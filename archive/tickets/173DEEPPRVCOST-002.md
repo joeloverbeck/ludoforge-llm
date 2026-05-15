@@ -1,10 +1,10 @@
 # 173DEEPPRVCOST-002: Phase 1 — Train continuedDeepening encoded-build axis closure
 
-**Status**: BLOCKED by residual token-state-index measured gate
+**Status**: COMPLETED - archived residual owner moved to Spec 174
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `GameDefRuntime` encoded-state projection cache and policy encoded-state cache keying
-**Deps**: `archive/tickets/173DEEPPRVCOST-001.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-001.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -34,7 +34,7 @@ This ticket closes the train continuedDeepening encoded-build axis — both deci
 5. **Determinism gates pass on the post-witness baseline.** Confirmed via the archived ticket's Command Ledger — `pnpm -F @ludoforge/engine test` (`81/81 files passed`), `test:integration:fitl-rules` (`79/79 files passed`), `pnpm turbo test --force` all green on 2026-05-15. This ticket inherits that baseline and MUST preserve it byte-identical.
 6. **No new test files have been added to the corpus that exercise train-operation continuedDeepening at the slice level.** Confirmed by absence of train-specific perf tests in `packages/engine/test/perf/agents/`. The architectural-invariant test for any new cache (per spec §6.2) is novel scope owned by this ticket.
 
-7. **Post-002 witness changed the residual owner.** Confirmed by `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-002.md`: encoded builds on `train:chooseNStep:add` and `train:chooseNStep:confirm` dropped to `0`, but the ticket's train time gate is still red. User approved option 2 on 2026-05-15: keep the encoded-build closure, mark this ticket nonterminal/blocked on the residual measured gate, and create successor `tickets/173DEEPPRVCOST-003.md` for the token-state-index residual.
+7. **Post-002 witness changed the residual owner.** Confirmed by `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-002.md`: encoded builds on `train:chooseNStep:add` and `train:chooseNStep:confirm` dropped to `0`, but the ticket's train time gate is still red. User approved option 2 on 2026-05-15: keep the encoded-build closure, mark this ticket nonterminal/blocked on the residual measured gate at that time, and create successor `archive/tickets/173DEEPPRVCOST-003.md` for the token-state-index residual.
 
 No blocking mismatches against the encoded-build axis. The train elapsed-time target remains red and is deferred to the successor named above.
 
@@ -79,7 +79,7 @@ Per spec §4.2, the post-merge witness output is the proof of axis closure. The 
 1. Re-runs `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD>` after the fix lands.
 2. Appends the new run as a dated rollup to `reports/` (per spec §6.3 — append, do not overwrite the Phase 0 baseline).
 3. Confirms the train encoded-build axis closed and the hot axes show measurable improvement on slow-tier mean ms/decision and total ms.
-4. Because the measured time target remains red, the ticket stays blocked rather than archived as complete; successor `tickets/173DEEPPRVCOST-003.md` owns the residual token-state-index cost.
+4. Because the measured time target remained red, successor `archive/tickets/173DEEPPRVCOST-003.md` owned the residual token-state-index cost.
 
 Expected post-fix targets (informed by current evidence; not contractual):
 
@@ -100,7 +100,7 @@ This is an audit-dependent ticket — the exact file set depends on the Phase 2 
 - `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — corrected generated report status/command text for post-Phase-0 witness runs.
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-002.md` (new) — post-002 witness rollup.
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-002.csv` (new) — post-002 per-decision CSV.
-- `tickets/173DEEPPRVCOST-003.md` (new) — successor for residual token-state-index cost.
+- `archive/tickets/173DEEPPRVCOST-003.md` — successor for residual token-state-index cost.
 - `packages/engine/src/agents/policy-preview.ts` — verified-no-edit; the fix lands below the preview drive at the encoded-state cache seam.
 - `packages/engine/src/agents/policy-evaluation-core.ts` — verified-no-edit; already routes constructor encoded-state resolution through `resolvePolicyEncodedState`.
 - `packages/engine/src/agents/microturn-option-eval.ts` — verified-no-edit; already passes `runtime` into inner microturn scoring.
@@ -158,7 +158,7 @@ This is an audit-dependent ticket — the exact file set depends on the Phase 2 
 3. **Spec 172 §4.5 constructor invariant extended, not broken.** If a new constructor-resolved structure is cached, the architectural-invariant test enumerates it; the constructor still resolves all caches via runtime/cached accessors with no direct builder calls.
 4. **Cache key collision-free for the encoded view.** The new projection key includes the exact `GameState` fields consumed by `buildEncodedState`; a focused test proves decision-stack-only states can reuse the cached view while a changed encoded global variable cannot collide.
 5. **Within-node sibling-option cache hit rate not regressed.** The existing `policyEncodedStateCache` continues to work for sibling option evaluations within one preview-drive node — the fix extends coverage to inter-node sharing without losing intra-node efficiency.
-6. **Witness re-run shows measurable improvement but the time gate remains red.** Per spec §4.2, the retained fix is not reverted because the witness shows measurable improvement and no per-decision regression on the owned train classes. The ticket remains blocked because the train elapsed-time thresholds are still unmet; successor `tickets/173DEEPPRVCOST-003.md` owns the residual.
+6. **Witness re-run shows measurable improvement but the time gate remains red.** Per spec §4.2, the retained fix is not reverted because the witness shows measurable improvement and no per-decision regression on the owned train classes. The train elapsed-time thresholds remained unmet; successor `archive/tickets/173DEEPPRVCOST-003.md` owned the residual.
 
 ## Test Plan
 
@@ -209,11 +209,14 @@ This is an audit-dependent ticket — the exact file set depends on the Phase 2 
 
 ## Outcome
 
-**Completion date**: not complete; blocked on residual measured gate as of 2026-05-15.
+**Completion date**: 2026-05-15.
+Outcome amended: 2026-05-15.
 
 ### User-Approved Boundary Reset
 
-The post-002 witness closed the encoded-build counter axis but left the train elapsed-time gates red. After reassessing against `docs/FOUNDATIONS.md`, the user approved option 2 on 2026-05-15: retain the encoded-build closure, keep this ticket nonterminal/blocked rather than archive it as complete, and create successor `tickets/173DEEPPRVCOST-003.md` for the residual token-state-index train cost.
+The post-002 witness closed the encoded-build counter axis but left the train elapsed-time gates red. After reassessing against `docs/FOUNDATIONS.md`, the user approved option 2 on 2026-05-15: retain the encoded-build closure, keep this ticket nonterminal/blocked at that time rather than archive it as the terminal performance closure, and create successor `archive/tickets/173DEEPPRVCOST-003.md` for the residual token-state-index train cost.
+
+Post-Spec-173 closeout amendment: the successor chain has now completed through `archive/tickets/173DEEPPRVCOST-008.md`, Spec 173 §4.2(c) fired, and `specs/174-wasm-preview-drive-coverage-extension.md` owns the remaining generic WASM preview-drive coverage extension. This ticket is therefore complete as the retained encoded-build closure slice, not as the terminal Spec 173 performance closure.
 
 ### What Landed
 
@@ -238,7 +241,7 @@ The post-002 witness closed the encoded-build counter axis but left the train el
 | Combined slow-tier train total | 317,808.07 ms | 146,110.85 ms | -54.03% | material improvement, still red |
 | Slowest seed 1005 wall time | 183,274.3 ms | 107,468.38 ms | -41.36% | improved, still above `≤60 s` soft target |
 
-The retained change is correct reusable substrate and materially improves the owned measured seam, but the ticket remains blocked because the explicit train elapsed-time gates are still unmet. The post-002 report shows the residual train rows now have `0` encoded builds but still high token-state-index counts (`train:chooseNStep:add` `33,203`; `train:chooseNStep:confirm` `6,242`), so `tickets/173DEEPPRVCOST-003.md` owns that non-overlapping residual.
+The retained change is correct reusable substrate and materially improves the owned measured seam. The post-002 report shows the residual train rows now have `0` encoded builds but still high token-state-index counts (`train:chooseNStep:add` `33,203`; `train:chooseNStep:confirm` `6,242`), so successor `archive/tickets/173DEEPPRVCOST-003.md` owned that non-overlapping residual. Later successors exhausted the remaining TypeScript-side residual and moved terminal ownership to `specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Invariant Proof Matrix
 
@@ -283,10 +286,10 @@ The retained change is correct reusable substrate and materially improves the ow
 
 ### Deferred Scope
 
-- `tickets/173DEEPPRVCOST-003.md` owns the residual train continuedDeepening token-state-index cost exposed by the post-002 witness.
+- `archive/tickets/173DEEPPRVCOST-003.md` owned the residual train continuedDeepening token-state-index cost exposed by the post-002 witness.
 - Coup/govern/event residual axes remain outside this ticket and should be selected by the next Spec 173 witness-driven ticket only after the residual train owner lands or is otherwise classified.
-- WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.
+- WASM preview-drive coverage moved to `specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
 
 ### Late-Edit / Proof Validity
 
-Post-witness edits changed only report-template text, ticket/spec ownership, proof transcription, and successor artifacts; they do not change the measured CSV rows or runtime cache semantics. Final correctness, integrity, and hygiene lanes above were run after the ticket/spec edits. This ticket remains nonterminal because the measured train elapsed-time gates are still red, not because of a failing correctness lane.
+Post-witness edits changed only report-template text, ticket/spec ownership, proof transcription, and successor artifacts; they do not change the measured CSV rows or runtime cache semantics. Final correctness, integrity, and hygiene lanes above were run after the ticket/spec edits. This archival amendment changes only ownership text after Spec 174 became the terminal residual owner.

@@ -1,10 +1,10 @@
 # 173DEEPPRVCOST-006: Phase 1 - Train continuedDeepening residual spread closure
 
-**Status**: BLOCKED by successor decision-stack digest residual
+**Status**: COMPLETED - diagnostic handoff archived to Spec 174
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - train continuedDeepening residual hot-axis classification or generic closure
-**Deps**: `archive/tickets/173DEEPPRVCOST-005.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-005.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -74,7 +74,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 - `packages/engine/test/**/*zobrist*.test.ts`, `packages/engine/test/unit/agents/*`, or nearby focused tests selected by implementation (modify/add)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.md` (new post-006 witness)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.csv` (new post-006 witness)
-- `specs/173-deep-preview-drive-cost-reduction.md` (modify only if Phase-N escalation is triggered or the ticket list needs a status update)
+- `archive/specs/173-deep-preview-drive-cost-reduction.md` (modify only if Phase-N escalation is triggered or the ticket list needs a status update)
 
 ## Out of Scope
 
@@ -144,6 +144,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 
 **Completion date**: 2026-05-15.
 **Authorization**: User approved Option C on 2026-05-15 after the first safe non-overlapping runtime candidate failed the decisive witness. Scope effect: diagnostic/nonterminal handoff; no runtime code retained in this ticket.
+Outcome amended: 2026-05-15.
 
 ### What Landed
 
@@ -152,7 +153,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.md`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.csv`
 - Reverted the runtime candidate after the full 15-seed witness showed no material train-spread improvement.
-- Added successor `archive/tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual. Post-review then added active successor `tickets/173DEEPPRVCOST-008.md` for the terminal Spec 173 Phase 1 / Phase-N decision after ticket 007 completed with no retained runtime code.
+- Added successor `archive/tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual. Post-review later archived terminal successor `archive/tickets/173DEEPPRVCOST-008.md` after it completed the Spec 173 Phase 1 / Phase-N decision, triggered §4.2(c), and authored `specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Rejected Candidate Ledger
 
@@ -162,9 +163,9 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 
 ### Residual Owner / Successor
 
-Archived successor `archive/tickets/173DEEPPRVCOST-007.md` owned the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. Ticket 007 classified that residual as red/flat with no retained runtime code. Active successor `tickets/173DEEPPRVCOST-008.md` now owns the terminal Spec 173 Phase 1 decision: find a distinct material TS-side closure or trigger §4.2(c).
+Archived successor `archive/tickets/173DEEPPRVCOST-007.md` owned the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. Ticket 007 classified that residual as red/flat with no retained runtime code. Archived successor `archive/tickets/173DEEPPRVCOST-008.md` completed the terminal Spec 173 Phase 1 decision by triggering §4.2(c); `specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension.
 
-Ticket 006 is blocked and not archive-ready because it produced diagnostic evidence and a successor handoff, but did not land a generic closure or trigger the Spec 173 Phase-N escalation condition by itself.
+Ticket 006 is complete as a diagnostic no-retained-code handoff slice. It did not land a generic closure or trigger the Spec 173 Phase-N escalation condition by itself, but the successor chain has now completed and moved the terminal residual to `specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Artifact Classification
 
@@ -190,14 +191,14 @@ Ticket 006 is blocked and not archive-ready because it produced diagnostic evide
 | Determinism preserved | No runtime code retained after revert | proven by final diff classification | `git status --short` / final diff |
 | Engine-agnostic boundary preserved | Candidate and successor are generic preview/Zobrist work; no FITL ids or profile/rules changed | proven by final diff classification | final diff |
 | Run-local lifetime preserved | No new cache or mutable state retained | not applicable | final diff |
-| Decision-stack correctness preserved | Candidate reverted; archived successor classified the digest residual; active successor owns any future closure or Phase-N trigger proof | deferred to confirmed successor | `tickets/173DEEPPRVCOST-008.md` |
+| Decision-stack correctness preserved | Candidate reverted; archived successors classified the digest residual and completed the Phase-N trigger decision; Spec 174 owns the future closure proof | deferred to confirmed successor | `specs/174-wasm-preview-drive-coverage-extension.md` |
 | Measured residual handled truthfully | Red attempt recorded; remaining owner named | proven | this outcome + successor |
 
 ### Source-Size Ledger
 
 `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
-`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | tickets/173DEEPPRVCOST-008.md`
+`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | specs/174-wasm-preview-drive-coverage-extension.md`
 
 ### Late-Edit Proof Validity
 

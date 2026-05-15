@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — scripts/ + reports/ only
-**Deps**: `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -231,6 +231,7 @@ The final proof lanes ran before this terminal outcome transcription. The only p
 ## Outcome
 
 Completed: 2026-05-15
+Outcome amended: 2026-05-15.
 
 Phase 0 landed as a script/report-only measurement witness. The implementation added `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` and generated the checked-in Markdown and CSV artifacts at `reports/fitl-arvn-15-seed-decomposition-2026-05-15.md` and `reports/fitl-arvn-15-seed-decomposition-2026-05-15.csv`.
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - generic decision-stack digest/encoding cost closure or Phase-N classification
-**Deps**: `tickets/173DEEPPRVCOST-006.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-006.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -70,7 +70,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 - `packages/engine/test/determinism/**/*zobrist*.test.ts` (modify/add only if needed)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.md` (new post-007 witness)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.csv` (new post-007 witness)
-- `specs/173-deep-preview-drive-cost-reduction.md` (modify only if Phase-N escalation is triggered or the ticket list needs a status update)
+- `archive/specs/173-deep-preview-drive-cost-reduction.md` (modify only if Phase-N escalation is triggered or the ticket list needs a status update)
 
 ## Out of Scope
 
@@ -140,6 +140,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 ## Outcome
 
 **Completion date**: 2026-05-15.
+Outcome amended: 2026-05-15.
 
 ### What Landed
 
@@ -168,7 +169,7 @@ This ticket counts as a second consecutive non-improving Phase 1 slice after `17
 
 ### Residual Owner
 
-The remaining train decision-stack digest/encoding residual is not closed by a safe non-overlapping TS-side change in this ticket. Successor `tickets/173DEEPPRVCOST-008.md` owns the final Spec 173 Phase 1 / Phase-N decision slice: it must either find a distinct, byte-equivalent generic owner or become the third consecutive no-improvement slice that triggers Spec 173 §4.2(c).
+The remaining train decision-stack digest/encoding residual was not closed by a safe non-overlapping TS-side change in this ticket. Archived successor `archive/tickets/173DEEPPRVCOST-008.md` completed the final Spec 173 Phase 1 / Phase-N decision slice by recording the third consecutive no-improvement slice and triggering Spec 173 §4.2(c).
 
 ### Artifact Classification
 

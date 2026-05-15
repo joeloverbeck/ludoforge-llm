@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — Zobrist decision-stack digest / encoded-state projection-key reuse path
-**Deps**: `tickets/173DEEPPRVCOST-003.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-003.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -76,8 +76,8 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 
 ## Out of Scope
 
-- Encoded-state build elimination already owned by `tickets/173DEEPPRVCOST-002.md`.
-- Token-state-index churn already owned by `tickets/173DEEPPRVCOST-003.md`.
+- Encoded-state build elimination already owned by `archive/tickets/173DEEPPRVCOST-002.md`.
+- Token-state-index churn already owned by `archive/tickets/173DEEPPRVCOST-003.md`.
 - Coup/govern/event residual axes unless the post-004 witness makes one of them the next selected Spec 173 ticket.
 - Preview-config retuning (`depthCap`, `maxOptions`, `chooseNBeamWidth`, `capClass`).
 - Agent-profile mutation.

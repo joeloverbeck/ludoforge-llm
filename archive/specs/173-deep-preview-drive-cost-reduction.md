@@ -1,6 +1,6 @@
 # Spec 173 — Deep-Preview-Drive Per-Decision Cost Reduction
 
-**Status**: PROPOSED
+**Status**: COMPLETED - Phase N triggered and Spec 174 authored on 2026-05-15
 **Priority**: High — the post-spec-172 `fitl-arvn-agent-evolution` 15-seed harness completes in ~5:17 wall-clock, but per-seed wall-time spread across the tier is ~6.5× per decision (seed `1000`: ~66 ms/decision vs seed `1005`: ~444 ms/decision). The outliers (`1005`: 185.6 s; `1011`: 83.7 s; `1008`: 69.4 s) dominate the tournament-loop budget at `concurrency=8` and throttle every campaign experiment that reuses this harness. Halving the outlier seeds roughly halves the steady-state experimental-loop latency.
 **Complexity**: M — Phase 0 perf witness is XS, Phase 1 is an open-ended witness-driven hot-path closure pass authored as ticket slices, Phase N escalation gate is an XL follow-up spec only if triggered. No new types, no schema changes, no kernel-surface changes, no agent-profile changes.
 **Date**: 2026-05-15
@@ -224,17 +224,24 @@ Spec 173 does not amend any Foundation. The Phase-N escalation gate, if it fires
 Decomposed via `/spec-to-tickets` on 2026-05-15:
 
 - [`archive/tickets/173DEEPPRVCOST-001.md`](../archive/tickets/173DEEPPRVCOST-001.md) — Phase 0 — Per-seed × per-microturn-class perf witness (covers §4.1, §5 Phase 0, §6.3; completed 2026-05-15)
-- [`tickets/173DEEPPRVCOST-002.md`](../tickets/173DEEPPRVCOST-002.md) — Phase 1 — Train continuedDeepening encoded-build axis closure (covers §4.2; targets the dominant Phase 0 hot axes `train:chooseNStep:add | continuedDeepening` and `train:chooseNStep:confirm | continuedDeepening`, ~74% of slow-tier top-10 total time; blocked after post-002 witness because encoded builds dropped to `0` but elapsed train gates remain red)
-- [`tickets/173DEEPPRVCOST-003.md`](../tickets/173DEEPPRVCOST-003.md) — Phase 1 — Train continuedDeepening token-state-index residual closure (covers the post-002 residual where train encoded builds are `0` but token index builds remain `33,203` for `train:chooseNStep:add` and `6,242` for `train:chooseNStep:confirm`; blocked after post-003 final witness because token-index builds dropped to `0` but elapsed train gates remain red)
+- [`archive/tickets/173DEEPPRVCOST-002.md`](../tickets/173DEEPPRVCOST-002.md) — Phase 1 — Train continuedDeepening encoded-build axis closure (covers §4.2; targets the dominant Phase 0 hot axes `train:chooseNStep:add | continuedDeepening` and `train:chooseNStep:confirm | continuedDeepening`, ~74% of slow-tier top-10 total time; completed as retained encoded-build closure slice, with later residual ownership moved through successors to Spec 174)
+- [`archive/tickets/173DEEPPRVCOST-003.md`](../tickets/173DEEPPRVCOST-003.md) — Phase 1 — Train continuedDeepening token-state-index residual closure (covers the post-002 residual where train encoded builds are `0` but token index builds remain `33,203` for `train:chooseNStep:add` and `6,242` for `train:chooseNStep:confirm`; completed as retained token-index closure slice, with later residual ownership moved through successors to Spec 174)
 - [`archive/tickets/173DEEPPRVCOST-004.md`](../archive/tickets/173DEEPPRVCOST-004.md) — Phase 1 — Train continuedDeepening decision-stack and projection-key cost closure (covers the post-003 residual where train encoded builds and token-index builds are both `0`, while CPU profile evidence points to decision-stack hashing and encoded projection-key stringification; completed 2026-05-15 after post-004 final witness closed the train elapsed gates but left the spec-wide slowest-seed soft target red)
 - [`archive/tickets/173DEEPPRVCOST-005.md`](../archive/tickets/173DEEPPRVCOST-005.md) — Phase 1 — Secondary continuedDeepening residual closure for `coupArvnRedeployPolice:chooseOne` (completed 2026-05-15 after materially improving the selected coup residual; Spec 173 remains active because slowest seed `1005` is still above `<=60 s`)
-- [`tickets/173DEEPPRVCOST-006.md`](../tickets/173DEEPPRVCOST-006.md) — Phase 1 — Train continuedDeepening residual spread closure (blocked after a safe choose-N preview no-entry-hash candidate was flat/regressive on the 15-seed witness; no runtime code retained)
-- [`archive/tickets/173DEEPPRVCOST-007.md`](../archive/tickets/173DEEPPRVCOST-007.md) — Phase 1 — Train decision-stack digest residual closure (completed 2026-05-15 by no-retained-code classification; post-007 witness kept the train digest/encoding residual red/flat and counts as the second consecutive non-improving Phase 1 slice, so §4.2(c) has not fired yet)
-- [`tickets/173DEEPPRVCOST-008.md`](../tickets/173DEEPPRVCOST-008.md) — Phase 1 — Terminal train residual or Phase-N trigger decision (owns the post-007 final TS-side closure attempt or the third consecutive no-improvement classification that triggers §4.2(c) and Spec 174 authoring)
+- [`archive/tickets/173DEEPPRVCOST-006.md`](../tickets/173DEEPPRVCOST-006.md) — Phase 1 — Train continuedDeepening residual spread closure (completed as diagnostic/no-retained-code handoff after a safe choose-N preview no-entry-hash candidate was flat/regressive on the 15-seed witness; later residual ownership moved through successors to Spec 174)
+- [`archive/tickets/173DEEPPRVCOST-007.md`](../archive/tickets/173DEEPPRVCOST-007.md) — Phase 1 — Train decision-stack digest residual closure (completed 2026-05-15 by no-retained-code classification; post-007 witness kept the train digest/encoding residual red/flat and counted as the second consecutive non-improving Phase 1 slice before ticket 008)
+- [`archive/tickets/173DEEPPRVCOST-008.md`](../tickets/173DEEPPRVCOST-008.md) — Phase 1 — Terminal train residual or Phase-N trigger decision (completed 2026-05-15 with no retained runtime code; post-008 witness was red/flat and triggered §4.2(c); authored `specs/174-wasm-preview-drive-coverage-extension.md`)
 
-Phase 1 tickets land sequentially per §4.4 (the post-merge witness output of ticket K informs ticket K+1's scope). The post-005 witness materially improved the selected coup residual but left the §1 slowest-seed soft target red and still reports train add/confirm above the Phase 1 spread criterion. Ticket 006 classified a safe choose-N preview no-entry-hash candidate as non-closeout evidence and handed the remaining concrete digest/encoding owner to ticket 007. Ticket 007 then classified that digest/encoding residual as red/flat with no retained runtime code. That is the second consecutive non-improving Phase 1 slice after ticket 006; §4.2(c) still needs one more consecutive no-improvement slice before Phase-N escalation fires, and §4.2(b) has not fired because the post-007 witness still reports slow-tier train axes above the spread criterion. Ticket 008 owns that terminal Phase 1 decision: either land a distinct material TS-side closure or trigger §4.2(c) and author Spec 174.
+Phase 1 tickets landed sequentially per §4.4 (the post-merge witness output of ticket K informed ticket K+1's scope). The post-005 witness materially improved the selected coup residual but left the §1 slowest-seed soft target red and still reported train add/confirm above the Phase 1 spread criterion. Ticket 006 classified a safe choose-N preview no-entry-hash candidate as non-closeout evidence and handed the remaining concrete digest/encoding owner to ticket 007. Ticket 007 then classified that digest/encoding residual as red/flat with no retained runtime code. Ticket 008 completed the terminal Phase 1 decision with no retained runtime code and post-008 red/flat evidence:
 
-**Phase N**: no ticket in this spec. If §4.2(b) or (c) fires (Phase 1 cannot meet the §1 soft target via TS-side closure, OR three consecutive Phase 1 tickets show no measurable improvement), the follow-up Spec 174 is authored and decomposed under its own ticket prefix.
+- slowest seed `1005`: post-007 `74,562.87 ms` -> post-008 `75,311.43 ms`, still red versus `<=60 s`;
+- `train:chooseNStep:add | continuedDeepening`: post-007 `54,468.25 ms` -> post-008 `54,546.24 ms`, no material improvement;
+- `train:chooseNStep:confirm | continuedDeepening`: post-007 `40,155.09 ms` -> post-008 `39,527.73 ms`, only a minor/no-material change;
+- hot class with slow:fast ratio `>3x`: still `yes`.
+
+That makes tickets 006, 007, and 008 three consecutive non-improving Phase 1 slices. Spec 173 §4.2(c) has fired.
+
+**Phase N**: triggered by §4.2(c). Follow-up `specs/174-wasm-preview-drive-coverage-extension.md` is authored as the WASM preview-drive coverage extension owner. Spec 173 is complete by Phase-N handoff, not by meeting the original `<=60 s` slowest-seed soft target.
 
 Phase 0 landed and was reviewed before any Phase 1 fix landed, satisfying the mandatory ordering for the rest of this spec.
 
@@ -242,4 +249,25 @@ Phase 0 landed and was reviewed before any Phase 1 fix landed, satisfying the ma
 
 N/A. This spec was authored from session-internal investigation against `reports/fitl-arvn-15-seed-harness-wall-times-2026-05-15.md`, not from an external proposal. The trigger report contains measurement only and explicitly defers root-cause analysis to follow-up profiling. No per-recommendation disposition table is required.
 
-The spec does, however, build on the Phase-N escalation framing first surfaced in spec 150 §9 ("WASM preview-drive coverage extension is a much larger separate effort") and spec 172 §2.7 / §9 (same). The reassessment of *those* deferred items — turning the framing into an explicit, evidence-gated escalation gate (§4.3) — is the architectural step this spec adds to the lineage. If Spec 174 is later authored, its trigger evidence is the §4.2(b) or (c) Phase 1 exit condition recorded in the final `reports/` rollup, not new external proposal.
+The spec does, however, build on the Phase-N escalation framing first surfaced in spec 150 §9 ("WASM preview-drive coverage extension is a much larger separate effort") and spec 172 §2.7 / §9 (same). The reassessment of *those* deferred items — turning the framing into an explicit, evidence-gated escalation gate (§4.3) — is the architectural step this spec adds to the lineage. Spec 174 was authored after §4.2(c) fired; its trigger evidence is the post-008 final rollup, not a new external proposal.
+
+## 12. Outcome
+
+Completed on 2026-05-15 by Phase-N handoff.
+
+Spec 173 delivered the 15-seed decomposition witness, several material TypeScript-side closures through tickets 002-005, and then a terminal evidence-backed stop after three consecutive non-improving Phase 1 slices:
+
+- `archive/tickets/173DEEPPRVCOST-006.md` retained no runtime code after a flat/regressive choose-N preview no-entry-hash candidate.
+- `archive/tickets/173DEEPPRVCOST-007.md` retained no runtime code after the decision-stack digest/encoding residual stayed red/flat.
+- `archive/tickets/173DEEPPRVCOST-008.md` retained no runtime code and recorded post-008 final evidence that the train residual and slowest seed remained red/flat.
+
+The final Spec 173 witness is `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md` with CSV `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.csv`. The decisive result is:
+
+| Metric | Post-007 baseline | Post-008 final | Verdict |
+|---|---:|---:|---|
+| Slowest seed 1005 wall time | `74,562.87 ms` | `75,311.43 ms` | still red versus `<=60 s` |
+| `train:chooseNStep:add` slow-tier total | `54,468.25 ms` | `54,546.24 ms` | no material improvement |
+| `train:chooseNStep:confirm` slow-tier total | `40,155.09 ms` | `39,527.73 ms` | minor/no material improvement |
+| Hot class with slow:fast ratio >3x | yes | yes | residual remains |
+
+Spec 174 now owns the generic WASM preview-drive coverage extension. Spec 173 does not retain further TypeScript-side optimization ownership.

@@ -1,10 +1,10 @@
 # 173DEEPPRVCOST-003: Phase 1 — Train continuedDeepening token-state-index residual closure
 
-**Status**: BLOCKED by residual non-token-index train elapsed gate
+**Status**: COMPLETED - archived residual owner moved to Spec 174
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — preview-drive/token-state-index reuse path
-**Deps**: `tickets/173DEEPPRVCOST-002.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-002.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -75,7 +75,7 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 
 ## Out of Scope
 
-- Encoded-state projection cache changes already owned by `tickets/173DEEPPRVCOST-002.md`.
+- Encoded-state projection cache changes already owned by `archive/tickets/173DEEPPRVCOST-002.md`.
 - Coup/govern/event residual axes unless the post-003 witness makes one of them the next selected Spec 173 ticket.
 - Preview-config retuning (`depthCap`, `maxOptions`, `chooseNBeamWidth`, `capClass`).
 - Agent-profile mutation.
@@ -145,11 +145,14 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 
 ## Outcome
 
-**Completion date**: not complete; blocked on residual measured gate as of 2026-05-15.
+**Completion date**: 2026-05-15.
+Outcome amended: 2026-05-15.
 
 ### User-Approved Boundary Reset
 
-After the first post-003 witness eliminated the token-index counters but left train elapsed gates red, the user requested a reassessment against `docs/FOUNDATIONS.md` and then approved option 2 on 2026-05-15: keep investigating within this ticket only while the next owner remains in the generic token-index/cache seam. The final retained changes stay inside that seam. The remaining dominant owner is no longer token-state-index churn, so this ticket stays nonterminal/blocked rather than claiming Spec 173 completion.
+After the first post-003 witness eliminated the token-index counters but left train elapsed gates red, the user requested a reassessment against `docs/FOUNDATIONS.md` and then approved option 2 on 2026-05-15: keep investigating within this ticket only while the next owner remains in the generic token-index/cache seam. The final retained changes stay inside that seam. The remaining dominant owner is no longer token-state-index churn, so this ticket stayed nonterminal/blocked at that time rather than claiming Spec 173 completion.
+
+Post-Spec-173 closeout amendment: later successors completed the remaining TypeScript-side classification chain, `archive/tickets/173DEEPPRVCOST-008.md` triggered Spec 173 §4.2(c), and `specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension. This ticket is complete as the retained token-index closure slice, not as the terminal Spec 173 performance closure.
 
 ### Chosen Residual Owner
 
@@ -183,7 +186,7 @@ The chosen token-index owner was mutable preview state cache lifetime:
 | `train:chooseNStep:confirm` slow mean | 1,781.6475 ms | 1,698.4784 ms | -4.67% | improved, still red |
 | Slowest seed 1005 wall time | 107,468.38 ms | 104,515.38 ms | -2.75% | improved, still above `<=60 s` soft target |
 
-The retained change is correct generic substrate and measurably improves the owned token-index seam, but the train elapsed-time gates remain red. Foundation #15 and #16 therefore require naming the residual owner instead of marking Spec 173 complete by assertion.
+The retained change is correct generic substrate and measurably improves the owned token-index seam, but the train elapsed-time gates remain red. Foundation #15 and #16 therefore required naming the residual owner instead of marking Spec 173 complete by assertion.
 
 ### Residual Owner / Successor
 
@@ -236,8 +239,8 @@ Successor `archive/tickets/173DEEPPRVCOST-004.md` owns that non-overlapping resi
 
 - `archive/tickets/173DEEPPRVCOST-004.md` owns the remaining train continuedDeepening elapsed owner: decision-stack hashing and encoded projection-key stringification after token-index builds are zero.
 - Coup/govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket after train residual ownership is exhausted or reclassified.
-- WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.
+- WASM preview-drive coverage moved to `specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
 
 ### Late-Edit / Proof Validity
 
-Post-witness edits to this ticket and the successor ticket/spec prose do not change runtime behavior. Final correctness, determinism, hygiene, and dependency lanes ran after the retained runtime/source edits.
+Post-witness edits to this ticket and the successor ticket/spec prose do not change runtime behavior. Final correctness, determinism, hygiene, and dependency lanes ran after the retained runtime/source edits. This archival amendment changes only ownership text after Spec 174 became the terminal residual owner.

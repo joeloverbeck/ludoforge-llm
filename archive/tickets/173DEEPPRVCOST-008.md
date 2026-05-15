@@ -1,10 +1,10 @@
 # 173DEEPPRVCOST-008: Phase 1 - Terminal train residual or Phase-N trigger decision
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - final generic train residual closure or Phase-N escalation classification
-**Deps**: `archive/tickets/173DEEPPRVCOST-007.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-007.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -22,7 +22,7 @@ This ticket owns the next and terminal Spec 173 Phase 1 decision slice. It must 
 
 1. **The post-007 witness is current.** `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-007-final.md` completed all 15 seeds and still reports a hot class with slow:fast ratio above `3x`.
 2. **The previous two Phase 1 slices were non-improving.** Ticket 006 reverted its safe candidate after a red 15-seed witness; ticket 007 retained no runtime code after its JSON-segment cache candidate was flat/regressive.
-3. **Spec 173 §4.2(c) has not fired yet.** It requires three consecutive non-improving Phase 1 tickets; this ticket is the next decision point.
+3. **Spec 173 §4.2(c) had not fired before this ticket.** It required three consecutive non-improving Phase 1 tickets; this ticket was the next decision point.
 4. **Spec 173 §4.2(b) has not fired yet.** The post-007 witness still reports train slow-tier axes above the spread criterion, so the residual cannot be treated as fully exhausted by spread evidence alone.
 5. **Foundation alignment requires an explicit terminal decision.** Foundation #15 requires naming the remaining architectural owner if TS-side closure is exhausted; Foundation #16 requires the 15-seed witness to decide materiality.
 
@@ -72,7 +72,7 @@ Run the same 15-seed decomposition witness with a fresh date/label. The report m
 - `packages/engine/test/**/*zobrist*.test.ts`, `packages/engine/test/unit/agents/*`, or nearby focused tests selected by implementation (modify/add if code lands)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.md` (new post-008 witness)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>.csv` (new post-008 witness)
-- `specs/173-deep-preview-drive-cost-reduction.md` (modify for ticket status and Phase-N trigger state)
+- `archive/specs/173-deep-preview-drive-cost-reduction.md` (modify for ticket status and Phase-N trigger state)
 - `specs/174-*.md` (new only if Spec 173 §4.2(c) fires)
 
 ## Out of Scope
@@ -138,3 +138,74 @@ Run the same 15-seed decomposition witness with a fresh date/label. The report m
 7. `pnpm turbo typecheck`
 8. `pnpm turbo test --force`
 9. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completion date**: 2026-05-15.
+Outcome amended: 2026-05-15.
+
+### What Landed
+
+- No runtime code is retained. Live inspection confirmed the remaining train residual is still the same generic decision-stack digest/encoding cost already classified by ticket 007, with the current safe substrate already present: frame-identity `WeakMap` memoization plus run-local `zobristTable.frameDigestCache` keyed by the byte-equivalent encoded frame string.
+- Captured the checked-in post-008 terminal Phase 1 witness:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.csv`
+- Updated `archive/specs/173-deep-preview-drive-cost-reduction.md` to record that Spec 173 §4.2(c) fired after three consecutive non-improving Phase 1 slices.
+- Authored follow-up `specs/174-wasm-preview-drive-coverage-extension.md` as the Phase N owner for WASM preview-drive coverage extension.
+
+### Measured Result and Phase-N Trigger
+
+| Metric | Post-007 baseline | Post-008 final | Delta | Verdict |
+|---|---:|---:|---:|---|
+| Slowest seed 1005 wall time | `74,562.87 ms` | `75,311.43 ms` | `+1.00%` | still red versus `<=60 s` |
+| `train:chooseNStep:add` slow-tier total | `54,468.25 ms` | `54,546.24 ms` | `+0.14%` | no material improvement |
+| `train:chooseNStep:confirm` slow-tier total | `40,155.09 ms` | `39,527.73 ms` | `-1.56%` | minor/no material improvement |
+| Hot class with slow:fast ratio >3x | yes | yes | unchanged | Phase 1 residual remains |
+
+This is the third consecutive non-improving Phase 1 slice after tickets 006 and 007. Spec 173 §4.2(c) is now fired, and Phase N is triggered. Spec 173 closes by authoring Spec 174 rather than by claiming the TypeScript-side residual is solved.
+
+### Residual Owner
+
+The remaining owner is `specs/174-wasm-preview-drive-coverage-extension.md`. It owns the generic WASM preview-drive coverage extension for `continuedDeepening` / `deep1024` preview-drive work, including TS/WASM parity, fail-closed unsupported classification, activation counters, and any later default-flip proof. This ticket does not implement Spec 174 code.
+
+### Artifact Classification
+
+- Checked-in diagnostic evidence: the post-008 final report and CSV listed above.
+- Ignored/ephemeral diagnostic evidence: none.
+- Generated schema/golden fallout: none; no source, schema, fixture, or generated contract diff is retained.
+
+### Command Ledger
+
+| Ticket section | Literal command / shorthand | Ran directly / substituted / pending | Final citation |
+|---|---|---|---|
+| Build | `pnpm -F @ludoforge/engine build` | ran before the decisive no-code witness | exit 0 |
+| Focused no-change proof | focused correctness/cache tests for a retained runtime fix, or focused no-change proof | substituted by final source inspection plus no-retained-code diff classification | no runtime code retained; existing digest/cache substrate inspected |
+| Decomposition witness | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD> --profile-buckets` | ran with `--date 2026-05-15-post-008-final` | exit 0; 15/15 seeds completed; report and CSV written |
+| FITL rules / targeted determinism / equivalence / broad lanes | ticket-named final lanes | not run | no runtime code retained; build plus measured classification are the final no-code proof surface |
+| Dependency graph | `pnpm run check:ticket-deps` | ran after terminal/spec closeout edit | passed for 4 active tickets and 2347 archived tickets |
+
+### Invariant Proof Matrix
+
+| Invariant | Witness / assertion | Status | Proof lane |
+|---|---|---|---|
+| Determinism preserved | No runtime code retained after post-007 source state | proven by final diff classification | final diff |
+| Engine-agnostic boundary preserved | No FITL ids, profile data, preview bounds, or rules changed | proven by final diff classification | final diff |
+| Run-local lifetime preserved | Existing frame digest cache remains run-local; no new mutable cache retained | proven by inspected existing substrate | `zobrist.ts`, `gamedef-runtime.ts` inspection |
+| Decision-stack correctness preserved | No new digest/frame reuse added; existing byte-equivalent cache remains unchanged | proven | final diff |
+| Measured residual handled truthfully | Post-008 witness is red/flat; §4.2(c) fired; Spec 174 authored | proven | post-008 final report and Spec 174 |
+
+### Source-Size Ledger
+
+No source files have retained active growth. Near/over-guidance candidate files were inspected only:
+
+`path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+`packages/engine/src/kernel/zobrist.ts | 645 | 645 | no | none retained | source inspected only; no distinct safe TS owner retained | specs/174-wasm-preview-drive-coverage-extension.md`
+
+`packages/engine/src/kernel/microturn/apply.ts | 800 | 800 | no | none retained | source inspected only; no edit made at cap boundary | specs/174-wasm-preview-drive-coverage-extension.md`
+
+`packages/engine/src/agents/policy-preview.ts | 1286 | 1286 | no | none retained | source inspected only; no edit made to preexisting oversized file | specs/174-wasm-preview-drive-coverage-extension.md`
+
+### Late-Edit Proof Validity
+
+The ticket, Spec 173, and Spec 174 edits are no-retained-code classification, exact metric transcription, and ownership handoff after the final witness. They do not validate a retained runtime path and do not change the witness command or threshold. The dependency-check transcription records the just-run graph check and changes no scope, acceptance, command semantics, dependency ownership, or proof claims; no empirical rerun is required.

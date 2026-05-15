@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — secondary continuedDeepening hot-path residual
-**Deps**: `archive/tickets/173DEEPPRVCOST-004.md`, `specs/173-deep-preview-drive-cost-reduction.md`
+**Deps**: `archive/tickets/173DEEPPRVCOST-004.md`, `archive/specs/173-deep-preview-drive-cost-reduction.md`
 
 ## Problem
 
@@ -210,7 +210,7 @@ Result for the selected ticket target:
 - Post-005 preview-state-drive witness: slow-tier total `23,415.95 ms`, slow mean `450.3067 ms`, fast mean `156.6449 ms`, ratio `2.8747`.
 - Delta: `-15,522.65 ms` total (`-39.86%`) and `-298.5125 ms` mean (`-39.86%`) on the selected residual.
 
-Spec-wide residual remains: slowest seed `1005` improved to `72,522.37 ms` under bucket profiling, still above the Spec 173 `<=60 s` soft target. `train:chooseNStep:add` and `train:chooseNStep:confirm` remain below their ticket-004 elapsed gates (`1,608.7344 ms <= 1,800 ms`, `1,116.6162 ms <= 1,300 ms`) with encoded builds and token-index builds still `0`, but the post-005 fast-vs-slow table still reports train add/confirm above the Phase 1 spread criterion. Successor `tickets/173DEEPPRVCOST-006.md` owns that concrete post-005 train continuedDeepening residual spread classification.
+Spec-wide residual remains: slowest seed `1005` improved to `72,522.37 ms` under bucket profiling, still above the Spec 173 `<=60 s` soft target. `train:chooseNStep:add` and `train:chooseNStep:confirm` remain below their ticket-004 elapsed gates (`1,608.7344 ms <= 1,800 ms`, `1,116.6162 ms <= 1,300 ms`) with encoded builds and token-index builds still `0`, but the post-005 fast-vs-slow table still reports train add/confirm above the Phase 1 spread criterion. Successor `archive/tickets/173DEEPPRVCOST-006.md` owns that concrete post-005 train continuedDeepening residual spread classification.
 
 Final verification:
 
@@ -236,6 +236,7 @@ Source-size ledger:
 ## Outcome
 
 **Completion date**: 2026-05-15.
+Outcome amended: 2026-05-15.
 
 ### What Landed
 
@@ -255,7 +256,7 @@ The ticket-owned coup residual improved materially, but Spec 173 remains active 
 
 ### Residual Owner / Successor
 
-Successor `tickets/173DEEPPRVCOST-006.md` owns the concrete post-005 residual: train continuedDeepening add/confirm still exceed the Phase 1 fast-vs-slow spread criterion after ticket 005, even though their ticket-004 elapsed gates remain closed. Ticket 005 does not widen into that train spread or Phase-N escalation classification.
+Successor `archive/tickets/173DEEPPRVCOST-006.md` owns the concrete post-005 residual: train continuedDeepening add/confirm still exceed the Phase 1 fast-vs-slow spread criterion after ticket 005, even though their ticket-004 elapsed gates remain closed. Ticket 005 does not widen into that train spread or Phase-N escalation classification.
 
 ### Artifact Classification
 
@@ -277,4 +278,4 @@ Successor `tickets/173DEEPPRVCOST-006.md` owns the concrete post-005 residual: t
 
 ### Post-Review Correction
 
-Post-review added successor `tickets/173DEEPPRVCOST-006.md` and updated this ticket's residual-owner wording so the remaining Spec 173 work has a concrete owner before archival. This is ticket/spec ownership truthing only; it does not change source behavior or invalidate the source/test proof lanes above.
+Post-review added successor `archive/tickets/173DEEPPRVCOST-006.md` and updated this ticket's residual-owner wording so the remaining Spec 173 work has a concrete owner before archival. This is ticket/spec ownership truthing only; it does not change source behavior or invalidate the source/test proof lanes above.

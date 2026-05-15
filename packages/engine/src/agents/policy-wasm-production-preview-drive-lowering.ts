@@ -23,6 +23,8 @@ export const lowerProductionPreviewDriveIr = (
       stableMoveKey: candidate.stableMoveKey,
       initialValue: program.rootValues[0] ?? 0,
       initialPreviewStateValues: program.rootValues,
+      ...(input.previewBranch === undefined ? {} : { previewBranch: input.previewBranch }),
+      ...(program.previewSignalCarrier === undefined ? {} : { previewSignalCarrier: program.previewSignalCarrier }),
     })),
     steps: program.ops.flatMap(lowerProductionPreviewDriveIrOp),
   };

@@ -18,6 +18,7 @@ import {
   evaluateProductionPreviewDriveBatchWithWasm,
   type PolicyWasmProductionPreviewDriveCandidate,
 } from './policy-wasm-production-preview-drive.js';
+import type { PolicyWasmPreviewStatus } from './policy-wasm-preview-drive.js';
 import {
   evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
@@ -76,20 +77,9 @@ const previewDynamicRefCode = (ref: CompiledAgentPolicyRef): number => {
   return stablePayloadCode(ref);
 };
 
-const previewTraceOutcomeFromWasm = (
-  outcome: 'completed' | 'stochastic' | 'depthCap' | 'failed',
-): PolicyPreviewTraceOutcome => {
-  switch (outcome) {
-    case 'completed':
-      return 'ready';
-    case 'stochastic':
-      return 'stochastic';
-    case 'depthCap':
-      return 'depthCap';
-    case 'failed':
-      return 'failed';
-  }
-};
+const previewTraceOutcomeFromWasmStatus = (
+  status: PolicyWasmPreviewStatus,
+): PolicyPreviewTraceOutcome => status === 'ready' ? 'ready' : status;
 
 const collectPreviewDynamicRefs = (expr: CompiledPolicyExpr): readonly CompiledAgentPolicyRef[] => {
   const refs: CompiledAgentPolicyRef[] = [];
@@ -252,6 +242,9 @@ const materializePreviewDynamicRowsWithWasm = (
       originSeatId: input.seatId,
       originTurnId: input.state.turnCount,
       depthCap: input.profile.preview.completionDepthCap ?? 6,
+      previewBranch: input.profile.preview.inner?.strategy === 'continuedDeepening'
+        ? 'continuedDeepening'
+        : 'greedy',
       previewStateSlots,
       candidates: group,
     });
@@ -273,7 +266,7 @@ const materializePreviewDynamicRowsWithWasm = (
     }
     for (const row of result.rows) {
       rowsByKey.set(row.stableMoveKey, {
-        outcome: previewTraceOutcomeFromWasm(row.outcome),
+        outcome: previewTraceOutcomeFromWasmStatus(row.previewSignalCarrier.previewStatus),
         depth: row.depth,
         ...(row.previewStateValues === undefined ? {} : { previewStateValues: row.previewStateValues }),
       });

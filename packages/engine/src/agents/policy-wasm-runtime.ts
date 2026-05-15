@@ -35,7 +35,7 @@ import {
 } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 10;
+export const POLICY_WASM_ABI_VERSION = 11;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -104,6 +104,10 @@ interface PolicyWasmExports {
     outDepthsPtr: number,
     outValuesPtr: number,
     outPreviewStatePtr: number,
+    outPreviewStatusesPtr: number,
+    outPreviewBranchesPtr: number,
+    outTiebreakAfterPreviewNoSignalPtr: number,
+    outPolicyPreviewSignalUnavailablePtr: number,
     outPreviewStateLen: number,
     outLen: number,
   ) => number;
@@ -1191,6 +1195,10 @@ export const createPolicyWasmRuntime = (
       const outDepthsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outPreviewStatePtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateOutputBytes));
+      const outPreviewStatusesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outPreviewBranchesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outTiebreakAfterPreviewNoSignalPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outPolicyPreviewSignalUnavailablePtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -1200,6 +1208,10 @@ export const createPolicyWasmRuntime = (
           outDepthsPtr,
           outValuesPtr,
           outPreviewStatePtr,
+          outPreviewStatusesPtr,
+          outPreviewBranchesPtr,
+          outTiebreakAfterPreviewNoSignalPtr,
+          outPolicyPreviewSignalUnavailablePtr,
           previewStateSlotCount,
           previewInput.candidates.length,
         );
@@ -1228,6 +1240,10 @@ export const createPolicyWasmRuntime = (
             outDepthsPtr,
             outValuesPtr,
             outPreviewStatePtr,
+            outPreviewStatusesPtr,
+            outPreviewBranchesPtr,
+            outTiebreakAfterPreviewNoSignalPtr,
+            outPolicyPreviewSignalUnavailablePtr,
           ),
         };
       } finally {
@@ -1236,6 +1252,10 @@ export const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outDepthsPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outPreviewStatePtr, Math.max(I32_BYTES, previewStateOutputBytes));
+        wasm.ludoforge_policy_vm_dealloc(outPreviewStatusesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outPreviewBranchesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outTiebreakAfterPreviewNoSignalPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outPolicyPreviewSignalUnavailablePtr, outputBytes);
       }
     },
   };

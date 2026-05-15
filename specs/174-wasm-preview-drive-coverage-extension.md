@@ -117,7 +117,7 @@ Witness tooling:
 Decomposed via `/spec-to-tickets` on 2026-05-15:
 
 - [`archive/tickets/174WASMDEEPPRV-001.md`](../archive/tickets/174WASMDEEPPRV-001.md) — Phase 0 — Inventory unsupported preview-drive classes and wire production preview-drive counters
-- [`tickets/174WASMDEEPPRV-002.md`](../tickets/174WASMDEEPPRV-002.md) — Phase 1a — Serialize Foundation-20 preview-signal carriers across WASM FFI
+- [`archive/tickets/174WASMDEEPPRV-002.md`](../archive/tickets/174WASMDEEPPRV-002.md) — Phase 1a — Serialize Foundation-20 preview-signal carriers across WASM FFI
 - [`tickets/174WASMDEEPPRV-003.md`](../tickets/174WASMDEEPPRV-003.md) — Phase 1b — Bounded decision-stack publication ABI
 - [`tickets/174WASMDEEPPRV-004.md`](../tickets/174WASMDEEPPRV-004.md) — Phase 1c — Preview-state slot ABI extensions
 - [`tickets/174WASMDEEPPRV-005.md`](../tickets/174WASMDEEPPRV-005.md) — Phase 1d — Candidate grouping ABI

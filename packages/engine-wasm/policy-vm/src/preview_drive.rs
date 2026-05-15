@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 10;
+const ABI_VERSION: i32 = 11;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -16,6 +16,18 @@ const OUTCOME_COMPLETED: i32 = 1;
 const OUTCOME_STOCHASTIC: i32 = 2;
 const OUTCOME_DEPTH_CAP: i32 = 3;
 const OUTCOME_FAILED: i32 = 4;
+
+const PREVIEW_STATUS_READY: i32 = 1;
+const PREVIEW_STATUS_STOCHASTIC: i32 = 2;
+const PREVIEW_STATUS_HIDDEN: i32 = 3;
+const PREVIEW_STATUS_UNRESOLVED: i32 = 4;
+const PREVIEW_STATUS_FAILED: i32 = 5;
+const PREVIEW_STATUS_DEPTH_CAP: i32 = 6;
+const PREVIEW_STATUS_GATED: i32 = 7;
+
+const PREVIEW_BRANCH_NONE: i32 = 0;
+const PREVIEW_BRANCH_GREEDY: i32 = 1;
+const PREVIEW_BRANCH_CONTINUED_DEEPENING: i32 = 2;
 
 const OP_ADD_GLOBAL: i32 = 1;
 const OP_CHOOSE_ONE_GREEDY: i32 = 2;
@@ -35,6 +47,10 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
     out_depths_ptr: *mut i32,
     out_values_ptr: *mut i32,
     out_preview_state_ptr: *mut i32,
+    out_preview_statuses_ptr: *mut i32,
+    out_preview_branches_ptr: *mut i32,
+    out_tiebreak_after_preview_no_signal_ptr: *mut i32,
+    out_policy_preview_signal_unavailable_ptr: *mut i32,
     out_preview_state_len: usize,
     out_len: usize,
 ) -> i32 {
@@ -43,6 +59,10 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         || out_depths_ptr.is_null()
         || out_values_ptr.is_null()
         || out_preview_state_ptr.is_null()
+        || out_preview_statuses_ptr.is_null()
+        || out_preview_branches_ptr.is_null()
+        || out_tiebreak_after_preview_no_signal_ptr.is_null()
+        || out_policy_preview_signal_unavailable_ptr.is_null()
     {
         return STATUS_NULL_POINTER;
     }
@@ -58,6 +78,10 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         out_depths_ptr,
         out_values_ptr,
         out_preview_state_ptr,
+        out_preview_statuses_ptr,
+        out_preview_branches_ptr,
+        out_tiebreak_after_preview_no_signal_ptr,
+        out_policy_preview_signal_unavailable_ptr,
         out_preview_state_len,
         out_len,
     ) {
@@ -72,6 +96,10 @@ fn evaluate_preview_drive_batch(
     out_depths_ptr: *mut i32,
     out_values_ptr: *mut i32,
     out_preview_state_ptr: *mut i32,
+    out_preview_statuses_ptr: *mut i32,
+    out_preview_branches_ptr: *mut i32,
+    out_tiebreak_after_preview_no_signal_ptr: *mut i32,
+    out_policy_preview_signal_unavailable_ptr: *mut i32,
     out_preview_state_len: usize,
     out_len: usize,
 ) -> Result<(), i32> {
@@ -114,11 +142,21 @@ fn evaluate_preview_drive_batch(
         for _ in 0..preview_state_slot_count {
             preview_state_values.push(cursor.read()?);
         }
+        let preview_signal_carrier_explicit = read_bool_flag(cursor.read()?)?;
+        let preview_status = read_preview_status(cursor.read()?)?;
+        let preview_branch = read_preview_branch(cursor.read()?)?;
+        let tiebreak_after_preview_no_signal = read_bool_flag(cursor.read()?)?;
+        let policy_preview_signal_unavailable = read_bool_flag(cursor.read()?)?;
         states.push(PreviewDriveState {
             outcome: OUTCOME_COMPLETED,
             depth: 0,
             value: initial_value,
             preview_state_values,
+            preview_signal_carrier_explicit,
+            preview_status,
+            preview_branch,
+            tiebreak_after_preview_no_signal,
+            policy_preview_signal_unavailable,
         });
     }
 
@@ -302,6 +340,12 @@ fn evaluate_preview_drive_batch(
             *out_outcomes_ptr.add(index) = state.outcome;
             *out_depths_ptr.add(index) = state.depth;
             *out_values_ptr.add(index) = state.value;
+            *out_preview_statuses_ptr.add(index) = state.preview_status();
+            *out_preview_branches_ptr.add(index) = state.preview_branch;
+            *out_tiebreak_after_preview_no_signal_ptr.add(index) =
+                state.tiebreak_after_preview_no_signal;
+            *out_policy_preview_signal_unavailable_ptr.add(index) =
+                state.policy_preview_signal_unavailable;
             for (slot_index, value) in state.preview_state_values.iter().enumerate() {
                 *out_preview_state_ptr.add((index * preview_state_slot_count) + slot_index) =
                     *value;
@@ -327,15 +371,62 @@ fn as_usize(value: i32) -> Result<usize, i32> {
     Ok(value as usize)
 }
 
+fn read_bool_flag(value: i32) -> Result<i32, i32> {
+    match value {
+        0 | 1 => Ok(value),
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
+fn read_preview_status(value: i32) -> Result<i32, i32> {
+    match value {
+        PREVIEW_STATUS_READY
+        | PREVIEW_STATUS_STOCHASTIC
+        | PREVIEW_STATUS_HIDDEN
+        | PREVIEW_STATUS_UNRESOLVED
+        | PREVIEW_STATUS_FAILED
+        | PREVIEW_STATUS_DEPTH_CAP
+        | PREVIEW_STATUS_GATED => Ok(value),
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
+fn read_preview_branch(value: i32) -> Result<i32, i32> {
+    match value {
+        PREVIEW_BRANCH_NONE | PREVIEW_BRANCH_GREEDY | PREVIEW_BRANCH_CONTINUED_DEEPENING => {
+            Ok(value)
+        }
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
 #[derive(Clone)]
 struct PreviewDriveState {
     outcome: i32,
     depth: i32,
     value: i32,
     preview_state_values: Vec<i32>,
+    preview_signal_carrier_explicit: i32,
+    preview_status: i32,
+    preview_branch: i32,
+    tiebreak_after_preview_no_signal: i32,
+    policy_preview_signal_unavailable: i32,
 }
 
 impl PreviewDriveState {
+    fn preview_status(&self) -> i32 {
+        if self.preview_signal_carrier_explicit == 1 {
+            return self.preview_status;
+        }
+        match self.outcome {
+            OUTCOME_COMPLETED => PREVIEW_STATUS_READY,
+            OUTCOME_STOCHASTIC => PREVIEW_STATUS_STOCHASTIC,
+            OUTCOME_DEPTH_CAP => PREVIEW_STATUS_DEPTH_CAP,
+            OUTCOME_FAILED => PREVIEW_STATUS_FAILED,
+            _ => PREVIEW_STATUS_FAILED,
+        }
+    }
+
     fn add_to_primary_preview_state_value(&mut self, delta: i32) -> Result<(), i32> {
         self.add_to_preview_state_value(0, delta)
     }

@@ -6,6 +6,24 @@ export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0014;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
+export type PolicyWasmPreviewStatus =
+  | 'ready'
+  | 'stochastic'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'gated';
+
+export type PolicyWasmPreviewBranch = 'none' | 'greedy' | 'continuedDeepening';
+
+export interface PolicyWasmPreviewSignalCarrier {
+  readonly previewStatus: PolicyWasmPreviewStatus;
+  readonly previewBranch: PolicyWasmPreviewBranch;
+  readonly tiebreakAfterPreviewNoSignal: boolean;
+  readonly policyPreviewSignalUnavailable: boolean;
+}
+
 export type PolicyWasmPreviewDriveUnsupportedClass =
   | 'gated'
   | 'hidden-sampling'
@@ -64,6 +82,8 @@ export interface PolicyWasmPreviewDriveCandidate {
   readonly stableMoveKey: string;
   readonly initialValue: number;
   readonly initialPreviewStateValues?: readonly number[];
+  readonly previewBranch?: PolicyWasmPreviewBranch;
+  readonly previewSignalCarrier?: PolicyWasmPreviewSignalCarrier;
 }
 
 export interface PolicyWasmPreviewDriveBatchInput {
@@ -84,6 +104,7 @@ export interface PolicyWasmPreviewDriveRow {
   readonly depth: number;
   readonly value: number;
   readonly previewStateValues?: Readonly<Record<string, number>>;
+  readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
 }
 
 export type PolicyWasmPreviewDriveResult =
@@ -134,6 +155,11 @@ export const encodePolicyWasmPreviewDriveInput = (
       stablePayloadCode({ literal: candidate.stableMoveKey }),
       candidate.initialValue,
       ...initialPreviewStateValues,
+      candidate.previewSignalCarrier === undefined ? 0 : 1,
+      previewStatusCode(candidate.previewSignalCarrier?.previewStatus ?? 'ready'),
+      previewBranchCode(candidate.previewSignalCarrier?.previewBranch ?? candidate.previewBranch ?? 'none'),
+      candidate.previewSignalCarrier?.tiebreakAfterPreviewNoSignal === true ? 1 : 0,
+      candidate.previewSignalCarrier?.policyPreviewSignalUnavailable === true ? 1 : 0,
     );
   }
   for (const step of input.steps) {
@@ -156,6 +182,10 @@ export const decodePolicyWasmPreviewDriveRows = (
   outDepthsPtr: number,
   outValuesPtr: number,
   outPreviewStatePtr: number,
+  outPreviewStatusesPtr: number,
+  outPreviewBranchesPtr: number,
+  outTiebreakAfterPreviewNoSignalPtr: number,
+  outPolicyPreviewSignalUnavailablePtr: number,
 ): readonly PolicyWasmPreviewDriveRow[] => {
   const view = new DataView(memory);
   const slots = input.previewStateSlots ?? [];
@@ -171,6 +201,12 @@ export const decodePolicyWasmPreviewDriveRows = (
       outcome: decodeOutcome(view.getInt32(outOutcomesPtr + (index * I32_BYTES), true)),
       depth: view.getInt32(outDepthsPtr + (index * I32_BYTES), true),
       value: view.getInt32(outValuesPtr + (index * I32_BYTES), true),
+      previewSignalCarrier: {
+        previewStatus: decodePreviewStatus(view.getInt32(outPreviewStatusesPtr + (index * I32_BYTES), true)),
+        previewBranch: decodePreviewBranch(view.getInt32(outPreviewBranchesPtr + (index * I32_BYTES), true)),
+        tiebreakAfterPreviewNoSignal: decodeBoolFlag(view.getInt32(outTiebreakAfterPreviewNoSignalPtr + (index * I32_BYTES), true)),
+        policyPreviewSignalUnavailable: decodeBoolFlag(view.getInt32(outPolicyPreviewSignalUnavailablePtr + (index * I32_BYTES), true)),
+      },
       ...(previewStateValues === undefined ? {} : { previewStateValues }),
     };
   });
@@ -256,6 +292,80 @@ const decodeOutcome = (code: number): PolicyWasmPreviewDriveOutcome => {
     default:
       throw new Error(`Policy WASM preview-drive returned unknown outcome ${code}.`);
   }
+};
+
+const previewStatusCode = (previewStatus: PolicyWasmPreviewStatus): number => {
+  switch (previewStatus) {
+    case 'ready':
+      return 1;
+    case 'stochastic':
+      return 2;
+    case 'hidden':
+      return 3;
+    case 'unresolved':
+      return 4;
+    case 'failed':
+      return 5;
+    case 'depthCap':
+      return 6;
+    case 'gated':
+      return 7;
+  }
+};
+
+const decodePreviewStatus = (code: number): PolicyWasmPreviewStatus => {
+  switch (code) {
+    case 1:
+      return 'ready';
+    case 2:
+      return 'stochastic';
+    case 3:
+      return 'hidden';
+    case 4:
+      return 'unresolved';
+    case 5:
+      return 'failed';
+    case 6:
+      return 'depthCap';
+    case 7:
+      return 'gated';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview status ${code}.`);
+  }
+};
+
+const previewBranchCode = (previewBranch: PolicyWasmPreviewBranch): number => {
+  switch (previewBranch) {
+    case 'none':
+      return 0;
+    case 'greedy':
+      return 1;
+    case 'continuedDeepening':
+      return 2;
+  }
+};
+
+const decodePreviewBranch = (code: number): PolicyWasmPreviewBranch => {
+  switch (code) {
+    case 0:
+      return 'none';
+    case 1:
+      return 'greedy';
+    case 2:
+      return 'continuedDeepening';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview branch ${code}.`);
+  }
+};
+
+const decodeBoolFlag = (code: number): boolean => {
+  if (code === 0) {
+    return false;
+  }
+  if (code === 1) {
+    return true;
+  }
+  throw new Error(`Policy WASM preview-drive returned unknown boolean flag ${code}.`);
 };
 
 const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupportedClass): number => {

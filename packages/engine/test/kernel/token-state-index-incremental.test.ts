@@ -13,6 +13,7 @@ import {
 } from '../../src/kernel/token-state-index.js';
 import { applyPublishedDecisionFromCanonicalState } from '../../src/kernel/microturn/apply.js';
 import { publishMicroturnGreedyChooseOne } from '../../src/kernel/microturn/publish.js';
+import { createMutableState, freezeState } from '../../src/kernel/state-draft.js';
 import {
   applyEffects,
   asPlayerId,
@@ -342,6 +343,52 @@ describe('POLPREVDRIVE-007 residual token-state index cache', () => {
     assert.equal(getTokenStateIndex(canonical), canonicalIndex);
     assert.notEqual(getTokenStateIndex(preview), canonicalIndex);
   });
+
+  it('preserves token-state index across mutable top-level zone clones', () => {
+    const canonical = makeTokenState({
+      source: [{ id: asTokenId('unit'), type: 'pawn', props: {} }],
+      target: [],
+    } as unknown as GameState['zones']);
+    const canonicalIndex = getTokenStateIndex(canonical);
+    __internal_for_tests.resetBuildTokenStateIndexCount();
+
+    const mutableClone = freezeState(createMutableState(canonical));
+    const clonedIndex = getTokenStateIndex(mutableClone);
+
+    assert.equal(clonedIndex, canonicalIndex);
+    assert.equal(
+      __internal_for_tests.getBuildTokenStateIndexCount(),
+      0,
+      'top-level zones clones should inherit the cached token-state index instead of rebuilding',
+    );
+    assertIndexMatchesFreshRebuild('mutable top-level zone clone', mutableClone, clonedIndex);
+  });
+
+  it('refreshes large zone mutations without forcing a full token-state rebuild', () => {
+    const ctx = makeLargeZoneMoveContext();
+    assertIndexMatchesFreshRebuild('initial large-zone cached state', ctx.state, getTokenStateIndex(ctx.state));
+    __internal_for_tests.resetBuildTokenStateIndexCount();
+
+    const result = applyEffects([
+      eff({ moveToken: { token: '$unit', from: 'source:none', to: 'target:none', position: 'bottom' } }),
+      eff({
+        bindValue: {
+          bind: '$probeStatus',
+          value: { _t: 2 as const, ref: 'tokenProp', token: '$probe', prop: 'status' },
+        },
+      }),
+    ], ctx);
+
+    assert.equal(result.bindings.$probeStatus, 'active');
+    assert.equal(result.state.zones['source:none']?.length, 23);
+    assert.equal(result.state.zones['target:none']?.length, 4);
+    assert.equal(
+      __internal_for_tests.getBuildTokenStateIndexCount(),
+      0,
+      'large mutable zone updates should refresh the copied index instead of invalidating and rebuilding',
+    );
+    assertIndexMatchesFreshRebuild('large-zone move final state', result.state, getTokenStateIndex(result.state));
+  });
 });
 
 function assertIndexMatchesFreshRebuild(
@@ -436,6 +483,51 @@ function makeEffectScopedIndexContext(): EffectContext {
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),
     bindings: { $unit: 'u1' },
+    moveParams: {},
+    collector: createCollector(),
+  });
+}
+
+function makeLargeZoneMoveContext(): EffectContext {
+  const def: GameDef = {
+    metadata: { id: 'large-zone-token-state-index-refresh-test', players: { min: 1, max: 1 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('source:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+      { id: asZoneId('target:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+    ],
+    tokenTypes: [{ id: 'unit', props: { status: 'string' } }],
+    setup: [],
+    turnStructure: { phases: [] },
+    actions: [],
+    triggers: [],
+    terminal: { conditions: [] },
+  };
+  const sourceTokens = Array.from({ length: 24 }, (_, index): Token => ({
+    id: asTokenId(`u${index}`),
+    type: 'unit',
+    props: { status: 'active' },
+  }));
+  const targetTokens = Array.from({ length: 3 }, (_, index): Token => ({
+    id: asTokenId(`t${index}`),
+    type: 'unit',
+    props: { status: 'active' },
+  }));
+  const state = makeTokenState({
+    'source:none': sourceTokens,
+    'target:none': targetTokens,
+  });
+
+  return makeExecutionEffectContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    rng: createRng(11n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: { $unit: 'u0', $probe: 'u10' },
     moveParams: {},
     collector: createCollector(),
   });

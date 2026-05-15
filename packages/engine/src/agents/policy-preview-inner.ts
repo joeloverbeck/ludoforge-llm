@@ -15,6 +15,7 @@ import type {
   MicroturnState,
 } from '../kernel/microturn/types.js';
 import { createMutableState, freezeState } from '../kernel/state-draft.js';
+import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
 import type {
   AgentPreviewAuthoredCompletionPolicy,
   AgentPreviewFallbackCompletionPolicy,
@@ -337,6 +338,8 @@ const driveOption = (
     syntheticDecisions: [...syntheticDecisions],
     completionPolicyFallbackCount,
   });
+  const draftTokenStateIndex = createDraftTokenStateIndex(input.state, input.runtime?.tokenStateIndexCache);
+  draftTokenStateIndex.attachPreviewState(input.state);
   let state = applyPublishedDecision(
     input.def,
     freezeState(createMutableState(input.state)),
@@ -345,6 +348,8 @@ const driveOption = (
     { advanceToDecisionPoint: true },
     input.runtime,
   ).state;
+  draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
+  draftTokenStateIndex.attachAsCanonical(state);
   let depth = 1;
 
   while (true) {
@@ -410,14 +415,17 @@ const driveOption = (
         completionPolicy: nextDecisionResult.usedFallback ? 'greedy' : completionPolicy,
       });
     }
+    const prevState = state;
     state = applyPublishedDecision(
       input.def,
-      state,
+      prevState,
       microturn,
       nextDecision,
       { advanceToDecisionPoint: true },
       input.runtime,
     ).state;
+    draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
+    draftTokenStateIndex.attachAsCanonical(state);
     depth += 1;
   }
 };

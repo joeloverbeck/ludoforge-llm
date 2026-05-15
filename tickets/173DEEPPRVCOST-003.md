@@ -1,6 +1,6 @@
 # 173DEEPPRVCOST-003: Phase 1 — Train continuedDeepening token-state-index residual closure
 
-**Status**: PENDING
+**Status**: BLOCKED by residual non-token-index train elapsed gate
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — preview-drive/token-state-index reuse path
@@ -142,3 +142,102 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 8. `pnpm turbo typecheck`
 9. `pnpm turbo test --force`
 10. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completion date**: not complete; blocked on residual measured gate as of 2026-05-15.
+
+### User-Approved Boundary Reset
+
+After the first post-003 witness eliminated the token-index counters but left train elapsed gates red, the user requested a reassessment against `docs/FOUNDATIONS.md` and then approved option 2 on 2026-05-15: keep investigating within this ticket only while the next owner remains in the generic token-index/cache seam. The final retained changes stay inside that seam. The remaining dominant owner is no longer token-state-index churn, so this ticket stays nonterminal/blocked rather than claiming Spec 173 completion.
+
+### Chosen Residual Owner
+
+The chosen token-index owner was mutable preview state cache lifetime:
+
+- `createMutableState` cloned the top-level `zones` object without copying the cached token-state index.
+- Large mutable zone mutations invalidated the copied index when more than 16 token ids were affected, forcing later token-backed reads to rebuild a full token-state index.
+- Token effect handlers with a draft tracker bypassed the cache and scanned zones directly through `findTokenStateIndexEntry`, even after mutable-zone refresh made the cache safe to use.
+- `chooseNStep` inner preview applies did not prewarm the source state's token index before cloning/applying synthetic add/confirm branches.
+
+### What Landed
+
+- Copied the cached token-state index across mutable top-level state clones in `createMutableState`.
+- Removed the large-zone incremental-refresh cutoff so token-zone mutations refresh affected entries instead of invalidating the entire mutable-state index.
+- Routed token occurrence lookup through `getTokenStateIndexEntry` for mutable effect scopes instead of the direct full-zone scan path.
+- Prewarmed token-state indexes for choose-N inner preview source states before synthetic applies.
+- Preserved preview-drive bounds, policy profile data, FITL rules, and caller-visible immutable `GameState` semantics.
+- Added focused token-index lifecycle coverage proving large zone mutations and mutable top-level zone clones avoid full token-index rebuilds while remaining byte-equivalent to fresh index construction.
+- Generated final post-003 witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-003-final.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-003-final.csv`
+
+### Measured Result and Materiality
+
+| Metric | Post-002 baseline | Post-003 final | Delta | Verdict |
+|---|---:|---:|---:|---|
+| `train:chooseNStep:add` token index builds | 33,203 | 0 | -100% | token-index axis closed |
+| `train:chooseNStep:confirm` token index builds | 6,242 | 0 | -100% | token-index axis closed |
+| Combined train token index builds | 39,445 | 0 | -100% | token-index axis closed |
+| `train:chooseNStep:add` slow mean | 2,537.9756 ms | 2,438.9376 ms | -3.90% | improved, still red |
+| `train:chooseNStep:confirm` slow mean | 1,781.6475 ms | 1,698.4784 ms | -4.67% | improved, still red |
+| Slowest seed 1005 wall time | 107,468.38 ms | 104,515.38 ms | -2.75% | improved, still above `<=60 s` soft target |
+
+The retained change is correct generic substrate and measurably improves the owned token-index seam, but the train elapsed-time gates remain red. Foundation #15 and #16 therefore require naming the residual owner instead of marking Spec 173 complete by assertion.
+
+### Residual Owner / Successor
+
+A single-seed CPU profile after token-index closure (`/tmp/fitl-1005-post003.cpuprofile`, diagnostic only) showed the remaining top self-time shifted away from token-index rebuilds and toward:
+
+- `digestEncodedDecisionStackFrame` / `zobristKey` decision-stack hashing.
+- `encodeDecisionStackFrameDigestInput` decision-stack serialization.
+- `stableStringify` in `policy-encoded-state-cache.ts` projection-key construction.
+
+Successor `tickets/173DEEPPRVCOST-004.md` owns that non-overlapping residual. This ticket does not widen into encoded-state projection-key or Zobrist decision-stack digest work.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness / assertion | Status | Proof lane |
+|---|---|---|---|
+| Token occurrence semantics preserved | Cached index matches fresh rebuild across duplicate tokens, changed zones, and full deletion | proven | `token-state-index-incremental.test.js` |
+| Mutable top-level zone clones inherit cache safely | Clone reads reuse the cached index without rebuild and deep-equal fresh index | proven | `token-state-index-incremental.test.js` |
+| Large mutable zone updates refresh rather than rebuild | Move across zones with more than 16 affected token ids keeps build count at 0 and matches fresh index | proven | `token-state-index-incremental.test.js` |
+| Engine-agnostic boundary preserved | No FITL ids, action ids, card ids, or profile changes | proven by diff inspection | source diff |
+| Measured token-index seam handled | Final 15-seed witness reports train token-index builds at 0 | proven | `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-003-final.md` |
+
+### Command Ledger
+
+| Ticket section | Literal command / shorthand | Ran directly / substituted / pending | Final citation |
+|---|---|---|---|
+| Build | `pnpm -F @ludoforge/engine build` | ran directly after final source edits | exit 0 |
+| Focused token-index tests | focused token-index correctness/cache lifecycle tests | ran compiled direct test | `pnpm -F @ludoforge/engine exec node --test dist/test/kernel/token-state-index-incremental.test.js`; 14 tests passed |
+| Final decomposition witness | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD>` | ran with `--date 2026-05-15-post-003-final` | exit 0; all 15 seeds completed; report and CSV written |
+| Remaining-owner CPU profile | diagnostic single-seed profile | substituted for root-cause classification; not a committed artifact | `node --cpu-prof ... --child-seed 1005`; showed top self-time in decision-stack hashing and projection-key stringification |
+| Determinism/equivalence gates | focused replay/fork/zobrist/bytecode subset | ran compiled direct subset | 26 tests passed across 7 suites |
+| FITL rules | `pnpm -F @ludoforge/engine test:integration:fitl-rules` | ran directly | 79/79 files passed |
+| Repo lint/typecheck/test | `pnpm turbo lint`, `pnpm turbo typecheck`, `pnpm turbo test --force` | ran directly | lint exit 0; typecheck exit 0; forced test exit 0 with 5/5 tasks successful and engine 81/81 default files passed |
+| Dependency graph | `pnpm run check:ticket-deps` | ran directly after final ticket/spec edits | ticket dependency integrity check passed for 3 active tickets and 2344 archived tickets |
+
+### Source-Size Ledger
+
+`path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+`packages/engine/src/agents/policy-preview.ts | 1285 | 1286 | no, preexisting over cap | +1 | one-line source-state token-index attach point in existing preview-drive flow; extraction would obscure the measured seam | none`
+
+`packages/engine/src/agents/policy-preview-inner.ts | 525 | 533 | no | +8 | kept local to inner preview apply/delta lifecycle | none`
+
+`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 593 | 610 | no | +17 | helper added to centralize choose-N preview token-index prewarm | local helper prevents repeated apply/prewarm code | none`
+
+`packages/engine/src/kernel/effects-token.ts | 1194 | 1187 | no, preexisting over cap | -7 | removed stale bypass/threshold instead of adding parallel route | none`
+
+`packages/engine/src/kernel/state-draft.ts | 225 | 228 | no | +3 | canonical mutable clone factory is the correct single source for top-level zone clone cache inheritance | none`
+
+### Deferred Scope
+
+- `tickets/173DEEPPRVCOST-004.md` owns the remaining train continuedDeepening elapsed owner: decision-stack hashing and encoded projection-key stringification after token-index builds are zero.
+- Coup/govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket after train residual ownership is exhausted or reclassified.
+- WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.
+
+### Late-Edit / Proof Validity
+
+Post-witness edits to this ticket and the successor ticket/spec prose do not change runtime behavior. Final correctness, determinism, hygiene, and dependency lanes ran after the retained runtime/source edits.

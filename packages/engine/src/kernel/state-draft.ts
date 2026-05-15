@@ -11,6 +11,7 @@
  */
 
 import type { GameState, Token } from './types.js';
+import { copyCachedTokenStateIndex } from './token-state-index.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,7 +51,7 @@ export interface DraftTracker {
  * outer map never alias the original state.
  */
 export function createMutableState(state: GameState): MutableGameState {
-  return {
+  const mutable = {
     ...state,
     globalVars: { ...state.globalVars },
     perPlayerVars: { ...state.perPlayerVars },
@@ -64,6 +65,8 @@ export function createMutableState(state: GameState): MutableGameState {
     activeLastingEffects: state.activeLastingEffects !== undefined ? [...state.activeLastingEffects] : undefined,
     interruptPhaseStack: state.interruptPhaseStack !== undefined ? [...state.interruptPhaseStack] : undefined,
   };
+  copyCachedTokenStateIndex(state, mutable);
+  return mutable;
 }
 
 /** Factory returning a fresh DraftTracker with empty Sets. */

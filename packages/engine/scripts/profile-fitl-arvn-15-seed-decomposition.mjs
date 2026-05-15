@@ -422,7 +422,7 @@ function buildRollup(perSeed, decisions) {
 
   return {
     date: config.date,
-    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs}`,
+    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}`,
     maxTurns: config.maxTurns,
     timeoutMs: config.timeoutMs,
     seedCount: config.seeds.length,
@@ -537,7 +537,7 @@ function renderMarkdown(rollup, csvPath) {
     '# FITL ARVN 15-Seed Per-Microturn-Class Decomposition',
     '',
     `**Date**: ${rollup.date}`,
-    '**Status**: Phase 0 measurement witness for Spec 173.',
+    '**Status**: Spec 173 measurement witness.',
     `**Command**: \`${rollup.command}\``,
     `**CSV**: \`${relativeToRepo(csvPath)}\``,
     '',

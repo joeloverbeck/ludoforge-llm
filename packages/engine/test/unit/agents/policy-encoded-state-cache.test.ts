@@ -1,5 +1,6 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { PolicyEvaluationContext } from '../../../src/agents/policy-evaluation-core.js';
@@ -70,7 +71,7 @@ function createDef(id: string): GameDef {
   return {
     metadata: { id, players: { min: 2, max: 2 } },
     constants: {},
-    globalVars: [],
+    globalVars: [{ name: 'score', type: 'int', init: 0, min: -10, max: 10 }],
     perPlayerVars: [],
     zones: [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', zoneKind: 'board' },
@@ -126,6 +127,15 @@ function resolvedEncodedState(context: PolicyEvaluationContext): EncodedState | 
 }
 
 describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
+  it('keeps projection key sorting locale-independent', () => {
+    const source = readFileSync(
+      new URL('../../../src/agents/policy-encoded-state-cache.js', import.meta.url),
+      'utf8',
+    );
+
+    assert.equal(source.includes('localeCompare'), false);
+  });
+
   it('reuses encoded state across contexts sharing the same GameState object and runtime', () => {
     const def = createDef('policy-encoded-state-cache-reuse');
     const runtime = createGameDefRuntime(def);
@@ -141,11 +151,11 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.deepEqual(firstEncoded, buildEncodedState(state, resolvedLayout(first)));
   });
 
-  it('reuses encoded state for canonically equal distinct GameState objects', () => {
+  it('reuses encoded state for encoded-equivalent distinct GameState objects', () => {
     const def = createDef('policy-encoded-state-cache-distinct-state');
     const runtime = createGameDefRuntime(def);
     const firstState = initialState(def, 172005, 2).state;
-    const secondState = initialState(def, 172005, 2).state;
+    const secondState = { ...initialState(def, 172005, 2).state, turnCount: firstState.turnCount + 1 };
 
     const firstEncoded = resolvedEncodedState(createContext(def, runtime, firstState));
     const secondEncoded = resolvedEncodedState(createContext(def, runtime, secondState));
@@ -153,17 +163,21 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.ok(firstEncoded !== undefined);
     assert.ok(secondEncoded !== undefined);
     assert.notEqual(firstState, secondState);
+    assert.notEqual(secondState.turnCount, firstState.turnCount);
     assert.equal(secondEncoded, firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(firstState), firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(secondState), secondEncoded);
     assert.deepEqual(secondEncoded, firstEncoded);
   });
 
-  it('does not collide for distinct serialized states with the same stateHash bucket', () => {
+  it('does not collide for distinct encoded-state projections with the same stateHash bucket', () => {
     const def = createDef('policy-encoded-state-cache-hash-collision-guard');
     const runtime = createGameDefRuntime(def);
     const firstState = initialState(def, 172005, 2).state;
-    const secondState = { ...firstState, turnCount: firstState.turnCount + 1 };
+    const secondState = {
+      ...firstState,
+      globalVars: { ...firstState.globalVars, score: 1 },
+    };
 
     const firstEncoded = resolvedEncodedState(createContext(def, runtime, firstState));
     const secondEncoded = resolvedEncodedState(createContext(def, runtime, secondState));
@@ -175,7 +189,7 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.notEqual(secondEncoded, firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(firstState), firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(secondState), secondEncoded);
-    assert.deepEqual(secondEncoded, firstEncoded);
+    assert.notDeepEqual([...secondEncoded.globals], [...firstEncoded.globals]);
   });
 
   it('resets the run-local encoded-state cache across runtime forks', () => {
@@ -188,6 +202,7 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.ok(encoded !== undefined);
     assert.equal(runtime.policyEncodedStateCache.get(state), encoded);
     assert.notEqual(forked.policyEncodedStateCache, runtime.policyEncodedStateCache);
+    assert.notEqual(forked.policyEncodedStateProjectionCache, runtime.policyEncodedStateProjectionCache);
     assert.equal(forked.policyEncodedStateCache.get(state), undefined);
   });
 

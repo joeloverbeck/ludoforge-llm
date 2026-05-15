@@ -1,6 +1,5 @@
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { serializeGameState } from '../kernel/serde.js';
 import type { GameState } from '../kernel/types.js';
 
 const stableStringify = (value: unknown): string => {
@@ -11,13 +10,20 @@ const stableStringify = (value: unknown): string => {
     return `[${value.map(stableStringify).join(',')}]`;
   }
   return `{${Object.entries(value as Readonly<Record<string, unknown>>)
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
     .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
     .join(',')}}`;
 };
 
-const canonicalSerializedStateKey = (state: GameState): string =>
-  stableStringify(serializeGameState(state));
+const encodedStateProjectionKey = (state: GameState): string =>
+  stableStringify({
+    globalMarkers: state.globalMarkers,
+    globalVars: state.globalVars,
+    markers: state.markers,
+    perPlayerVars: state.perPlayerVars,
+    zoneVars: state.zoneVars,
+    zones: state.zones,
+  });
 
 let objectHitCount = 0;
 let hashHitCount = 0;
@@ -35,13 +41,12 @@ export function resolvePolicyEncodedState(
     return objectCached;
   }
 
-  const serializedState = canonicalSerializedStateKey(state);
-  const hashEntries = runtime.policyEncodedStateHashCache.get(state.stateHash) ?? [];
-  const hashCached = hashEntries.find((entry) => entry.serializedState === serializedState)?.encodedState;
-  if (hashCached !== undefined) {
+  const projectionKey = encodedStateProjectionKey(state);
+  const projectionCached = runtime.policyEncodedStateProjectionCache.get(projectionKey);
+  if (projectionCached !== undefined) {
     hashHitCount += 1;
-    runtime.policyEncodedStateCache.set(state, hashCached);
-    return hashCached;
+    runtime.policyEncodedStateCache.set(state, projectionCached);
+    return projectionCached;
   }
 
   missCount += 1;
@@ -50,10 +55,7 @@ export function resolvePolicyEncodedState(
     return undefined;
   }
   runtime.policyEncodedStateCache.set(state, encoded);
-  runtime.policyEncodedStateHashCache.set(state.stateHash, [
-    ...hashEntries,
-    { serializedState, encodedState: encoded },
-  ]);
+  runtime.policyEncodedStateProjectionCache.set(projectionKey, encoded);
   return encoded;
 }
 

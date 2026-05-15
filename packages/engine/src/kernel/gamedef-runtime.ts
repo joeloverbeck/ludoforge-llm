@@ -39,14 +39,10 @@ export interface CardDrawRuntimeState {
 export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
 export const TOKEN_STATE_INDEX_CACHE_LIMIT = 4_096;
 export const POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT = 4_096;
-export const POLICY_ENCODED_STATE_HASH_CACHE_LIMIT = 4_096;
+export const POLICY_ENCODED_STATE_PROJECTION_CACHE_LIMIT = 4_096;
 export type PolicyWasmBytecodeInputCache = LruCache<string, Uint8Array>;
 export type PolicyWasmBytecodeStateWordsCache = LruCache<string, Int32Array>;
-export interface PolicyEncodedStateHashCacheEntry {
-  readonly serializedState: string;
-  readonly encodedState: EncodedState;
-}
-export type PolicyEncodedStateHashCache = LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>;
+export type PolicyEncodedStateProjectionCache = LruCache<string, EncodedState>;
 
 export interface GameDefRuntime {
   /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */
@@ -83,10 +79,11 @@ export interface GameDefRuntime {
   readonly policyEncodedStateCache: WeakMap<GameState, EncodedState>;
   /**
    * `runLocal`: memoizes encoded-state projections for distinct but
-   * canonically identical GameState objects. Entries are addressed by
-   * stateHash only as an accelerator; serialized-state equality guards reuse.
+   * encoded-equivalent GameState objects. The key is built from only the
+   * GameState fields consumed by buildEncodedState, so decision-stack-only
+   * preview states can safely reuse the same encoded projection.
    */
-  readonly policyEncodedStateHashCache: PolicyEncodedStateHashCache;
+  readonly policyEncodedStateProjectionCache: PolicyEncodedStateProjectionCache;
   /**
    * `sharedStructural`: lazily populated compiled query/filter plans keyed by
    * compiled AST object identity. Plans depend only on GameDef structure; they
@@ -145,7 +142,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
-    policyEncodedStateHashCache: new LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>(POLICY_ENCODED_STATE_HASH_CACHE_LIMIT),
+    policyEncodedStateProjectionCache: new LruCache<string, EncodedState>(POLICY_ENCODED_STATE_PROJECTION_CACHE_LIMIT),
     compiledQueryPlanCache: createCompiledQueryPlanCache(),
     policyBytecodeCache: new WeakMap<CompiledPolicyExpr, PolicyBytecode>(),
     scheduleIndex,
@@ -166,7 +163,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * `zobristTable.frameDigestCache`, `publicationProbeCache`,
  * `tokenStateIndexCache`, `policyWasmBytecodeInputCache`, and
  * `policyWasmBytecodeStateWordsCache`, `policyEncodedStateCache`, and
- * `policyEncodedStateHashCache`; all reset at game boundaries so
+ * `policyEncodedStateProjectionCache`; all reset at game boundaries so
  * long-lived callers do not accumulate cross-run state.
  * `compiledQueryPlanCache` and `policyBytecodeCache` remain shared structural
  * across forks.
@@ -184,7 +181,7 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
-    policyEncodedStateHashCache: new LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>(POLICY_ENCODED_STATE_HASH_CACHE_LIMIT),
+    policyEncodedStateProjectionCache: new LruCache<string, EncodedState>(POLICY_ENCODED_STATE_PROJECTION_CACHE_LIMIT),
     scheduleIndex: forkScheduleIndexForRun(runtime.scheduleIndex),
   } as unknown as ForkedGameDefRuntimeForRun;
 }

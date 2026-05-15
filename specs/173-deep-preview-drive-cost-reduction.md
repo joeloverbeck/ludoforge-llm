@@ -224,10 +224,12 @@ Spec 173 does not amend any Foundation. The Phase-N escalation gate, if it fires
 Decomposed via `/spec-to-tickets` on 2026-05-15:
 
 - [`archive/tickets/173DEEPPRVCOST-001.md`](../archive/tickets/173DEEPPRVCOST-001.md) — Phase 0 — Per-seed × per-microturn-class perf witness (covers §4.1, §5 Phase 0, §6.3; completed 2026-05-15)
+- [`tickets/173DEEPPRVCOST-002.md`](../tickets/173DEEPPRVCOST-002.md) — Phase 1 — Train continuedDeepening encoded-build axis closure (covers §4.2; targets the dominant Phase 0 hot axes `train:chooseNStep:add | continuedDeepening` and `train:chooseNStep:confirm | continuedDeepening`, ~74% of slow-tier top-10 total time; blocked after post-002 witness because encoded builds dropped to `0` but elapsed train gates remain red)
+- [`tickets/173DEEPPRVCOST-003.md`](../tickets/173DEEPPRVCOST-003.md) — Phase 1 — Train continuedDeepening token-state-index residual closure (covers the post-002 residual where train encoded builds are `0` but token index builds remain `33,203` for `train:chooseNStep:add` and `6,242` for `train:chooseNStep:confirm`)
 
-Phase 1 ticket slices may now be authored via a subsequent `/spec-to-tickets` invocation against this spec. Each Phase 1 ticket cites the archived Phase 0 axis it closes and re-runs the witness post-merge. Number of slices depends on what Phase 0 revealed; expect 3–8 per the spec 172 precedent.
+Phase 1 tickets land sequentially per §4.4 (the post-merge witness output of ticket K informs ticket K+1's scope). The post-002 rollup showed a material train improvement but left the train elapsed-time gates red after encoded builds were eliminated, so ticket 003 owns the next non-overlapping train residual before the series selects secondary coup/govern/event axes. Likely later candidates if 003 does not fully close the §1 soft target: secondary slow-tier classes (`coupArvnRedeployPolice:chooseOne`, `govern:chooseN*`), event-class bytecode-cache miss rate, or any new top axis that emerges once train cost recedes. Total Phase 1 ticket count depends on what each witness reveals; expect 2–4 more slices per the spec 172 precedent.
 
-**Phase N**: no ticket in this spec. If §4.2(b) or (c) fires (Phase 1 cannot meet the §1 soft target via TS-side closure), the follow-up Spec 174 is authored and decomposed under its own ticket prefix.
+**Phase N**: no ticket in this spec. If §4.2(b) or (c) fires (Phase 1 cannot meet the §1 soft target via TS-side closure, OR three consecutive Phase 1 tickets show no measurable improvement), the follow-up Spec 174 is authored and decomposed under its own ticket prefix.
 
 Phase 0 landed and was reviewed before any Phase 1 fix landed, satisfying the mandatory ordering for the rest of this spec.
 

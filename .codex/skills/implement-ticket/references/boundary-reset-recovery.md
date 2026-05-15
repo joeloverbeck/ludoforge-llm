@@ -73,6 +73,17 @@ Use this path when the active ticket remains closeable after the correction. If 
 
 Before terminal closeout after this path, run the same reset compliance check: authorization recorded, active artifacts corrected before resumed coding or explicitly repaired with rerun proof, fresh checkpoint emitted, proof lanes re-extracted, and no unapproved later mismatch class folded into the terminal status.
 
+Use this compact checkpoint delta immediately after a user-approved narrowed, deferred, or sibling-owned option when the reset changes the active deliverable, proof lane, witness path, status, or residual owner:
+
+- `approved option`: `<option label and user confirmation>`
+- `scope effect`: `<narrows ticket | defers sibling work | proof-only correction | blocks retained substrate | other>`
+- `active boundary now`: `<what the active ticket still owns>`
+- `deferred/residual owner`: `<successor id/path, same active ticket, or confirmed sibling>`
+- `durable artifacts patched`: `<active ticket/spec/sibling/report paths already updated, or pending before coding>`
+- `proof lanes re-extracted`: `<new decisive metric, correctness lanes, dependency/integrity lane, and any substituted commands>`
+- `terminal status plan`: `<COMPLETED/IMPLEMENTED only if green; BLOCKED/PARTIAL/nonterminal if acceptance remains red>`
+- `later mismatch guard`: `<what class the approval covers; stop for new 1-3-1 if another file/artifact/seed/corpus/witness noun changes>`
+
 ## Foundation Numeric Normalization
 
 When a `FOUNDATIONS.md` reset requires replacing non-integer rule-authoritative values with an exact integer representation, do not treat the edit as a mechanical value rewrite. Use this proof shape:

@@ -1,6 +1,6 @@
 # 172POLEVASTA-004: Phase 3 — runtime-owned policyBytecodeCache (sharedStructural GameDefRuntime field)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/gamedef-runtime.ts` (new `sharedStructural` field); `packages/engine/src/agents/policy-evaluation-core.ts` (bytecode resolution path)
@@ -98,3 +98,55 @@ Add a test asserting: a consideration's compiled bytecode is **reused** across t
 3. `pnpm -F @ludoforge/engine test:perf` (witness — bytecode/feature-table seams drop to first-touch-only)
 4. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
 5. `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:integration:fitl-rules`
+
+## Outcome
+
+Completion date: 2026-05-15.
+
+Implementation complete.
+
+What landed:
+
+- Added `GameDefRuntime.policyBytecodeCache` as a `sharedStructural` `WeakMap<CompiledPolicyExpr, PolicyBytecode>` constructed in `createGameDefRuntime` and carried unchanged through `forkGameDefRuntimeForRun`.
+- Replaced the always-empty per-context bytecode cache with a runtime-owned lookup in `PolicyEvaluationContext.evaluateCompiledExprWithVm` when `input.runtime` is present and the context uses the canonical per-`GameDef` encoded-state layout.
+- Preserved a runtime-absent fallback cache for one-shot/no-runtime paths. Explicit non-canonical `encodedStateLayout` overrides also use the fallback path so the runtime cache remains keyed only by `CompiledPolicyExpr` under the canonical per-def layout contract.
+- Added `packages/engine/test/unit/agents/policy-bytecode-cache.test.ts` covering reuse across contexts sharing a runtime, sharedStructural carry-through on runtime fork, and non-reuse for explicit non-canonical layouts.
+- `eval-runtime-resources-contract.ts` was verified-no-edit: `policyBytecodeCache` is read directly from `CreatePolicyEvaluationContextInput.runtime` and does not flow into the `EvalRuntimeResources` subset.
+
+Generated/schema fallout: none. No serialized trace/result, schema, GameDef, or golden shape changed.
+
+Deferred scope:
+
+- `172POLEVASTA-005` still owns `policyEncodedStateCache`.
+- `172POLEVASTA-006` still owns the constructor-wide no-direct-build architectural invariant, the perf-witness flip, and the headline ARVN deep-preview completion check.
+
+Source-size ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+|---|---:|---:|---|---|---|---|
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2222 | 2234 | no; preexisting oversize | 12 lines | extraction would widen and obscure the Phase 3 bytecode-cache seam | none |
+
+Command ledger:
+
+| ticket section | literal command/shorthand | status |
+|---|---|---|
+| Test Plan | `pnpm -F @ludoforge/engine test:unit` | passed after outcome prewrite; 5719 tests / 956 suites |
+| Test Plan | `pnpm -F @ludoforge/engine test:integration` | passed; 293/293 files |
+| Test Plan | targeted determinism/bytecode-equivalence bundle | passed; 24 tests / 6 suites |
+| Test Plan | `pnpm -F @ludoforge/engine test:integration:fitl-rules` | passed; 79/79 files |
+| Test Plan | `pnpm -F @ludoforge/engine test` | passed; schema artifact check plus 81/81 default-lane files |
+| Test Plan | `pnpm turbo build` | passed |
+| Test Plan | `pnpm turbo lint` | passed |
+| Test Plan | `pnpm turbo typecheck` | passed |
+| Test Plan | `pnpm -F @ludoforge/engine test:perf` | ran red on the existing combined `172POLEVASTA-001` witness: `total=5077`, `buildEncodedStateLayout=1`, `buildFeatureTable=1`, `buildExpressionFeatureTable=36`, `buildEncodedState=5039`. Classified as out-of-scope for this Phase 3 ticket because `172POLEVASTA-005` owns the encoded-state cache and `172POLEVASTA-006` owns flipping the combined perf witness to passing. |
+| Closeout | `pnpm run check:ticket-deps` | passed; 3 active tickets and 2339 archived tickets |
+
+Additional pre-final verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/policy-bytecode-cache.test.js` — passed.
+- `pnpm -F @ludoforge/engine typecheck` — passed.
+- `pnpm -F @ludoforge/engine lint` — passed.
+- `node --test packages/engine/dist/test/determinism/forked-vs-fresh-runtime-parity.test.js packages/engine/dist/test/determinism/spec-140-replay-identity.test.js packages/engine/dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js packages/engine/dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js packages/engine/dist/test/integration/policy-bytecode-equivalence.test.js` — passed.
+
+Late-edit invalidation check: after the final proof runs, only this ticket's terminal status and proof ledger were edited; no source, generated artifact, schema, or golden was changed by the closeout transcription.

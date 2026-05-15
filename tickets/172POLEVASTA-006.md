@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test-only; reuses the test/internal build counters added by `172POLEVASTA-001`
-**Deps**: `archive/tickets/172POLEVASTA-002.md`, `archive/tickets/172POLEVASTA-003.md`, `tickets/172POLEVASTA-004.md`, `tickets/172POLEVASTA-005.md`
+**Deps**: `archive/tickets/172POLEVASTA-002.md`, `archive/tickets/172POLEVASTA-003.md`, `archive/tickets/172POLEVASTA-004.md`, `tickets/172POLEVASTA-005.md`
 
 ## Problem
 

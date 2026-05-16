@@ -1,6 +1,6 @@
 # 175WASMTSFALCON-004: Phase 3 — Parity oracle coverage for every unsupported reason
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — adds parity-oracle fixtures under `packages/engine/test/integration/`. No production source change.
@@ -141,3 +141,59 @@ Likely surface — final file naming and the exact fixture set are refined again
 3. `pnpm -F @ludoforge/engine test:e2e` — end-to-end coverage.
 4. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-3-post-coverage` — post-coverage witness for acceptance criteria #4 / #5.
 5. `pnpm run check:ticket-deps` — dep integrity.
+
+## Outcome
+
+Completed on 2026-05-16. Phase 3 now has parity-oracle coverage for every unsupported preview-drive reason emitted by the fresh 15-seed enumeration, with no production source changes.
+
+What landed:
+
+- Added owner-specific parity fixtures for the five fresh post-Phase-1 unsupported reason triples:
+  - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-cardEventAction.test.ts`
+  - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-actionBatch.test.ts`
+  - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-chooseN.test.ts`
+  - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-popInterruptPhase.test.ts`
+  - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-projectedState.test.ts`
+- Added `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-reason-coverage.test.ts` to assert a 1:1 mapping between the enumerated reason triples and the fixture metadata.
+- Extended `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-fixtures.ts` with shared unsupported-reason metadata and reusable parity helpers.
+- Added fresh enumeration evidence:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-coverage-enumeration.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-coverage-enumeration.csv`
+- Added post-coverage acceptance evidence:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-post-coverage.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-post-coverage.csv`
+
+Reassessment and corrections:
+
+- The fresh enumeration command preserved the same five unique unsupported reason triples named by the ticket: `projectedState`, `cardEventAction`, `actionBatch`, `chooseN`, and `popInterruptPhase`.
+- No checkpointed `packages/engine/test/integration/fixtures/175-parity/` snapshots were needed; every reason is exercised through bounded synthetic/public-seam fixtures.
+- The new parity fixtures compare public policy-score or deep-preview output with WASM enabled against the TypeScript path with WASM disabled. Diagnostic `scoreContributions` are intentionally excluded from the byte-equivalence projection because the WASM score-row path can omit that diagnostic-only field while preserving the public score, selection, preview outcome, and unknown-ref output.
+- The report date strings remain the ticket-command labels (`2026-05-17-*`) even though this implementation session ran on 2026-05-16.
+
+Current witness results:
+
+- Fresh enumeration command passed: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-3-coverage-enumeration`.
+- Post-coverage command passed: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-3-post-coverage`.
+- Post-coverage report summary: seeds completed `15/15`, rows `3769`, WASM preview-drive route count `3125`, unsupported count `1998`, batch count `2648`.
+- Post-coverage unsupported reason counts remained non-zero for every targeted reason. The slow-tier seed wall times were `1005=43913.35`, `1011=6993.67`, `1008=20056.98`, `1013=7495.54`, `1009=11883.37`; median `11883.37 ms` is within ±10% of the `11536.43 ms` baseline.
+
+Command ledger:
+
+| Ticket section | Literal command/shorthand | Current/final citation |
+| --- | --- | --- |
+| What to Change | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-3-coverage-enumeration` | Ran directly; generated the enumeration Markdown/CSV listed above. |
+| Test Plan | `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test packages/engine/test/integration/policy-wasm-preview-drive-equivalence-*.test.ts` | Split into build plus compiled Node test runner: `pnpm -F @ludoforge/engine build` and `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-wasm-preview-drive-equivalence*.test.js`; focused run passed with 8 tests before and after the broad turbo lane. |
+| Acceptance Criteria / Test Plan | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-3-post-coverage` | Ran directly; generated the post-coverage Markdown/CSV listed above. |
+| Acceptance Criteria | `pnpm turbo test` | Passed: `Tasks: 5 successful, 5 total`; cache note: 1 task cached/replayed, with engine/runner test work completed green in this lane. |
+| Acceptance Criteria | `pnpm -F @ludoforge/engine test:e2e` | Passed: 6 tests, 6 pass, 0 fail. |
+| Test Plan | `pnpm run check:ticket-deps` | Passed after terminal status/proof transcription: dependency integrity check passed for 2 active tickets and 2373 archived tickets. |
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+| --- | ---:| ---:| --- | ---:| --- | --- |
+| `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-fixtures.ts` | 309 | 786 | no, remains under 800 | +477 | Kept in the existing parity helper named by the ticket so the owner-specific tests share one reason table and one public-seam parity harness; split is not required before terminal status because the file remains under the hard cap. | none |
+
+Schema/generated fallout: none; this ticket adds integration tests and report artifacts only.
+
+Late-edit proof classification: the final edit changed only ticket status and proof transcription after the implementation, witness, focused parity, broad test, and e2e lanes were already green. It did not change source, report artifacts, acceptance scope, touched-file ownership, or command semantics. `pnpm run check:ticket-deps` passed after this edit.

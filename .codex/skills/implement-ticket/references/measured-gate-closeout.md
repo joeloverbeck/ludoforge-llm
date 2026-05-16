@@ -36,6 +36,38 @@ artifact before final transcription. Do not let a later broad-suite sample
 silently replace the metric artifact that the report/ticket cites as the
 decisive gate.
 
+### Measured Profile Report Checklist
+
+When a profiling ticket needs a checked-in measured-profile report, include the
+rows that let the next owner distinguish the ticket-owned improvement from
+residual cost or fallback masking:
+
+- `baseline`: exact command, artifact path, wall-clock or owned metric, and
+  decisive comparison fields
+- `final`: same command shape, artifact path, wall-clock or owned metric, and
+  decisive comparison fields
+- `delta`: absolute and percent change, with `material`, `minor`, `red`, or
+  ticket-family verdict language
+- `activation`: route counts, hit/reuse counters, compile/cache counters, or
+  other proof that the owned fast path actually ran
+- `fallback/unsupported`: unsupported, fallback, rejected-default, or
+  no-signal counts before and after; state when they are intentionally
+  unchanged
+- `hot buckets`: top owned buckets before/after, including count and elapsed
+  fields when available
+- `residual owner`: successor ticket, active spec phase, same-ticket
+  continuation, or `none` with rationale
+- `artifacts`: checked-in report, raw profiler files, CSV/markdown summaries,
+  ignored ephemeral paths, and which artifact is decisive
+- `default/status verdict`: whether the result allows a default flip, keeps a
+  red/blocked gate, completes a bounded slice, or only supplies diagnostic
+  evidence
+
+For WASM, VM, cache, bytecode, or other accelerator profile work, keep route
+activation separate from correctness parity. A passing profile command is not
+enough if route counts, unsupported/fallback rows, or bucket ownership would let
+fallback success hide an inactive fast path.
+
 ### Measured Engine Refactor Terminal Checklist
 
 For a measured engine/kernel refactor that produces a checked-in report,

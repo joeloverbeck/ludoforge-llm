@@ -4,6 +4,7 @@ import { publishMicroturn } from '../kernel/microturn/publish.js';
 import type { Decision } from '../kernel/microturn/types.js';
 import type { GameDef, GameState, MoveParamScalar, VariableValue } from '../kernel/index.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { perfHotPathCount } from '../kernel/perf-profiler.js';
 import { computeFullHash, createZobristTable } from '../kernel/zobrist.js';
 import {
   buildPolicyWasmPreviewZoneValues,
@@ -61,6 +62,7 @@ export const materializePolicyWasmPreviewStatePatch = (
   let actionUsage: GameState['actionUsage'] = input.state.actionUsage;
   let nextFrameId = input.state.nextFrameId;
   let nextTurnId = input.state.nextTurnId;
+  let structuralStateMirrorsCurrent = true;
   let zoneVars: Record<string, Record<string, number>> = Object.fromEntries(
     Object.entries(input.state.zoneVars).map(([zoneId, vars]) => [zoneId, { ...vars }]),
   );
@@ -71,6 +73,22 @@ export const materializePolicyWasmPreviewStatePatch = (
       markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), state);
     }
   }
+  const syncMirrorsFromStructuralState = (state: GameState): void => {
+    structuralState = state;
+    globalVars = state.globalVars;
+    actionUsage = state.actionUsage;
+    nextFrameId = state.nextFrameId;
+    nextTurnId = state.nextTurnId;
+    zoneVars = state.zoneVars;
+    zones = buildPolicyWasmPreviewZoneValues(state);
+    markerValues.clear();
+    for (const [zoneId, markers] of Object.entries(state.markers)) {
+      for (const [marker, markerState] of Object.entries(markers)) {
+        markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), markerState);
+      }
+    }
+    structuralStateMirrorsCurrent = true;
+  };
 
   for (const op of input.patch.ops) {
     switch (op.kind) {
@@ -80,6 +98,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           throw new Error(`Policy WASM state patch referenced unknown global variable "${op.varName}".`);
         }
         globalVars = { ...globalVars, [varName]: materializeScalar(op.value) };
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'setZoneVar': {
@@ -95,6 +114,7 @@ export const materializePolicyWasmPreviewStatePatch = (
             [varName]: op.value,
           },
         };
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'moveToken': {
@@ -109,6 +129,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           throw new Error(`Policy WASM state patch token move "${op.tokenId}" is not materializable.`);
         }
         zones = nextZones;
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'setTokenProp': {
@@ -122,6 +143,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           throw new Error(`Policy WASM state patch token property "${op.tokenId}.${op.prop}" is not materializable.`);
         }
         zones = nextZones;
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'setMarker': {
@@ -132,6 +154,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           throw new Error(`Policy WASM state patch referenced unknown marker "${op.zoneId}.${op.marker}".`);
         }
         markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), markerState);
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'setActionUsage': {
@@ -147,11 +170,13 @@ export const materializePolicyWasmPreviewStatePatch = (
             gameCount: op.gameCount,
           },
         };
+        structuralStateMirrorsCurrent = false;
         break;
       }
       case 'setMicroturnMetadata':
         nextFrameId = op.nextFrameId as GameState['nextFrameId'];
         nextTurnId = op.nextTurnId as GameState['nextTurnId'];
+        structuralStateMirrorsCurrent = false;
         break;
       case 'applyChooseNStepDecision': {
         const microturn = publishMicroturn(input.def, structuralState, input.runtime);
@@ -189,19 +214,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           { advanceToDecisionPoint: true },
           input.runtime,
         ).state;
-        structuralState = applied;
-        globalVars = applied.globalVars;
-        actionUsage = applied.actionUsage;
-        nextFrameId = applied.nextFrameId;
-        nextTurnId = applied.nextTurnId;
-        zoneVars = applied.zoneVars;
-        zones = buildPolicyWasmPreviewZoneValues(applied);
-        markerValues.clear();
-        for (const [zoneId, markers] of Object.entries(applied.markers)) {
-          for (const [marker, state] of Object.entries(markers)) {
-            markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), state);
-          }
-        }
+        syncMirrorsFromStructuralState(applied);
         break;
       }
       case 'applyChooseOneDecision': {
@@ -232,22 +245,18 @@ export const materializePolicyWasmPreviewStatePatch = (
           { advanceToDecisionPoint: true },
           input.runtime,
         ).state;
-        structuralState = applied;
-        globalVars = applied.globalVars;
-        actionUsage = applied.actionUsage;
-        nextFrameId = applied.nextFrameId;
-        nextTurnId = applied.nextTurnId;
-        zoneVars = applied.zoneVars;
-        zones = buildPolicyWasmPreviewZoneValues(applied);
-        markerValues.clear();
-        for (const [zoneId, markers] of Object.entries(applied.markers)) {
-          for (const [marker, state] of Object.entries(markers)) {
-            markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), state);
-          }
-        }
+        syncMirrorsFromStructuralState(applied);
         break;
       }
     }
+  }
+
+  if (structuralStateMirrorsCurrent) {
+    perfHotPathCount('policyWasmStatePatch:reuseAppliedStateHash');
+    return {
+      state: structuralState,
+      stateHash: structuralState.stateHash,
+    };
   }
 
   const markers: Record<string, Record<string, string>> = {};

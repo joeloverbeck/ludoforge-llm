@@ -9,6 +9,11 @@ import type { Decision } from '../../src/kernel/microturn/types.js';
 import type { ChooseOneContext } from '../../src/kernel/microturn/types.js';
 import { applyPublishedDecision } from '../../src/kernel/microturn/apply.js';
 import {
+  resetHotPathProfilerCounters,
+  setHotPathProfilingEnabled,
+  snapshotHotPathProfilerCounters,
+} from '../../src/kernel/perf-profiler.js';
+import {
   asActionId,
   asPhaseId,
   assertValidatedGameDef,
@@ -183,11 +188,23 @@ describe('policy WASM chooseNStep continuation state-patch materialization', () 
     }
     assert.equal(result.rows[0]?.statePatch?.ops[0]?.kind, 'applyChooseNStepDecision');
 
-    const materialized = materializePolicyWasmPreviewStatePatch({
-      def: fixture.def,
-      state: fixture.state,
-      patch: result.rows[0]!.statePatch!,
-    }).state;
+    resetHotPathProfilerCounters();
+    setHotPathProfilingEnabled(true);
+    let materialized: GameState | undefined;
+    try {
+      materialized = materializePolicyWasmPreviewStatePatch({
+        def: fixture.def,
+        state: fixture.state,
+        patch: result.rows[0]!.statePatch!,
+      }).state;
+    } finally {
+      setHotPathProfilingEnabled(false);
+    }
+    assert.equal(
+      snapshotHotPathProfilerCounters().find((bucket) => bucket.key === 'policyWasmStatePatch:reuseAppliedStateHash')?.count,
+      1,
+    );
+    assert.ok(materialized);
     const reference = applyPublishedDecision(
       fixture.def,
       fixture.state,
@@ -233,11 +250,23 @@ describe('policy WASM chooseNStep continuation state-patch materialization', () 
     }
     assert.equal(result.rows[0]?.statePatch?.ops[0]?.kind, 'applyChooseOneDecision');
 
-    const materialized = materializePolicyWasmPreviewStatePatch({
-      def: fixture.def,
-      state: fixture.state,
-      patch: result.rows[0]!.statePatch!,
-    }).state;
+    resetHotPathProfilerCounters();
+    setHotPathProfilingEnabled(true);
+    let materialized: GameState | undefined;
+    try {
+      materialized = materializePolicyWasmPreviewStatePatch({
+        def: fixture.def,
+        state: fixture.state,
+        patch: result.rows[0]!.statePatch!,
+      }).state;
+    } finally {
+      setHotPathProfilingEnabled(false);
+    }
+    assert.equal(
+      snapshotHotPathProfilerCounters().find((bucket) => bucket.key === 'policyWasmStatePatch:reuseAppliedStateHash')?.count,
+      1,
+    );
+    assert.ok(materialized);
     const reference = applyPublishedDecision(
       fixture.def,
       fixture.state,

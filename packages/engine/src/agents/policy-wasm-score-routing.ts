@@ -23,6 +23,7 @@ import type { PolicyWasmPreviewStatus } from './policy-wasm-preview-drive.js';
 import {
   evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
+  recordProductionPolicyWasmPreviewDrive,
   recordProductionPolicyWasmPreviewCandidateFeatureRows,
   recordProductionPolicyWasmScoreRows,
   type PolicyWasmPrecomputedDynamicCandidateFeature,
@@ -221,6 +222,7 @@ const materializePreviewDynamicRowsWithWasm = (
     return [];
   }
   if (hasCardEventActionCandidate(input.def, input.candidates)) {
+    recordProductionPolicyWasmPreviewDrive('unsupported');
     return null;
   }
   const slotsByCode = new Map<number, readonly string[]>();
@@ -269,6 +271,7 @@ const materializePreviewDynamicRowsWithWasm = (
       candidates: group,
     });
     if (result.kind !== 'supported') {
+      recordProductionPolicyWasmPreviewDrive('unsupported');
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',
@@ -284,6 +287,7 @@ const materializePreviewDynamicRowsWithWasm = (
         },
       });
     }
+    recordProductionPolicyWasmPreviewDrive('supported');
     for (const row of result.rows) {
       rowsByKey.set(row.stableMoveKey, {
         outcome: previewTraceOutcomeFromWasmStatus(row.previewSignalCarrier.previewStatus),

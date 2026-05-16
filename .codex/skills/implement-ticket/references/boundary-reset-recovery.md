@@ -64,6 +64,7 @@ When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling ha
 3. Update the active ticket, spec, and affected sibling tickets first when their current wording still claims the deferred surface.
 4. Create or update the successor/follow-up owner when the reset splits real work out of the active ticket. The successor must name the residual surface precisely enough that the active ticket can close without hiding it.
 5. Scan direct dependents before coding. Use an id/path search such as `rg -n '<active-ticket-id>|Deps:.*<active-ticket-id>' tickets specs` or the nearest repo-safe equivalent, then classify each hit as `no edit`, `updated stale assumption`, or `successor owner`. Update same-series dependent acceptance text when it still assumes the old boundary.
+   - For phase splits, include a stale-noun scan as well as id/path edges: active id, successor id, phase labels, old capability noun, new capability noun, and `Deps:` references across the relevant `tickets/`, `specs/`, `reports/`, and docs. Classify hits as `historical`, `updated stale assumption`, `successor owner`, or `still active-ticket-owned` so old prose cannot continue implying that the narrowed ticket owns the deferred capability.
 6. Classify every deferred public/authored syntax or artifact in the reset class as `absent`, `rejected fail-closed`, or `implemented now`. If the current compiler, schema, CLI, or public API still accepts a deferred syntax, add or preserve a focused fail-closed diagnostic before terminal status unless the user-approved option explicitly kept that syntax in scope.
 7. Emit a fresh working-notes checkpoint for the narrowed slice, including `proof noun alignment`, `authorization ledger`, `deferred sibling/spec scope`, `verification substitutions`, changed final proof lanes, dependent-sibling classification, and deferred-syntax disposition.
 8. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket before implementation.
@@ -82,6 +83,7 @@ Use this compact checkpoint delta immediately after a user-approved narrowed, de
 - `durable artifacts patched`: `<active ticket/spec/sibling/report paths already updated, or pending before coding>`
 - `proof lanes re-extracted`: `<new decisive metric, correctness lanes, dependency/integrity lane, and any substituted commands>`
 - `terminal status plan`: `<COMPLETED/IMPLEMENTED only if green; BLOCKED/PARTIAL/nonterminal if acceptance remains red>`
+- `phase-split stale-noun scan`: `<ids/nouns searched and stale assumptions updated, or not applicable>`
 - `later mismatch guard`: `<what class the approval covers; stop for new 1-3-1 if another file/artifact/seed/corpus/witness noun changes>`
 
 ## Foundation Numeric Normalization

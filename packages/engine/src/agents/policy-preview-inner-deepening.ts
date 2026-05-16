@@ -18,6 +18,7 @@ import {
   type ChooseNStepInnerPreviewRun,
   type RunChooseNStepInnerPreviewInput,
 } from './policy-preview-inner-choosenstep.js';
+import { recordProductionPolicyWasmPreviewDrive } from './policy-wasm-runtime.js';
 
 export interface DeepeningRunResult {
   readonly run: ChooseNStepInnerPreviewRun;
@@ -188,6 +189,7 @@ export const runDeepPass = (
     },
   };
   const options = broadRun.options.map((option) => {
+    recordProductionPolicyWasmPreviewDrive('unsupported');
     const deepDrive = continueChooseNStepInnerPreviewDrive(
       {
         ...input,

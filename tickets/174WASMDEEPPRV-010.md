@@ -16,7 +16,7 @@ If ticket 009's gate decision records a **Pass** (slow-tier median improves mate
 
 1. Confirmed Spec 174 §6 Foundation #14 row mandates deletion of temporary A/B routing once the supported route is defaulted.
 2. Confirmed Spec 174 §2 Non-Goals reaffirms "No compatibility alias retained after a default flip. Temporary A/B routing is proof machinery only."
-3. The exact A/B routing surface is the per-class predicates inside `policy-wasm-score-routing.ts` and `policy-preview-inner-deepening.ts` introduced by ticket 008.
+3. The exact A/B routing surface is split across Phase 3a/3b: ticket 008 introduces broad activation telemetry and explicit deep unsupported classification, while ticket 011 owns the deep materialized-state route required before any deep default flip.
 
 ## Architecture Check
 
@@ -29,10 +29,10 @@ If ticket 009's gate decision records a **Pass** (slow-tier median improves mate
 ### 1. Default flip
 
 In `packages/engine/src/agents/policy-wasm-score-routing.ts`:
-- For every class supported after Phase 1 (002–006) and activated in Phase 3 (008), make WASM the default — remove the supported-vs-fallback predicate. Unsupported classes continue to fail closed with stable reason strings.
+- For every class supported after Phase 1 (002–006) and activated across Phase 3a/3b (`tickets/174WASMDEEPPRV-008.md` and `tickets/174WASMDEEPPRV-011.md`), make WASM the default — remove the supported-vs-fallback predicate. Unsupported classes continue to fail closed with stable reason strings.
 
 In `packages/engine/src/agents/policy-preview-inner-deepening.ts:165` (`runDeepPass`):
-- Remove the route predicate added in ticket 008; supported shapes always invoke `evaluateProductionPreviewDriveBatchWithWasm`. Unsupported shapes still fall back to `continueChooseNStepInnerPreviewDrive` as the deterministic stable path.
+- Remove the route predicate added by ticket 011; supported shapes always invoke the deep materialized-state WASM route. Unsupported shapes still fall back to `continueChooseNStepInnerPreviewDrive` as the deterministic stable path.
 
 ### 2. A/B wiring deletion
 

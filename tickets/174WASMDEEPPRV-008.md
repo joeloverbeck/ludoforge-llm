@@ -1,70 +1,79 @@
-# 174WASMDEEPPRV-008: Phase 3 — Production route activation (broad + deep-phase wire-in)
+# 174WASMDEEPPRV-008: Phase 3a — Production route activation counters (broad + deep unsupported classification)
 
-**Status**: PENDING
+**Status**: BLOCKED by prerequisite
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `policy-wasm-score-routing.ts`, `policy-preview-inner-deepening.ts`, `policy-agent-inner-preview.ts`
+**Engine Changes**: Yes — `policy-wasm-score-routing.ts`, `policy-preview-inner-deepening.ts`
 **Deps**: `archive/tickets/174WASMDEEPPRV-007.md`
 
 ## Problem
 
-Phase 1 ABI extensions (002–006) and the Phase 2 parity oracle (007) prove that supported preview-drive rows can route through WASM with byte-equivalent output and F#20 signal preservation. This ticket activates the production route in two layers:
-- **Broad-phase**: lift the fail-closed gates in `policy-wasm-score-routing.ts:217-322` so supported `continuedDeepening` / `deep1024` rows actually traverse the WASM path.
-- **Deep-phase**: wire `runDeepPass` (`policy-preview-inner-deepening.ts:165`) to invoke WASM via `evaluateProductionPreviewDriveBatchWithWasm` for supported options; fall back to `continueChooseNStepInnerPreviewDrive` for unsupported shapes.
-Each activation site calls `recordProductionPolicyWasmPreviewDrive('supported' | 'unsupported')` (added in ticket 001) so route activation is observable.
+Phase 1 ABI extensions (002–006) and the Phase 2 parity oracle (007) prove that supported preview-drive rows can route through WASM with byte-equivalent row output and F#20 signal preservation. Live reassessment on 2026-05-16 found that the current WASM preview-drive API returns row/value/status metadata but does not return the materialized projected `GameState` required by `runDeepPass` and `projectedStateByOptionKey`. Counting deep-phase WASM while still consuming TypeScript state would make fallback success look like route activation, violating Foundations #9, #16, and #20.
 
-## Assumption Reassessment (2026-05-15)
+This narrowed Phase 3a ticket activates the truthful production telemetry that the current API can support:
+- **Broad-phase**: supported preview-drive rows reached from `policy-wasm-score-routing.ts` increment `recordProductionPolicyWasmPreviewDrive('supported')`; unsupported/fallback broad classes increment `recordProductionPolicyWasmPreviewDrive('unsupported')`.
+- **Deep-phase**: `runDeepPass` continues to use `continueChooseNStepInnerPreviewDrive` for the materialized projected state and increments `recordProductionPolicyWasmPreviewDrive('unsupported')` for each deferred deep option.
+
+The missing deep materialized-state ABI and real deep-phase WASM state consumption are split to `tickets/174WASMDEEPPRV-011.md`.
+
+## Assumption Reassessment (2026-05-16)
 
 1. Confirmed `policy-wasm-score-routing.ts:246` already calls `evaluateProductionPreviewDriveBatchWithWasm` from the broad phase but fails closed for `continuedDeepening` / `deep1024`; after 002–006 the fail-closed branches narrow.
-2. Confirmed `runDeepPass` at `policy-preview-inner-deepening.ts:165` calls `continueChooseNStepInnerPreviewDrive` at line 191 per option; this is the deep-phase wire-in point.
-3. Confirmed `runDeepPass` is invoked from `policy-agent-inner-preview.ts:486` — outer dispatch wiring may need a small adjustment to surface route activation counters.
-4. The parity oracle (007) is green for every supported class before this ticket activates the route.
+2. Confirmed `runDeepPass` at `policy-preview-inner-deepening.ts:165` calls `continueChooseNStepInnerPreviewDrive` at line 191 per option; this remains the only live path that returns the `GameState` needed by deep-phase consumers.
+3. Confirmed `runDeepPass` is invoked from `policy-agent-inner-preview.ts:486`; no outer dispatch shape change is required for the narrowed counter/fallback boundary.
+4. The parity oracle (007) is green for supported row output, but it does not prove materialized deep projected-state output.
+5. User approved the Foundation-aligned Option 1 reset on 2026-05-16: land broad activation counters now, record deep unsupported fallback, and split the missing ABI/state work to `tickets/174WASMDEEPPRV-011.md`.
 
 ## Architecture Check
 
-1. Activation gated on parity (007) — the route only goes live for classes the oracle proves byte-equivalent. F#16 (Testing as proof) is upheld.
+1. Activation gated on parity (007) — the broad route only records supported activation when the WASM call returns supported row output. F#16 (Testing as proof) is upheld.
 2. Engine-agnostic (F#1): activation predicates inspect generic ABI-supported shapes, not FITL identifiers.
-3. F#20: unsupported shapes still fail closed with stable reason strings (no silent scalar coercion).
+3. F#20: unsupported shapes remain explicit through unsupported counters and existing fail-closed reason strings; deep fallback is not counted as supported activation.
 4. Foundation 5 (One rules protocol): legality / publication remain kernel-owned; WASM only evaluates preview-drive rows.
-5. No backwards-compatibility shim (F#14): the broad-phase fail-closed branches for now-supported classes are deleted, not commented out.
+5. No backwards-compatibility shim (F#14): this ticket adds telemetry to the existing production route and defers the missing state-return contract rather than adding a compatibility alias.
 
 ## What to Change
 
-### 1. Broad-phase fail-closed branch removal
+### 1. Broad-phase activation counter recording
 
-In `policy-wasm-score-routing.ts:217-322`:
-- For each unsupported class the Phase 1 work has now closed (per the 174 Phase 0 inventory and the 002–006 ABI extensions), remove the fail-closed branch.
-- Route those classes through WASM via the existing `evaluateProductionPreviewDriveBatchWithWasm` call (line 246).
-- Wrap the call site so `recordProductionPolicyWasmPreviewDrive('supported')` is called on success and `recordProductionPolicyWasmPreviewDrive('unsupported')` is called when the route still fails closed.
+In `policy-wasm-score-routing.ts`:
+- Keep the existing `evaluateProductionPreviewDriveBatchWithWasm` broad route.
+- Call `recordProductionPolicyWasmPreviewDrive('supported')` when a broad preview-drive batch returns `kind: 'supported'`.
+- Call `recordProductionPolicyWasmPreviewDrive('unsupported')` when the broad route falls back or fails closed for unsupported preview-drive inputs.
 
-### 2. Deep-phase inner-deepening wire-in
+### 2. Deep-phase unsupported classification
 
 In `policy-preview-inner-deepening.ts:165` (`runDeepPass`) and the per-option loop at line 191:
-- Add a route predicate: if the option's preview config matches the Phase 1 supported shape set, invoke `evaluateProductionPreviewDriveBatchWithWasm` (importing as needed); else fall back to `continueChooseNStepInnerPreviewDrive`.
-- Each branch calls `recordProductionPolicyWasmPreviewDrive(...)` accordingly.
+- Keep `continueChooseNStepInnerPreviewDrive` as the deep-phase implementation because it returns the required projected `GameState`.
+- Call `recordProductionPolicyWasmPreviewDrive('unsupported')` for each deep option that reaches the deferred deep route boundary.
+- Do not call `recordProductionPolicyWasmPreviewDrive('supported')` from deep phase until `tickets/174WASMDEEPPRV-011.md` returns a WASM-produced materialized projected state.
 
-### 3. Outer dispatch adjustment
+### 3. Successor handoff
 
-In `policy-agent-inner-preview.ts:486`: if the outer call site needs to surface route activation counters or new return-shape fields from the deep pass, adjust the wiring minimally. No semantic change to the outer dispatch.
+Add `tickets/174WASMDEEPPRV-011.md` for the deep materialized-state ABI and true deep-phase WASM consumption. Update adjacent Phase 4 ticket dependencies so measurement/default-flip work does not proceed as if full deep activation already landed.
 
 ### 4. Integration test for route activation
 
 `packages/engine/test/integration/policy-wasm-preview-drive-production-route-activation.test.ts` (`@test-class: architectural-invariant`):
-- Synthetic state that exercises a supported `continuedDeepening` / `deep1024` shape → assert `getProductionPolicyWasmPreviewDriveRouteCount` increments by the expected delta.
-- Synthetic state that exercises an unsupported shape (from the residual tail) → assert `getProductionPolicyWasmPreviewDriveUnsupportedCount` increments.
+- Synthetic state that exercises a supported broad preview-drive shape → assert `getProductionPolicyWasmPreviewDriveRouteCount` increments by the expected delta.
+- Synthetic state that exercises a deep `continuedDeepening` shape → assert `getProductionPolicyWasmPreviewDriveUnsupportedCount` increments and no supported deep activation is counted.
 - Reset between cases.
 
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-wasm-score-routing.ts` (modify)
 - `packages/engine/src/agents/policy-preview-inner-deepening.ts` (modify)
-- `packages/engine/src/agents/policy-agent-inner-preview.ts` (modify if needed for dispatch wiring)
 - `packages/engine/test/integration/policy-wasm-preview-drive-production-route-activation.test.ts` (new)
+- `tickets/174WASMDEEPPRV-011.md` (new — deep materialized-state ABI successor)
+- `tickets/174WASMDEEPPRV-009.md` (modify — dependency correction)
+- `tickets/174WASMDEEPPRV-010.md` (modify — default-flip prerequisite correction)
+- `specs/174-wasm-preview-drive-coverage-extension.md` (modify — phase list correction)
+- `reports/174-phase-0-unsupported-class-inventory.md` (modify — unsupported-class ownership correction)
 
 ## Out of Scope
 
 - No default flip / A/B wiring deletion (ticket 010 owns that — gated on 009's perf gate).
-- No new ABI work — this ticket consumes 002–006.
+- No new ABI work — `tickets/174WASMDEEPPRV-011.md` owns the missing deep materialized-state ABI.
 - No FITL-specific identifiers introduced.
 
 ## Acceptance Criteria
@@ -75,20 +84,54 @@ In `policy-agent-inner-preview.ts:486`: if the outer call site needs to surface 
 2. Parity oracle (007) remains green.
 3. Engine suite green: `pnpm turbo build && pnpm turbo test`.
 4. Determinism gates green (same list as ticket 002).
+5. `pnpm run check:ticket-deps` passes after the same-series dependency rewrite.
 
 ### Invariants
 
-1. Activation only occurs for classes the parity oracle (007) proves byte-equivalent.
+1. Supported activation is counted only when the broad WASM preview-drive route returns supported output; TypeScript fallback cannot count as supported activation.
 2. Unsupported shapes fail closed with stable reason strings — no silent scalar coercion.
 3. Route counters increment monotonically; reset behaviour matches the existing record/* counter pattern.
+4. Deep-phase fallback remains explicit and successor-owned until a WASM-produced materialized projected state exists.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/policy-wasm-preview-drive-production-route-activation.test.ts` — counter-increment assertions for supported and unsupported synthetic states.
+1. `packages/engine/test/integration/policy-wasm-preview-drive-production-route-activation.test.ts` — counter-increment assertions for supported broad-route and deferred deep-route synthetic states.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-production-route-activation.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Phase 3a landed on 2026-05-16 with the Foundation-aligned boundary approved by the user: broad production preview-drive batches now record supported activation only when WASM returns supported output, while deep `continuedDeepening` records explicit unsupported telemetry and remains TypeScript-backed until the materialized-state ABI exists.
+
+This ticket is intentionally not archive-ready. The missing deep WASM-produced projected `GameState` contract is split to `tickets/174WASMDEEPPRV-011.md`, and downstream measurement/default-flip work now depends on that successor instead of treating Phase 3 as fully activated.
+
+Implemented scope:
+- `policy-wasm-score-routing.ts` records supported broad-route counters and unsupported broad-route fallback/fail-closed counters.
+- `policy-preview-inner-deepening.ts` records unsupported deep-route counters before the stable TypeScript deep fallback.
+- `policy-wasm-preview-drive-production-route-activation.test.ts` proves broad supported activation and deep unsupported classification.
+- `tickets/174WASMDEEPPRV-011.md`, `tickets/174WASMDEEPPRV-009.md`, `tickets/174WASMDEEPPRV-010.md`, `specs/174-wasm-preview-drive-coverage-extension.md`, and `reports/174-phase-0-unsupported-class-inventory.md` now describe the split Phase 3a/3b graph.
+
+Generated fallout: none. No schema, golden, WASM ABI, or GameSpecDoc artifacts changed.
+
+Source-size ledger: `policy-wasm-score-routing.ts` is 584 lines after the counter wiring, `policy-preview-inner-deepening.ts` is 225 lines, and the new integration test is 210 lines; no source split was required.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-production-route-activation.test.js`
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-equivalence.test.js`
+- `pnpm -F @ludoforge/engine test:determinism`
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm run check:ticket-deps`
+
+Known non-ticket-owned advisory output during verification: runner Vite chunk-size warnings and runner jsdom/canvas/crash-recovery stderr emitted by existing tests.
+
+Post-review correction (2026-05-16): `tickets/174WASMDEEPPRV-009.md` now uses post-`174WASMDEEPPRV-011` witness filenames, and `tickets/174WASMDEEPPRV-010.md` now names both Phase 3a/3b activation owners before default flip. No runtime code changed during review; the ticket remains blocked by prerequisite and not archive-ready.

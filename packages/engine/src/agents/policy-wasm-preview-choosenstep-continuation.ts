@@ -1,7 +1,6 @@
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { GameState, MoveParamScalar } from '../kernel/index.js';
 import type { Decision, MicroturnState } from '../kernel/microturn/types.js';
-import { advanceChooseNStepContext } from '../kernel/microturn/publish.js';
 import type {
   PolicyWasmPreviewDriveCandidate,
   PolicyWasmPreviewDriveUnsupportedClass,
@@ -50,24 +49,20 @@ export const lowerPolicyWasmChooseNStepContinuation = (
   if (input.decision.decisionKey !== input.microturn.decisionContext.decisionKey) {
     return unsupported(owner, 'candidate chooseNStep decision key does not match published continuation');
   }
-  if (input.decision.command === 'confirm') {
-    return unsupported(owner, 'chooseNStep confirm continuation materialization is deferred to production consumption');
-  }
-  if (input.decision.value === undefined) {
+  if (input.decision.command !== 'confirm' && input.decision.value === undefined) {
     return unsupported(owner, 'chooseNStep continuation add/remove commands require a scalar value');
   }
   const publishedDecision = input.microturn.legalActions.find((candidate): candidate is ChooseNStepDecision =>
     candidate.kind === 'chooseNStep'
     && candidate.decisionKey === input.decision.decisionKey
     && candidate.command === input.decision.command
-    && candidate.value !== undefined
-    && scalarCode(candidate.value as MoveParamScalar) === scalarCode(input.decision.value as MoveParamScalar));
+    && (input.decision.command === 'confirm'
+      ? candidate.value === undefined
+      : candidate.value !== undefined
+        && input.decision.value !== undefined
+        && scalarCode(candidate.value as MoveParamScalar) === scalarCode(input.decision.value as MoveParamScalar)));
   if (publishedDecision === undefined) {
     return unsupported(owner, 'candidate chooseNStep decision is not published as a legal continuation');
-  }
-  const advanced = advanceChooseNStepContext(top.context, input.decision);
-  if (advanced.done) {
-    return unsupported(owner, 'chooseNStep terminal continuation materialization is deferred to production consumption');
   }
   const stableMoveKey = chooseNStepContinuationStableKey(input.decision);
   return {
@@ -83,7 +78,7 @@ export const lowerPolicyWasmChooseNStepContinuation = (
           frameId: input.microturn.frameId,
           decisionKey: String(input.decision.decisionKey),
           command: input.decision.command,
-          value: input.decision.value as MoveParamScalar,
+          ...(input.decision.value === undefined ? {} : { value: input.decision.value as MoveParamScalar }),
         }],
       },
     },

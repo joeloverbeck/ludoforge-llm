@@ -47,8 +47,8 @@ import type {
   SyntheticDecisionTraceEntry,
 } from '../kernel/types.js';
 
-type ChooseNStepDecision = Extract<Decision, { readonly kind: 'chooseNStep' }>;
-type ChooseNStepMicroturn = MicroturnState & {
+export type ChooseNStepDecision = Extract<Decision, { readonly kind: 'chooseNStep' }>;
+export type ChooseNStepMicroturn = MicroturnState & {
   readonly kind: 'chooseNStep';
   readonly decisionContext: Extract<MicroturnState['decisionContext'], { readonly kind: 'chooseNStep' }>;
 };
@@ -157,7 +157,7 @@ const selectedOptionStableKey = (decision: Decision): string => {
   }
 };
 
-const syntheticDecisionTraceEntry = (
+export const syntheticDecisionTraceEntry = (
   decision: Decision,
   depth: number,
   completionPolicy: PolicyPreviewDriveTrace['completionPolicy'],

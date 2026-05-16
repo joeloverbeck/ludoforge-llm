@@ -43,9 +43,13 @@ describe('policy WASM chooseNStep continuation ABI lowering', () => {
     }
   });
 
-  it('fails closed for unsupported confirm continuations without counting activation', () => {
+  it('encodes supported confirm continuations as explicit WASM state-patch operations', () => {
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
     const fixture = createChoosenStepPreviewFixture();
+    const addDecision = fixture.microturn.legalActions.find((candidate): candidate is ChooseNStepDecision =>
+      candidate.kind === 'chooseNStep' && candidate.command === 'add' && candidate.value !== undefined);
+    assert.ok(addDecision);
+    assert.notEqual(addDecision.value, undefined);
     const decision: ChooseNStepDecision = {
       kind: 'chooseNStep',
       decisionKey: fixture.microturn.decisionContext.decisionKey,
@@ -54,16 +58,27 @@ describe('policy WASM chooseNStep continuation ABI lowering', () => {
 
     const result = lowerPolicyWasmChooseNStepContinuation({
       state: fixture.state,
-      microturn: fixture.microturn,
+      microturn: {
+        ...fixture.microturn,
+        legalActions: [...fixture.microturn.legalActions, decision],
+        decisionContext: {
+          ...fixture.microturn.decisionContext,
+          selectedSoFar: [addDecision.value!],
+          stepCommands: ['confirm'],
+        },
+      },
       decision,
     });
 
-    assert.deepEqual(result, {
-      kind: 'unsupported',
-      unsupportedClass: 'unsupported-effect',
-      owner: 'production-preview-drive.chooseNStepContinuation',
-      reason: 'chooseNStep confirm continuation materialization is deferred to production consumption',
-    });
+    assert.equal(result.kind, 'supported');
+    if (result.kind === 'supported') {
+      assert.deepEqual(result.candidate.statePatch?.ops, [{
+        kind: 'applyChooseNStepDecision',
+        frameId: fixture.microturn.frameId,
+        decisionKey: String(decision.decisionKey),
+        command: 'confirm',
+      }]);
+    }
     assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 0);
     assert.equal(getProductionPolicyWasmPreviewDriveUnsupportedCount(), 0);
   });

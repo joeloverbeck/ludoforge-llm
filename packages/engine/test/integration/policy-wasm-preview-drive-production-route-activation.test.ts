@@ -14,6 +14,7 @@ import {
   asPhaseId,
   asPlayerId,
   initialState,
+  serializeGameState,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
@@ -194,17 +195,56 @@ describe('policy WASM preview-drive production route activation', () => {
     }
   });
 
-  it('counts deep continued-deepening as unsupported until WASM returns materialized projected state', () => {
+  it('counts deep continued-deepening as supported only when WASM returns consumed projected states', () => {
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(initializePolicyWasmRuntimeSync());
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
 
-    capturePreview('continuedDeepening');
+    try {
+      const wasmPreview = capturePreview('continuedDeepening');
+      const supportedCount = getProductionPolicyWasmPreviewDriveRouteCount();
+      const unsupportedCount = getProductionPolicyWasmPreviewDriveUnsupportedCount();
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+      policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+      const referencePreview = capturePreview('continuedDeepening');
 
-    assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 0);
-    assert.ok(
-      getProductionPolicyWasmPreviewDriveUnsupportedCount() > 0,
-      'deep continued-deepening should record an explicit unsupported route classification',
-    );
+      assert.ok(
+        supportedCount > 0,
+        'deep continued-deepening should record supported route activation',
+      );
+      assert.equal(unsupportedCount, 0);
+      assert.deepEqual([...wasmPreview.projectedStateByOptionKey.keys()], [...referencePreview.projectedStateByOptionKey.keys()]);
+      for (const [stableMoveKey, wasmProjected] of wasmPreview.projectedStateByOptionKey) {
+        const referenceProjected = referencePreview.projectedStateByOptionKey.get(stableMoveKey);
+        assert.ok(referenceProjected);
+        assert.equal(wasmProjected.outcome, referenceProjected.outcome);
+        assert.equal(wasmProjected.driveDepth, referenceProjected.driveDepth);
+        assert.equal(wasmProjected.completionPolicy, referenceProjected.completionPolicy);
+        assert.equal(wasmProjected.capClass, referenceProjected.capClass);
+        assert.ok(wasmProjected.state);
+        assert.ok(referenceProjected.state);
+        assert.deepEqual(serializeGameState(wasmProjected.state), serializeGameState(referenceProjected.state));
+      }
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+      policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    }
+  });
 
+  it('keeps deep continued-deepening unsupported when no WASM runtime is available', () => {
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+
+    try {
+      capturePreview('continuedDeepening');
+
+      assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 0);
+      assert.ok(
+        getProductionPolicyWasmPreviewDriveUnsupportedCount() > 0,
+        'deep continued-deepening should preserve explicit unsupported provenance without a runtime',
+      );
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+      policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    }
   });
 });

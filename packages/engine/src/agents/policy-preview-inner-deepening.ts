@@ -1,6 +1,9 @@
 import { buildSeatResolutionIndex } from '../kernel/identity.js';
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
-import type { DeepTrigger } from '../kernel/types.js';
+import type { DeepTrigger, SyntheticDecisionTraceEntry } from '../kernel/types.js';
+import {
+  publishMicroturn,
+} from '../kernel/microturn/publish.js';
 import {
   buildPolicyVictorySurface,
   type SurfaceResolutionContext,
@@ -14,11 +17,22 @@ import {
 } from './policy-preview-inner.js';
 import {
   continueChooseNStepInnerPreviewDrive,
+  syntheticDecisionTraceEntry,
+  type ChooseNStepDecision,
   type ChooseNStepInnerPreviewResult,
   type ChooseNStepInnerPreviewRun,
+  type ChooseNStepMicroturn,
   type RunChooseNStepInnerPreviewInput,
 } from './policy-preview-inner-choosenstep.js';
-import { recordProductionPolicyWasmPreviewDrive } from './policy-wasm-runtime.js';
+import {
+  pickInnerDecision,
+} from './policy-preview.js';
+import { lowerPolicyWasmChooseNStepContinuation } from './policy-wasm-preview-choosenstep-continuation.js';
+import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
+import {
+  getInitializedPolicyWasmRuntime,
+  recordProductionPolicyWasmPreviewDrive,
+} from './policy-wasm-runtime.js';
 
 export interface DeepeningRunResult {
   readonly run: ChooseNStepInnerPreviewRun;
@@ -163,6 +177,132 @@ const resolveDeepOption = (
   };
 };
 
+const continueChooseNStepInnerPreviewDriveWithWasm = (
+  input: RunChooseNStepInnerPreviewInput,
+  stateAfterRoot: ChooseNStepInnerPreviewResult['state'],
+  initialDepth: number,
+): DriveResult | undefined => {
+  const runtime = getInitializedPolicyWasmRuntime();
+  if (runtime === null) {
+    return undefined;
+  }
+  const depthCap = input.depthCap ?? input.profile.preview.inner?.depthCap ?? input.profile.preview.completionDepthCap ?? 1;
+  const completionPolicy = input.completionPolicy ?? input.profile.preview.completion ?? 'policyGuided';
+  const fallbackCompletionPolicy = input.fallbackCompletionPolicy ?? input.profile.preview.fallbackCompletionPolicy ?? 'greedy';
+  const syntheticDecisions: SyntheticDecisionTraceEntry[] = [];
+  let completionPolicyFallbackCount = 0;
+  let producedProjectedState = false;
+  const finish = (
+    state: ChooseNStepInnerPreviewResult['state'],
+    depth: number,
+    outcome: DriveResult['outcome'],
+  ): DriveResult | undefined => producedProjectedState
+    ? {
+        state,
+        depth,
+        outcome,
+        completionPolicy,
+        syntheticDecisions: [...syntheticDecisions],
+        completionPolicyFallbackCount,
+      }
+    : undefined;
+  let state = stateAfterRoot;
+  let depth = initialDepth;
+
+  while (true) {
+    const microturn = publishMicroturn(input.def, state, input.runtime);
+    if (
+      microturn.kind === 'actionSelection'
+      || microturn.kind === 'outcomeGrantResolve'
+      || microturn.kind === 'turnRetirement'
+      || microturn.seatId !== input.microturn.seatId
+      || microturn.turnId !== input.microturn.turnId
+    ) {
+      return finish(state, depth, 'ready');
+    }
+    if (microturn.kind === 'stochasticResolve') {
+      return finish(state, depth, 'stochastic');
+    }
+    if (depth >= depthCap) {
+      return finish(state, depth, 'depthCap');
+    }
+
+    const nextDecisionResult = pickInnerDecision(
+      state,
+      input.def,
+      microturn,
+      completionPolicy,
+      fallbackCompletionPolicy,
+      {
+        def: input.def,
+        state: input.state,
+        playerId: input.playerId,
+        seatId: input.seatId,
+        trustedMoveIndex: new Map(),
+        previewMode: input.profile.preview.mode,
+        completionPolicy,
+        fallbackCompletionPolicy,
+        completionDepthCap: depthCap,
+        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+        policyGuidedDeps: {
+          catalog: input.catalog,
+          profile: input.profile,
+        },
+      },
+    );
+    const nextDecision = nextDecisionResult.decision;
+    if (nextDecisionResult.usedFallback) {
+      completionPolicyFallbackCount += 1;
+    }
+    if (nextDecision === undefined || nextDecision.kind !== 'chooseNStep') {
+      return undefined;
+    }
+    const chooseNStepMicroturn = microturn as ChooseNStepMicroturn;
+    const chooseNStepDecision = nextDecision as ChooseNStepDecision;
+    const lowered = lowerPolicyWasmChooseNStepContinuation({
+      state,
+      microturn: chooseNStepMicroturn,
+      decision: chooseNStepDecision,
+      initialValue: 0,
+    });
+    if (lowered.kind !== 'supported') {
+      return undefined;
+    }
+    const result = runtime.evaluatePreviewDriveBatch({
+      profileId: 'production-deep-choosenstep-continuation',
+      originSeatId: chooseNStepMicroturn.seatId,
+      originTurnId: chooseNStepMicroturn.turnId,
+      depthCap,
+      candidates: [lowered.candidate],
+      steps: [],
+      materializeStatePatch: true,
+    });
+    if (result.kind !== 'supported') {
+      return undefined;
+    }
+    const patch = result.rows[0]?.statePatch;
+    if (patch === undefined) {
+      return undefined;
+    }
+    const traceEntry = syntheticDecisionTraceEntry(
+      chooseNStepDecision,
+      syntheticDecisions.length + 1,
+      nextDecisionResult.usedFallback ? 'greedy' : completionPolicy,
+    );
+    if (traceEntry !== undefined) {
+      syntheticDecisions.push(traceEntry);
+    }
+    state = materializePolicyWasmPreviewStatePatch({
+      def: input.def,
+      state,
+      patch,
+      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    }).state;
+    producedProjectedState = true;
+    depth += 1;
+  }
+};
+
 export const runDeepPass = (
   input: RunChooseNStepInnerPreviewInput,
   broadRun: ChooseNStepInnerPreviewRun,
@@ -189,8 +329,7 @@ export const runDeepPass = (
     },
   };
   const options = broadRun.options.map((option) => {
-    recordProductionPolicyWasmPreviewDrive('unsupported');
-    const deepDrive = continueChooseNStepInnerPreviewDrive(
+    const wasmDrive = continueChooseNStepInnerPreviewDriveWithWasm(
       {
         ...input,
         state: option.state,
@@ -199,6 +338,16 @@ export const runDeepPass = (
       option.state,
       option.driveDepth,
     );
+    const deepDrive = wasmDrive ?? continueChooseNStepInnerPreviewDrive(
+      {
+        ...input,
+        state: option.state,
+        depthCap: config.deep.depthCap,
+      },
+      option.state,
+      option.driveDepth,
+    );
+    recordProductionPolicyWasmPreviewDrive(wasmDrive === undefined ? 'unsupported' : 'supported');
     return resolveDeepOption(
       input,
       option,

@@ -165,19 +165,19 @@ export const materializePolicyWasmPreviewStatePatch = (
         if (String(decisionContext.decisionKey) !== op.decisionKey) {
           throw new Error('Policy WASM state patch referenced a mismatched chooseNStep continuation.');
         }
-        if (op.command === 'confirm') {
-          throw new Error('Policy WASM state patch chooseNStep confirm materialization is not supported by this ABI slice.');
-        }
         const opValue = op.value;
-        if (opValue === undefined) {
+        if (op.command !== 'confirm' && opValue === undefined) {
           throw new Error('Policy WASM state patch chooseNStep add/remove materialization requires a value.');
         }
         const decision = microturn.legalActions.find((candidate): candidate is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
           candidate.kind === 'chooseNStep'
           && candidate.command === op.command
           && candidate.decisionKey === decisionContext.decisionKey
-          && candidate.value !== undefined
-          && scalarCode(candidate.value as MoveParamScalar) === scalarCode(opValue));
+          && (op.command === 'confirm'
+            ? candidate.value === undefined
+            : candidate.value !== undefined
+              && opValue !== undefined
+              && scalarCode(candidate.value as MoveParamScalar) === scalarCode(opValue)));
         if (decision === undefined) {
           throw new Error('Policy WASM state patch referenced a non-legal chooseNStep continuation decision.');
         }

@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-010: Phase 4b — Default flip and A/B wiring deletion
 
-**Status**: PENDING
+**Status**: REJECTED — Phase 4 gate failed; no code retained
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-wasm-score-routing.ts`, `policy-preview-inner-deepening.ts`, possibly `policy-agent-inner-preview.ts`
@@ -97,3 +97,11 @@ Run the 15-seed witness one more time post-flip; capture `reports/fitl-arvn-15-s
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-default-route.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD>-post-174-final --profile-buckets`
+
+## Outcome
+
+Declined — Phase 4 gate failed; escalation report at `reports/174-phase-4-architectural-blocker.md` governs next owner.
+
+No engine code changed under this ticket. The gate-decision report at `reports/174-phase-4-gate-decision.md` recorded a Fail verdict: post-008 slow-tier median `27211.75 ms`, required `<=20408.8125 ms`, post-174-011 final median `62042.20 ms`, delta `+34830.45 ms` (`+127.9978%`). The default flip and A/B deletion are therefore not authorized.
+
+Next owner: `tickets/174WASMDEEPPRV-014.md`.

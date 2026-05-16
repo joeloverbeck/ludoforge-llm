@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-009: Phase 4a — Perf-witness rerun and gate decision
 
-**Status**: PENDING
+**Status**: COMPLETED — Phase 4 gate decision recorded Fail; residual owner 014
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement and gate-decision ticket
@@ -83,3 +83,50 @@ None — this is a measurement-and-report ticket. Manual verification consists o
 1. `pnpm -F @ludoforge/engine build` (ensure WASM is built with all Phase 1 + Phase 3 changes)
 2. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD>-post-174-011 --profile-buckets`
 3. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implementation completed on 2026-05-16. The decisive Phase 4 witness ran on 2026-05-16 and produced:
+
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.md`
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.csv`
+- `reports/174-phase-4-gate-decision.md`
+- `reports/174-phase-4-architectural-blocker.md`
+
+Gate verdict: Fail. The post-008 baseline slow-tier median was `27211.75 ms`; the required final median for a 25% improvement was `<=20408.8125 ms`; the post-174-011 final slow-tier median was `62042.20 ms`, a `+34830.45 ms` regression (`+127.9978%`). Activation counters from the witness were: WASM production preview-drive route count `181`, unsupported count `3394`, batch count `1712`.
+
+Landed scope:
+- Augmented `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` so the witness CSV records `wasmProductionPreviewDriveRouteCount` and `wasmProductionPreviewDriveUnsupportedCount` per decision and the Markdown report summarizes route, unsupported, and batch totals by microturn class.
+- Extracted report rendering to `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` to resolve the source-size hard gate on the touched script.
+- Created the gate-decision report and fail-path blocker report.
+- Rejected `tickets/174WASMDEEPPRV-010.md` without code changes because the default flip is not authorized.
+- Added `tickets/174WASMDEEPPRV-014.md` as the next non-overlapping owner for the failed gate residual.
+
+Generated/artifact fallout: checked-in witness Markdown/CSV and two Phase 4 reports were created. No schema, golden, GameSpecDoc, WASM ABI, or checked-in generated JSON artifact changed.
+
+Source-size ledger:
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs | before 862 | after 700 | crossed cap? no, extracted below cap | active growth resolved by helper extraction | extraction/defer rationale: report rendering moved to adjacent helper | successor if any: none`
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs | before 0 | after 201 | crossed cap? no | active growth new helper under typical band | extraction/defer rationale: source-size gate resolution for measurement script | successor if any: none`
+
+Command ledger:
+- Test Plan | `pnpm -F @ludoforge/engine build` | ran directly before witness | passed.
+- What to Change/Test Plan | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date 2026-05-16-post-174-011 --profile-buckets` | ran directly | passed; wrote witness report and CSV.
+- Acceptance | determinism gates same list as Spec 174 AC #4 | ran as focused compiled Node test command after build | passed; 24 tests, 6 suites, 0 failures.
+- Test Plan | `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` | split into three serial turbo lanes | passed.
+- Ticket graph integrity | `pnpm run check:ticket-deps` | ran after final terminal-status graph edits | passed.
+
+Verification:
+- `node --check packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` - passed.
+- `node --check packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` - passed.
+- `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000 --timeout-ms 400000 --date 2026-05-16-post-174-011-smoke --profile-buckets --output-dir /tmp/ludoforge-174-smoke` - passed; verified new Markdown totals and CSV counter columns.
+- `pnpm -F @ludoforge/engine build` - passed.
+- `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date 2026-05-16-post-174-011 --profile-buckets` - passed; 15/15 seeds completed and wrote the witness Markdown/CSV.
+- `node --test packages/engine/dist/test/determinism/spec-140-replay-identity.test.js packages/engine/dist/test/determinism/forked-vs-fresh-runtime-parity.test.js packages/engine/dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js packages/engine/dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js packages/engine/dist/test/integration/policy-bytecode-equivalence.test.js` - passed; 24 tests, 6 suites, 0 failures.
+- `pnpm turbo test` - passed; 5 successful tasks, 1 cached. Advisory emissions only: runner jsdom/canvas/ticker-error stderr from existing passing tests.
+- `pnpm turbo lint` - passed; 2 successful tasks, 1 cached.
+- `pnpm turbo typecheck` - passed; 3 successful tasks, 1 cached.
+- `pnpm run check:ticket-deps` - passed; ticket dependency integrity check passed for 3 active tickets and 2362 archived tickets.
+
+Late-edit proof validity: the final ticket status/proof transcription happened after the source, report, spec, dependent-ticket, successor-ticket, witness, and broad proof lanes were complete. The follow-up dependency-check transcription is clerical and records the just-run graph result; it does not change source, command semantics, acceptance thresholds, touched-file ownership, dependency ownership, or residual owner.
+
+Archive status: completed and ready for post-ticket review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `tickets/174WASMDEEPPRV-014.md` is the next active owner.

@@ -58,7 +58,7 @@ The route remains generic: it consumes compiled GameDef, policy bytecode, encode
 | 3b-prereq | Deep preview-drive state-patch/materialization ABI. | A generic WASM state-patch payload and TypeScript host decoder can reconstruct canonical projected `GameState` values for supported deep preview continuations; unsupported structural classes fail closed with explicit provenance. |
 | 3b-continuation-prereq | Deep preview-drive `chooseNStep` continuation state-patch/materialization ABI. | A generic WASM/host continuation ABI can materialize projected `GameState` values for supported `chooseNStep` deep continuations without TypeScript being the hidden state producer; unsupported classes fail closed with explicit provenance. |
 | 3b | Deep preview-drive materialized-state consumption. | Deep `continuedDeepening` / `deep1024` rows route through WASM only when the WASM route returns the projected `GameState` consumed by `runDeepPass`; unsupported classes remain explicit. |
-| 4 | Perf gate and default-flip decision. | The 15-seed witness improves the Spec 173 residual materially, or records a new architectural blocker with exact unsupported classes and next owner. |
+| 4 | Perf gate and default-flip decision. | Fail recorded on 2026-05-16: the post-174-011 15-seed witness regressed the slow-tier median to `62042.20 ms` against the `<=20408.8125 ms` pass threshold; `reports/174-phase-4-architectural-blocker.md` names `tickets/174WASMDEEPPRV-014.md` as the next owner and `tickets/174WASMDEEPPRV-010.md` is rejected. |
 
 ## 5. Acceptance Criteria
 
@@ -130,11 +130,12 @@ Decomposed via `/spec-to-tickets` on 2026-05-15:
 - [`archive/tickets/174WASMDEEPPRV-012.md`](../archive/tickets/174WASMDEEPPRV-012.md) — Phase 3b prerequisite — Deep preview-drive state-patch ABI design
 - [`archive/tickets/174WASMDEEPPRV-013.md`](../archive/tickets/174WASMDEEPPRV-013.md) — Phase 3b continuation prerequisite — chooseNStep continuation state-patch ABI
 - [`archive/tickets/174WASMDEEPPRV-011.md`](../archive/tickets/174WASMDEEPPRV-011.md) — Phase 3b — Deep preview-drive materialized-state consumption (after 013)
-- [`tickets/174WASMDEEPPRV-009.md`](../tickets/174WASMDEEPPRV-009.md) — Phase 4a — Perf-witness rerun and gate decision
-- [`tickets/174WASMDEEPPRV-010.md`](../tickets/174WASMDEEPPRV-010.md) — Phase 4b — Default flip and A/B wiring deletion (gated on 009's perf-gate Pass; descope path documented in body)
+- [`tickets/174WASMDEEPPRV-009.md`](../tickets/174WASMDEEPPRV-009.md) — Phase 4a — Perf-witness rerun and gate decision (Fail recorded; ready for review/archive after 009 closeout)
+- [`tickets/174WASMDEEPPRV-010.md`](../tickets/174WASMDEEPPRV-010.md) — Phase 4b — Default flip and A/B wiring deletion (rejected because 009's perf gate failed)
+- [`tickets/174WASMDEEPPRV-014.md`](../tickets/174WASMDEEPPRV-014.md) — Phase 4c — Diagnose failed post-011 residual owner
 
 This spec intentionally does not implement WASM preview-drive code inside the Spec 173 closeout ticket; the first slice owns inventory only.
 
 ## 9. Outcome
 
-Pending implementation.
+Phase 4 gate update on 2026-05-16: `tickets/174WASMDEEPPRV-009.md` reran the post-011 15-seed witness and recorded a Fail verdict in `reports/174-phase-4-gate-decision.md`. The default flip in `tickets/174WASMDEEPPRV-010.md` is rejected without engine changes. The next owner is `tickets/174WASMDEEPPRV-014.md`, which must diagnose the remaining unsupported-count and zero-counter residual classes before any later default-flip path can be reconsidered.

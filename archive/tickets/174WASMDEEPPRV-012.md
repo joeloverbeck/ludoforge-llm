@@ -109,11 +109,11 @@ Landed scope:
 - Added an opt-in `materializeStatePatch` production preview-drive request path. Existing broad production preview-drive rows remain unchanged unless the caller requests materialized projected state.
 - Added WASM-returned state-patch rows for supported generic state classes: global variable values, zone variable values, token moves, numeric/boolean token scalar properties, marker state, action-usage counters, and microturn metadata needed for canonical preview-state identity.
 - Added TypeScript host materialization that reconstructs a canonical `GameState`, recomputes `stateHash`/`_runningHash`, and rejects mismatched or non-materializable payloads deterministically.
-- Kept production deep `runDeepPass` consumption out of scope; `tickets/174WASMDEEPPRV-011.md` remains the owner for dispatching deep `continuedDeepening` through this substrate.
+- Kept production deep `runDeepPass` consumption out of scope; `tickets/174WASMDEEPPRV-011.md` remains the owner for dispatching deep `continuedDeepening` after `tickets/174WASMDEEPPRV-013.md` lands the missing generic `chooseNStep` continuation materialization prerequisite.
 
 Unsupported/fail-closed scope:
 - Per-player variable patches and broader structural classes not encoded above remain unsupported for state-patch materialization.
-- Existing preview-drive unsupported/fallback reason surfaces remain explicit; production activation is still deferred to `tickets/174WASMDEEPPRV-011.md`.
+- Existing preview-drive unsupported/fallback reason surfaces remain explicit; production activation is still deferred through `tickets/174WASMDEEPPRV-013.md` to `tickets/174WASMDEEPPRV-011.md`.
 
 ABI identity:
 - `POLICY_WASM_ABI_VERSION` / Rust `ABI_VERSION`: `15 -> 16`.
@@ -125,13 +125,13 @@ Generated/schema fallout:
 - No schema, golden, GameSpecDoc, or checked-in generated JSON artifact changed.
 
 Source-size ledger:
-- `packages/engine/src/agents/policy-wasm-preview-drive.ts | before 768 | after 936 | crossed cap? yes | active growth state-patch ABI codec/type extension | extraction/defer rationale: canonical preview-drive ABI hub; extracting while the ABI is still changing would widen/obscure the substrate seam | successor if any: tickets/174WASMDEEPPRV-011.md`
-- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts | before 786 | after 881 | crossed cap? yes | active growth opt-in state-patch emission/materialization | extraction/defer rationale: canonical production preview-drive compiler hub; surgical addition keeps the state-patch provenance beside supported/fail-closed lowering | successor if any: tickets/174WASMDEEPPRV-011.md`
-- `packages/engine/src/agents/policy-wasm-runtime.ts | before 1404 | after 1424 | crossed cap? no, preexisting oversize + active growth | active growth FFI pointer/length mirror | extraction/defer rationale: canonical WASM runtime FFI hub; narrow mirror update is safer than interface extraction in this ticket | successor if any: tickets/174WASMDEEPPRV-011.md`
-- `packages/engine-wasm/policy-vm/src/preview_drive.rs | before 757 | after 883 | crossed cap? yes | active growth ABI state-patch validation/output mirror | extraction/defer rationale: canonical Rust preview-drive ABI evaluator; split would obscure host/guest mirror proof | successor if any: tickets/174WASMDEEPPRV-011.md`
+- `packages/engine/src/agents/policy-wasm-preview-drive.ts | before 768 | after 936 | crossed cap? yes | active growth state-patch ABI codec/type extension | extraction/defer rationale: canonical preview-drive ABI hub; extracting while the ABI is still changing would widen/obscure the substrate seam | successor if any: tickets/174WASMDEEPPRV-013.md`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts | before 786 | after 881 | crossed cap? yes | active growth opt-in state-patch emission/materialization | extraction/defer rationale: canonical production preview-drive compiler hub; surgical addition keeps the state-patch provenance beside supported/fail-closed lowering | successor if any: tickets/174WASMDEEPPRV-013.md`
+- `packages/engine/src/agents/policy-wasm-runtime.ts | before 1404 | after 1424 | crossed cap? no, preexisting oversize + active growth | active growth FFI pointer/length mirror | extraction/defer rationale: canonical WASM runtime FFI hub; narrow mirror update is safer than interface extraction in this ticket | successor if any: tickets/174WASMDEEPPRV-013.md`
+- `packages/engine-wasm/policy-vm/src/preview_drive.rs | before 757 | after 883 | crossed cap? yes | active growth ABI state-patch validation/output mirror | extraction/defer rationale: canonical Rust preview-drive ABI evaluator; split would obscure host/guest mirror proof | successor if any: tickets/174WASMDEEPPRV-013.md`
 - `packages/engine-wasm/policy-vm/src/lib.rs | before 1307 | after 1307 | crossed cap? no active growth beyond ABI version literal | extraction/defer rationale: preexisting canonical VM export hub | successor if any: none`
 
-Post-review correction (2026-05-16): `tickets/174WASMDEEPPRV-011.md` is now unblocked because this prerequisite ABI landed, and it explicitly owns resolving the inherited source-size gate while wiring deep materialized-state consumption. No runtime code changed during review.
+Post-review correction (2026-05-16): `tickets/174WASMDEEPPRV-011.md` was initially unblocked because this prerequisite ABI landed, and it explicitly owned resolving the inherited source-size gate while wiring deep materialized-state consumption. Later live reassessment found this action-pipeline-rooted substrate is necessary but not sufficient for `runDeepPass`; `tickets/174WASMDEEPPRV-013.md` now owns the missing generic `chooseNStep` continuation materialization prerequisite and source-size gate resolution before 011 can close. No runtime code changed during review.
 
 Verification:
 - `pnpm -F @ludoforge/engine-wasm build` — passed.

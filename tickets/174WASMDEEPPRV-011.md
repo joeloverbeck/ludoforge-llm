@@ -1,16 +1,16 @@
 # 174WASMDEEPPRV-011: Phase 3b — Deep preview-drive materialized-state consumption
 
-**Status**: PENDING
+**Status**: BLOCKED by prerequisite
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — TypeScript host bridge consumption, deep preview dispatch after ABI prerequisite
-**Deps**: `tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`
+**Deps**: `tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`, `tickets/174WASMDEEPPRV-013.md`
 
 ## Problem
 
 `174WASMDEEPPRV-008` can truthfully count broad preview-drive WASM activation, but live reassessment found that `runDeepPass` cannot consume `evaluateProductionPreviewDriveBatchWithWasm` as its implementation because the WASM row output does not include the materialized projected `GameState` required by `ChooseNStepInnerPreviewResult.state` and `projectedStateByOptionKey`. Counting a WASM row while still using TypeScript to produce the state would make fallback success look like route activation and would violate Foundations #9, #16, and #20.
 
-This ticket wires `runDeepPass` to consume WASM-produced projected state after the prerequisite state-patch/materialization ABI in `archive/tickets/174WASMDEEPPRV-012.md` exists.
+This ticket wires `runDeepPass` to consume WASM-produced projected state after the prerequisite state-patch/materialization ABI in `archive/tickets/174WASMDEEPPRV-012.md` exists and after `tickets/174WASMDEEPPRV-013.md` lands the missing generic `chooseNStep` continuation materialization ABI.
 
 ## Assumption Reassessment (2026-05-16)
 
@@ -18,6 +18,7 @@ This ticket wires `runDeepPass` to consume WASM-produced projected state after t
 2. `runDeepPass` must return `ChooseNStepInnerPreviewResult` objects whose `state` is the projected post-preview state; downstream callers expose that state through `projectedStateByOptionKey`.
 3. `174WASMDEEPPRV-008` records deep-phase unsupported counters and keeps the TypeScript fallback until this ABI/state contract exists.
 4. Additional reassessment on 2026-05-16 found that `runDeepPass` operates on `chooseNStep` microturn continuations, while the existing production preview-drive compiler is rooted in root action `Move` pipelines. A scalar/global-only bridge would still require TypeScript to apply the deep continuation to derive state deltas, so it is not a Foundation-aligned proof that WASM produced the consumed projected state. `archive/tickets/174WASMDEEPPRV-012.md` owns the prerequisite generic state-patch/materialization ABI.
+5. Reassessment after 012 landed found that the prerequisite ABI is necessary but not sufficient: live `compileProductionPreviewDrive` still compiles action-pipeline-rooted `Move` programs, while `runDeepPass` needs `chooseNStep` continuation state patches. User-approved Option 2 on 2026-05-16 split that missing prerequisite into `tickets/174WASMDEEPPRV-013.md` and keeps this ticket blocked until it lands.
 
 ## Architecture Check
 
@@ -29,11 +30,11 @@ This ticket wires `runDeepPass` to consume WASM-produced projected state after t
 
 ### 0. Source-size gate resolution
 
-Before terminal closeout, resolve the source-size gate inherited from the `174WASMDEEPPRV-012` substrate: the current implementation grew the canonical preview-drive TypeScript/Rust hubs past the repo's 800-line guidance. Because this ticket touches the same ABI and deep-consumption surfaces, it owns either a narrow extraction that keeps the deep-route seam clear or an explicit 1-3-1 decision documenting why extraction is deferred.
+Before terminal closeout, resolve the source-size gate inherited from the `174WASMDEEPPRV-012` substrate and carried into `tickets/174WASMDEEPPRV-013.md`: the current implementation grew the canonical preview-drive TypeScript/Rust hubs past the repo's 800-line guidance. Because this ticket will touch the same ABI and deep-consumption surfaces after 013 lands, it owns confirming that 013 resolved the gate or carrying an explicit user-approved 1-3-1 deferral before terminal closeout.
 
 ### 1. Materialized projected-state ABI
 
-Consume the preview-drive state-patch ABI from `archive/tickets/174WASMDEEPPRV-012.md` so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
+Consume the preview-drive state-patch ABI from `archive/tickets/174WASMDEEPPRV-012.md` plus the `chooseNStep` continuation materialization ABI from `tickets/174WASMDEEPPRV-013.md` so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
 
 ### 2. Deep-phase WASM consumption
 
@@ -95,23 +96,27 @@ Add tests that prove:
 
 ## Outcome
 
-Unblocked on 2026-05-16 after `archive/tickets/174WASMDEEPPRV-012.md` landed the prerequisite generic state-patch/materialization ABI.
+Re-blocked on 2026-05-16 after live reassessment showed `archive/tickets/174WASMDEEPPRV-012.md` landed the generic action-pipeline-rooted state-patch/materialization ABI, but not the generic `chooseNStep` continuation materialization ABI required by `runDeepPass`.
 
-Landed scope so far: reassessment only; no runtime code has landed under this ticket.
+Authorization ledger: user approved recommended Option 2 on 2026-05-16 after a Foundations-aligned 1-3-1 reassessment. Scope effect: defers missing prerequisite work to `tickets/174WASMDEEPPRV-013.md`; this ticket remains the production consumption owner after 013 lands.
 
-Continuation owner: this ticket owns wiring `runDeepPass` to consume WASM-produced projected state and owns resolving the inherited source-size gate for the preview-drive ABI/deep-consumption hubs before terminal closeout.
+Landed scope so far: reassessment and ticket/spec graph correction only; no runtime code has landed under this ticket.
 
-Dependency/spec/sibling rewrites: this ticket depends on archived 012; Spec 174 lists archived 012 before this active continuation; Phase 4 remains gated on 011.
+Missing prerequisite: `tickets/174WASMDEEPPRV-013.md` owns the generic `chooseNStep` continuation compiler/materialization ABI and source-size gate resolution needed before this ticket can truthfully count supported deep activation.
+
+Continuation owner: this ticket owns wiring `runDeepPass` to consume WASM-produced projected state after 013 lands and owns verifying that the inherited source-size gate is resolved before terminal closeout.
+
+Dependency/spec/sibling rewrites: this ticket depends on archived 012 and active 013; Spec 174 lists 013 before this active continuation; Phase 4 remains gated on 011.
 
 Verification:
-- `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 5 active tickets and 2358 archived tickets.
+- `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 5 active tickets and 2359 archived tickets.
 - `git diff --check` — passed.
-- `git diff --no-index --check /dev/null archive/tickets/174WASMDEEPPRV-012.md` — whitespace-clean; command exited 1 with no diagnostics because the new untracked file differs from `/dev/null`.
+- `git diff --no-index --check /dev/null tickets/174WASMDEEPPRV-013.md` — whitespace-clean; command exited 1 with no diagnostics because the new untracked file differs from `/dev/null`.
 
 Schema/generated fallout: none; markdown/ticket graph only.
 
-Late-edit proof validity: review changed only this ticket's status/prose and archive-path references after 012 was archived. Dependency and markdown hygiene were rerun; no source, test, schema, or runtime acceptance boundary changed.
+Late-edit proof validity: approved Option 2 changed only ticket/spec/report graph prose and active-ticket status/dependency ownership. Dependency and markdown hygiene were rerun; no source, test, schema, WASM ABI, or runtime acceptance behavior changed, so no engine proof rerun is required for this blocked handoff.
 
-Archive status: active and not archive-ready.
+Archive status: blocked and not archive-ready.
 
-Next workflow: continue with `$implement-ticket tickets/174WASMDEEPPRV-011.md`.
+Next workflow: continue with `$implement-ticket tickets/174WASMDEEPPRV-013.md`.

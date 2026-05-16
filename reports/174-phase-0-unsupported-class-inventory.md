@@ -75,17 +75,17 @@ Ticket 001 adds production preview-drive route and unsupported counters only. It
 
 ## Deep-Phase Attribution
 
-`runDeepPass` in `policy-preview-inner-deepening.ts` currently routes every `continuedDeepening` option through TypeScript. Therefore the deep phase has no live WASM fail-closed reason string today; its current unsupported class is the absence of a production WASM dispatch boundary. `174WASMDEEPPRV-008` records this as explicit unsupported deep-route telemetry; the prerequisite state-patch/materialization ABI owner is `174WASMDEEPPRV-012`, and the real deep activation owner remains `174WASMDEEPPRV-011`.
+`runDeepPass` in `policy-preview-inner-deepening.ts` currently routes every `continuedDeepening` option through TypeScript. Therefore the deep phase has no live WASM fail-closed reason string today; its current unsupported class is the absence of a production WASM dispatch boundary. `174WASMDEEPPRV-008` records this as explicit unsupported deep-route telemetry; the action-pipeline state-patch/materialization ABI owner is `174WASMDEEPPRV-012`, the missing generic `chooseNStep` continuation materialization prerequisite owner is `174WASMDEEPPRV-013`, and the real deep activation owner remains `174WASMDEEPPRV-011`.
 
 The post-008 witness classes that make the deep-phase route material are:
 
 | Witness class | Preview branch | Decisions in slow tier | Total ms in slow tier | Phase owner |
 |---|---|---:|---:|---|
-| `train:chooseNStep:add` | `continuedDeepening` | 33 | 54546.24 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, then `174WASMDEEPPRV-011` materialized-state activation |
-| `train:chooseNStep:confirm` | `continuedDeepening` | 35 | 39527.73 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, then `174WASMDEEPPRV-011` materialized-state activation |
-| `coupArvnRedeployPolice:chooseOne` | `continuedDeepening` | 52 | 24104.97 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-004`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, then `174WASMDEEPPRV-011` materialized-state activation |
-| `govern:chooseNStep:confirm` | `continuedDeepening` | 25 | 12791.11 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, then `174WASMDEEPPRV-011` materialized-state activation |
-| `govern:chooseNStep:add` | `continuedDeepening` | 35 | 11820.45 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, then `174WASMDEEPPRV-011` materialized-state activation |
+| `train:chooseNStep:add` | `continuedDeepening` | 33 | 54546.24 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, `174WASMDEEPPRV-013` continuation materialization, then `174WASMDEEPPRV-011` materialized-state activation |
+| `train:chooseNStep:confirm` | `continuedDeepening` | 35 | 39527.73 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, `174WASMDEEPPRV-013` continuation materialization, then `174WASMDEEPPRV-011` materialized-state activation |
+| `coupArvnRedeployPolice:chooseOne` | `continuedDeepening` | 52 | 24104.97 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-004`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, `174WASMDEEPPRV-013` continuation materialization, then `174WASMDEEPPRV-011` materialized-state activation |
+| `govern:chooseNStep:confirm` | `continuedDeepening` | 25 | 12791.11 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, `174WASMDEEPPRV-013` continuation materialization, then `174WASMDEEPPRV-011` materialized-state activation |
+| `govern:chooseNStep:add` | `continuedDeepening` | 35 | 11820.45 | `174WASMDEEPPRV-003`, `174WASMDEEPPRV-005`, `174WASMDEEPPRV-006`, `174WASMDEEPPRV-008` telemetry, `174WASMDEEPPRV-012` state-patch ABI, `174WASMDEEPPRV-013` continuation materialization, then `174WASMDEEPPRV-011` materialized-state activation |
 
 ## Counter Wiring Status
 
@@ -97,4 +97,4 @@ Ticket 001 adds these generic counters in `policy-wasm-runtime.ts`:
 - `getProductionPolicyWasmPreviewDriveRouteCount()`
 - `getProductionPolicyWasmPreviewDriveUnsupportedCount()`
 
-Dispatch callsites intentionally remain unchanged in this phase. Phase 3a activation telemetry (`174WASMDEEPPRV-008`) owns calling `recordProductionPolicyWasmPreviewDrive(...)` from broad-phase supported batches and deep-phase unsupported fallback sites, so fallback success cannot be mistaken for route activation. Phase 3b prerequisite (`174WASMDEEPPRV-012`) owns the state-patch/materialization ABI, and Phase 3b (`174WASMDEEPPRV-011`) owns true deep materialized-state activation.
+Dispatch callsites intentionally remain unchanged in this phase. Phase 3a activation telemetry (`174WASMDEEPPRV-008`) owns calling `recordProductionPolicyWasmPreviewDrive(...)` from broad-phase supported batches and deep-phase unsupported fallback sites, so fallback success cannot be mistaken for route activation. Phase 3b prerequisite (`174WASMDEEPPRV-012`) owns the action-pipeline state-patch/materialization ABI, `174WASMDEEPPRV-013` owns the missing generic `chooseNStep` continuation materialization prerequisite, and Phase 3b (`174WASMDEEPPRV-011`) owns true deep materialized-state activation.

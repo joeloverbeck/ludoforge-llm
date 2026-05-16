@@ -56,6 +56,7 @@ The route remains generic: it consumes compiled GameDef, policy bytecode, encode
 | 2 | Parity for supported deep preview-drive rows. | A new integration parity oracle (sibling to `packages/engine/test/integration/policy-bytecode-equivalence*.test.ts`, not an extension of it) proves TypeScript and WASM preview-drive output are byte-equivalent for supported rows — preview outcomes, candidate ordering, state-feature values, and Foundation-20 signal carriers. |
 | 3a | Production route activation telemetry. | Broad production preview-drive rows route through WASM where supported, with nonzero activation counters; deep-phase `continuedDeepening` remains TypeScript-backed and increments explicit unsupported counters until materialized projected-state ABI support lands. |
 | 3b-prereq | Deep preview-drive state-patch/materialization ABI. | A generic WASM state-patch payload and TypeScript host decoder can reconstruct canonical projected `GameState` values for supported deep preview continuations; unsupported structural classes fail closed with explicit provenance. |
+| 3b-continuation-prereq | Deep preview-drive `chooseNStep` continuation state-patch/materialization ABI. | A generic WASM/host continuation ABI can materialize projected `GameState` values for supported `chooseNStep` deep continuations without TypeScript being the hidden state producer; unsupported classes fail closed with explicit provenance. |
 | 3b | Deep preview-drive materialized-state consumption. | Deep `continuedDeepening` / `deep1024` rows route through WASM only when the WASM route returns the projected `GameState` consumed by `runDeepPass`; unsupported classes remain explicit. |
 | 4 | Perf gate and default-flip decision. | The 15-seed witness improves the Spec 173 residual materially, or records a new architectural blocker with exact unsupported classes and next owner. |
 
@@ -127,7 +128,8 @@ Decomposed via `/spec-to-tickets` on 2026-05-15:
 - [`archive/tickets/174WASMDEEPPRV-007.md`](../archive/tickets/174WASMDEEPPRV-007.md) — Phase 2 — TS/WASM preview-drive parity oracle
 - [`tickets/174WASMDEEPPRV-008.md`](../tickets/174WASMDEEPPRV-008.md) — Phase 3a — Production route activation counters (broad + deep unsupported classification)
 - [`archive/tickets/174WASMDEEPPRV-012.md`](../archive/tickets/174WASMDEEPPRV-012.md) — Phase 3b prerequisite — Deep preview-drive state-patch ABI design
-- [`tickets/174WASMDEEPPRV-011.md`](../tickets/174WASMDEEPPRV-011.md) — Phase 3b — Deep preview-drive materialized-state consumption
+- [`tickets/174WASMDEEPPRV-013.md`](../tickets/174WASMDEEPPRV-013.md) — Phase 3b continuation prerequisite — chooseNStep continuation state-patch ABI
+- [`tickets/174WASMDEEPPRV-011.md`](../tickets/174WASMDEEPPRV-011.md) — Phase 3b — Deep preview-drive materialized-state consumption (blocked on 013)
 - [`tickets/174WASMDEEPPRV-009.md`](../tickets/174WASMDEEPPRV-009.md) — Phase 4a — Perf-witness rerun and gate decision
 - [`tickets/174WASMDEEPPRV-010.md`](../tickets/174WASMDEEPPRV-010.md) — Phase 4b — Default flip and A/B wiring deletion (gated on 009's perf-gate Pass; descope path documented in body)
 

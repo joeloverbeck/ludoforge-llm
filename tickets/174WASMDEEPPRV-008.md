@@ -14,7 +14,7 @@ This narrowed Phase 3a ticket activates the truthful production telemetry that t
 - **Broad-phase**: supported preview-drive rows reached from `policy-wasm-score-routing.ts` increment `recordProductionPolicyWasmPreviewDrive('supported')`; unsupported/fallback broad classes increment `recordProductionPolicyWasmPreviewDrive('unsupported')`.
 - **Deep-phase**: `runDeepPass` continues to use `continueChooseNStepInnerPreviewDrive` for the materialized projected state and increments `recordProductionPolicyWasmPreviewDrive('unsupported')` for each deferred deep option.
 
-The missing deep materialized-state ABI and real deep-phase WASM state consumption are split to `tickets/174WASMDEEPPRV-011.md`.
+The missing deep materialized-state ABI and real deep-phase WASM state consumption are split across `tickets/174WASMDEEPPRV-013.md` and `tickets/174WASMDEEPPRV-011.md`: 013 owns the generic `chooseNStep` continuation materialization prerequisite, and 011 owns production deep consumption after that prerequisite lands.
 
 ## Assumption Reassessment (2026-05-16)
 
@@ -22,7 +22,7 @@ The missing deep materialized-state ABI and real deep-phase WASM state consumpti
 2. Confirmed `runDeepPass` at `policy-preview-inner-deepening.ts:165` calls `continueChooseNStepInnerPreviewDrive` at line 191 per option; this remains the only live path that returns the `GameState` needed by deep-phase consumers.
 3. Confirmed `runDeepPass` is invoked from `policy-agent-inner-preview.ts:486`; no outer dispatch shape change is required for the narrowed counter/fallback boundary.
 4. The parity oracle (007) is green for supported row output, but it does not prove materialized deep projected-state output.
-5. User approved the Foundation-aligned Option 1 reset on 2026-05-16: land broad activation counters now, record deep unsupported fallback, and split the missing ABI/state work to `tickets/174WASMDEEPPRV-011.md`.
+5. User approved the Foundation-aligned Option 1 reset on 2026-05-16: land broad activation counters now, record deep unsupported fallback, and split the missing ABI/state work to `tickets/174WASMDEEPPRV-011.md`. Later 011 reassessment split the missing generic `chooseNStep` continuation prerequisite to `tickets/174WASMDEEPPRV-013.md`.
 
 ## Architecture Check
 
@@ -46,11 +46,11 @@ In `policy-wasm-score-routing.ts`:
 In `policy-preview-inner-deepening.ts:165` (`runDeepPass`) and the per-option loop at line 191:
 - Keep `continueChooseNStepInnerPreviewDrive` as the deep-phase implementation because it returns the required projected `GameState`.
 - Call `recordProductionPolicyWasmPreviewDrive('unsupported')` for each deep option that reaches the deferred deep route boundary.
-- Do not call `recordProductionPolicyWasmPreviewDrive('supported')` from deep phase until `tickets/174WASMDEEPPRV-011.md` returns a WASM-produced materialized projected state.
+- Do not call `recordProductionPolicyWasmPreviewDrive('supported')` from deep phase until `tickets/174WASMDEEPPRV-013.md` lands the generic `chooseNStep` continuation materialization prerequisite and `tickets/174WASMDEEPPRV-011.md` returns a WASM-produced materialized projected state.
 
 ### 3. Successor handoff
 
-Add `tickets/174WASMDEEPPRV-011.md` for the deep materialized-state ABI and true deep-phase WASM consumption. Update adjacent Phase 4 ticket dependencies so measurement/default-flip work does not proceed as if full deep activation already landed.
+Add `tickets/174WASMDEEPPRV-011.md` for true deep-phase WASM consumption and, after later reassessment, `tickets/174WASMDEEPPRV-013.md` for the missing generic `chooseNStep` continuation materialization prerequisite. Update adjacent Phase 4 ticket dependencies so measurement/default-flip work does not proceed as if full deep activation already landed.
 
 ### 4. Integration test for route activation
 
@@ -73,7 +73,7 @@ Add `tickets/174WASMDEEPPRV-011.md` for the deep materialized-state ABI and true
 ## Out of Scope
 
 - No default flip / A/B wiring deletion (ticket 010 owns that — gated on 009's perf gate).
-- No new ABI work — `tickets/174WASMDEEPPRV-011.md` owns the missing deep materialized-state ABI.
+- No new ABI work — `tickets/174WASMDEEPPRV-013.md` owns the missing generic continuation ABI prerequisite and `tickets/174WASMDEEPPRV-011.md` owns production deep consumption.
 - No FITL-specific identifiers introduced.
 
 ## Acceptance Criteria
@@ -109,13 +109,13 @@ Add `tickets/174WASMDEEPPRV-011.md` for the deep materialized-state ABI and true
 
 Phase 3a landed on 2026-05-16 with the Foundation-aligned boundary approved by the user: broad production preview-drive batches now record supported activation only when WASM returns supported output, while deep `continuedDeepening` records explicit unsupported telemetry and remains TypeScript-backed until the materialized-state ABI exists.
 
-This ticket is intentionally not archive-ready. The missing deep WASM-produced projected `GameState` contract is split to `tickets/174WASMDEEPPRV-011.md`, and downstream measurement/default-flip work now depends on that successor instead of treating Phase 3 as fully activated.
+This ticket is intentionally not archive-ready. The missing deep WASM-produced projected `GameState` contract is split to `tickets/174WASMDEEPPRV-013.md` and `tickets/174WASMDEEPPRV-011.md`, and downstream measurement/default-flip work depends on 011 instead of treating Phase 3 as fully activated.
 
 Implemented scope:
 - `policy-wasm-score-routing.ts` records supported broad-route counters and unsupported broad-route fallback/fail-closed counters.
 - `policy-preview-inner-deepening.ts` records unsupported deep-route counters before the stable TypeScript deep fallback.
 - `policy-wasm-preview-drive-production-route-activation.test.ts` proves broad supported activation and deep unsupported classification.
-- `tickets/174WASMDEEPPRV-011.md`, `tickets/174WASMDEEPPRV-009.md`, `tickets/174WASMDEEPPRV-010.md`, `specs/174-wasm-preview-drive-coverage-extension.md`, and `reports/174-phase-0-unsupported-class-inventory.md` now describe the split Phase 3a/3b graph.
+- `tickets/174WASMDEEPPRV-013.md`, `tickets/174WASMDEEPPRV-011.md`, `tickets/174WASMDEEPPRV-009.md`, `tickets/174WASMDEEPPRV-010.md`, `specs/174-wasm-preview-drive-coverage-extension.md`, and `reports/174-phase-0-unsupported-class-inventory.md` now describe the split Phase 3a/3b graph.
 
 Generated fallout: none. No schema, golden, WASM ABI, or GameSpecDoc artifacts changed.
 

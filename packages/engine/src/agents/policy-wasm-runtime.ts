@@ -235,6 +235,7 @@ type PolicyWasmBatchPrecomputedInput = {
 
 const assertFiniteI32 = (label: string, value: number): void => {
   if (!Number.isInteger(value) || value < -0x8000_0000 || value > 0x7fff_ffff) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM ${label} must be a signed 32-bit integer.`);
   }
 };
@@ -242,6 +243,7 @@ const assertFiniteI32 = (label: string, value: number): void => {
 const checkedExports = (instance: WebAssembly.Instance): PolicyWasmExports => {
   const exports = instance.exports as Partial<PolicyWasmExports>;
   if (!(exports.memory instanceof WebAssembly.Memory)) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM module does not export memory.');
   }
   for (const name of [
@@ -256,6 +258,7 @@ const checkedExports = (instance: WebAssembly.Instance): PolicyWasmExports => {
     'ludoforge_policy_vm_evaluate_preview_drive_batch',
   ] as const) {
     if (typeof exports[name] !== 'function') {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM module is missing export ${name}.`);
     }
   }
@@ -428,6 +431,7 @@ const encodePolicyBytecodeInput = (
       words.set(programWords, headerWords.length);
       words.set(stateWords, headerWords.length + programWords.length);
       if (words.length !== encodedPolicyBytecodeInputWordCount(bytecode, encoded, context)) {
+        // @policy-wasm-throw: contract-violation
         throw new Error('Policy WASM bytecode input size drifted.');
       }
       return new Uint8Array(words.buffer);
@@ -476,6 +480,7 @@ const encodePolicyBytecodeInput = (
     writeWord(context.layout.varLayout.perPlayerVariableIds.length);
     writeWord(context.layout.varLayout.zoneVariableIds.length);
     if (wordIndex !== POLICY_BYTECODE_HEADER_WORDS) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM bytecode header size drifted.');
     }
 
@@ -499,6 +504,7 @@ const encodePolicyBytecodeInput = (
     writeWord(encoded.globalMarkers.length);
     writeBigUint64Words(encoded.globalMarkers);
     if (wordIndex !== bytes.byteLength / I32_BYTES) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM bytecode input size drifted.');
     }
     return bytes;
@@ -587,6 +593,7 @@ const encodeBatchInput = (
   precomputed: PolicyWasmBatchPrecomputedInput = {},
 ): Uint8Array => {
   if (program.byteLength % I32_BYTES !== 0) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM batch program must be i32-aligned.');
   }
   const layoutId = cachedLayoutIdentity(context.layout, context.def);
@@ -613,6 +620,7 @@ const encodeBatchInput = (
   }
   for (const feature of candidateFeatures) {
     if (feature.values.length !== candidates.length) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM candidate feature "${feature.id}" row count must match candidate count.`);
     }
     words.push(stableStringCode(feature.id), feature.values.length);
@@ -623,9 +631,11 @@ const encodeBatchInput = (
   }
   for (const feature of previewCandidateFeatures) {
     if (feature.values.length !== candidates.length) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview candidate feature "${feature.id}" row count must match candidate count.`);
     }
     if (feature.outcomes.length !== candidates.length) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview candidate feature "${feature.id}" outcome count must match candidate count.`);
     }
     words.push(stableStringCode(feature.id), feature.values.length);
@@ -636,6 +646,7 @@ const encodeBatchInput = (
   }
   for (const feature of dynamicCandidateFeatures) {
     if (feature.values.length !== candidates.length) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM dynamic candidate feature ${feature.code} row count must match candidate count.`);
     }
     words.push(feature.code, feature.values.length);
@@ -669,6 +680,7 @@ const encodePolicyValue = (value: PolicyValue): readonly [number, number] => {
   if (typeof value === 'boolean') {
     return [value ? VALUE_TRUE : VALUE_FALSE, value ? 1 : 0];
   }
+  // @policy-wasm-throw: contract-violation
   throw new Error('Policy WASM precomputed values must be undefined, boolean, or safe integer numbers.');
 };
 
@@ -685,6 +697,7 @@ const encodePreviewOutcome = (outcome: PolicyWasmPreviewOutcome | undefined): nu
     case 'unresolved':
       return 5;
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview outcome "${String(outcome)}" is not encodable.`);
   }
 };
@@ -714,6 +727,7 @@ const decodePolicyValue = (tag: number, value: number): PolicyValue => {
     case VALUE_TRUE:
       return true;
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM bytecode evaluation returned unknown value tag ${tag}.`);
   }
 };
@@ -735,6 +749,7 @@ const supportedBatchValues = (
     if (isUnsupportedWasmError(error)) {
       return null;
     }
+    // @policy-wasm-throw: contract-violation
     throw error;
   }
 };
@@ -1099,12 +1114,15 @@ export const createPolicyWasmRuntime = (
   const wasm = checkedExports(instance);
 
   if (wasm.ludoforge_policy_vm_abi_magic() !== POLICY_WASM_ABI_MAGIC) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM ABI magic mismatch.');
   }
   if (wasm.ludoforge_policy_vm_abi_version() !== POLICY_WASM_ABI_VERSION) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM ABI version mismatch.');
   }
   if (wasm.ludoforge_policy_vm_smoke_layout_id() !== POLICY_WASM_SMOKE_LAYOUT_ID) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM smoke layout mismatch.');
   }
 
@@ -1127,6 +1145,7 @@ export const createPolicyWasmRuntime = (
         view.setInt32(inputPtr + 20, right, true);
         const status = wasm.ludoforge_policy_vm_evaluate_smoke(inputPtr, SMOKE_INPUT_BYTES, outPtr);
         if (status !== 0) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM smoke evaluation failed with status ${status}.`);
         }
         return view.getInt32(outPtr, true);
@@ -1149,6 +1168,7 @@ export const createPolicyWasmRuntime = (
           outValuePtr,
         );
         if (status !== 0) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM bytecode evaluation failed with status ${status}.`);
         }
         const view = new DataView(wasm.memory.buffer);
@@ -1176,6 +1196,7 @@ export const createPolicyWasmRuntime = (
           candidates.length,
         );
         if (status !== 0) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM bytecode batch evaluation failed with status ${status}.`);
         }
         const view = new DataView(wasm.memory.buffer);
@@ -1277,6 +1298,7 @@ export const createPolicyWasmRuntime = (
           };
         }
         if (status !== 0) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM preview-drive batch failed with status ${status}.`);
         }
         return {

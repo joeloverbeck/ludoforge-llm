@@ -33,6 +33,23 @@ import {
   type PolicyWasmPreviewDriveUnsupportedDetail,
 } from './policy-wasm-runtime.js';
 
+/*
+ * Spec 175 WASM/TS fallback contract:
+ *
+ * This file is the production preview-drive entry point that calls into the
+ * WASM routing layer. WASM-side unsupported-detection branches return null, or
+ * an equivalent typed unsupported sentinel, and callers here must treat that as
+ * a signal to invoke the TypeScript fallback evaluator. The TypeScript fallback
+ * is the correctness oracle for unsupported shapes; null is not a fatal
+ * condition when the fallback is available.
+ *
+ * See policy-wasm-score-routing.ts for the full source-level contract and the
+ * marker convention enforced by
+ * packages/engine/test/architecture/policy-wasm-throw-contract.test.ts.
+ *
+ * Reference: archive/specs/175-wasm-ts-fallback-contract-enforcement.md.
+ */
+
 export interface DeepeningRunResult {
   readonly run: ChooseNStepInnerPreviewRun;
   readonly triggerFired?: DeepTrigger;

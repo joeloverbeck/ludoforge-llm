@@ -40,6 +40,7 @@ export const decodePreviewStateSlots = (
     const slotCode = view.getInt32(base, true);
     const expectedSlotCode = stablePayloadCode({ literal: slot.id });
     if (slotCode !== expectedSlotCode) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive slot id code mismatch for slot ${slotIndex}.`);
     }
     return {
@@ -55,6 +56,7 @@ const decodePreviewStateSlotKind = (code: number): PolicyWasmPreviewStateSlotKin
     case 2: return 'feature';
     case 3: return 'surface';
     case 4: return 'generic';
+    // @policy-wasm-throw: contract-violation
     default: throw new Error(`Policy WASM preview-drive returned unknown preview-state slot kind ${code}.`);
   }
 };
@@ -63,6 +65,7 @@ const decodePreviewStateSlotLifetime = (code: number): PolicyWasmPreviewStateSlo
   switch (code) {
     case 1: return 'singleIteration';
     case 2: return 'crossIteration';
+    // @policy-wasm-throw: contract-violation
     default: throw new Error(`Policy WASM preview-drive returned unknown preview-state slot lifetime ${code}.`);
   }
 };

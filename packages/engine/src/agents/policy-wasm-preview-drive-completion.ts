@@ -20,12 +20,14 @@ export const maxCompletionRecordCount = (
   depthCap: number,
 ): number => {
   if (depthCap <= 0 || !Number.isInteger(depthCap)) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM preview-drive depthCap must be a positive integer.');
   }
   let maxCount = 0;
   for (const candidate of candidates) {
     const records = candidate.continuedDeepeningCompletionRecords ?? [];
     if (records.length > depthCap) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM continued-deepening completion record count must not exceed depthCap.');
     }
     maxCount = Math.max(maxCount, records.length);
@@ -41,18 +43,22 @@ export const encodeCompletionRecords = (
 ): void => {
   const records = candidate.continuedDeepeningCompletionRecords ?? [];
   if (records.length > completionRecordMaxCount) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM continued-deepening completion record count exceeds batch max count.');
   }
   words.push(records.length);
   let previousIterationIndex = -1;
   for (const record of records) {
     if (!Number.isInteger(record.iterationIndex) || record.iterationIndex < 0) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM continued-deepening completion iterationIndex must be a non-negative integer.');
     }
     if (record.iterationIndex <= previousIterationIndex) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM continued-deepening completion iterationIndex must be strictly ordered.');
     }
     if (!Number.isInteger(record.residualBudget) || record.residualBudget < 0 || record.residualBudget > depthCap) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM continued-deepening completion residualBudget must be within depthCap.');
     }
     previousIterationIndex = record.iterationIndex;
@@ -80,12 +86,15 @@ export const decodeCompletionRecords = (
     const outcome = decodeCompletionOutcome(view.getInt32(base + (2 * I32_BYTES), true));
     const expected = expectedRecords[recordIndex]!;
     if (iterationIndex !== expected.iterationIndex) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM continued-deepening completion iteration mismatch for candidate ${candidateIndex}, record ${recordIndex}.`);
     }
     if (residualBudget !== expected.residualBudget) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM continued-deepening completion residual budget mismatch for candidate ${candidateIndex}, record ${recordIndex}.`);
     }
     if (outcome !== expected.outcome) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM continued-deepening completion outcome mismatch for candidate ${candidateIndex}, record ${recordIndex}.`);
     }
     records.push({ iterationIndex, residualBudget, outcome });
@@ -117,6 +126,7 @@ const decodeCompletionOutcome = (code: number): PolicyWasmPreviewDriveCompletion
     case 4:
       return 'failed';
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive returned unknown completion outcome ${code}.`);
   }
 };

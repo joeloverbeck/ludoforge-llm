@@ -251,6 +251,7 @@ export const encodePolicyWasmPreviewDriveInput = (
   for (const candidate of input.candidates) {
     const initialPreviewStateValues = candidate.initialPreviewStateValues ?? [];
     if (initialPreviewStateValues.length !== (input.previewStateSlots?.length ?? 0)) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM preview-drive candidate preview-state value count must match preview-state slot count.');
     }
     words.push(
@@ -374,12 +375,15 @@ const encodeCandidateGroup = (candidate: PolicyWasmPreviewDriveCandidate): reado
     return [0, 0, 0];
   }
   if (group.ordinalInGroup < 0 || !Number.isInteger(group.ordinalInGroup)) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM candidate group ordinal must be a non-negative integer.');
   }
   if (group.groupSize <= 0 || !Number.isInteger(group.groupSize)) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM candidate group size must be a positive integer.');
   }
   if (group.ordinalInGroup >= group.groupSize) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM candidate group ordinal must be smaller than group size.');
   }
   return [
@@ -402,18 +406,22 @@ const decodeCandidateGroup = (
   const groupSize = view.getInt32(base + (2 * I32_BYTES), true);
   if (candidateGroup === undefined) {
     if (groupCode !== 0 || ordinalInGroup !== 0 || groupSize !== 0) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM candidate group metadata unexpectedly present for candidate ${candidateIndex}.`);
     }
     return {};
   }
   const expectedGroupCode = stablePayloadCode({ literal: candidateGroup.groupId });
   if (groupCode !== expectedGroupCode) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM candidate group id code mismatch for candidate ${candidateIndex}.`);
   }
   if (ordinalInGroup !== candidateGroup.ordinalInGroup) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM candidate group ordinal mismatch for candidate ${candidateIndex}.`);
   }
   if (groupSize !== candidateGroup.groupSize) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM candidate group size mismatch for candidate ${candidateIndex}.`);
   }
   return {
@@ -459,6 +467,7 @@ const encodeStep = (
       return;
     case 'applyCandidateDeltas':
       if (step.candidateDeltas.length !== input.candidates.length) {
+        // @policy-wasm-throw: contract-violation
         throw new Error('Policy WASM preview-drive candidate delta count must match candidate count.');
       }
       words.push(6, ...step.candidateDeltas);
@@ -503,6 +512,7 @@ const decodeOutcome = (code: number): PolicyWasmPreviewDriveOutcome => {
     case 4:
       return 'failed';
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive returned unknown outcome ${code}.`);
   }
 };
@@ -543,6 +553,7 @@ const decodePreviewStatus = (code: number): PolicyWasmPreviewStatus => {
     case 7:
       return 'gated';
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive returned unknown preview status ${code}.`);
   }
 };
@@ -567,6 +578,7 @@ const decodePreviewBranch = (code: number): PolicyWasmPreviewBranch => {
     case 2:
       return 'continuedDeepening';
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive returned unknown preview branch ${code}.`);
   }
 };
@@ -578,6 +590,7 @@ const decodeBoolFlag = (code: number): boolean => {
   if (code === 1) {
     return true;
   }
+  // @policy-wasm-throw: contract-violation
   throw new Error(`Policy WASM preview-drive returned unknown boolean flag ${code}.`);
 };
 
@@ -612,9 +625,11 @@ const maxDecisionStackPublicationDepth = (
       continue;
     }
     if (publication.maxDepth < 0 || !Number.isInteger(publication.maxDepth)) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM decision-stack publication maxDepth must be a non-negative integer.');
     }
     if (publication.frames.length > publication.maxDepth) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM decision-stack publication frame count must not exceed maxDepth.');
     }
     maxDepth = Math.max(maxDepth, publication.maxDepth);
@@ -633,12 +648,14 @@ const encodeDecisionStackPublication = (
     return;
   }
   if (publication.maxDepth > decisionStackMaxDepth) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM decision-stack publication maxDepth exceeds batch maxDepth.');
   }
   words.push(publication.maxDepth, publication.frames.length);
   let previousDepth = -1;
   for (const frame of publication.frames) {
     if (frame.depth <= previousDepth) {
+      // @policy-wasm-throw: contract-violation
       throw new Error('Policy WASM decision-stack publication frame depth must be strictly ordered.');
     }
     previousDepth = frame.depth;
@@ -679,6 +696,7 @@ const decodeDecisionStackPublication = (
     const contextCode = view.getInt32(base + (5 * I32_BYTES), true);
     const expectedContextCode = stablePayloadCode({ literal: candidatePublication.frames[frameIndex]!.contextId });
     if (contextCode !== expectedContextCode) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM decision-stack publication context code mismatch for candidate ${candidateIndex}, frame ${frameIndex}.`);
     }
   }
@@ -724,12 +742,14 @@ const decodeDecisionStackFrameVariant = (code: number): PolicyWasmDecisionStackF
     case 6:
       return 'turnRetirement';
     default:
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Policy WASM preview-drive returned unknown decision-stack frame variant ${code}.`);
   }
 };
 
 const assertFiniteI32 = (label: string, value: number): void => {
   if (!Number.isInteger(value) || value < -0x8000_0000 || value > 0x7fff_ffff) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM ${label} must be a signed 32-bit integer.`);
   }
 };

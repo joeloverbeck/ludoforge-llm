@@ -31,6 +31,26 @@ import {
   type PolicyWasmRuntime,
 } from './policy-wasm-runtime.js';
 
+/*
+ * Spec 175 WASM/TS fallback contract:
+ *
+ * This file routes policy scoring through the WASM module when supported.
+ * WASM-side branches that detect an unsupported preview-drive shape must return
+ * null, or this function's typed fallback sentinel, so the caller can run the
+ * TypeScript evaluator. That TypeScript fallback is the correctness oracle for
+ * unsupported shapes; do not throw from unsupported-detection branches when a
+ * fallback is available.
+ *
+ * Throws are reserved for genuine contract violations such as unknown policy
+ * ids, unknown candidate-feature ids, and corrupt codec/ABI output. Those
+ * throws carry the contract-violation marker adjacent to the throw, while
+ * unsupported fallback branches carry the null-return marker adjacent to the
+ * fallback return. The marker convention is enforced by
+ * packages/engine/test/architecture/policy-wasm-throw-contract.test.ts.
+ *
+ * Reference: archive/specs/175-wasm-ts-fallback-contract-enforcement.md.
+ */
+
 interface EncodedPolicyView {
   readonly layout: EncodedStateLayout;
   readonly encoded: EncodedState;
@@ -50,6 +70,7 @@ const encodeWasmPrecomputedPolicyValue = (value: PolicyValue): number | boolean 
   if (typeof value === 'number' && Number.isSafeInteger(value)) {
     return value;
   }
+  // @policy-wasm-throw: contract-violation
   throw new PolicyRuntimeError({
     code: 'RUNTIME_EVALUATION_ERROR',
     message: `Policy WASM score rows require scalar integer precomputed values; got ${String(value)}.`,
@@ -227,6 +248,7 @@ const materializePreviewDynamicRowsWithWasm = (
       unsupportedOwner: 'production-preview-drive.cardEventAction',
       reason: 'production preview-drive does not route card event action candidates',
     });
+    // @policy-wasm-unsupported: null-return
     return null;
   }
   const slotsByCode = new Map<number, readonly string[]>();
@@ -234,6 +256,7 @@ const materializePreviewDynamicRowsWithWasm = (
     const slots = previewGlobalSlotsForRef(input.catalog, input.def, ref);
     if (slots === undefined || slots.length === 0) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
+      // @policy-wasm-unsupported: null-return
       return null;
     }
     slotsByCode.set(previewDynamicRefCode(ref), slots);
@@ -270,6 +293,7 @@ const materializePreviewDynamicRowsWithWasm = (
         reason: result.reason,
       });
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
+      // @policy-wasm-unsupported: null-return
       return null;
     }
     recordProductionPolicyWasmPreviewDrive('supported');
@@ -370,6 +394,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   const considerations = input.considerationIds.map((id) => {
     const consideration = input.catalog.compiled.considerations[id];
     if (consideration === undefined) {
+      // @policy-wasm-throw: contract-violation
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',
         message: `Unknown consideration "${id}".`,
@@ -396,6 +421,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   for (const id of input.profile.plan.candidateFeatures) {
     const feature = input.catalog.compiled.candidateFeatures[id];
     if (feature === undefined) {
+      // @policy-wasm-throw: contract-violation
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',
         message: `Unknown candidate feature "${id}".`,
@@ -462,18 +488,8 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
     });
     if (values === null) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: `Policy WASM preview row route failed closed for profile "${input.profileId}": unsupported candidate feature "${id}".`,
-        detail: {
-          route: 'wasmPreviewCandidateFeatureRows',
-          profileId: input.profileId,
-          seatId: input.seatId,
-          candidateCount: input.candidates.length,
-          featureId: id,
-          unsupportedRowClass: 'unsupported preview candidate feature expression',
-        },
-      });
+      // @policy-wasm-unsupported: null-return
+      return false;
     }
     for (const [index, candidate] of input.candidates.entries()) {
       input.evaluation.setCandidateFeatureValue(candidate, id, values[index]);
@@ -525,18 +541,8 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
 
   if (result.kind !== 'supported') {
     recordProductionPolicyWasmScoreRows('unsupported');
-    throw new PolicyRuntimeError({
-      code: 'RUNTIME_EVALUATION_ERROR',
-      message: `Policy WASM score-row route failed closed for profile "${input.profileId}": ${result.reason}.`,
-      detail: {
-        route: 'wasmScoreRows',
-        profileId: input.profileId,
-        seatId: input.seatId,
-        candidateCount: input.candidates.length,
-        considerationCount: considerations.length,
-        unsupportedRowClass: result.reason,
-      },
-    });
+    // @policy-wasm-unsupported: null-return
+    return false;
   }
   recordProductionPolicyWasmScoreRows('supported');
 
@@ -547,6 +553,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   for (const candidate of input.candidates) {
     const score = scoresByKey.get(candidate.stableMoveKey);
     if (score === undefined) {
+      // @policy-wasm-throw: contract-violation
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',
         message: `Policy WASM score-row route omitted candidate "${candidate.stableMoveKey}".`,

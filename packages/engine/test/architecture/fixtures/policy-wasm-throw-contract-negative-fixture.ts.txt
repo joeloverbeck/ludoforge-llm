@@ -1,0 +1,8 @@
+function unsupportedPreviewDriveBranch(): void {
+  if (true) {
+    throw new PolicyRuntimeError({
+      code: 'POLICY_WASM_PREVIEW_DRIVE_UNSUPPORTED',
+      message: 'unsupported preview-drive branch should return null so TypeScript fallback can run',
+    });
+  }
+}

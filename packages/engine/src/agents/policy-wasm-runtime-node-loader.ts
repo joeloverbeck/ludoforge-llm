@@ -18,6 +18,7 @@ const findRepoRoot = (startUrl: string): string => {
     }
     const parent = dirname(cursor);
     if (parent === cursor) {
+      // @policy-wasm-throw: contract-violation
       throw new Error(`Unable to locate repository root from ${startUrl}.`);
     }
     cursor = parent;

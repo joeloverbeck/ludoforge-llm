@@ -49,6 +49,7 @@ export const maxStatePatchOpCount = (
 ): number => {
   const max = candidates.reduce((count, candidate) => Math.max(count, candidate.statePatch?.ops.length ?? 0), 0);
   if (max > depthCap) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM preview-drive state-patch op count must not exceed depth cap.');
   }
   return max;
@@ -65,9 +66,11 @@ export const encodeStatePatch = (
   }
   const ops = candidate.statePatch?.ops;
   if (ops === undefined) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM preview-drive materialized state patch is required for every candidate.');
   }
   if (ops.length > statePatchMaxOpCount) {
+    // @policy-wasm-throw: contract-violation
     throw new Error('Policy WASM preview-drive state-patch op count exceeds batch maximum.');
   }
   words.push(ops.length);
@@ -89,10 +92,12 @@ export const decodeStatePatch = (
   }
   const opCount = view.getInt32(outStatePatchCountsPtr + (candidateIndex * I32_BYTES), true);
   if (opCount < 0 || opCount > statePatchMaxOpCount) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM preview-drive returned invalid state-patch op count for candidate ${candidateIndex}.`);
   }
   const expectedPatch = input.candidates[candidateIndex]?.statePatch;
   if (expectedPatch === undefined || expectedPatch.ops.length !== opCount) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM preview-drive state-patch op count mismatch for candidate ${candidateIndex}.`);
   }
   const ops = Array.from({ length: opCount }, (_entry, opIndex) =>
@@ -159,6 +164,7 @@ const decodeStatePatchOp = (
     view.getInt32(base + (wordIndex * I32_BYTES), true));
   const expectedWords = encodeStatePatchOp(expected);
   if (!actual.every((word, wordIndex) => word === expectedWords[wordIndex])) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM preview-drive state-patch op mismatch for candidate ${candidateIndex}, op ${opIndex}.`);
   }
   return expected;
@@ -197,6 +203,7 @@ const statePatchPositionCode = (position: 'top' | 'bottom' | undefined): number 
 
 const assertFiniteI32 = (label: string, value: number): void => {
   if (!Number.isInteger(value) || value < -2_147_483_648 || value > 2_147_483_647) {
+    // @policy-wasm-throw: contract-violation
     throw new Error(`Policy WASM preview-drive ${label} must be a finite i32.`);
   }
 };

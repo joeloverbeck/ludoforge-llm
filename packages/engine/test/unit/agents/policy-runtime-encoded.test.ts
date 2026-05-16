@@ -7,6 +7,7 @@ import {
   __internal_for_tests as policyWasmRuntimeInternals,
   type PolicyWasmRuntime,
 } from '../../../src/agents/policy-wasm-runtime.js';
+import { productionPolicyWasmCounterInternals } from '../../../src/agents/policy-wasm-runtime-counters.js';
 import {
   asActionId,
   asPhaseId,
@@ -257,7 +258,7 @@ describe('encoded policy runtime reads', () => {
     }
   });
 
-  it('fails closed with production diagnostics when preloaded WASM cannot score the batch', () => {
+  it('falls back to TypeScript scoring when preloaded WASM cannot score the batch', () => {
     const fakeRuntime: PolicyWasmRuntime = {
       evaluateSmokeAdd: () => 0,
       evaluatePolicyBytecode: () => undefined,
@@ -267,20 +268,14 @@ describe('encoded policy runtime reads', () => {
       evaluatePreviewDriveBatch: () => ({ kind: 'supported', profileId: 'baseline', rows: [] }),
     };
 
+    productionPolicyWasmCounterInternals.resetProductionScoreRowCounters();
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(fakeRuntime);
     try {
       const result = evaluate('enabled');
-      assert.equal(result.kind, 'failure');
-      assert.equal(result.failure.code, 'RUNTIME_EVALUATION_ERROR');
-      assert.match(result.failure.message, /Policy WASM score-row route failed closed/u);
-      assert.deepEqual(result.failure.detail, {
-        route: 'wasmScoreRows',
-        profileId: 'baseline',
-        seatId: 'alpha',
-        candidateCount: 2,
-        considerationCount: 3,
-        unsupportedRowClass: 'unsupported value expression for consideration boardStrength',
-      });
+      assert.equal(result.kind, 'success');
+      assert.equal(result.metadata.finalScore, 12);
+      assert.equal(productionPolicyWasmCounterInternals.getProductionScoreRowRouteCount(), 0);
+      assert.equal(productionPolicyWasmCounterInternals.getProductionScoreRowUnsupportedCount(), 1);
     } finally {
       policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
     }

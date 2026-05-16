@@ -153,7 +153,7 @@ Outcome amended: 2026-05-15.
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.md`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.csv`
 - Reverted the runtime candidate after the full 15-seed witness showed no material train-spread improvement.
-- Added successor `archive/tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual. Post-review later archived terminal successor `archive/tickets/173DEEPPRVCOST-008.md` after it completed the Spec 173 Phase 1 / Phase-N decision, triggered §4.2(c), and authored `specs/174-wasm-preview-drive-coverage-extension.md`.
+- Added successor `archive/tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual. Post-review later archived terminal successor `archive/tickets/173DEEPPRVCOST-008.md` after it completed the Spec 173 Phase 1 / Phase-N decision, triggered §4.2(c), and authored `archive/specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Rejected Candidate Ledger
 
@@ -163,9 +163,9 @@ Outcome amended: 2026-05-15.
 
 ### Residual Owner / Successor
 
-Archived successor `archive/tickets/173DEEPPRVCOST-007.md` owned the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. Ticket 007 classified that residual as red/flat with no retained runtime code. Archived successor `archive/tickets/173DEEPPRVCOST-008.md` completed the terminal Spec 173 Phase 1 decision by triggering §4.2(c); `specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension.
+Archived successor `archive/tickets/173DEEPPRVCOST-007.md` owned the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. Ticket 007 classified that residual as red/flat with no retained runtime code. Archived successor `archive/tickets/173DEEPPRVCOST-008.md` completed the terminal Spec 173 Phase 1 decision by triggering §4.2(c); `archive/specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension.
 
-Ticket 006 is complete as a diagnostic no-retained-code handoff slice. It did not land a generic closure or trigger the Spec 173 Phase-N escalation condition by itself, but the successor chain has now completed and moved the terminal residual to `specs/174-wasm-preview-drive-coverage-extension.md`.
+Ticket 006 is complete as a diagnostic no-retained-code handoff slice. It did not land a generic closure or trigger the Spec 173 Phase-N escalation condition by itself, but the successor chain has now completed and moved the terminal residual to `archive/specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Artifact Classification
 
@@ -191,14 +191,14 @@ Ticket 006 is complete as a diagnostic no-retained-code handoff slice. It did no
 | Determinism preserved | No runtime code retained after revert | proven by final diff classification | `git status --short` / final diff |
 | Engine-agnostic boundary preserved | Candidate and successor are generic preview/Zobrist work; no FITL ids or profile/rules changed | proven by final diff classification | final diff |
 | Run-local lifetime preserved | No new cache or mutable state retained | not applicable | final diff |
-| Decision-stack correctness preserved | Candidate reverted; archived successors classified the digest residual and completed the Phase-N trigger decision; Spec 174 owns the future closure proof | deferred to confirmed successor | `specs/174-wasm-preview-drive-coverage-extension.md` |
+| Decision-stack correctness preserved | Candidate reverted; archived successors classified the digest residual and completed the Phase-N trigger decision; Spec 174 owns the future closure proof | deferred to confirmed successor | `archive/specs/174-wasm-preview-drive-coverage-extension.md` |
 | Measured residual handled truthfully | Red attempt recorded; remaining owner named | proven | this outcome + successor |
 
 ### Source-Size Ledger
 
 `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
-`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | specs/174-wasm-preview-drive-coverage-extension.md`
+`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
 ### Late-Edit Proof Validity
 

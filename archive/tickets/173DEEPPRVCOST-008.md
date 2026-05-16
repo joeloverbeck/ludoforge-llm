@@ -151,7 +151,7 @@ Outcome amended: 2026-05-15.
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.csv`
 - Updated `archive/specs/173-deep-preview-drive-cost-reduction.md` to record that Spec 173 §4.2(c) fired after three consecutive non-improving Phase 1 slices.
-- Authored follow-up `specs/174-wasm-preview-drive-coverage-extension.md` as the Phase N owner for WASM preview-drive coverage extension.
+- Authored follow-up `archive/specs/174-wasm-preview-drive-coverage-extension.md` as the Phase N owner for WASM preview-drive coverage extension.
 
 ### Measured Result and Phase-N Trigger
 
@@ -166,7 +166,7 @@ This is the third consecutive non-improving Phase 1 slice after tickets 006 and 
 
 ### Residual Owner
 
-The remaining owner is `specs/174-wasm-preview-drive-coverage-extension.md`. It owns the generic WASM preview-drive coverage extension for `continuedDeepening` / `deep1024` preview-drive work, including TS/WASM parity, fail-closed unsupported classification, activation counters, and any later default-flip proof. This ticket does not implement Spec 174 code.
+The remaining owner is `archive/specs/174-wasm-preview-drive-coverage-extension.md`. It owns the generic WASM preview-drive coverage extension for `continuedDeepening` / `deep1024` preview-drive work, including TS/WASM parity, fail-closed unsupported classification, activation counters, and any later default-flip proof. This ticket does not implement Spec 174 code.
 
 ### Artifact Classification
 
@@ -200,11 +200,11 @@ No source files have retained active growth. Near/over-guidance candidate files 
 
 `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
-`packages/engine/src/kernel/zobrist.ts | 645 | 645 | no | none retained | source inspected only; no distinct safe TS owner retained | specs/174-wasm-preview-drive-coverage-extension.md`
+`packages/engine/src/kernel/zobrist.ts | 645 | 645 | no | none retained | source inspected only; no distinct safe TS owner retained | archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
-`packages/engine/src/kernel/microturn/apply.ts | 800 | 800 | no | none retained | source inspected only; no edit made at cap boundary | specs/174-wasm-preview-drive-coverage-extension.md`
+`packages/engine/src/kernel/microturn/apply.ts | 800 | 800 | no | none retained | source inspected only; no edit made at cap boundary | archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
-`packages/engine/src/agents/policy-preview.ts | 1286 | 1286 | no | none retained | source inspected only; no edit made to preexisting oversized file | specs/174-wasm-preview-drive-coverage-extension.md`
+`packages/engine/src/agents/policy-preview.ts | 1286 | 1286 | no | none retained | source inspected only; no edit made to preexisting oversized file | archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
 ### Late-Edit Proof Validity
 

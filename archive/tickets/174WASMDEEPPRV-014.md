@@ -56,7 +56,7 @@ Produce a short report that names the next non-overlapping implementation owner,
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4c-residual.md` (new witness output)
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4c-residual.csv` (new witness CSV)
 - `tickets/174WASMDEEPPRV-015.md` (new follow-up owner if Phase 4c selects a non-overlapping implementation owner)
-- `specs/174-wasm-preview-drive-coverage-extension.md` (modify only for ticket-list/outcome parity)
+- `archive/specs/174-wasm-preview-drive-coverage-extension.md` (modify only for ticket-list/outcome parity)
 - `archive/tickets/174WASMDEEPPRV-010.md` (modify only if a later Pass path is reauthorized)
 
 ## Out of Scope
@@ -102,7 +102,7 @@ Landed scope:
 - Produced the full Phase 4c witness at `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4c-residual.md` and `.csv`.
 - Produced `reports/174-phase-4c-residual-owner.md`.
 - Created `tickets/174WASMDEEPPRV-015.md` as the next non-overlapping owner: zero-counter `continuedDeepening` token/query residuals.
-- Updated `specs/174-wasm-preview-drive-coverage-extension.md` so the active ticket list and outcome name the Phase 4c result.
+- Updated `archive/specs/174-wasm-preview-drive-coverage-extension.md` so the ticket list and outcome name the Phase 4c result.
 
 Residual classification:
 - Reason-granular unsupported leaders are now explicit: `govern:chooseNStep:add` has `667` `agent-guided-completion` rows and `92` no-projected-state rows; `govern:chooseNStep:confirm` has `464` no-projected-state rows; `event` has `457` card-event action rows.

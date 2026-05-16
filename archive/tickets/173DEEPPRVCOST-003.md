@@ -152,7 +152,7 @@ Outcome amended: 2026-05-15.
 
 After the first post-003 witness eliminated the token-index counters but left train elapsed gates red, the user requested a reassessment against `docs/FOUNDATIONS.md` and then approved option 2 on 2026-05-15: keep investigating within this ticket only while the next owner remains in the generic token-index/cache seam. The final retained changes stay inside that seam. The remaining dominant owner is no longer token-state-index churn, so this ticket stayed nonterminal/blocked at that time rather than claiming Spec 173 completion.
 
-Post-Spec-173 closeout amendment: later successors completed the remaining TypeScript-side classification chain, `archive/tickets/173DEEPPRVCOST-008.md` triggered Spec 173 §4.2(c), and `specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension. This ticket is complete as the retained token-index closure slice, not as the terminal Spec 173 performance closure.
+Post-Spec-173 closeout amendment: later successors completed the remaining TypeScript-side classification chain, `archive/tickets/173DEEPPRVCOST-008.md` triggered Spec 173 §4.2(c), and `archive/specs/174-wasm-preview-drive-coverage-extension.md` now owns the generic WASM preview-drive coverage extension. This ticket is complete as the retained token-index closure slice, not as the terminal Spec 173 performance closure.
 
 ### Chosen Residual Owner
 
@@ -239,7 +239,7 @@ Successor `archive/tickets/173DEEPPRVCOST-004.md` owns that non-overlapping resi
 
 - `archive/tickets/173DEEPPRVCOST-004.md` owns the remaining train continuedDeepening elapsed owner: decision-stack hashing and encoded projection-key stringification after token-index builds are zero.
 - Coup/govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket after train residual ownership is exhausted or reclassified.
-- WASM preview-drive coverage moved to `specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
+- WASM preview-drive coverage moved to `archive/specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
 
 ### Late-Edit / Proof Validity
 

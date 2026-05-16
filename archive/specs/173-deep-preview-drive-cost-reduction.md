@@ -230,7 +230,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-15:
 - [`archive/tickets/173DEEPPRVCOST-005.md`](../archive/tickets/173DEEPPRVCOST-005.md) — Phase 1 — Secondary continuedDeepening residual closure for `coupArvnRedeployPolice:chooseOne` (completed 2026-05-15 after materially improving the selected coup residual; Spec 173 remains active because slowest seed `1005` is still above `<=60 s`)
 - [`archive/tickets/173DEEPPRVCOST-006.md`](../tickets/173DEEPPRVCOST-006.md) — Phase 1 — Train continuedDeepening residual spread closure (completed as diagnostic/no-retained-code handoff after a safe choose-N preview no-entry-hash candidate was flat/regressive on the 15-seed witness; later residual ownership moved through successors to Spec 174)
 - [`archive/tickets/173DEEPPRVCOST-007.md`](../archive/tickets/173DEEPPRVCOST-007.md) — Phase 1 — Train decision-stack digest residual closure (completed 2026-05-15 by no-retained-code classification; post-007 witness kept the train digest/encoding residual red/flat and counted as the second consecutive non-improving Phase 1 slice before ticket 008)
-- [`archive/tickets/173DEEPPRVCOST-008.md`](../tickets/173DEEPPRVCOST-008.md) — Phase 1 — Terminal train residual or Phase-N trigger decision (completed 2026-05-15 with no retained runtime code; post-008 witness was red/flat and triggered §4.2(c); authored `specs/174-wasm-preview-drive-coverage-extension.md`)
+- [`archive/tickets/173DEEPPRVCOST-008.md`](../tickets/173DEEPPRVCOST-008.md) — Phase 1 — Terminal train residual or Phase-N trigger decision (completed 2026-05-15 with no retained runtime code; post-008 witness was red/flat and triggered §4.2(c); authored `archive/specs/174-wasm-preview-drive-coverage-extension.md`)
 
 Phase 1 tickets landed sequentially per §4.4 (the post-merge witness output of ticket K informed ticket K+1's scope). The post-005 witness materially improved the selected coup residual but left the §1 slowest-seed soft target red and still reported train add/confirm above the Phase 1 spread criterion. Ticket 006 classified a safe choose-N preview no-entry-hash candidate as non-closeout evidence and handed the remaining concrete digest/encoding owner to ticket 007. Ticket 007 then classified that digest/encoding residual as red/flat with no retained runtime code. Ticket 008 completed the terminal Phase 1 decision with no retained runtime code and post-008 red/flat evidence:
 
@@ -241,7 +241,7 @@ Phase 1 tickets landed sequentially per §4.4 (the post-merge witness output of 
 
 That makes tickets 006, 007, and 008 three consecutive non-improving Phase 1 slices. Spec 173 §4.2(c) has fired.
 
-**Phase N**: triggered by §4.2(c). Follow-up `specs/174-wasm-preview-drive-coverage-extension.md` is authored as the WASM preview-drive coverage extension owner. Spec 173 is complete by Phase-N handoff, not by meeting the original `<=60 s` slowest-seed soft target.
+**Phase N**: triggered by §4.2(c). Follow-up `archive/specs/174-wasm-preview-drive-coverage-extension.md` is authored as the WASM preview-drive coverage extension owner. Spec 173 is complete by Phase-N handoff, not by meeting the original `<=60 s` slowest-seed soft target.
 
 Phase 0 landed and was reviewed before any Phase 1 fix landed, satisfying the mandatory ordering for the rest of this spec.
 

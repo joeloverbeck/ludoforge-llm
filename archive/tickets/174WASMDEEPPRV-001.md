@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-runtime.ts` (new counters)
-**Deps**: `specs/174-wasm-preview-drive-coverage-extension.md`
+**Deps**: `archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
 ## Problem
 

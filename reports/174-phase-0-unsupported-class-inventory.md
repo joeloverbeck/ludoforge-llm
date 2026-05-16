@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-15
 **Ticket**: `archive/tickets/174WASMDEEPPRV-001.md`
-**Spec**: `specs/174-wasm-preview-drive-coverage-extension.md`
+**Spec**: `archive/specs/174-wasm-preview-drive-coverage-extension.md`
 **Trigger witness**: `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md`
 
 ## Summary

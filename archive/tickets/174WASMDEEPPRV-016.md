@@ -58,7 +58,7 @@ Produce `reports/174-phase-4e-train-choosenstep-residual.md` with the before/aft
 - `reports/174-phase-4e-train-choosenstep-residual.md` (new)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4e-train-choosenstep-*.md` (new bounded witness report)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4e-train-choosenstep-*.csv` (new bounded witness CSV)
-- `specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
+- `archive/specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
 
 ## Out of Scope
 
@@ -110,7 +110,7 @@ Landed scope:
 - Classified the dominant `train:chooseNStep` residual as `agent-guided-completion` / `production-deep-choosenstep-continuation.pickInnerDecision`: the completion policy selects a non-`chooseNStep` continuation decision, while the current deep WASM continuation path only lowers `chooseNStep` continuations.
 - Retained no runtime code because the safe implementation owner is a broader generic continuation-ABI/runtime coverage slice, not a Phase 4e micro-optimization.
 - Created `archive/tickets/174WASMDEEPPRV-017.md` as the next non-overlapping owner for generic non-`chooseNStep` deep continuation materialization; that owner has now completed route/support coverage without a Phase 4 performance-gate pass.
-- Updated `specs/174-wasm-preview-drive-coverage-extension.md` with the Phase 4e diagnostic result and Phase 4f ticket-list parity.
+- Updated `archive/specs/174-wasm-preview-drive-coverage-extension.md` with the Phase 4e diagnostic result and Phase 4f ticket-list parity.
 
 Residual classification:
 - Seed `1005` completed terminal in `62297.98 ms` across `790` decisions.

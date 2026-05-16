@@ -53,7 +53,7 @@ Rerun the bounded seed-1005 witness and record whether the `production-deep-choo
 - `reports/174-phase-4f-non-choosenstep-continuation.md` (new)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4f-non-choosenstep-continuation-*.md` (new bounded witness report)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4f-non-choosenstep-continuation-*.csv` (new bounded witness CSV)
-- `specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
+- `archive/specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
 
 ## Out of Scope
 

@@ -216,7 +216,7 @@ Outcome amended: 2026-05-15.
 
 The post-002 witness closed the encoded-build counter axis but left the train elapsed-time gates red. After reassessing against `docs/FOUNDATIONS.md`, the user approved option 2 on 2026-05-15: retain the encoded-build closure, keep this ticket nonterminal/blocked at that time rather than archive it as the terminal performance closure, and create successor `archive/tickets/173DEEPPRVCOST-003.md` for the residual token-state-index train cost.
 
-Post-Spec-173 closeout amendment: the successor chain has now completed through `archive/tickets/173DEEPPRVCOST-008.md`, Spec 173 §4.2(c) fired, and `specs/174-wasm-preview-drive-coverage-extension.md` owns the remaining generic WASM preview-drive coverage extension. This ticket is therefore complete as the retained encoded-build closure slice, not as the terminal Spec 173 performance closure.
+Post-Spec-173 closeout amendment: the successor chain has now completed through `archive/tickets/173DEEPPRVCOST-008.md`, Spec 173 §4.2(c) fired, and `archive/specs/174-wasm-preview-drive-coverage-extension.md` owns the remaining generic WASM preview-drive coverage extension. This ticket is therefore complete as the retained encoded-build closure slice, not as the terminal Spec 173 performance closure.
 
 ### What Landed
 
@@ -241,7 +241,7 @@ Post-Spec-173 closeout amendment: the successor chain has now completed through 
 | Combined slow-tier train total | 317,808.07 ms | 146,110.85 ms | -54.03% | material improvement, still red |
 | Slowest seed 1005 wall time | 183,274.3 ms | 107,468.38 ms | -41.36% | improved, still above `≤60 s` soft target |
 
-The retained change is correct reusable substrate and materially improves the owned measured seam. The post-002 report shows the residual train rows now have `0` encoded builds but still high token-state-index counts (`train:chooseNStep:add` `33,203`; `train:chooseNStep:confirm` `6,242`), so successor `archive/tickets/173DEEPPRVCOST-003.md` owned that non-overlapping residual. Later successors exhausted the remaining TypeScript-side residual and moved terminal ownership to `specs/174-wasm-preview-drive-coverage-extension.md`.
+The retained change is correct reusable substrate and materially improves the owned measured seam. The post-002 report shows the residual train rows now have `0` encoded builds but still high token-state-index counts (`train:chooseNStep:add` `33,203`; `train:chooseNStep:confirm` `6,242`), so successor `archive/tickets/173DEEPPRVCOST-003.md` owned that non-overlapping residual. Later successors exhausted the remaining TypeScript-side residual and moved terminal ownership to `archive/specs/174-wasm-preview-drive-coverage-extension.md`.
 
 ### Invariant Proof Matrix
 
@@ -288,7 +288,7 @@ The retained change is correct reusable substrate and materially improves the ow
 
 - `archive/tickets/173DEEPPRVCOST-003.md` owned the residual train continuedDeepening token-state-index cost exposed by the post-002 witness.
 - Coup/govern/event residual axes remain outside this ticket and should be selected by the next Spec 173 witness-driven ticket only after the residual train owner lands or is otherwise classified.
-- WASM preview-drive coverage moved to `specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
+- WASM preview-drive coverage moved to `archive/specs/174-wasm-preview-drive-coverage-extension.md` after Spec 173 §4.2(c) fired.
 
 ### Late-Edit / Proof Validity
 

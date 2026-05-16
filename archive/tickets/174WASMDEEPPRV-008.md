@@ -67,7 +67,7 @@ Add `archive/tickets/174WASMDEEPPRV-011.md` for true deep-phase WASM consumption
 - `archive/tickets/174WASMDEEPPRV-011.md` (new — deep materialized-state ABI successor)
 - `tickets/174WASMDEEPPRV-009.md` (modify — dependency correction)
 - `archive/tickets/174WASMDEEPPRV-010.md` (modify — default-flip prerequisite correction)
-- `specs/174-wasm-preview-drive-coverage-extension.md` (modify — phase list correction)
+- `archive/specs/174-wasm-preview-drive-coverage-extension.md` (modify — phase list correction)
 - `reports/174-phase-0-unsupported-class-inventory.md` (modify — unsupported-class ownership correction)
 
 ## Out of Scope
@@ -115,7 +115,7 @@ Implemented scope:
 - `policy-wasm-score-routing.ts` records supported broad-route counters and unsupported broad-route fallback/fail-closed counters.
 - `policy-preview-inner-deepening.ts` records unsupported deep-route counters before the stable TypeScript deep fallback.
 - `policy-wasm-preview-drive-production-route-activation.test.ts` proves broad supported activation and deep unsupported classification.
-- `archive/tickets/174WASMDEEPPRV-013.md`, `archive/tickets/174WASMDEEPPRV-011.md`, `tickets/174WASMDEEPPRV-009.md`, `archive/tickets/174WASMDEEPPRV-010.md`, `specs/174-wasm-preview-drive-coverage-extension.md`, and `reports/174-phase-0-unsupported-class-inventory.md` now describe the split Phase 3a/3b graph.
+- `archive/tickets/174WASMDEEPPRV-013.md`, `archive/tickets/174WASMDEEPPRV-011.md`, `tickets/174WASMDEEPPRV-009.md`, `archive/tickets/174WASMDEEPPRV-010.md`, `archive/specs/174-wasm-preview-drive-coverage-extension.md`, and `reports/174-phase-0-unsupported-class-inventory.md` now describe the split Phase 3a/3b graph.
 
 Generated fallout: none. No schema, golden, WASM ABI, or GameSpecDoc artifacts changed.
 

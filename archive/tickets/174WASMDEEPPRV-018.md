@@ -88,7 +88,7 @@ If the bounded witness does not improve materially, record that truth and keep `
 - `reports/174-phase-4g-decision-stack-digest-cost.md` (new)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4g-decision-stack-digest-cost-*.md` (new bounded witness report)
 - `reports/fitl-arvn-15-seed-decomposition-<YYYY-MM-DD>-phase-4g-decision-stack-digest-cost-*.csv` (new bounded witness CSV)
-- `specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
+- `archive/specs/174-wasm-preview-drive-coverage-extension.md` (modify for outcome/ticket-list parity)
 
 ## Out of Scope
 
@@ -151,7 +151,7 @@ This keeps the optimization generic and fail-closed: ambiguous or manually patch
 - New report: `reports/174-phase-4g-decision-stack-digest-cost.md`
 - New bounded witness report: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4g-decision-stack-digest-cost-final.md`
 - New bounded witness CSV: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4g-decision-stack-digest-cost-final.csv`
-- Updated spec: `specs/174-wasm-preview-drive-coverage-extension.md`
+- Updated spec: `archive/specs/174-wasm-preview-drive-coverage-extension.md`
 
 ### Bounded Phase 4g witness
 

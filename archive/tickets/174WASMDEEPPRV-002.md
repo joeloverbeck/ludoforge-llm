@@ -100,7 +100,7 @@ Implemented the Phase 1a ABI carrier substrate:
 
 Ticket corrections applied:
 
-- Entry correction: requested namespace `174WASMDEPPPRV-002` resolved to the live `174WASMDEEPPRV-002` namespace from `specs/174-wasm-preview-drive-coverage-extension.md`.
+- Entry correction: requested namespace `174WASMDEPPPRV-002` resolved to the live `174WASMDEEPPRV-002` namespace from `archive/specs/174-wasm-preview-drive-coverage-extension.md`.
 - Touched-file scope correction: the live generic host codec and runtime ABI mirrors are `packages/engine/src/agents/policy-wasm-preview-drive.ts`, `packages/engine/src/agents/policy-wasm-runtime.ts`, and `packages/engine/src/agents/policy-wasm-score-routing.ts` in addition to the ticket-named production lowering/types and Rust files. `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` stayed verified-no-edit because the carrier reconstruction belongs to the runtime codec and lowering boundary; the production wrapper's caller-known branch is carried through its typed input/lowering seam.
 
 Generated fallout:

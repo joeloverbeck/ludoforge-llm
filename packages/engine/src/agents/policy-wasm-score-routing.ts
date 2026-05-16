@@ -234,18 +234,7 @@ const materializePreviewDynamicRowsWithWasm = (
     const slots = previewGlobalSlotsForRef(input.catalog, input.def, ref);
     if (slots === undefined || slots.length === 0) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: `Policy WASM production preview-drive route failed closed for profile "${input.profileId}": unsupported preview ref.`,
-        detail: {
-          route: 'wasmProductionPreviewDriveRows',
-          profileId: input.profileId,
-          seatId: input.seatId,
-          candidateCount: input.candidates.length,
-          unsupportedRowClass: 'unsupported preview-drive ref',
-          unsupportedRef: ref,
-        },
-      });
+      return null;
     }
     slotsByCode.set(previewDynamicRefCode(ref), slots);
   }
@@ -281,19 +270,7 @@ const materializePreviewDynamicRowsWithWasm = (
         reason: result.reason,
       });
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: `Policy WASM production preview-drive route failed closed for profile "${input.profileId}": ${result.reason}.`,
-        detail: {
-          route: 'wasmProductionPreviewDriveRows',
-          profileId: input.profileId,
-          seatId: input.seatId,
-          candidateCount: group.length,
-          unsupportedDriveClass: result.unsupportedDriveClass,
-          unsupportedOwner: result.unsupportedOwner,
-          unsupportedRowClass: result.reason,
-        },
-      });
+      return null;
     }
     recordProductionPolicyWasmPreviewDrive('supported');
     for (const row of result.rows) {

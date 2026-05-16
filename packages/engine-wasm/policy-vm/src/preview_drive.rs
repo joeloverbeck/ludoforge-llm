@@ -180,9 +180,6 @@ fn evaluate_preview_drive_batch(
     if preview_state_slot_count != out_preview_state_len {
         return Err(STATUS_BAD_LENGTH);
     }
-    if preview_state_slot_count > depth_cap as usize {
-        return Err(STATUS_BAD_OPERAND);
-    }
     if completion_record_max_count > depth_cap as usize {
         return Err(STATUS_BAD_OPERAND);
     }

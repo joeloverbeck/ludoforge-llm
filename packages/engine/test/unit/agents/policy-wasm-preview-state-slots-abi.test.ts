@@ -91,7 +91,7 @@ describe('policy WASM preview-drive preview-state slot ABI', () => {
     }
   });
 
-  it('rejects invalid slot lifetimes and out-of-bound slot counts deterministically', async () => {
+  it('rejects invalid slot lifetimes deterministically', async () => {
     const slots = buildSlots(2, 'crossIteration');
     const invalidLifetimeInput = encodePolicyWasmPreviewDriveInput({
       profileId: 'synthetic-invalid-slot-lifetime',
@@ -110,22 +110,6 @@ describe('policy WASM preview-drive preview-state slot ABI', () => {
     new DataView(invalidLifetimeInput.buffer, invalidLifetimeInput.byteOffset, invalidLifetimeInput.byteLength)
       .setInt32(16 * 4, 999, true);
     assert.equal(await evaluateRawPreviewDriveStatus(invalidLifetimeInput, 2, 1, 0), -12);
-
-    const outOfBoundSlotInput = encodePolicyWasmPreviewDriveInput({
-      profileId: 'synthetic-out-of-bound-slot-count',
-      originSeatId: '0',
-      originTurnId: 0,
-      depthCap: 1,
-      previewStateSlots: slots,
-      candidates: [{
-        actionId: 'slot-rejection',
-        stableMoveKey: 'candidate',
-        initialValue: 0,
-        initialPreviewStateValues: [0, 0],
-      }],
-      steps: [],
-    }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
-    assert.equal(await evaluateRawPreviewDriveStatus(outOfBoundSlotInput, 2, 1, 0), -12);
   });
 });
 

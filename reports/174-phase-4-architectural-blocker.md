@@ -5,7 +5,7 @@
 **Gate report**: `reports/174-phase-4-gate-decision.md`
 **Witness report**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.md`
 **Witness CSV**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.csv`
-**Next owner**: `tickets/174WASMDEEPPRV-014.md`
+**Next owner**: `archive/tickets/174WASMDEEPPRV-014.md`
 
 ## Blocker Summary
 
@@ -50,7 +50,7 @@ The current witness exposes unsupported production preview-drive activity by mic
 
 ## Required Next Work
 
-`tickets/174WASMDEEPPRV-014.md` owns the next architectural slice:
+`archive/tickets/174WASMDEEPPRV-014.md` owns the next architectural slice:
 
 - add or expose reason-granular unsupported preview-drive telemetry for the witness rows, without weakening Foundation 20 fallback provenance;
 - explain the zero-counter high-wall-time classes, especially `coupArvnRedeployPolice:chooseOne`;

@@ -352,6 +352,10 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
           wasmPreviewCandidateFeatureRowUnsupportedCount: delta(after, before, 'wasmPreviewCandidateFeatureRowUnsupportedCount'),
           wasmProductionPreviewDriveRouteCount: delta(after, before, 'wasmProductionPreviewDriveRouteCount'),
           wasmProductionPreviewDriveUnsupportedCount: delta(after, before, 'wasmProductionPreviewDriveUnsupportedCount'),
+          wasmProductionPreviewDriveUnsupportedReasons: deltaReasonCounts(
+            after.wasmProductionPreviewDriveUnsupportedReasonCounts,
+            before.wasmProductionPreviewDriveUnsupportedReasonCounts,
+          ),
           wasmProductionPreviewDriveBatchCount: delta(after, before, 'wasmProductionPreviewDriveBatchCount'),
           tokenStateIndexBuildCount: delta(after, before, 'tokenStateIndexBuildCount'),
           persistentTokenStateIndexCacheHitCount: delta(after, before, 'persistentTokenStateIndexCacheHitCount'),
@@ -402,6 +406,8 @@ function readCounters(internals) {
       internals.policyWasmRuntimeInternals.getProductionPreviewDriveRouteCount(),
     wasmProductionPreviewDriveUnsupportedCount:
       internals.policyWasmRuntimeInternals.getProductionPreviewDriveUnsupportedCount(),
+    wasmProductionPreviewDriveUnsupportedReasonCounts:
+      internals.policyWasmRuntimeInternals.getProductionPreviewDriveUnsupportedReasonCounts(),
     wasmProductionPreviewDriveBatchCount:
       internals.policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     policyEncodedStateObjectHitCount:
@@ -491,6 +497,7 @@ function aggregateRows(rows, keyFn) {
       bytecodeCacheCompileCount: 0,
       wasmProductionPreviewDriveRouteCount: 0,
       wasmProductionPreviewDriveUnsupportedCount: 0,
+      wasmProductionPreviewDriveUnsupportedReasons: new Map(),
       wasmProductionPreviewDriveBatchCount: 0,
       tokenStateIndexBuildCount: 0,
       staticRebuildCount: 0,
@@ -507,6 +514,7 @@ function aggregateRows(rows, keyFn) {
     bucket.bytecodeCacheCompileCount += row.bytecodeCacheCompileCount;
     bucket.wasmProductionPreviewDriveRouteCount += row.wasmProductionPreviewDriveRouteCount;
     bucket.wasmProductionPreviewDriveUnsupportedCount += row.wasmProductionPreviewDriveUnsupportedCount;
+    addReasonCounts(bucket.wasmProductionPreviewDriveUnsupportedReasons, row.wasmProductionPreviewDriveUnsupportedReasons);
     bucket.wasmProductionPreviewDriveBatchCount += row.wasmProductionPreviewDriveBatchCount;
     bucket.tokenStateIndexBuildCount += row.tokenStateIndexBuildCount;
     bucket.staticRebuildCount += row.staticRebuildCount;
@@ -536,6 +544,7 @@ function aggregateRows(rows, keyFn) {
       bytecodeCacheCompileCount: bucket.bytecodeCacheCompileCount,
       wasmProductionPreviewDriveRouteCount: bucket.wasmProductionPreviewDriveRouteCount,
       wasmProductionPreviewDriveUnsupportedCount: bucket.wasmProductionPreviewDriveUnsupportedCount,
+      wasmProductionPreviewDriveUnsupportedReasons: reasonRows(bucket.wasmProductionPreviewDriveUnsupportedReasons),
       wasmProductionPreviewDriveBatchCount: bucket.wasmProductionPreviewDriveBatchCount,
       tokenStateIndexBuildCount: bucket.tokenStateIndexBuildCount,
       staticRebuildCount: bucket.staticRebuildCount,
@@ -550,6 +559,51 @@ function aggregateRows(rows, keyFn) {
     };
   }).sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
   return { byKey: new Map(rowsOut.map((row) => [row.key, row])), rows: rowsOut };
+}
+
+function deltaReasonCounts(afterRows, beforeRows) {
+  const beforeByKey = new Map((beforeRows ?? []).map((row) => [reasonKey(row), row.count]));
+  return (afterRows ?? [])
+    .map((row) => ({
+      unsupportedDriveClass: row.unsupportedDriveClass,
+      ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
+      reason: row.reason,
+      count: row.count - (beforeByKey.get(reasonKey(row)) ?? 0),
+    }))
+    .filter((row) => row.count > 0)
+    .sort(compareReasonRows);
+}
+
+function addReasonCounts(target, rows) {
+  for (const row of rows ?? []) {
+    const key = reasonKey(row);
+    const current = target.get(key);
+    target.set(key, {
+      unsupportedDriveClass: row.unsupportedDriveClass,
+      ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
+      reason: row.reason,
+      count: (current?.count ?? 0) + row.count,
+    });
+  }
+}
+
+function reasonRows(rowsByKey) {
+  return [...rowsByKey.values()].sort(compareReasonRows);
+}
+
+function reasonKey(row) {
+  return `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`;
+}
+
+function compareReasonRows(left, right) {
+  return right.count - left.count
+    || compareCodepoint(left.unsupportedDriveClass, right.unsupportedDriveClass)
+    || compareCodepoint(left.unsupportedOwner ?? '', right.unsupportedOwner ?? '')
+    || compareCodepoint(left.reason, right.reason);
+}
+
+function compareCodepoint(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {

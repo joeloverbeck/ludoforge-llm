@@ -17,6 +17,7 @@ export function renderCsv(rows) {
     'wasmPreviewCandidateFeatureRowUnsupportedCount',
     'wasmProductionPreviewDriveRouteCount',
     'wasmProductionPreviewDriveUnsupportedCount',
+    'wasmProductionPreviewDriveUnsupportedReasons',
     'wasmProductionPreviewDriveBatchCount',
     'tokenStateIndexBuildCount',
     'persistentTokenStateIndexCacheHitCount',
@@ -77,8 +78,8 @@ export function renderMarkdown(rollup, options) {
     '',
     '## Per-Microturn-Class Rollup',
     '',
-    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive batches | Token index builds | Static rebuilds |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
+    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | Token index builds | Static rebuilds |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|',
     ...rollup.perDecisionClass.map((row) => renderAggregateRow(row.key, row)),
     '',
     '## Top Hot Axes In Slow-Tier Seeds',
@@ -98,6 +99,7 @@ export function renderMarkdown(rollup, options) {
       `${formatNumber(row.maxMs)} |`,
     ].join(' | ')),
     ...(profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
+    ...renderUnsupportedReasonSection(rollup.perDecisionClass),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
     '',
@@ -141,10 +143,67 @@ function renderAggregateRow(label, row) {
     row.bytecodeCacheCompileCount,
     row.wasmProductionPreviewDriveRouteCount,
     row.wasmProductionPreviewDriveUnsupportedCount,
+    formatReasonCounts(row.wasmProductionPreviewDriveUnsupportedReasons),
     row.wasmProductionPreviewDriveBatchCount,
     row.tokenStateIndexBuildCount,
     `${row.staticRebuildCount} |`,
   ].join(' | ');
+}
+
+function renderUnsupportedReasonSection(rows) {
+  const reasonRows = rows
+    .filter((row) => row.wasmProductionPreviewDriveUnsupportedCount > 0)
+    .flatMap((row) => (row.wasmProductionPreviewDriveUnsupportedReasons ?? []).map((reason) => ({
+      microturnClass: row.key,
+      routeCount: row.wasmProductionPreviewDriveRouteCount,
+      unsupportedCount: row.wasmProductionPreviewDriveUnsupportedCount,
+      ...reason,
+    })))
+    .sort((left, right) =>
+      right.count - left.count
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.unsupportedDriveClass, right.unsupportedDriveClass)
+      || compareCodepoint(left.unsupportedOwner ?? '', right.unsupportedOwner ?? '')
+      || compareCodepoint(left.reason, right.reason),
+    );
+  if (reasonRows.length === 0) {
+    return [
+      '',
+      '## WASM Preview-Drive Unsupported Reasons',
+      '',
+      '_No reason-granular unsupported preview-drive rows recorded._',
+    ];
+  }
+  return [
+    '',
+    '## WASM Preview-Drive Unsupported Reasons',
+    '',
+    '| Microturn class | Unsupported class | Unsupported owner | Reason | Count | Class unsupported total | Class route total |',
+    '|---|---|---|---|---:|---:|---:|',
+    ...reasonRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.unsupportedDriveClass,
+      row.unsupportedOwner ?? '',
+      markdownCell(row.reason),
+      row.count,
+      row.unsupportedCount,
+      `${row.routeCount} |`,
+    ].join(' | ')),
+  ];
+}
+
+function formatReasonCounts(rows) {
+  if ((rows ?? []).length === 0) {
+    return '';
+  }
+  return rows.map((row) => {
+    const owner = row.unsupportedOwner === undefined ? 'unknown' : row.unsupportedOwner;
+    return `${row.unsupportedDriveClass}/${owner}/${row.reason}:${row.count}`;
+  }).join('; ');
+}
+
+function compareCodepoint(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function renderHotPathBucketSection(rows) {

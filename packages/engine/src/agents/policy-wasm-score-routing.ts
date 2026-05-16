@@ -222,7 +222,11 @@ const materializePreviewDynamicRowsWithWasm = (
     return [];
   }
   if (hasCardEventActionCandidate(input.def, input.candidates)) {
-    recordProductionPolicyWasmPreviewDrive('unsupported');
+    recordProductionPolicyWasmPreviewDrive('unsupported', {
+      unsupportedDriveClass: 'unsupported-effect',
+      unsupportedOwner: 'production-preview-drive.cardEventAction',
+      reason: 'production preview-drive does not route card event action candidates',
+    });
     return null;
   }
   const slotsByCode = new Map<number, readonly string[]>();
@@ -271,7 +275,11 @@ const materializePreviewDynamicRowsWithWasm = (
       candidates: group,
     });
     if (result.kind !== 'supported') {
-      recordProductionPolicyWasmPreviewDrive('unsupported');
+      recordProductionPolicyWasmPreviewDrive('unsupported', {
+        unsupportedDriveClass: result.unsupportedDriveClass,
+        ...(result.unsupportedOwner === undefined ? {} : { unsupportedOwner: result.unsupportedOwner }),
+        reason: result.reason,
+      });
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       throw new PolicyRuntimeError({
         code: 'RUNTIME_EVALUATION_ERROR',

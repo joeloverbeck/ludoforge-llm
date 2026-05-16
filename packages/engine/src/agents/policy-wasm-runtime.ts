@@ -6,8 +6,6 @@ import type { PolicyWasmBytecodeInputCache, PolicyWasmBytecodeStateWordsCache } 
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   getCachedScoreRowBytecode,
-  getScoreRowBytecodeCompileCount,
-  resetScoreRowBytecodeCompileCount,
 } from './policy-wasm-score-bytecode-cache.js';
 import {
   cachedLayoutIdentity,
@@ -28,10 +26,11 @@ import {
 } from './policy-wasm-preview-drive.js';
 import {
   getCachedPolicyWasmBytecodeInput,
-  getPolicyWasmBytecodeInputCacheCounters,
   policyWasmBytecodeInputCacheKey,
-  resetPolicyWasmBytecodeInputCacheCounters,
 } from './policy-wasm-bytecode-input-cache.js';
+import {
+  productionPolicyWasmCounterInternals,
+} from './policy-wasm-runtime-counters.js';
 import type { PolicyScheduleFallbackFired, PolicyScheduleFallbackKind } from './policy-evaluation-core.js';
 import {
   encodeWasmPhaseScheduleValue,
@@ -225,12 +224,6 @@ export interface PolicyWasmRuntime {
 }
 
 let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
-let productionScoreRowRouteCount = 0;
-let productionScoreRowUnsupportedCount = 0;
-let productionPreviewCandidateFeatureRowRouteCount = 0;
-let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
-let productionPreviewDriveRouteCount = 0;
-let productionPreviewDriveUnsupportedCount = 0;
 
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
@@ -1335,78 +1328,21 @@ export const createPolicyWasmRuntime = (
 export const getInitializedPolicyWasmRuntime = (): PolicyWasmRuntime | null =>
   productionPolicyWasmRuntime;
 
-export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsupported'): void => {
-  if (kind === 'supported') {
-    productionScoreRowRouteCount += 1;
-  } else {
-    productionScoreRowUnsupportedCount += 1;
-  }
-};
-
-export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'supported' | 'unsupported'): void => {
-  if (kind === 'supported') {
-    productionPreviewCandidateFeatureRowRouteCount += 1;
-  } else {
-    productionPreviewCandidateFeatureRowUnsupportedCount += 1;
-  }
-};
-
-export const recordProductionPolicyWasmPreviewDrive = (kind: 'supported' | 'unsupported'): void => {
-  if (kind === 'supported') {
-    productionPreviewDriveRouteCount += 1;
-  } else {
-    productionPreviewDriveUnsupportedCount += 1;
-  }
-};
-
-export const getProductionPolicyWasmPreviewDriveRouteCount = (): number =>
-  productionPreviewDriveRouteCount;
-
-export const getProductionPolicyWasmPreviewDriveUnsupportedCount = (): number =>
-  productionPreviewDriveUnsupportedCount;
+export {
+  getProductionPolicyWasmPreviewDriveRouteCount,
+  getProductionPolicyWasmPreviewDriveUnsupportedCount,
+  getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts,
+  type PolicyWasmPreviewDriveUnsupportedDetail,
+  recordProductionPolicyWasmPreviewCandidateFeatureRows,
+  recordProductionPolicyWasmPreviewDrive,
+  recordProductionPolicyWasmScoreRows,
+} from './policy-wasm-runtime-counters.js';
 
 export const __internal_for_tests = {
   setInitializedPolicyWasmRuntime(runtime: PolicyWasmRuntime | null): void {
     productionPolicyWasmRuntime = runtime;
   },
-  getProductionScoreRowRouteCount(): number {
-    return productionScoreRowRouteCount;
-  },
-  getProductionScoreRowUnsupportedCount(): number {
-    return productionScoreRowUnsupportedCount;
-  },
-  getProductionScoreRowBytecodeCompileCount(): number {
-    return getScoreRowBytecodeCompileCount();
-  },
-  getPolicyWasmBytecodeInputCacheCounters(): {
-    readonly hitCount: number;
-    readonly missCount: number;
-    readonly writeCount: number;
-  } {
-    return getPolicyWasmBytecodeInputCacheCounters();
-  },
-  getProductionPreviewCandidateFeatureRowRouteCount(): number {
-    return productionPreviewCandidateFeatureRowRouteCount;
-  },
-  getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
-    return productionPreviewCandidateFeatureRowUnsupportedCount;
-  },
-  getProductionPreviewDriveRouteCount(): number {
-    return productionPreviewDriveRouteCount;
-  },
-  getProductionPreviewDriveUnsupportedCount(): number {
-    return productionPreviewDriveUnsupportedCount;
-  },
-  resetProductionScoreRowCounters(): void {
-    productionScoreRowRouteCount = 0;
-    productionScoreRowUnsupportedCount = 0;
-    productionPreviewCandidateFeatureRowRouteCount = 0;
-    productionPreviewCandidateFeatureRowUnsupportedCount = 0;
-    productionPreviewDriveRouteCount = 0;
-    productionPreviewDriveUnsupportedCount = 0;
-    resetScoreRowBytecodeCompileCount();
-    resetPolicyWasmBytecodeInputCacheCounters();
-  },
+  ...productionPolicyWasmCounterInternals,
   encodePolicyBytecodeInputForTest(
     bytecode: PolicyBytecode,
     encoded: EncodedState,

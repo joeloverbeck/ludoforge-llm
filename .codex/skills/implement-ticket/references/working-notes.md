@@ -5,6 +5,18 @@
 - Capture reassessment outcomes affecting correctness: discrepancy lists, evidence classification, authoritative boundary restatements, verification-owned scope corrections.
 - In Codex sessions, record at minimum: draft/untracked status when relevant, the discrepancy class (`blocking` vs `nonblocking`), the final authoritative boundary, and any verification command substitutions or semantic expectation corrections.
 
+## Hard Stop Before First Edit
+
+Before touching files, emit this five-line checkpoint even when the full checklist below will follow:
+
+- `status/dirt`: active ticket/spec/sibling status plus relevant dirty or untracked paths
+- `ticket deliverables`: explicit files, artifacts, reports, witnesses, and status/graph changes the ticket names
+- `boundary`: the authoritative owned slice after live reassessment
+- `proof lanes`: final acceptance lanes and any output-contention ordering
+- `terminal-status plan`: intended status and what must be true before setting it
+
+If this was missed, emit a `late recovery checkpoint` immediately after discovery and before the next edit. Do not later claim the late checkpoint satisfied the pre-edit stop requirement.
+
 ## Minimal Codex Working-Notes Checklist
 
 This reference is the canonical compact checklist for normal Codex runs. If the main `SKILL.md` adds fields for a specific ticket type, use the union of this list and the main skill's triggered fields rather than treating this section as a reason to omit them.

@@ -32,6 +32,7 @@ import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-dr
 import {
   getInitializedPolicyWasmRuntime,
   recordProductionPolicyWasmPreviewDrive,
+  type PolicyWasmPreviewDriveUnsupportedDetail,
 } from './policy-wasm-runtime.js';
 
 export interface DeepeningRunResult {
@@ -181,10 +182,14 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
   input: RunChooseNStepInnerPreviewInput,
   stateAfterRoot: ChooseNStepInnerPreviewResult['state'],
   initialDepth: number,
-): DriveResult | undefined => {
+): { readonly kind: 'supported'; readonly drive: DriveResult } | { readonly kind: 'unsupported'; readonly detail: PolicyWasmPreviewDriveUnsupportedDetail } => {
   const runtime = getInitializedPolicyWasmRuntime();
   if (runtime === null) {
-    return undefined;
+    return unsupportedWasmDeepDrive(
+      'unknown',
+      'production-deep-choosenstep-continuation.runtime',
+      'no initialized policy WASM runtime',
+    );
   }
   const depthCap = input.depthCap ?? input.profile.preview.inner?.depthCap ?? input.profile.preview.completionDepthCap ?? 1;
   const completionPolicy = input.completionPolicy ?? input.profile.preview.completion ?? 'policyGuided';
@@ -196,16 +201,23 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     state: ChooseNStepInnerPreviewResult['state'],
     depth: number,
     outcome: DriveResult['outcome'],
-  ): DriveResult | undefined => producedProjectedState
+  ): { readonly kind: 'supported'; readonly drive: DriveResult } | { readonly kind: 'unsupported'; readonly detail: PolicyWasmPreviewDriveUnsupportedDetail } => producedProjectedState
     ? {
-        state,
-        depth,
-        outcome,
-        completionPolicy,
-        syntheticDecisions: [...syntheticDecisions],
-        completionPolicyFallbackCount,
+        kind: 'supported',
+        drive: {
+          state,
+          depth,
+          outcome,
+          completionPolicy,
+          syntheticDecisions: [...syntheticDecisions],
+          completionPolicyFallbackCount,
+        },
       }
-    : undefined;
+    : unsupportedWasmDeepDrive(
+        'unknown',
+        'production-deep-choosenstep-continuation.projectedState',
+        'deep preview-drive reached a terminal boundary before materializing a WASM projected state',
+      );
   let state = stateAfterRoot;
   let depth = initialDepth;
 
@@ -255,7 +267,11 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
       completionPolicyFallbackCount += 1;
     }
     if (nextDecision === undefined || nextDecision.kind !== 'chooseNStep') {
-      return undefined;
+      return unsupportedWasmDeepDrive(
+        'agent-guided-completion',
+        'production-deep-choosenstep-continuation.pickInnerDecision',
+        'deep preview-drive selected a non-chooseNStep continuation decision',
+      );
     }
     const chooseNStepMicroturn = microturn as ChooseNStepMicroturn;
     const chooseNStepDecision = nextDecision as ChooseNStepDecision;
@@ -266,7 +282,7 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
       initialValue: 0,
     });
     if (lowered.kind !== 'supported') {
-      return undefined;
+      return unsupportedWasmDeepDrive(lowered.unsupportedClass, lowered.owner, lowered.reason);
     }
     const result = runtime.evaluatePreviewDriveBatch({
       profileId: 'production-deep-choosenstep-continuation',
@@ -278,11 +294,15 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
       materializeStatePatch: true,
     });
     if (result.kind !== 'supported') {
-      return undefined;
+      return unsupportedWasmDeepDrive(result.unsupportedDriveClass, result.unsupportedOwner, result.reason);
     }
     const patch = result.rows[0]?.statePatch;
     if (patch === undefined) {
-      return undefined;
+      return unsupportedWasmDeepDrive(
+        'unsupported-effect',
+        'production-deep-choosenstep-continuation.statePatch',
+        'WASM chooseNStep continuation did not return a materialized state patch',
+      );
     }
     const traceEntry = syntheticDecisionTraceEntry(
       chooseNStepDecision,
@@ -302,6 +322,19 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     depth += 1;
   }
 };
+
+const unsupportedWasmDeepDrive = (
+  unsupportedDriveClass: NonNullable<PolicyWasmPreviewDriveUnsupportedDetail['unsupportedDriveClass']>,
+  unsupportedOwner: string | undefined,
+  reason: string,
+): { readonly kind: 'unsupported'; readonly detail: PolicyWasmPreviewDriveUnsupportedDetail } => ({
+  kind: 'unsupported',
+  detail: {
+    unsupportedDriveClass,
+    ...(unsupportedOwner === undefined ? {} : { unsupportedOwner }),
+    reason,
+  },
+});
 
 export const runDeepPass = (
   input: RunChooseNStepInnerPreviewInput,
@@ -338,7 +371,7 @@ export const runDeepPass = (
       option.state,
       option.driveDepth,
     );
-    const deepDrive = wasmDrive ?? continueChooseNStepInnerPreviewDrive(
+    const deepDrive = wasmDrive.kind === 'supported' ? wasmDrive.drive : continueChooseNStepInnerPreviewDrive(
       {
         ...input,
         state: option.state,
@@ -347,7 +380,10 @@ export const runDeepPass = (
       option.state,
       option.driveDepth,
     );
-    recordProductionPolicyWasmPreviewDrive(wasmDrive === undefined ? 'unsupported' : 'supported');
+    recordProductionPolicyWasmPreviewDrive(
+      wasmDrive.kind === 'supported' ? 'supported' : 'unsupported',
+      wasmDrive.kind === 'supported' ? {} : wasmDrive.detail,
+    );
     return resolveDeepOption(
       input,
       option,

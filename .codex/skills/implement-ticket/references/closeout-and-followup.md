@@ -318,9 +318,10 @@ Use this compact final handoff shape when implementation stops before archival:
 
 - `implemented ticket`: active path and terminal status
 - `archive status`: `implemented but not archived`, `archived`, or `post-ticket-review already ran`
-- `tracked modified`: tracked files changed by this implementation
-- `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
+- `tracked modified`: exact tracked paths, or tight path groups only when every member is already visible in the ticket outcome
+- `untracked added`: exact new source, test, fixture, report, ticket, or artifact paths; use `none` only after checking `git status --short`
 - `green proof lanes`: commands that passed and are final for the owned slice
+- `advisory emissions`: warning/stderr rows from passing lanes, classified as `ticket-owned`, `known sibling/spec-owned`, or `non-ticket-owned`
 - `cached broad lanes`: `none`, `cache-covered`, `cache-hit supplemental`, or `cache-hit proof pending`; for mixed Turbo output, name which broad lanes replayed cached logs and why the ticket-owned surface is still proven
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
@@ -346,9 +347,10 @@ Cache-hit classification quick table:
 For a large implementation diff, prefer this concrete final-response skeleton over a vague summary:
 
 - `implemented ticket`: `<path>` — `<terminal status>`
-- `tracked modified`: `<path group or exact list>; source-size ledger in <ticket/report section if triggered>`
+- `tracked modified`: `<exact list, or path group only when ticket outcome already lists members>; source-size ledger in <ticket/report section if triggered>`
 - `untracked added`: `<exact new tests/fixtures/reports/tickets, or none>`
 - `green proof lanes`: `<focused lanes>; <root/package lanes>`
+- `advisory emissions`: `<none, or warning/stderr -> owner classification>`
 - `cached broad lanes`: `<classification and direct-proof rationale, or none>`
 - `classified red/non-final lanes`: `<none, or lane -> owner/substitution>`
 - `archive status`: `<implemented but not archived | archived | post-ticket-review already ran>`

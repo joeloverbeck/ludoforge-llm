@@ -1,0 +1,135 @@
+import {
+  getPolicyWasmBytecodeInputCacheCounters,
+  resetPolicyWasmBytecodeInputCacheCounters,
+} from './policy-wasm-bytecode-input-cache.js';
+import {
+  getScoreRowBytecodeCompileCount,
+  resetScoreRowBytecodeCompileCount,
+} from './policy-wasm-score-bytecode-cache.js';
+
+export interface PolicyWasmPreviewDriveUnsupportedDetail {
+  readonly unsupportedDriveClass?: string;
+  readonly unsupportedOwner?: string;
+  readonly reason?: string;
+}
+
+export interface PolicyWasmPreviewDriveUnsupportedReasonCount {
+  readonly unsupportedDriveClass: string;
+  readonly unsupportedOwner?: string;
+  readonly reason: string;
+  readonly count: number;
+}
+
+let productionScoreRowRouteCount = 0;
+let productionScoreRowUnsupportedCount = 0;
+let productionPreviewCandidateFeatureRowRouteCount = 0;
+let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+let productionPreviewDriveRouteCount = 0;
+let productionPreviewDriveUnsupportedCount = 0;
+const productionPreviewDriveUnsupportedReasonCounts = new Map<string, PolicyWasmPreviewDriveUnsupportedReasonCount>();
+
+export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsupported'): void => {
+  if (kind === 'supported') {
+    productionScoreRowRouteCount += 1;
+  } else {
+    productionScoreRowUnsupportedCount += 1;
+  }
+};
+
+export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'supported' | 'unsupported'): void => {
+  if (kind === 'supported') {
+    productionPreviewCandidateFeatureRowRouteCount += 1;
+  } else {
+    productionPreviewCandidateFeatureRowUnsupportedCount += 1;
+  }
+};
+
+export const recordProductionPolicyWasmPreviewDrive = (
+  kind: 'supported' | 'unsupported',
+  detail: PolicyWasmPreviewDriveUnsupportedDetail = {},
+): void => {
+  if (kind === 'supported') {
+    productionPreviewDriveRouteCount += 1;
+    return;
+  }
+  productionPreviewDriveUnsupportedCount += 1;
+  const row = normalizeUnsupportedDetail(detail);
+  const key = `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`;
+  const current = productionPreviewDriveUnsupportedReasonCounts.get(key);
+  productionPreviewDriveUnsupportedReasonCounts.set(key, {
+    ...row,
+    count: (current?.count ?? 0) + 1,
+  });
+};
+
+export const getProductionPolicyWasmPreviewDriveRouteCount = (): number =>
+  productionPreviewDriveRouteCount;
+
+export const getProductionPolicyWasmPreviewDriveUnsupportedCount = (): number =>
+  productionPreviewDriveUnsupportedCount;
+
+export const getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts = (): readonly PolicyWasmPreviewDriveUnsupportedReasonCount[] =>
+  [...productionPreviewDriveUnsupportedReasonCounts.values()]
+    .sort((left, right) =>
+      right.count - left.count
+      || compareCodepoint(left.unsupportedDriveClass, right.unsupportedDriveClass)
+      || compareCodepoint(left.unsupportedOwner ?? '', right.unsupportedOwner ?? '')
+      || compareCodepoint(left.reason, right.reason),
+    );
+
+export const productionPolicyWasmCounterInternals = {
+  getProductionScoreRowRouteCount(): number {
+    return productionScoreRowRouteCount;
+  },
+  getProductionScoreRowUnsupportedCount(): number {
+    return productionScoreRowUnsupportedCount;
+  },
+  getProductionScoreRowBytecodeCompileCount(): number {
+    return getScoreRowBytecodeCompileCount();
+  },
+  getPolicyWasmBytecodeInputCacheCounters(): {
+    readonly hitCount: number;
+    readonly missCount: number;
+    readonly writeCount: number;
+  } {
+    return getPolicyWasmBytecodeInputCacheCounters();
+  },
+  getProductionPreviewCandidateFeatureRowRouteCount(): number {
+    return productionPreviewCandidateFeatureRowRouteCount;
+  },
+  getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
+    return productionPreviewCandidateFeatureRowUnsupportedCount;
+  },
+  getProductionPreviewDriveRouteCount(): number {
+    return productionPreviewDriveRouteCount;
+  },
+  getProductionPreviewDriveUnsupportedCount(): number {
+    return productionPreviewDriveUnsupportedCount;
+  },
+  getProductionPreviewDriveUnsupportedReasonCounts(): readonly PolicyWasmPreviewDriveUnsupportedReasonCount[] {
+    return getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts();
+  },
+  resetProductionScoreRowCounters(): void {
+    productionScoreRowRouteCount = 0;
+    productionScoreRowUnsupportedCount = 0;
+    productionPreviewCandidateFeatureRowRouteCount = 0;
+    productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+    productionPreviewDriveRouteCount = 0;
+    productionPreviewDriveUnsupportedCount = 0;
+    productionPreviewDriveUnsupportedReasonCounts.clear();
+    resetScoreRowBytecodeCompileCount();
+    resetPolicyWasmBytecodeInputCacheCounters();
+  },
+};
+
+const normalizeUnsupportedDetail = (
+  detail: PolicyWasmPreviewDriveUnsupportedDetail,
+): PolicyWasmPreviewDriveUnsupportedReasonCount => ({
+  unsupportedDriveClass: detail.unsupportedDriveClass ?? 'unknown',
+  ...(detail.unsupportedOwner === undefined ? {} : { unsupportedOwner: detail.unsupportedOwner }),
+  reason: detail.reason ?? 'unspecified unsupported preview-drive route',
+  count: 0,
+});
+
+const compareCodepoint = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;

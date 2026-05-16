@@ -16,6 +16,16 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 Load `references/working-notes.md` for the working-notes checklist, `commentary` usage, and the 1-3-1 boundary reset ledger format. Emit the compact working-notes checkpoint before coding. If resuming after context compaction, interruption, or a long handoff and the visible context does not include that checkpoint, reload the working-notes reference and reconstruct or re-emit the checkpoint before any further file edit. If the handoff only says a checkpoint happened but does not preserve the full ticket-named deliverables ledger, treat the checkpoint as incomplete: rebuild that ledger from the active ticket, final diff, and untracked files before any further edit or terminal closeout. If the handoff names an in-flight command, terminal session id, background pid, or still-running proof lane, poll or classify that command before starting any command that can contend for the same package, cache, generated tree, `dist`, schema artifacts, goldens, benchmark resources, or other proof outputs. If polling fails because the terminal session or process no longer exists, treat that proof result as unobservable: check for remaining matching processes, rerun the idempotent lane when feasible, and never cite the lost session as evidence. A compaction or handoff summary may be cited as `compaction-preserved evidence` only when it includes the command, exit status, decisive metric or output, and no unresolved invalidating edit; otherwise rerun the lane or mark it unobserved.
 
+Hard stop before first edit: before touching any file, emit a short checkpoint with these five lines even if the fuller ledger will follow:
+
+- `status/dirt`: active ticket/spec/sibling status plus relevant dirty or untracked paths
+- `ticket deliverables`: explicit files, artifacts, reports, witnesses, and status/graph changes the ticket names
+- `boundary`: the authoritative owned slice after live reassessment
+- `proof lanes`: final acceptance lanes and any output-contention ordering
+- `terminal-status plan`: intended status and what must be true before setting it
+
+If this hard stop was missed, pause at discovery time and emit a `late recovery checkpoint` before the next edit. Do not describe the late checkpoint as satisfying the pre-edit requirement in audit or closeout language.
+
 Terminal status stop: do not set a ticket's terminal status until no further source, test, schema, generated-artifact, ticket-scope, touched-file, dependency, or proof-story edits remain expected and the final proof set has run or been explicitly classified. If the active ticket needs an early closeout draft, write the intended terminal state in prose while leaving the status nonterminal, then apply the terminal status only as the final narrow edit after proof.
 
 Durable nonterminal status stop: treat `BLOCKED`, `PARTIAL`, retained-substrate red-gate states, and similar explicit nonterminal closeout states as durable status changes, not as casual progress notes. If proof rows, dependency/status graph checks, successor/spec edits, decisive metric transcription, or proof-validity classification remain pending, draft the intended nonterminal state in prose and keep the ticket's `**Status**` unchanged until those rows are settled or explicitly classified. Apply the actual `**Status**: BLOCKED...` / `PARTIAL...` edit only after the measured result, residual owner, dependency integrity, and late-edit validity story are durable, unless the user explicitly asked for an immediate status marker and the ticket records the remaining proof rows as still pending.
@@ -274,6 +284,15 @@ When a proof ticket requires a **new calibrated threshold or ceiling**, prefer t
 
 When a profiling ticket needs a **new counter or diagnostic field** to expose the owned metric, add the counter before changing the measured behavior when practical, then capture a same-seam baseline and current result with the same output shape. If the baseline predates the counter, record the old proxy metric explicitly, explain why it is comparable, and keep the final verdict on the ticket-owned metric rather than raw wall-clock noise alone.
 
+For profiling or investigation tickets that add diagnostic telemetry and produce durable witness artifacts, use this compact sequence unless live reassessment proves a narrower path is sufficient:
+
+1. add the smallest generic counter or diagnostic field needed to expose the ticket-owned metric
+2. run syntax and focused tests for the new telemetry before spending an expensive witness run
+3. run a tiny smoke witness that validates output shape, per-row/per-class units, required columns, and report rendering
+4. run the decisive bounded or full witness only after the output shape is known-good
+5. transcribe the measured classification into the owned ticket/report, including checked-in artifact paths and successor/residual owner when needed
+6. create or update successor/spec/ticket-list artifacts before the final broad proof lanes, then run the ticket graph integrity check after status or dependency edits
+
 For **profiling or benchmark red-gate tickets**, prefer the profiling fast path from Implementation Rules unless live reassessment triggers heavier guidance: load `references/working-notes.md`, `references/ticket-type-triage.md`, `references/specialized-ticket-types.md`, and `references/verification.md`; defer broader references until split ownership, nontrivial discrepancy, shared-contract/schema fallout, noisy harness behavior, command-wrapper ambiguity, or post-proof invalidation requires them.
 
 When a profiling, benchmark, or measured-gate ticket's closeout depends on red metrics, materiality, retained/rejected candidates, successor scope, respec-only completion, or terminal-status exceptions, load `references/measured-gate-closeout.md`. A Phase 0 measurement/report ticket that only produces the evidence artifact and does not decide a red/green budget or optimization closeout usually does not need `measured-gate-closeout.md`; use `ticket-type-triage`, `specialized-ticket-types`, `verification`, and `closeout-and-followup` until one of the red-gate triggers appears. Keep only the ticket-type trigger here; the detailed red-gate status table, ordering rules, worksheets, and candidate discipline live in that reference.
@@ -521,6 +540,18 @@ Final response must state whether `post-ticket-review` already ran. If it did no
 Use this exact handoff sentence when no archival/review ran and the ticket is completed/archive-ready: `Post-review: not run; the ticket is implemented but not archived. Next workflow: $post-ticket-review <ticket>.`
 
 Use this exact handoff sentence when no archival/review ran and the ticket is blocked/nonterminal: `Post-review: not run; the ticket is blocked and not archive-ready. Next workflow: continue with $implement-ticket <successor-or-active-ticket>.`
+
+For large diffs, build the final response from this mini-template before writing prose so path lists and cache/advisory classifications do not collapse into a vague summary:
+
+- `implemented ticket`: active path and durable status
+- `tracked modified`: exact tracked paths, or tight path groups only when every member is already visible in the ticket outcome
+- `untracked added`: exact new source, test, fixture, report, ticket, or artifact paths; use `none` only after `git status --short`
+- `green proof lanes`: final commands that passed for the owned slice
+- `advisory emissions`: warnings/stderr from green lanes, classified as `ticket-owned`, `known sibling/spec-owned`, or `non-ticket-owned`
+- `cached broad lanes`: each cached/replayed broad lane classified as `cache-covered`, `cache-hit supplemental`, or `cache-hit proof pending`
+- `classified non-final lanes`: failed, skipped, stale, noisy, or substituted lanes; use `none` only after checking
+- `archive status`: `post-ticket-review already ran`, `archived`, `implemented but not archived`, or `blocked/not archive-ready`
+- `next workflow`: exact `$post-ticket-review ...` or `$implement-ticket ...` handoff sentence
 
 Use this compact final handoff shape when implementation stops before archival:
 

@@ -104,4 +104,4 @@ Declined — Phase 4 gate failed; escalation report at `reports/174-phase-4-arch
 
 No engine code changed under this ticket. The gate-decision report at `reports/174-phase-4-gate-decision.md` recorded a Fail verdict: post-008 slow-tier median `27211.75 ms`, required `<=20408.8125 ms`, post-174-011 final median `62042.20 ms`, delta `+34830.45 ms` (`+127.9978%`). The default flip and A/B deletion are therefore not authorized.
 
-Next owner: `tickets/174WASMDEEPPRV-014.md`.
+Diagnostic owner: `archive/tickets/174WASMDEEPPRV-014.md`. Current active continuation owner: `tickets/174WASMDEEPPRV-015.md`.

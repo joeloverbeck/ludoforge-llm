@@ -169,7 +169,7 @@ Reference reports (informing the strategic context):
 Decomposed via `/spec-to-tickets` on 2026-05-17:
 
 - [`archive/tickets/176POLWASMPERF-001.md`](../archive/tickets/176POLWASMPERF-001.md) — Phase 0 — Baseline reproduction + feature-flagged WASM timing instrumentation (covers §5 Phase 0)
-- [`tickets/176POLWASMPERF-002.md`](../tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
+- [`archive/tickets/176POLWASMPERF-002.md`](../archive/tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
 - [`tickets/176POLWASMPERF-003.md`](../tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
 - [`tickets/176POLWASMPERF-004.md`](../tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
 - [`tickets/176POLWASMPERF-005.md`](../tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)

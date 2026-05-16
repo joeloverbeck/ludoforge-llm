@@ -1,6 +1,6 @@
 # 176POLWASMPERF-002: Phase 1 — H1 FFI marshaling decomposition report
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — analysis and report only; consumes Phase 0's timing instrumentation.
@@ -81,3 +81,53 @@ None — analysis ticket.
 
 1. `pnpm turbo test` (sanity baseline, no engine source changes).
 2. (Manual) Phase 1 measurement command in §1 above; verify the report writes successfully and the verdict is one of the three defined values.
+
+## Outcome (2026-05-17)
+
+### What Landed
+
+- Added `reports/176-phase-1-ffi-marshaling-decomposition.md` as the Phase 1 H1 verdict report.
+- Reused the tracked Phase 0 timed/no-WASM artifacts rather than rerunning the 15-seed witness:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-0-wasm-on-timed.{md,csv}`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-0-no-wasm.{md,csv}`
+- No engine source, profiler script, schema, generated JSON, GameSpecDoc, GameDef, or visual-config files changed.
+
+### Ticket Corrections Applied
+
+- Fresh Phase 1 raw `reports/fitl-arvn-15-seed-decomposition-2026-05-NN-phase-1-h1-marshaling.{md,csv}` artifacts were not produced because the ticket explicitly allows reusing Phase 0's `phase-0-wasm-on-timed` artifacts when current. Reuse was verified with `git log cb124a071..HEAD -- packages/engine/src packages/engine/scripts <phase0 artifacts>`, which returned no commits.
+- The placeholder date label `2026-05-NN` is resolved by the reused artifact date `2026-05-17`.
+- The slow-tier TS-equivalent comparison from the ticket formula is negative under the reused witness: `(71009.1253 - 74439.3946) / 7854 = -0.436754 ms/call`. The Phase 1 report records this as cross-run outside-work/noise evidence and bases the H1 verdict on the direct measured bucket split.
+
+### Phase 1 Measurement Verdict
+
+| Scope | WASM calls | Marshaling ms | Execution ms | Deserialization ms | Overhead / execution | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| Full 15-seed run | 18048 | 1223.8808 | 463.3759 | 203.6470 | 3.08x | marshaling-dominant |
+| Slow-tier seeds `1005, 1011, 1008, 1013, 1009` | 7854 | 495.4031 | 184.4379 | 88.0545 | 3.16x | marshaling-dominant |
+
+The Phase 6 implication is the spec 176 H1 branch: if later phases do not prove a stronger structural blocker, the H1 result supports an Accelerate follow-up focused on batching more work per WASM call.
+
+### Verification Ledger
+
+Final lanes:
+
+- `pnpm turbo test` — pass. All five Turbo tasks were cache hits; classified as cache-covered sanity for this report-only ticket because no source, tests, schemas, manifests, generated runtime artifacts, or package outputs changed.
+- `pnpm run check:ticket-deps` — pass; ticket dependency integrity check passed for 6 active tickets and 2376 archived tickets.
+- `git diff --check` — pass for tracked changes.
+- `node -e "<trailing-whitespace check>" reports/176-phase-1-ffi-marshaling-decomposition.md` — pass; retained untracked report has no trailing whitespace.
+
+### Schema / Generated Fallout
+
+None expected. This ticket adds a checked-in Markdown report and updates this active ticket only.
+
+### Runtime Surface Breadth
+
+No runtime surface changed. This is an evidence-only report derived from existing Phase 0 profiler artifacts.
+
+### Deferred Scope
+
+H2 through H5 attribution and Phase 6 synthesis remain with tickets `176POLWASMPERF-003` through `176POLWASMPERF-007`.
+
+### Late Proof Validity
+
+Terminal status/proof transcription only. The status change records the already-produced report, the just-run `pnpm turbo test` result, and the post-status dependency-check result; it does not change scope, acceptance criteria, command semantics, touched-file ownership, dependency ownership, or Phase 6 handoff. Exact transcription of the dependency-check result does not require a second dependency-check rerun.

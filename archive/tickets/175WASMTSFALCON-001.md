@@ -1,6 +1,6 @@
 # 175WASMTSFALCON-001: Phase 0 — Inventory & classify WASM throw sites
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — analysis-only output
@@ -25,6 +25,46 @@ This ticket produces the authoritative classification report that Phase 1 acts o
 2. **No engine code change**: This ticket produces a report only. No `packages/engine/src/` files are modified. The WASM/TS boundary architecture is untouched.
 3. **Foundation 14 alignment**: The report names the asymmetric-throw pattern as a backwards-compatibility hack class to be eliminated wholesale, consistent with "No Backwards Compatibility" — there is no transitional period where some unsupported-detection branches throw and others return null after Phase 1 lands.
 4. **No new abstractions**: The classification taxonomy is the one already used implicitly by the post-fix code in `materializePreviewDynamicRowsWithWasm` (return null on unsupported detection) — this ticket just makes the taxonomy explicit and exhaustive.
+
+## Implementation Outcome (2026-05-16)
+
+Completed: Phase 0 inventory/report deliverable is implemented.
+
+What landed:
+
+- Added `reports/175-phase-0-wasm-throw-site-inventory.md`.
+- Recorded inventory identity: commit `ed23802274c5941c4578cae84770fe7555d1de48`, spec 175 Phase 0, and exact grep commands.
+- Classified all 85 `throw ` sites under `packages/engine/src/agents/policy-wasm-*.ts` exactly once.
+- Identified 2 class-A conversion targets for Phase 1: `packages/engine/src/agents/policy-wasm-score-routing.ts:465` and `packages/engine/src/agents/policy-wasm-score-routing.ts:528`.
+- Classified `packages/engine/src/agents/policy-wasm-score-routing.ts:550` as a remain-throw contract violation: a supported WASM result omitting a candidate row is corrupt supported-output evidence, not an unsupported shape with a safe TS fallback.
+- Listed already-converted null-return reference branches in `materializePreviewDynamicRowsWithWasm` and the runtime `-14` unsupported sentinels.
+- Seeded Phase 2 marker expectations: preserved B/C throws should use `// @policy-wasm-throw: contract-violation`; converted class-A sites should use `// @policy-wasm-unsupported: null-return`.
+
+Touch scope:
+
+- Report added: `reports/175-phase-0-wasm-throw-site-inventory.md`.
+- Engine source: verified no edit; this ticket remains analysis-only.
+- Generated/schema artifacts: not applicable; no runtime source, schema source, generated JSON, or package manifest changed.
+
+Command ledger and final proof:
+
+| Ticket section | Literal command/shorthand | Final citation |
+| --- | --- | --- |
+| Cross-reference verification | `grep -rn "throw " packages/engine/src/agents/policy-wasm-*.ts \| wc -l` | Passed; output `85`. |
+| Cross-reference verification | `grep -rn "throw new PolicyRuntimeError" packages/engine/src/agents/policy-wasm-*.ts` | Passed; output 6 rows, all in `policy-wasm-score-routing.ts` at lines 53, 373, 399, 465, 528, and 550. |
+| Test Plan | manual report verification | Passed; `awk` row-count check over the report's per-site table output `85`. |
+| Commands | `pnpm run check:ticket-deps` | Passed; `Ticket dependency integrity check passed for 5 active tickets and 2370 archived tickets.` |
+| Acceptance Criteria | `pnpm turbo test` sanity check | Passed; 5/5 tasks successful in 2m4.523s. Test tasks were cache misses; cached build tasks were supplemental because this ticket changed only ticket/report Markdown and no source, schema, generated runtime artifact, or package manifest. |
+
+Advisory emissions:
+
+- `pnpm turbo test` replayed cached build logs that included existing runner chunk-size warnings; non-ticket-owned.
+- Runner tests emitted expected jsdom/canvas and ticker-error-fence stderr from passing tests; non-ticket-owned.
+
+Late-edit proof validity:
+
+- Final edit class: terminal status plus exact proof transcription only.
+- No-invalidation: no source, schema, generated artifact, acceptance boundary, command semantics, touched-file scope, dependency ownership, or follow-up classification changed after final proof.
 
 ## What to Change
 
@@ -90,3 +130,27 @@ The total throw count in the report MUST equal `grep -rn "throw " packages/engin
 1. `grep -rn "throw " packages/engine/src/agents/policy-wasm-*.ts | wc -l` — sanity-check the report's total throw count.
 2. `grep -rn "throw new PolicyRuntimeError" packages/engine/src/agents/policy-wasm-*.ts` — verify the 6 sites in `policy-wasm-score-routing.ts` are all enumerated.
 3. `pnpm run check:ticket-deps` — confirm this ticket's Deps reference validates.
+
+## Outcome
+
+Completed: 2026-05-16.
+
+What changed:
+
+- Added `reports/175-phase-0-wasm-throw-site-inventory.md`.
+- Inventoried all 85 `throw ` sites under `packages/engine/src/agents/policy-wasm-*.ts` at commit `ed23802274c5941c4578cae84770fe7555d1de48`.
+- Classified 2 sites as class A conversion targets for Phase 1: `packages/engine/src/agents/policy-wasm-score-routing.ts:465` and `packages/engine/src/agents/policy-wasm-score-routing.ts:528`.
+- Classified the remaining 83 sites as class B/C remain-throw contract or codec/ABI guards, including `packages/engine/src/agents/policy-wasm-score-routing.ts:550` as a fatal supported-output omission rather than an unsupported-shape fallback.
+
+Deviations:
+
+- No engine source edits were made; this ticket remained analysis-only as scoped.
+- The report records 85 total `throw ` sites, not only the 6 `PolicyRuntimeError` sites, because the ticket required every `throw ` under `policy-wasm-*.ts` to be considered.
+
+Verification:
+
+- `grep -rn "throw " packages/engine/src/agents/policy-wasm-*.ts | wc -l` -> `85`.
+- `grep -rn "throw new PolicyRuntimeError" packages/engine/src/agents/policy-wasm-*.ts` -> 6 rows, all in `policy-wasm-score-routing.ts`.
+- Report per-site table row count -> `85`.
+- `pnpm run check:ticket-deps` -> passed.
+- `pnpm turbo test` -> passed, 5/5 tasks successful in 2m4.523s. Build-task cache replay was supplemental; engine and runner test tasks executed as cache misses.

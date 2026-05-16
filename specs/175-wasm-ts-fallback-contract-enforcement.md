@@ -111,7 +111,7 @@ Architecture-test placement (Phase 2):
 
 Decomposed via `/spec-to-tickets` on 2026-05-17:
 
-- [`tickets/175WASMTSFALCON-001.md`](../tickets/175WASMTSFALCON-001.md) — Phase 0 — Inventory & classify WASM throw sites (covers §4 Phase 0)
+- [`archive/tickets/175WASMTSFALCON-001.md`](../archive/tickets/175WASMTSFALCON-001.md) — Phase 0 — Inventory & classify WASM throw sites (covers §4 Phase 0)
 - [`tickets/175WASMTSFALCON-002.md`](../tickets/175WASMTSFALCON-002.md) — Phase 1 — Convert unsupported-detection throws to null-return (covers §4 Phase 1)
 - [`tickets/175WASMTSFALCON-003.md`](../tickets/175WASMTSFALCON-003.md) — Phase 2 — Architecture test enforcing null-return contract (covers §4 Phase 2)
 - [`tickets/175WASMTSFALCON-004.md`](../tickets/175WASMTSFALCON-004.md) — Phase 3 — Parity oracle coverage for every unsupported reason (covers §4 Phase 3)

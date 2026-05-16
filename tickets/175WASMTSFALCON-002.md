@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (and any other class-A sites Phase 0 identifies).
-**Deps**: `tickets/175WASMTSFALCON-001.md`
+**Deps**: `archive/tickets/175WASMTSFALCON-001.md`
 
 ## Problem
 

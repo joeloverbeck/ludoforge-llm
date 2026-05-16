@@ -14,6 +14,7 @@ import {
   asTurnId,
   createGameDefRuntime,
   publishMicroturn,
+  publishMicroturnFromPreviewStateNoHash,
   resolveActiveDeciderSeatIdForPlayer,
   toStochasticDecisionStackContext,
   type ActionDef,
@@ -154,6 +155,43 @@ describe('microturn publication', () => {
     assert.deepEqual(afterChoice.state.decisionStack, []);
     assert.equal(afterChoice.log.decisionContextKind, 'chooseOne');
     assert.equal(afterChoice.log.turnRetired, true);
+  });
+
+  it('keeps preview no-hash chooseOne publication legal-action equivalent without deriving observation', () => {
+    const action: ActionDef = {
+      id: asActionId('choose-and-gain'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        chooseOneEffect('$target', ['A', 'B']),
+        eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } }),
+      ],
+      limits: [],
+    };
+    const def = makeBaseDef([action]);
+    const runtime = createGameDefRuntime(def);
+    const state = makeBaseState(def);
+
+    const actionSelection = publishMicroturn(def, state, runtime);
+    const afterActionSelection = applyDecision(def, state, actionSelection.legalActions[0]!, undefined, runtime);
+    assert.equal(afterActionSelection.state.decisionStack?.at(-1)?.context.kind, 'chooseOne');
+    const canonical = publishMicroturn(def, afterActionSelection.state, runtime);
+    const preview = publishMicroturnFromPreviewStateNoHash(def, afterActionSelection.state, runtime);
+
+    assert.equal(canonical.kind, 'chooseOne');
+    assert.equal(preview.kind, canonical.kind);
+    assert.equal(preview.seatId, canonical.seatId);
+    assert.equal(preview.turnId, canonical.turnId);
+    assert.equal(preview.frameId, canonical.frameId);
+    assert.deepEqual(preview.decisionContext, canonical.decisionContext);
+    assert.deepEqual(preview.legalActions, canonical.legalActions);
+    assert.equal(canonical.projectedState.observation !== undefined, true);
+    assert.equal(preview.projectedState.observation, undefined);
+    assert.equal(preview.projectedState.state, afterActionSelection.state);
   });
 
   it('auto-completes exact-cardinality chooseN selections when the final set is uniquely determined', () => {

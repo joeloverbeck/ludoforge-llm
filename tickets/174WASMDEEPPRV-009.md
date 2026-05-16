@@ -129,4 +129,4 @@ Verification:
 
 Late-edit proof validity: the final ticket status/proof transcription happened after the source, report, spec, dependent-ticket, successor-ticket, witness, and broad proof lanes were complete. The follow-up dependency-check transcription is clerical and records the just-run graph result; it does not change source, command semantics, acceptance thresholds, touched-file ownership, dependency ownership, or residual owner.
 
-Archive status: completed and ready for post-ticket review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `tickets/174WASMDEEPPRV-015.md` is the next active owner.
+Archive status: completed and ready for post-ticket review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `archive/tickets/174WASMDEEPPRV-015.md` later completed the zero-counter owner slice.

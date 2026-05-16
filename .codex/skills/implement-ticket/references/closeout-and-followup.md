@@ -412,6 +412,16 @@ For red-gate successor closeout, include a compact post-metric proof-validity le
 - `post-metric graph edits`: `<successor/spec/dependency/status files changed after the decisive metric>`
 - `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "metric-only ownership transcription; no code, command, threshold, scope, or acceptance-boundary change">`
 
+For sequential measured tickets where the active submetric is complete but the parent spec/campaign gate remains red, use this compact parent-residual handoff before terminal status:
+
+- `active metric`: `<ticket-owned metric, baseline, decisive final, delta/materiality, command/artifact>`
+- `parent gate`: `<parent/spec headline target, decisive current verdict, why it remains active>`
+- `new dominant residual`: `<class/phase/owner now blocking the parent gate>`
+- `default flip / broad enablement`: `<allowed, still blocked, or out of scope, with reason>`
+- `residual owner`: `<existing active ticket/spec backlog, new follow-up, same-ticket continuation, or user-approved no-successor rationale>`
+- `archive state`: `implemented but not archived` for terminal active-slice completion, or `blocked and not archive-ready` when the active ticket itself remains nonterminal`
+- `next workflow`: `$post-ticket-review <ticket>` for implemented active-slice completion, or `$implement-ticket <successor-or-active-ticket>` for nonterminal continuation
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:

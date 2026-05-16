@@ -286,6 +286,42 @@ describe('refreshCachedTokenStateIndexEntries scoped scan (Option A)', () => {
     assert.equal(getTokenStateIndex(state).get('doomed'), undefined);
   });
 
+  it('matches a fresh rebuild when one refresh covers multiple changed tokens in shared zones', () => {
+    const state = makeTokenState({
+      'zone-a': [
+        { id: 'alpha', type: 'card', props: { status: 'ready' } },
+        { id: 'beta', type: 'card', props: { status: 'ready' } },
+        { id: 'shared', type: 'card', props: { status: 'ready' } },
+      ],
+      'zone-b': [
+        { id: 'shared', type: 'card', props: { status: 'ready' } },
+        { id: 'gamma', type: 'card', props: { status: 'ready' } },
+      ],
+      'zone-c': [],
+    } as unknown as GameState['zones']);
+    primeCache(state);
+
+    (state.zones as Record<string, readonly Token[]>)['zone-a'] = [
+      { id: asTokenId('alpha'), type: 'card', props: { status: 'spent' } },
+      { id: asTokenId('shared'), type: 'card', props: { status: 'ready' } },
+    ];
+    (state.zones as Record<string, readonly Token[]>)['zone-b'] = [
+      { id: asTokenId('gamma'), type: 'card', props: { status: 'spent' } },
+    ];
+    (state.zones as Record<string, readonly Token[]>)['zone-c'] = [
+      { id: asTokenId('beta'), type: 'card', props: { status: 'ready' } },
+    ];
+
+    const ok = refreshCachedTokenStateIndexEntries(
+      state,
+      new Set(['alpha', 'beta', 'shared', 'gamma']),
+      new Set(['zone-a', 'zone-b', 'zone-c']),
+    );
+
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('shared-zone multi-token refresh', state, getTokenStateIndex(state));
+  });
+
   it('returns false when no cache entry exists yet', () => {
     const state = makeTokenState({ 'zone-a': [] } as unknown as GameState['zones']);
     const ok = refreshCachedTokenStateIndexEntries(state, new Set(['x']), new Set(['zone-a']));

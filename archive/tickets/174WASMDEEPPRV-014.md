@@ -107,7 +107,7 @@ Landed scope:
 Residual classification:
 - Reason-granular unsupported leaders are now explicit: `govern:chooseNStep:add` has `667` `agent-guided-completion` rows and `92` no-projected-state rows; `govern:chooseNStep:confirm` has `464` no-projected-state rows; `event` has `457` card-event action rows.
 - Dominant zero-counter classes remain outside production preview-drive route activity: `coupArvnRedeployPolice:chooseOne` has `278705.94 ms` with `0` route, unsupported, and batch counts; `coupArvnRedeployOptionalTroops:chooseOne` has `34117.37 ms` with the same zero-counter shape.
-- The next owner is `tickets/174WASMDEEPPRV-015.md`, not rejected default-flip ticket `tickets/174WASMDEEPPRV-010.md`.
+- The next owner was `archive/tickets/174WASMDEEPPRV-015.md`, not rejected default-flip ticket `tickets/174WASMDEEPPRV-010.md`.
 
 Generated/artifact fallout: checked-in Phase 4c witness Markdown/CSV and residual-owner report were created. No schema, golden, GameSpecDoc, WASM ABI, or checked-in generated JSON artifact changed.
 

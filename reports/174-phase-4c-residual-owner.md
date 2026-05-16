@@ -5,7 +5,7 @@
 **Witness report**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4c-residual.md`
 **Witness CSV**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4c-residual.csv`
 **Command**: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date 2026-05-16-phase-4c-residual --profile-buckets`
-**Next owner**: `tickets/174WASMDEEPPRV-015.md`
+**Next owner**: `archive/tickets/174WASMDEEPPRV-015.md`
 
 ## Summary
 
@@ -40,6 +40,6 @@ The residual owner is not the rejected default flip in `tickets/174WASMDEEPPRV-0
 
 ## Decision
 
-The next non-overlapping owner is `tickets/174WASMDEEPPRV-015.md`: a generic token/query lifetime optimization for zero-counter `continuedDeepening` chooseOne residuals. That owner is separate from the rejected default flip in `tickets/174WASMDEEPPRV-010.md` because the dominant class records no production preview-drive route, unsupported, or batch activity to flip.
+The next non-overlapping owner was `archive/tickets/174WASMDEEPPRV-015.md`: a generic token/query lifetime optimization for zero-counter `continuedDeepening` chooseOne residuals. That owner is separate from the rejected default flip in `tickets/174WASMDEEPPRV-010.md` because the dominant class records no production preview-drive route, unsupported, or batch activity to flip.
 
 The reason-granular unsupported evidence remains useful successor input, but it is not the first owner because the dominant residual wall time is outside the production preview-drive route. A later WASM coverage ticket may use the reason rows above after the zero-counter token/query owner has either reduced or disproved the dominant residual.

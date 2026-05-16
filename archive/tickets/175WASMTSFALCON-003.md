@@ -1,6 +1,6 @@
 # 175WASMTSFALCON-003: Phase 2 — Architecture test enforcing null-return contract
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — adds test under `packages/engine/test/architecture/`. No source-code change.
@@ -91,3 +91,49 @@ The architecture test is picked up automatically by `pnpm turbo test` because it
 2. `pnpm turbo test` — full gate.
 3. `pnpm turbo lint && pnpm turbo typecheck` — confirm the new test file passes lint/typecheck.
 4. `pnpm run check:ticket-deps` — dep integrity.
+
+## Outcome
+
+Completed on 2026-05-16.
+
+What landed:
+
+- Added `packages/engine/test/architecture/policy-wasm-throw-contract.test.ts` with `// @test-class: architectural-invariant`.
+- Added `packages/engine/test/architecture/fixtures/policy-wasm-throw-contract-negative-fixture.ts.txt` as the deliberately unmarked throw fixture. The `.txt` suffix keeps it out of TypeScript compilation.
+- The architecture test walks every live `packages/engine/src/agents/policy-wasm-*.ts` source file through the TypeScript compiler API, audits every `throw` statement, requires `// @policy-wasm-throw: contract-violation` on the throw line or immediately preceding line, and reports `file:line` remediation guidance for violations.
+- The same test counts `// @policy-wasm-throw: contract-violation` and `// @policy-wasm-unsupported: null-return` markers for traceability against the Phase 0/Phase 1 inventory.
+- The negative fixture self-test runs the same walker against the fixture and asserts the unmarked throw is reported, so the architecture test cannot pass only because the current source happens to be clean.
+
+Live reassessment and corrections:
+
+- Focused command correction: engine tests run compiled `dist` files. The targeted proof is `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js`, not the source-path argument form from the draft command.
+- Throw-count correction: Phase 1's inventory now has 83 preserved throws, including the marked `throw error` rethrow in `policy-wasm-runtime.ts`; the architecture test enforces every `throw` statement, not only `throw new Error` / `throw new PolicyRuntimeError`.
+- Same-series scope: `tickets/175WASMTSFALCON-004.md` and `tickets/175WASMTSFALCON-005.md` remain pending; post-review updated only their `**Deps**` lines to record the Phase 2 prerequisite explicitly. Phase 3 parity fixtures and Phase 4 source headers are still out of scope here.
+- Schema/generated fallout: none expected; this ticket adds tests and a text fixture only.
+- Source-size check: the new architecture test is 179 lines and the fixture is 8 lines, both below the repository file-size ceiling.
+- Post-review correction: replaced the test file's default `localeCompare` sort with a byte-stable string comparator so violation ordering does not depend on system locale.
+
+Command ledger:
+
+| Ticket section | Literal command/shorthand | Current/final citation |
+| --- | --- | --- |
+| Acceptance Criteria / Commands | `pnpm -F @ludoforge/engine test packages/engine/test/architecture/policy-wasm-throw-contract.test.ts` | Replaced by `pnpm -F @ludoforge/engine build` plus `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js`; final focused run passed with 2 tests. |
+| Package proof | `pnpm -F @ludoforge/engine test` | Passed. Default lane summary: `85/85 files passed`; unit summary: `5657` tests passed; architecture summary: `92` tests passed. |
+| Commands | `pnpm turbo test` | Passed after the final source edit. Turbo summary: 5 successful / 5 total; 2 cached / 5 total. The cached `@ludoforge/engine-wasm:build` and `@ludoforge/engine:build` replays are supplemental because this ticket touched engine tests/fixture text, not Rust/WASM package sources; the engine test task executed fresh and reran the new architecture test. |
+| Commands | `pnpm turbo lint && pnpm turbo typecheck` | Passed as split serial commands. First lint run failed on the owned `console.log` diagnostic in the new test; fixed to `process.stdout.write`, rebuilt, reran the focused test, then lint passed. Typecheck passed: 3 successful / 3 total. |
+| Commands | `pnpm run check:ticket-deps` | Passed after terminal status/proof transcription: dependency integrity check passed for 3 active tickets and 2372 archived tickets. |
+| Post-review cleanup | `pnpm -F @ludoforge/engine build` plus `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js` | Passed after replacing `localeCompare`; focused test passed with 2 tests and logged `files=19 throws=83 contractMarkers=83 unsupportedNullMarkers=5`. |
+
+Verification so far:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js` passed after the red setup exposed and fixed a scanner gap for marked `throw error`: 2 tests passed; logged `files=19 throws=83 contractMarkers=83 unsupportedNullMarkers=5`.
+- `pnpm -F @ludoforge/engine build` passed after the lint-output edit.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js` passed after the lint-output edit: 2 tests passed; logged `files=19 throws=83 contractMarkers=83 unsupportedNullMarkers=5`.
+- `pnpm -F @ludoforge/engine test` passed; the new architecture test ran in the package lane and logged `files=19 throws=83 contractMarkers=83 unsupportedNullMarkers=5`.
+- `pnpm turbo test` passed after the final source edit; the new architecture test logged `files=19 throws=83 contractMarkers=83 unsupportedNullMarkers=5`. The runner build emitted existing Vite chunk-size advisories, and passing runner tests emitted existing JSDOM canvas/ticker stderr from unrelated test coverage.
+- `pnpm turbo lint` passed after the owned lint-output correction.
+- `pnpm turbo typecheck` passed.
+- `pnpm run check:ticket-deps` passed after terminal status/proof transcription.
+- Post-review `pnpm -F @ludoforge/engine build` passed after the deterministic-sort cleanup.
+- Post-review `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js` passed after the deterministic-sort cleanup.

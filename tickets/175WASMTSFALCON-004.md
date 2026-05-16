@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — adds parity-oracle fixtures under `packages/engine/test/integration/`. No production source change.
-**Deps**: `archive/tickets/175WASMTSFALCON-002.md`
+**Deps**: `archive/tickets/175WASMTSFALCON-002.md`, `archive/tickets/175WASMTSFALCON-003.md`
 
 ## Problem
 

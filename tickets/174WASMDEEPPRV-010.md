@@ -105,3 +105,5 @@ Declined — Phase 4 gate failed; escalation report at `reports/174-phase-4-arch
 No engine code changed under this ticket. The gate-decision report at `reports/174-phase-4-gate-decision.md` recorded a Fail verdict: post-008 slow-tier median `27211.75 ms`, required `<=20408.8125 ms`, post-174-011 final median `62042.20 ms`, delta `+34830.45 ms` (`+127.9978%`). The default flip and A/B deletion are therefore not authorized.
 
 Diagnostic owner: `archive/tickets/174WASMDEEPPRV-014.md`. Completed zero-counter continuation owner: `archive/tickets/174WASMDEEPPRV-015.md`. This rejected default-flip ticket remains blocked until a later measured gate records a pass.
+
+Continuation owner added on 2026-05-16: `tickets/174WASMDEEPPRV-016.md` owns the next non-overlapping Phase 4 slice for the new dominant reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening residuals. This does not reopen the default flip; 010 remains rejected unless 016 or a later gate owner records a measured Pass.

@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-013: Phase 3b prerequisite - chooseNStep continuation state-patch ABI
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes - generic chooseNStep continuation compiler/materialization ABI, TypeScript host bridge, Rust preview-drive mirror
@@ -113,3 +113,57 @@ Add focused tests proving:
 2. `pnpm -F @ludoforge/engine build && node --test <compiled continuation projected-state parity test>`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Implementation completed on 2026-05-16.
+
+Landed scope:
+- Added a generic host-side `chooseNStep` continuation lowering helper that validates the published continuation identity, classifies the continuation command, emits stable candidate keys, and returns explicit unsupported owner/reason provenance for deferred terminal/confirm continuations.
+- Extended the preview-drive state-patch ABI with an `applyChooseNStepDecision` op. The Rust preview-drive mirror validates the new op shape, the TypeScript ABI decoder verifies the WASM-returned op words, and the host materializer applies the returned generic continuation op through the public microturn decision protocol.
+- Added focused tests proving supported add-continuation rows return a WASM state patch, unsupported confirm continuations fail closed without incrementing supported activation, and the materialized projected state is byte-equivalent to the `applyPublishedDecision` TypeScript oracle through `serializeGameState`.
+- Kept production `runDeepPass` consumption out of scope; `tickets/174WASMDEEPPRV-011.md` remains the owner for consuming this prerequisite and counting deep supported activation after this ticket closes.
+
+Post-review correction (2026-05-16):
+- Tightened the host-side continuation lowerer so add/remove continuations are marked supported only when the exact decision is present in the published microturn legal action list. Malformed add/remove inputs now fail closed with stable provenance instead of advancing the context first and relying on later materialization failure.
+- Added a focused ABI regression for unpublished add continuations.
+
+Unsupported/fail-closed scope:
+- Supported in this prerequisite: nonterminal `chooseNStep` add/remove continuation state-patch rows whose published microturn identity matches the source state.
+- Deferred to `tickets/174WASMDEEPPRV-011.md`: production deep dispatch, terminal/confirm continuation consumption, Phase 4 measurement/default flip, and any broader unsupported classes found during production consumption.
+
+ABI identity:
+- `POLICY_WASM_ABI_VERSION` / Rust `ABI_VERSION` remains `16`.
+- State-patch op word width remains 5 i32 words.
+- New state-patch op code: `8` = `applyChooseNStepDecision`, encoded as `[op, frameId, decisionKeyCode, commandCode, valueCode]`.
+
+Generated/schema fallout:
+- Rust WASM target rebuilt under ignored `packages/engine-wasm/policy-vm/target/`.
+- No schema, golden, GameSpecDoc, or checked-in generated JSON artifact changed.
+
+Source-size ledger:
+- `packages/engine/src/agents/policy-wasm-preview-drive.ts | before 936 | after 735 | crossed cap? no, extracted below cap | active growth none after extraction; state-patch codec and preview-state slot codec moved to adjacent modules | extraction/defer rationale: resolved active ABI hub growth while preserving the public ABI barrel | successor if any: none`
+- `packages/engine-wasm/policy-vm/src/preview_drive.rs | before 883 | after 733 | crossed cap? no, extracted below cap | active growth none after extraction; code/status and state-patch validation moved to adjacent modules | extraction/defer rationale: resolved active Rust preview-drive ABI hub growth without changing FFI exports | successor if any: none`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts | before 881 | after 881 | crossed cap? no, preexisting oversize with no active growth in this ticket | active growth none | extraction/defer rationale: verified-no-edit; this prerequisite used a separate continuation lowering helper instead of growing the action-pipeline compiler hub | successor if any: tickets/174WASMDEEPPRV-011.md for production consumption`
+- `packages/engine/src/agents/policy-wasm-runtime.ts | before 1424 | after 1424 | crossed cap? no, preexisting oversize with no active growth in this ticket | active growth none | extraction/defer rationale: verified-no-edit; no FFI call-shape or counter change required | successor if any: none`
+- `packages/engine-wasm/policy-vm/src/lib.rs | before 1307 | after 1307 | crossed cap? no, preexisting oversize with no active growth in this ticket | active growth none | extraction/defer rationale: verified-no-edit; ABI version/export shape unchanged | successor if any: none`
+
+Command ledger:
+- Test Plan | `pnpm -F @ludoforge/engine-wasm build` | ran directly | passed
+- Test Plan | `pnpm -F @ludoforge/engine build && node --test <compiled continuation projected-state parity test>` | split into package build plus focused compiled Node test | passed; focused command covered the continuation ABI, continuation materialization, and inherited 012 state-patch materialization tests
+- Test Plan | `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` | split into four serial turbo lanes | passed
+- Test Plan | `pnpm run check:ticket-deps` | run after terminal status/dependency edits | passed
+
+Verification:
+- `pnpm -F @ludoforge/engine-wasm build` - passed.
+- `pnpm -F @ludoforge/engine build` - passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-preview-choosenstep-continuation-abi.test.js dist/test/integration/policy-wasm-preview-choosenstep-continuation-materialization.test.js dist/test/integration/policy-wasm-preview-drive-state-patch-materialization.test.js` - passed after post-review cleanup; 5 tests, 3 suites, 0 failures.
+- `pnpm turbo build` - passed after post-review cleanup; 3 successful, 1 cached. Advisory emissions only: Vite reported the existing runner large-chunk warning.
+- `pnpm turbo test` - passed after post-review cleanup; 5 successful, 3 cached; engine default lane reported 85/85 files passed. Advisory emissions only: runner tests replayed existing jsdom canvas/crash-recovery stderr while passing.
+- `pnpm turbo lint` - passed; 2 successful, 1 cached.
+- `pnpm turbo typecheck` - passed; 3 successful, 1 cached.
+- `pnpm run check:ticket-deps` - passed; ticket dependency integrity check passed for active and archived tickets.
+
+Late-edit proof validity: post-review changed source/test behavior at the continuation lowerer boundary, so the focused ABI/materialization proof and broad build/test/lint/typecheck lanes were rerun. The subsequent outcome edit records those just-run proof results and does not change source, test, schema, WASM ABI, runtime behavior, scope, command semantics, or dependency ownership.
+
+Archive status: completed and ready for archival.

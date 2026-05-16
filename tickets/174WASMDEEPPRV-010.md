@@ -29,7 +29,7 @@ If ticket 009's gate decision records a **Pass** (slow-tier median improves mate
 ### 1. Default flip
 
 In `packages/engine/src/agents/policy-wasm-score-routing.ts`:
-- For every class supported after Phase 1 (002–006) and activated across Phase 3a/3b (`tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`, `tickets/174WASMDEEPPRV-013.md`, and `tickets/174WASMDEEPPRV-011.md`), make WASM the default — remove the supported-vs-fallback predicate. Unsupported classes continue to fail closed with stable reason strings.
+- For every class supported after Phase 1 (002–006) and activated across Phase 3a/3b (`tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`, `archive/tickets/174WASMDEEPPRV-013.md`, and `tickets/174WASMDEEPPRV-011.md`), make WASM the default — remove the supported-vs-fallback predicate. Unsupported classes continue to fail closed with stable reason strings.
 
 In `packages/engine/src/agents/policy-preview-inner-deepening.ts:165` (`runDeepPass`):
 - Remove the route predicate added by ticket 011; supported shapes always invoke the deep materialized-state WASM route. Unsupported shapes still fall back to `continueChooseNStepInnerPreviewDrive` as the deterministic stable path.

@@ -1,6 +1,18 @@
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { GameState } from '../kernel/index.js';
 import {
+  decodeStatePatch,
+  encodeStatePatch,
+  maxStatePatchOpCount,
+  type PolicyWasmPreviewStatePatch,
+} from './policy-wasm-preview-drive-state-patch-codec.js';
+import {
+  decodePreviewStateSlots,
+  inferPolicyWasmPreviewStateSlotKind,
+  previewStateSlotKindCode,
+  previewStateSlotLifetimeCode,
+} from './policy-wasm-preview-drive-slots.js';
+import {
   decodeCompletionRecords,
   encodeCompletionRecords,
   maxCompletionRecordCount,
@@ -84,22 +96,12 @@ export interface PolicyWasmPreviewCandidateGroup {
   readonly groupSize: number;
 }
 
-export type PolicyWasmPreviewStatePatchScalar =
-  | { readonly kind: 'number'; readonly value: number }
-  | { readonly kind: 'boolean'; readonly value: boolean };
-
-export type PolicyWasmPreviewStatePatchOp =
-  | { readonly kind: 'setGlobalVar'; readonly varName: string; readonly value: PolicyWasmPreviewStatePatchScalar }
-  | { readonly kind: 'setZoneVar'; readonly zoneId: string; readonly varName: string; readonly value: number }
-  | { readonly kind: 'moveToken'; readonly tokenId: string; readonly fromZoneId: string; readonly toZoneId: string; readonly position?: 'top' | 'bottom' }
-  | { readonly kind: 'setTokenProp'; readonly tokenId: string; readonly prop: string; readonly value: PolicyWasmPreviewStatePatchScalar }
-  | { readonly kind: 'setMarker'; readonly zoneId: string; readonly marker: string; readonly state: string }
-  | { readonly kind: 'setActionUsage'; readonly actionId: string; readonly turnCount: number; readonly phaseCount: number; readonly gameCount: number }
-  | { readonly kind: 'setMicroturnMetadata'; readonly nextFrameId: number; readonly nextTurnId: number };
-
-export interface PolicyWasmPreviewStatePatch {
-  readonly ops: readonly PolicyWasmPreviewStatePatchOp[];
-}
+export type {
+  PolicyWasmPreviewStatePatch,
+  PolicyWasmPreviewStatePatchOp,
+  PolicyWasmPreviewStatePatchScalar,
+} from './policy-wasm-preview-drive-state-patch-codec.js';
+export { policyWasmPreviewDriveStatePatchOpWords } from './policy-wasm-preview-drive-state-patch-codec.js';
 
 export type PolicyWasmPreviewDriveUnsupportedClass =
   | 'gated'
@@ -361,209 +363,6 @@ export const decodePolicyWasmPreviewDriveRows = (
     };
   });
 };
-
-const STATE_PATCH_OP_WORDS = 5;
-
-export const policyWasmPreviewDriveStatePatchOpWords = (): number => STATE_PATCH_OP_WORDS;
-
-const maxStatePatchOpCount = (
-  candidates: readonly PolicyWasmPreviewDriveCandidate[],
-  depthCap: number,
-): number => {
-  const max = candidates.reduce((count, candidate) => Math.max(count, candidate.statePatch?.ops.length ?? 0), 0);
-  if (max > depthCap) {
-    throw new Error('Policy WASM preview-drive state-patch op count must not exceed depth cap.');
-  }
-  return max;
-};
-
-const encodeStatePatch = (
-  words: number[],
-  candidate: PolicyWasmPreviewDriveCandidate,
-  statePatchMaxOpCount: number,
-  materializeStatePatch: boolean,
-): void => {
-  if (!materializeStatePatch) {
-    return;
-  }
-  const ops = candidate.statePatch?.ops;
-  if (ops === undefined) {
-    throw new Error('Policy WASM preview-drive materialized state patch is required for every candidate.');
-  }
-  if (ops.length > statePatchMaxOpCount) {
-    throw new Error('Policy WASM preview-drive state-patch op count exceeds batch maximum.');
-  }
-  words.push(ops.length);
-  for (const op of ops) {
-    words.push(...encodeStatePatchOp(op));
-  }
-};
-
-const encodeStatePatchOp = (op: PolicyWasmPreviewStatePatchOp): readonly number[] => {
-  switch (op.kind) {
-    case 'setGlobalVar': {
-      const [tag, value] = encodeStatePatchScalar(op.value);
-      return [1, stablePayloadCode({ literal: op.varName }), tag, value, 0];
-    }
-    case 'setZoneVar':
-      return [2, stablePayloadCode({ literal: op.zoneId }), stablePayloadCode({ literal: op.varName }), op.value, 0];
-    case 'moveToken':
-      return [
-        3,
-        stablePayloadCode({ literal: op.tokenId }),
-        stablePayloadCode({ literal: op.fromZoneId }),
-        stablePayloadCode({ literal: op.toZoneId }),
-        statePatchPositionCode(op.position),
-      ];
-    case 'setTokenProp': {
-      const [tag, value] = encodeStatePatchScalar(op.value);
-      return [4, stablePayloadCode({ literal: op.tokenId }), stablePayloadCode({ literal: op.prop }), tag, value];
-    }
-    case 'setMarker':
-      return [5, stablePayloadCode({ literal: op.zoneId }), stablePayloadCode({ literal: op.marker }), stablePayloadCode({ literal: op.state }), 0];
-    case 'setActionUsage':
-      return [6, stablePayloadCode({ literal: op.actionId }), op.turnCount, op.phaseCount, op.gameCount];
-    case 'setMicroturnMetadata':
-      return [7, op.nextFrameId, op.nextTurnId, 0, 0];
-  }
-};
-
-const encodeStatePatchScalar = (value: PolicyWasmPreviewStatePatchScalar): readonly [number, number] => {
-  switch (value.kind) {
-    case 'number':
-      assertFiniteI32('state-patch scalar', value.value);
-      return [1, value.value];
-    case 'boolean':
-      return [value.value ? 3 : 2, value.value ? 1 : 0];
-  }
-};
-
-const statePatchPositionCode = (position: 'top' | 'bottom' | undefined): number => {
-  switch (position) {
-    case undefined:
-    case 'top':
-      return 0;
-    case 'bottom':
-      return 1;
-  }
-};
-
-const decodeStatePatch = (
-  input: PolicyWasmPreviewDriveBatchInput,
-  view: DataView,
-  outStatePatchCountsPtr: number,
-  outStatePatchOpsPtr: number,
-  statePatchMaxOpCount: number,
-  candidateIndex: number,
-): Pick<PolicyWasmPreviewDriveRow, 'statePatch'> => {
-  if (input.materializeStatePatch !== true) {
-    return {};
-  }
-  const opCount = view.getInt32(outStatePatchCountsPtr + (candidateIndex * I32_BYTES), true);
-  if (opCount < 0 || opCount > statePatchMaxOpCount) {
-    throw new Error(`Policy WASM preview-drive returned invalid state-patch op count for candidate ${candidateIndex}.`);
-  }
-  const expectedPatch = input.candidates[candidateIndex]?.statePatch;
-  if (expectedPatch === undefined || expectedPatch.ops.length !== opCount) {
-    throw new Error(`Policy WASM preview-drive state-patch op count mismatch for candidate ${candidateIndex}.`);
-  }
-  const ops = Array.from({ length: opCount }, (_entry, opIndex) =>
-    decodeStatePatchOp(input, expectedPatch.ops[opIndex]!, view, outStatePatchOpsPtr, statePatchMaxOpCount, candidateIndex, opIndex));
-  return { statePatch: { ops } };
-};
-
-const decodeStatePatchOp = (
-  input: PolicyWasmPreviewDriveBatchInput,
-  expected: PolicyWasmPreviewStatePatchOp,
-  view: DataView,
-  outStatePatchOpsPtr: number,
-  statePatchMaxOpCount: number,
-  candidateIndex: number,
-  opIndex: number,
-): PolicyWasmPreviewStatePatchOp => {
-  const base = outStatePatchOpsPtr + (((candidateIndex * statePatchMaxOpCount) + opIndex) * STATE_PATCH_OP_WORDS * I32_BYTES);
-  const actual = Array.from({ length: STATE_PATCH_OP_WORDS }, (_entry, wordIndex) =>
-    view.getInt32(base + (wordIndex * I32_BYTES), true));
-  const expectedWords = encodeStatePatchOp(expected);
-  if (!actual.every((word, wordIndex) => word === expectedWords[wordIndex])) {
-    throw new Error(`Policy WASM preview-drive state-patch op mismatch for candidate ${candidateIndex}, op ${opIndex}.`);
-  }
-  return expected;
-};
-
-const inferPolicyWasmPreviewStateSlotKind = (id: string): PolicyWasmPreviewStateSlotKind => {
-  if (id.startsWith('global.')) return 'global';
-  if (id.startsWith('feature.')) return 'feature';
-  if (id.startsWith('surface.')) return 'surface';
-  return 'generic';
-};
-
-const previewStateSlotKindCode = (kind: PolicyWasmPreviewStateSlotKind): number => {
-  switch (kind) {
-    case 'global':
-      return 1;
-    case 'feature':
-      return 2;
-    case 'surface':
-      return 3;
-    case 'generic':
-      return 4;
-  }
-};
-
-const decodePreviewStateSlotKind = (code: number): PolicyWasmPreviewStateSlotKind => {
-  switch (code) {
-    case 1:
-      return 'global';
-    case 2:
-      return 'feature';
-    case 3:
-      return 'surface';
-    case 4:
-      return 'generic';
-    default:
-      throw new Error(`Policy WASM preview-drive returned unknown preview-state slot kind ${code}.`);
-  }
-};
-
-const previewStateSlotLifetimeCode = (lifetime: PolicyWasmPreviewStateSlotLifetime): number => {
-  switch (lifetime) {
-    case 'singleIteration':
-      return 1;
-    case 'crossIteration':
-      return 2;
-  }
-};
-
-const decodePreviewStateSlotLifetime = (code: number): PolicyWasmPreviewStateSlotLifetime => {
-  switch (code) {
-    case 1:
-      return 'singleIteration';
-    case 2:
-      return 'crossIteration';
-    default:
-      throw new Error(`Policy WASM preview-drive returned unknown preview-state slot lifetime ${code}.`);
-  }
-};
-
-const decodePreviewStateSlots = (
-  expectedSlots: readonly PolicyWasmPreviewStateSlot[],
-  view: DataView,
-  outPreviewStateSlotMetadataPtr: number,
-): readonly PolicyWasmPreviewStateSlot[] =>
-  expectedSlots.map((slot, slotIndex) => {
-    const base = outPreviewStateSlotMetadataPtr + (slotIndex * 3 * I32_BYTES);
-    const slotCode = view.getInt32(base, true);
-    const expectedSlotCode = stablePayloadCode({ literal: slot.id });
-    if (slotCode !== expectedSlotCode) {
-      throw new Error(`Policy WASM preview-drive slot id code mismatch for slot ${slotIndex}.`);
-    }
-    return {
-      id: slot.id,
-      kind: decodePreviewStateSlotKind(view.getInt32(base + I32_BYTES, true)),
-      lifetime: decodePreviewStateSlotLifetime(view.getInt32(base + (2 * I32_BYTES), true)),
-    };
-  });
 
 const CANDIDATE_GROUP_METADATA_WORDS = 3;
 

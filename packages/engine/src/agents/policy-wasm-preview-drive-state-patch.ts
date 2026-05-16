@@ -1,5 +1,8 @@
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
-import type { GameDef, GameState, VariableValue } from '../kernel/index.js';
+import { applyPublishedDecision } from '../kernel/microturn/apply.js';
+import { publishMicroturn } from '../kernel/microturn/publish.js';
+import type { Decision } from '../kernel/microturn/types.js';
+import type { GameDef, GameState, MoveParamScalar, VariableValue } from '../kernel/index.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from '../kernel/zobrist.js';
 import {
@@ -28,6 +31,9 @@ const tokenPropIds = (def: GameDef): readonly string[] =>
 const markerStateIds = (def: GameDef): readonly string[] =>
   [...new Set((def.markerLattices ?? []).flatMap((lattice) => lattice.states))];
 
+const scalarCode = (value: MoveParamScalar): number =>
+  stablePayloadCode({ literal: value });
+
 export interface PolicyWasmPreviewStatePatchMaterializationResult {
   readonly state: GameState;
   readonly stateHash: bigint;
@@ -50,6 +56,7 @@ export const materializePolicyWasmPreviewStatePatch = (
   const markerStateByCode = codeIndex(markerStateIds(input.def));
   const actionByCode = codeIndex(input.def.actions.map((entry) => String(entry.id)));
 
+  let structuralState = input.state;
   let globalVars: Record<string, VariableValue> = { ...input.state.globalVars };
   let actionUsage: GameState['actionUsage'] = input.state.actionUsage;
   let nextFrameId = input.state.nextFrameId;
@@ -146,6 +153,57 @@ export const materializePolicyWasmPreviewStatePatch = (
         nextFrameId = op.nextFrameId as GameState['nextFrameId'];
         nextTurnId = op.nextTurnId as GameState['nextTurnId'];
         break;
+      case 'applyChooseNStepDecision': {
+        const microturn = publishMicroturn(input.def, structuralState, input.runtime);
+        if (
+          microturn.kind !== 'chooseNStep'
+          || microturn.frameId !== op.frameId
+        ) {
+          throw new Error('Policy WASM state patch referenced a mismatched chooseNStep continuation.');
+        }
+        const decisionContext = microturn.decisionContext as Extract<typeof microturn.decisionContext, { readonly kind: 'chooseNStep' }>;
+        if (String(decisionContext.decisionKey) !== op.decisionKey) {
+          throw new Error('Policy WASM state patch referenced a mismatched chooseNStep continuation.');
+        }
+        if (op.command === 'confirm') {
+          throw new Error('Policy WASM state patch chooseNStep confirm materialization is not supported by this ABI slice.');
+        }
+        const opValue = op.value;
+        if (opValue === undefined) {
+          throw new Error('Policy WASM state patch chooseNStep add/remove materialization requires a value.');
+        }
+        const decision = microturn.legalActions.find((candidate): candidate is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+          candidate.kind === 'chooseNStep'
+          && candidate.command === op.command
+          && candidate.decisionKey === decisionContext.decisionKey
+          && candidate.value !== undefined
+          && scalarCode(candidate.value as MoveParamScalar) === scalarCode(opValue));
+        if (decision === undefined) {
+          throw new Error('Policy WASM state patch referenced a non-legal chooseNStep continuation decision.');
+        }
+        const applied = applyPublishedDecision(
+          input.def,
+          structuralState,
+          microturn,
+          decision,
+          { advanceToDecisionPoint: true },
+          input.runtime,
+        ).state;
+        structuralState = applied;
+        globalVars = applied.globalVars;
+        actionUsage = applied.actionUsage;
+        nextFrameId = applied.nextFrameId;
+        nextTurnId = applied.nextTurnId;
+        zoneVars = applied.zoneVars;
+        zones = buildPolicyWasmPreviewZoneValues(applied);
+        markerValues.clear();
+        for (const [zoneId, markers] of Object.entries(applied.markers)) {
+          for (const [marker, state] of Object.entries(markers)) {
+            markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), state);
+          }
+        }
+        break;
+      }
     }
   }
 
@@ -164,7 +222,7 @@ export const materializePolicyWasmPreviewStatePatch = (
   }
 
   const projected: GameState = {
-    ...input.state,
+    ...structuralState,
     globalVars,
     actionUsage,
     zoneVars,

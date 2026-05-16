@@ -292,6 +292,16 @@ When proof is only partially complete after compaction or a long handoff, use th
 5. Apply terminal status as a final narrow patch only after the final lanes are green, classified, or explicitly substituted.
 6. Run the dependency/markdown integrity check if status, dependency edges, sibling ownership, active/archive classification, or same-series ownership changed, then finish with hygiene and untracked-aware status checks.
 
+Compact resumed-closeout checkpoint example:
+
+- `active ticket/status`: `tickets/ID.md` / `PENDING`
+- `remaining pending proof rows`: `turbo test`, `turbo lint`, `turbo typecheck`, focused compiled witness after any rebuild
+- `untracked artifacts`: new source/test paths from `git status --short`
+- `in-flight command/session`: `session 123 running turbo test`; poll before any command that can contend with `dist` or package caches
+- `post-proof edit class`: terminal status/proof transcription plus any prerequisite-dependent sibling unblock
+- `integrity lane`: `pnpm run check:ticket-deps` after status/dependency/sibling edits
+- `next status/handoff`: terminal status only after green/classified lanes, then `$post-ticket-review <ticket>`
+
 ### Status-Only Terminal Patch Sequence
 
 When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
@@ -315,6 +325,14 @@ Use this compact final handoff shape when implementation stops before archival:
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` for implemented/complete tickets unless archival already ran or the user explicitly asked to pause; for `BLOCKED`, `PARTIAL`, or retained-substrate red-gate tickets, name the successor or same active ticket continuation and do not suggest review/archive
+
+Before writing the final handoff, gather the facts with this mini-template so untracked files, cached lanes, and advisory diagnostics are not lost:
+
+- `status sweep`: latest `git status --short`, grouped into tracked implementation edits, untracked additions, and unrelated/preexisting paths if any
+- `proof ledger`: final commands, pass/fail/classification, cache classification, and whether a later producer required rerunning a focused consumer
+- `advisories`: warning/stderr rows from passing lanes, with owner classification (`ticket-owned`, `same-series/sibling-owned`, `non-ticket-owned`, or `known repo advisory`)
+- `graph/status edits`: terminal status, dependency/sibling/active-archive changes, and the integrity command that checked them
+- `review/archive state`: whether `post-ticket-review` ran, and the exact next workflow sentence when it did not
 
 Cache-hit classification quick table:
 

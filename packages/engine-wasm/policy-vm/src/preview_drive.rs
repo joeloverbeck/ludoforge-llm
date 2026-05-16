@@ -1,3 +1,17 @@
+#[path = "preview_drive_codes.rs"]
+mod preview_drive_codes;
+#[path = "preview_drive_state_patch.rs"]
+mod preview_drive_state_patch;
+
+use preview_drive_codes::{
+    read_decision_stack_frame_variant, read_outcome, read_preview_branch,
+    read_preview_state_slot_kind, read_preview_state_slot_lifetime, read_preview_status,
+    OUTCOME_COMPLETED, OUTCOME_DEPTH_CAP, OUTCOME_FAILED, OUTCOME_STOCHASTIC,
+    PREVIEW_STATUS_DEPTH_CAP, PREVIEW_STATUS_FAILED, PREVIEW_STATUS_READY,
+    PREVIEW_STATUS_STOCHASTIC,
+};
+use preview_drive_state_patch::{validate_state_patch_op, STATE_PATCH_OP_WORDS};
+
 const ABI_MAGIC: i32 = 0x4c46_5750;
 const ABI_VERSION: i32 = 16;
 
@@ -12,40 +26,10 @@ const STATUS_NULL_POINTER: i32 = -7;
 const STATUS_BAD_OPERAND: i32 = -12;
 const STATUS_UNSUPPORTED: i32 = -14;
 
-const OUTCOME_COMPLETED: i32 = 1;
-const OUTCOME_STOCHASTIC: i32 = 2;
-const OUTCOME_DEPTH_CAP: i32 = 3;
-const OUTCOME_FAILED: i32 = 4;
-
-const PREVIEW_STATUS_READY: i32 = 1;
-const PREVIEW_STATUS_STOCHASTIC: i32 = 2;
-const PREVIEW_STATUS_HIDDEN: i32 = 3;
-const PREVIEW_STATUS_UNRESOLVED: i32 = 4;
-const PREVIEW_STATUS_FAILED: i32 = 5;
-const PREVIEW_STATUS_DEPTH_CAP: i32 = 6;
-const PREVIEW_STATUS_GATED: i32 = 7;
-
-const PREVIEW_BRANCH_NONE: i32 = 0;
-const PREVIEW_BRANCH_GREEDY: i32 = 1;
-const PREVIEW_BRANCH_CONTINUED_DEEPENING: i32 = 2;
-
 const DECISION_STACK_FRAME_WORDS: usize = 6;
 const COMPLETION_RECORD_WORDS: usize = 3;
 const CANDIDATE_GROUP_METADATA_WORDS: usize = 3;
-const DECISION_STACK_FRAME_ACTION_SELECTION: i32 = 1;
-const DECISION_STACK_FRAME_CHOOSE_ONE: i32 = 2;
-const DECISION_STACK_FRAME_CHOOSE_N_STEP: i32 = 3;
-const DECISION_STACK_FRAME_STOCHASTIC_RESOLVE: i32 = 4;
-const DECISION_STACK_FRAME_OUTCOME_GRANT_RESOLVE: i32 = 5;
-const DECISION_STACK_FRAME_TURN_RETIREMENT: i32 = 6;
 const PREVIEW_STATE_SLOT_METADATA_WORDS: usize = 3;
-const STATE_PATCH_OP_WORDS: usize = 5;
-const PREVIEW_STATE_SLOT_KIND_GLOBAL: i32 = 1;
-const PREVIEW_STATE_SLOT_KIND_FEATURE: i32 = 2;
-const PREVIEW_STATE_SLOT_KIND_SURFACE: i32 = 3;
-const PREVIEW_STATE_SLOT_KIND_GENERIC: i32 = 4;
-const PREVIEW_STATE_SLOT_LIFETIME_SINGLE_ITERATION: i32 = 1;
-const PREVIEW_STATE_SLOT_LIFETIME_CROSS_ITERATION: i32 = 2;
 
 const OP_ADD_GLOBAL: i32 = 1;
 const OP_CHOOSE_ONE_GREEDY: i32 = 2;
@@ -615,65 +599,6 @@ fn read_bool_flag(value: i32) -> Result<i32, i32> {
     }
 }
 
-fn read_preview_status(value: i32) -> Result<i32, i32> {
-    match value {
-        PREVIEW_STATUS_READY
-        | PREVIEW_STATUS_STOCHASTIC
-        | PREVIEW_STATUS_HIDDEN
-        | PREVIEW_STATUS_UNRESOLVED
-        | PREVIEW_STATUS_FAILED
-        | PREVIEW_STATUS_DEPTH_CAP
-        | PREVIEW_STATUS_GATED => Ok(value),
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn read_outcome(value: i32) -> Result<i32, i32> {
-    match value {
-        OUTCOME_COMPLETED | OUTCOME_STOCHASTIC | OUTCOME_DEPTH_CAP | OUTCOME_FAILED => Ok(value),
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn read_preview_branch(value: i32) -> Result<i32, i32> {
-    match value {
-        PREVIEW_BRANCH_NONE | PREVIEW_BRANCH_GREEDY | PREVIEW_BRANCH_CONTINUED_DEEPENING => {
-            Ok(value)
-        }
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn read_decision_stack_frame_variant(value: i32) -> Result<i32, i32> {
-    match value {
-        DECISION_STACK_FRAME_ACTION_SELECTION
-        | DECISION_STACK_FRAME_CHOOSE_ONE
-        | DECISION_STACK_FRAME_CHOOSE_N_STEP
-        | DECISION_STACK_FRAME_STOCHASTIC_RESOLVE
-        | DECISION_STACK_FRAME_OUTCOME_GRANT_RESOLVE
-        | DECISION_STACK_FRAME_TURN_RETIREMENT => Ok(value),
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn read_preview_state_slot_kind(value: i32) -> Result<i32, i32> {
-    match value {
-        PREVIEW_STATE_SLOT_KIND_GLOBAL
-        | PREVIEW_STATE_SLOT_KIND_FEATURE
-        | PREVIEW_STATE_SLOT_KIND_SURFACE
-        | PREVIEW_STATE_SLOT_KIND_GENERIC => Ok(value),
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn read_preview_state_slot_lifetime(value: i32) -> Result<i32, i32> {
-    match value {
-        PREVIEW_STATE_SLOT_LIFETIME_SINGLE_ITERATION
-        | PREVIEW_STATE_SLOT_LIFETIME_CROSS_ITERATION => Ok(value),
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
 fn read_candidate_group(cursor: &mut I32Cursor<'_>) -> Result<CandidateGroup, i32> {
     let id_code = cursor.read()?;
     let ordinal_in_group = cursor.read()?;
@@ -719,81 +644,6 @@ fn validate_candidate_groups(states: &[PreviewDriveState]) -> Result<(), i32> {
         index += group_size;
     }
     Ok(())
-}
-
-fn validate_state_patch_scalar(tag: i32, value: i32) -> Result<(), i32> {
-    match tag {
-        1 => Ok(()),
-        2 => {
-            if value == 0 {
-                Ok(())
-            } else {
-                Err(STATUS_BAD_OPERAND)
-            }
-        }
-        3 => {
-            if value == 1 {
-                Ok(())
-            } else {
-                Err(STATUS_BAD_OPERAND)
-            }
-        }
-        _ => Err(STATUS_BAD_OPERAND),
-    }
-}
-
-fn validate_state_patch_op(
-    op_code: i32,
-    word1: i32,
-    word2: i32,
-    word3: i32,
-    word4: i32,
-) -> Result<(), i32> {
-    match op_code {
-        1 => {
-            if word1 <= 0 || word4 != 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            validate_state_patch_scalar(word2, word3)
-        }
-        2 => {
-            if word1 <= 0 || word2 <= 0 || word4 != 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            Ok(())
-        }
-        3 => {
-            if word1 <= 0 || word2 <= 0 || word3 <= 0 || (word4 != 0 && word4 != 1) {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            Ok(())
-        }
-        4 => {
-            if word1 <= 0 || word2 <= 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            validate_state_patch_scalar(word3, word4)
-        }
-        5 => {
-            if word1 <= 0 || word2 <= 0 || word3 <= 0 || word4 != 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            Ok(())
-        }
-        6 => {
-            if word1 <= 0 || word2 < 0 || word3 < 0 || word4 < 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            Ok(())
-        }
-        7 => {
-            if word1 < 0 || word2 < 0 || word3 != 0 || word4 != 0 {
-                return Err(STATUS_BAD_OPERAND);
-            }
-            Ok(())
-        }
-        _ => Err(STATUS_BAD_OPERAND),
-    }
 }
 
 struct PreviewStateSlot {

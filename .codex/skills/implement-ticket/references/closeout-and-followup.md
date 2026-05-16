@@ -446,6 +446,16 @@ target text appears inside markdown backticks, search for the path or id without
 the backticks instead of using a double-quoted pattern that contains a code
 span.
 
+When a new or updated successor comes from diagnostic/profiling evidence rather
+than a retained code slice, include a compact non-overlap ledger in the active
+ticket, report, or successor before final proof:
+
+- `completed active scope`: `<artifact/report/verdict and exact command>`
+- `residual evidence`: `<metric, owner stack, unsupported reason, or failed gate>`
+- `successor owns`: `<specific remaining seam and why it is outside the completed scope>`
+- `exclusions`: `<work the successor must not reopen or duplicate>`
+- `rerun condition`: `<command/artifact that should change when the successor lands>`
+
 ## Sibling Absorbed Ownership
 
 When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
@@ -490,6 +500,28 @@ When a measured/profiling candidate is fully reverted and the active ticket need
 4. If the remaining owner is concrete and non-overlapping, create or update the successor before final handoff and include the rejected evidence that establishes why it is not duplicate work.
 5. Use a nonterminal durable status such as `BLOCKED`, `PARTIAL`, or the series-local equivalent unless the active ticket explicitly allows terminal completion on diagnostic evidence plus successor ownership.
 6. Run dependency integrity after the successor/spec/status graph changes. Do not rerun source/test proof solely for the reverted candidate when no runtime/test code remains; instead record that final code proof is not applicable because the source diff was removed.
+
+For diagnostic measured tickets where no runtime candidate is retained and the
+ticket's owned deliverable is the measurement verdict/report itself, terminal
+completion is allowed only when all of these are true:
+
+1. The ticket/spec acceptance story allows completion by durable diagnostic
+   evidence and concrete residual ownership, or the user has approved that
+   boundary through `1-3-1`.
+2. The checked-in report or active ticket includes the exact command,
+   reproducibility identity, decisive metrics, unsupported/fallback or owner
+   classification, and artifact paths.
+3. Any successor is concrete, dependency-valid, and non-overlapping using the
+   diagnostic successor ledger above.
+4. The active ticket records `no retained runtime/source diff` and classifies
+   generated reports, CSVs, raw logs, profiles, or traces as checked-in evidence
+   or ephemeral transcription sources.
+5. Final proof is limited to the fresh diagnostic command, graph/status
+   integrity, artifact hygiene, and any broad no-code lanes needed by the repo;
+   do not invent a source/test proof requirement when no source or test code
+   changed.
+6. The final handoff says `implemented but not archived` and points to
+   `$post-ticket-review <ticket>` unless the user explicitly requested archival.
 
 For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
 

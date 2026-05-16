@@ -106,4 +106,4 @@ No engine code changed under this ticket. The gate-decision report at `reports/1
 
 Diagnostic owner: `archive/tickets/174WASMDEEPPRV-014.md`. Completed zero-counter continuation owner: `archive/tickets/174WASMDEEPPRV-015.md`. This rejected default-flip ticket remains blocked until a later measured gate records a pass.
 
-Continuation owner added on 2026-05-16: `tickets/174WASMDEEPPRV-016.md` owns the next non-overlapping Phase 4 slice for the new dominant reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening residuals. This does not reopen the default flip; 010 remains rejected unless 016 or a later gate owner records a measured Pass.
+Continuation owner added on 2026-05-16: `archive/tickets/174WASMDEEPPRV-016.md` owns the next non-overlapping Phase 4 slice for the new dominant reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening residuals. This does not reopen the default flip; 010 remains rejected unless 016 or a later gate owner records a measured Pass.

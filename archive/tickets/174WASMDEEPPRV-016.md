@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-016: Phase 4e — Diagnose train chooseNStep unsupported deepening residuals
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — diagnostic telemetry and generic preview-drive/deepening runtime only after measured owner is confirmed
@@ -95,3 +95,46 @@ Produce `reports/174-phase-4e-train-choosenstep-residual.md` with the before/aft
 1. `pnpm -F @ludoforge/engine build`
 2. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds <bounded train residual seed set> --timeout-ms 400000 --date <YYYY-MM-DD>-phase-4e-train-choosenstep --profile-buckets`
 3. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implementation completed on 2026-05-16.
+
+Outcome amended: 2026-05-16 after post-ticket-review archival.
+
+Landed scope:
+- Produced the bounded Phase 4e witness at `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4e-train-choosenstep-baseline.md` and `.csv`.
+- Produced `reports/174-phase-4e-train-choosenstep-residual.md`.
+- Classified the dominant `train:chooseNStep` residual as `agent-guided-completion` / `production-deep-choosenstep-continuation.pickInnerDecision`: the completion policy selects a non-`chooseNStep` continuation decision, while the current deep WASM continuation path only lowers `chooseNStep` continuations.
+- Retained no runtime code because the safe implementation owner is a broader generic continuation-ABI/runtime coverage slice, not a Phase 4e micro-optimization.
+- Created `tickets/174WASMDEEPPRV-017.md` as the next non-overlapping owner for generic non-`chooseNStep` deep continuation materialization.
+- Updated `specs/174-wasm-preview-drive-coverage-extension.md` with the Phase 4e diagnostic result and Phase 4f ticket-list parity.
+
+Residual classification:
+- Seed `1005` completed terminal in `62297.98 ms` across `790` decisions.
+- WASM production preview-drive route count `12`, unsupported count `519`, batch count `199`.
+- `train:chooseNStep:add | continuedDeepening`: total `15159.23 ms`, route count `2`, unsupported count `148`, batch count `0`.
+- `train:chooseNStep:confirm | continuedDeepening`: total `10001.11 ms`, route count `8`, unsupported count `97`, batch count `0`.
+- Dominant reason rows: `train:chooseNStep:add` recorded `143` and `train:chooseNStep:confirm` recorded `94` occurrences of `deep preview-drive selected a non-chooseNStep continuation decision` under `production-deep-choosenstep-continuation.pickInnerDecision`.
+- Smaller terminal-boundary rows remain: `train:chooseNStep:add` recorded `5` and `train:chooseNStep:confirm` recorded `3` occurrences of `deep preview-drive reached a terminal boundary before materializing a WASM projected state`.
+
+Generated/artifact fallout:
+- Checked-in report and CSV artifacts only.
+- No schema, golden, GameSpecDoc, WASM ABI, generated JSON, source, or test diff is retained in this ticket.
+
+Command ledger:
+- Test Plan | `pnpm -F @ludoforge/engine build` | ran before the bounded witness; passed.
+- Test Plan | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds <bounded train residual seed set> --timeout-ms 400000 --date <YYYY-MM-DD>-phase-4e-train-choosenstep --profile-buckets` | substituted with bounded seed `1005` and exact date stem `2026-05-16-phase-4e-train-choosenstep-baseline`; passed and wrote the Phase 4e witness Markdown/CSV.
+- Test Plan | `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` | split and ran as `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`; all passed from Turbo cache. Cache classification: cache-covered for this diagnostic/report-only ticket because no source, test, schema, generated runtime artifact, GameSpecDoc, or package code changed.
+- Ticket graph integrity | `pnpm run check:ticket-deps` | passed after terminal status and successor/spec graph edits: `Ticket dependency integrity check passed for 3 active tickets and 2365 archived tickets.`
+
+Source-size ledger:
+- No source file was edited.
+
+Late-edit proof validity:
+- The post-witness edits are report/ticket/spec/successor transcription and ownership classification only; they do not alter runtime code, command semantics, measured threshold, or witness artifacts. The bounded witness remains valid as diagnostic evidence for the final source state because no source or test diff was retained.
+- No-invalidation: this terminal status/proof transcription records already-run proof and the already-written Phase 4e owner map; it does not change scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification.
+- No-invalidation: the ticket-dependency result transcription is exact command-result recording only and does not change graph edges or status.
+
+Archive status: archived by `$post-ticket-review` on 2026-05-16.
+Next workflow: `$implement-ticket tickets/174WASMDEEPPRV-017.md`.

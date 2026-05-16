@@ -1,22 +1,23 @@
-# 174WASMDEEPPRV-011: Phase 3b — Deep preview-drive materialized-state ABI
+# 174WASMDEEPPRV-011: Phase 3b — Deep preview-drive materialized-state consumption
 
-**Status**: PENDING
+**Status**: BLOCKED by prerequisite
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — WASM preview-drive ABI, TypeScript host bridge, deep preview dispatch
-**Deps**: `tickets/174WASMDEEPPRV-008.md`
+**Engine Changes**: Yes — TypeScript host bridge consumption, deep preview dispatch after ABI prerequisite
+**Deps**: `tickets/174WASMDEEPPRV-008.md`, `tickets/174WASMDEEPPRV-012.md`
 
 ## Problem
 
 `174WASMDEEPPRV-008` can truthfully count broad preview-drive WASM activation, but live reassessment found that `runDeepPass` cannot consume `evaluateProductionPreviewDriveBatchWithWasm` as its implementation because the WASM row output does not include the materialized projected `GameState` required by `ChooseNStepInnerPreviewResult.state` and `projectedStateByOptionKey`. Counting a WASM row while still using TypeScript to produce the state would make fallback success look like route activation and would violate Foundations #9, #16, and #20.
 
-This ticket extends the generic preview-drive ABI/host bridge so supported deep `continuedDeepening` options can return the materialized projected state, then wires `runDeepPass` to consume that WASM-produced state.
+This ticket wires `runDeepPass` to consume WASM-produced projected state after the prerequisite state-patch/materialization ABI in `tickets/174WASMDEEPPRV-012.md` exists.
 
 ## Assumption Reassessment (2026-05-16)
 
 1. `evaluateProductionPreviewDriveBatchWithWasm` currently returns row/value/status metadata and preview-state slot values, not a full materialized `GameState`.
 2. `runDeepPass` must return `ChooseNStepInnerPreviewResult` objects whose `state` is the projected post-preview state; downstream callers expose that state through `projectedStateByOptionKey`.
 3. `174WASMDEEPPRV-008` records deep-phase unsupported counters and keeps the TypeScript fallback until this ABI/state contract exists.
+4. Additional reassessment on 2026-05-16 found that `runDeepPass` operates on `chooseNStep` microturn continuations, while the existing production preview-drive compiler is rooted in root action `Move` pipelines. A scalar/global-only bridge would still require TypeScript to apply the deep continuation to derive state deltas, so it is not a Foundation-aligned proof that WASM produced the consumed projected state. `tickets/174WASMDEEPPRV-012.md` owns the prerequisite generic state-patch/materialization ABI.
 
 ## Architecture Check
 
@@ -28,7 +29,7 @@ This ticket extends the generic preview-drive ABI/host bridge so supported deep 
 
 ### 1. Materialized projected-state ABI
 
-Extend the preview-drive ABI, Rust guest, and TypeScript host decoder so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
+Consume the preview-drive state-patch ABI from `tickets/174WASMDEEPPRV-012.md` so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
 
 ### 2. Deep-phase WASM consumption
 
@@ -57,6 +58,7 @@ Add tests that prove:
 - No FITL-specific code.
 - No Phase 4 measurement or default flip; those remain in tickets 009 and 010 after this prerequisite lands.
 - No policy-profile retuning or GameSpecDoc changes.
+- No prerequisite state-patch ABI design; ticket 012 owns the payload contract and decoder substrate.
 
 ## Acceptance Criteria
 
@@ -86,3 +88,28 @@ Add tests that prove:
 1. `pnpm -F @ludoforge/engine build && node --test <compiled deep projected-state parity test>`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Blocked on 2026-05-16 by prerequisite `tickets/174WASMDEEPPRV-012.md`.
+
+Landed scope: reassessment only; no runtime code landed under this ticket.
+
+Missing prerequisite: a generic WASM state-patch/materialization ABI that can reconstruct the `GameState` consumed by `runDeepPass` without TypeScript applying the deep continuation and then calling that fallback state production "supported" WASM activation.
+
+Successor or same-ticket continuation owner: `tickets/174WASMDEEPPRV-012.md` owns the prerequisite ABI design and proof substrate; this ticket remains the continuation owner for wiring `runDeepPass` after 012 lands.
+
+Dependency/spec/sibling rewrites: this ticket now depends on 012; Spec 174 lists 012 before 011; Phase 4 remains gated on 011.
+
+Verification:
+- `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 5 active tickets and 2358 archived tickets.
+- `git diff --check` — passed.
+- `git diff --no-index --check /dev/null tickets/174WASMDEEPPRV-012.md` — whitespace-clean; command exited 1 with no diagnostics because the new untracked file differs from `/dev/null`.
+
+Schema/generated fallout: none; markdown/ticket graph only.
+
+Late-edit proof validity: proof transcription only after the graph/hygiene checks; no scope, dependency, source, test, schema, or acceptance boundary changed after those checks.
+
+Archive status: blocked and not archive-ready.
+
+Next workflow: continue with `$implement-ticket tickets/174WASMDEEPPRV-012.md`.

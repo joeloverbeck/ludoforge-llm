@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — TypeScript host bridge consumption, deep preview dispatch after ABI prerequisite
-**Deps**: `tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`, `archive/tickets/174WASMDEEPPRV-013.md`
+**Deps**: `archive/tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`, `archive/tickets/174WASMDEEPPRV-013.md`
 
 ## Problem
 
@@ -98,6 +98,8 @@ Add tests that prove:
 
 Implementation completed on 2026-05-16.
 
+Outcome amended: 2026-05-16 — updated the archived dependency path after `174WASMDEEPPRV-008` was archived.
+
 Authorization ledger: user approved recommended Option 2 on 2026-05-16 after a Foundations-aligned 1-3-1 reassessment. Scope effect: the missing prerequisite work was split into `archive/tickets/174WASMDEEPPRV-013.md`; this ticket remained the production consumption owner after 013 landed.
 
 Landed scope:
@@ -109,7 +111,7 @@ Landed scope:
 Touched-file scope:
 - Modified: `packages/engine/src/agents/policy-preview-inner-deepening.ts`, `packages/engine/src/agents/policy-preview-inner-choosenstep.ts`, `packages/engine/src/agents/policy-wasm-preview-choosenstep-continuation.ts`, `packages/engine/src/agents/policy-wasm-preview-drive-state-patch.ts`, `packages/engine/test/integration/policy-wasm-preview-drive-production-route-activation.test.ts`, `packages/engine/test/unit/agents/policy-wasm-preview-choosenstep-continuation-abi.test.ts`.
 - Verified-no-edit: `packages/engine/src/agents/policy-wasm-preview-drive.ts`, `packages/engine/src/agents/policy-wasm-runtime.ts`, `packages/engine/src/agents/policy-wasm-production-preview-drive.ts`, `packages/engine/src/agents/policy-wasm-production-preview-drive-types.ts`, `packages/engine-wasm/policy-vm/src/preview_drive.rs`, and `packages/engine-wasm/policy-vm/src/lib.rs`; ABI version, magic, Rust mirror, and FFI export shape stayed unchanged.
-- Same-series graph: `tickets/174WASMDEEPPRV-008.md` was unblocked because this ticket satisfied its named prerequisite; Phase 4 tickets remain gated on 009/010.
+- Same-series graph: `archive/tickets/174WASMDEEPPRV-008.md` was unblocked because this ticket satisfied its named prerequisite; Phase 4 tickets remain gated on 009/010.
 
 Generated/schema fallout: ignored Rust WASM target rebuilt during verification. No schema, golden, GameSpecDoc, or checked-in generated JSON artifact changed.
 

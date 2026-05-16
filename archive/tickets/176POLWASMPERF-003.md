@@ -1,6 +1,6 @@
 # 176POLWASMPERF-003: Phase 2 — H2 TS-only hot-path attribution report
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — uses existing `--profile-buckets` infrastructure and `snapshotHotPathProfilerCounters` from `packages/engine/src/kernel/perf-profiler.ts`.
@@ -84,3 +84,62 @@ None — analysis ticket.
 
 1. `pnpm turbo test` (sanity baseline).
 2. (Manual) Phase 2 measurement command in §1 above; verify the report writes successfully and the verdict is one of the three defined values.
+
+## Outcome (2026-05-17)
+
+### What Landed
+
+- Added the Phase 2 H2 verdict report at `reports/176-phase-2-ts-only-hot-paths.md`.
+- Produced fresh no-WASM profile-bucket witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-2-h2-ts-only-hot-paths-no-wasm.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-2-h2-ts-only-hot-paths-no-wasm.csv`
+- No engine source, profiler script, schema, generated JSON, GameSpecDoc, GameDef, or visual-config files changed.
+
+### Ticket Corrections Applied
+
+- Phase 0's no-WASM CSV did not include `--profile-buckets`, so this ticket produced a fresh Phase 2 witness instead of reusing Phase 0.
+- The script appended `-no-wasm` to the generated witness artifact basename because the ticket's date label did not already include that suffix.
+- The four Phase 4h H2 symbol names still exist and were used unchanged. The report additionally records `evalQuery:applyTokenFilter` because it is a current measured TS-only bucket.
+
+### Phase 2 Measurement Verdict
+
+| Field | Value |
+|---|---:|
+| Slow-tier agent-call ms from CSV rows | 74056.2121 |
+| Timed TS-only bucket ms | 14039.7016 |
+| TS-only bucket fraction | 18.9582% |
+| Current Phase 2 no-WASM slow-tier wall median | 12069.08 ms |
+| Projected median under perfect TS-only bucket absorption | 9780.8366 ms |
+
+The measured H2 verdict is `ts-only-bound-low` because the TS-only bucket fraction is below the ticket's `<40%` threshold. H2 does not explain the WASM/TS equivalence by itself under the current post-spec-175 witness.
+
+### Verification Ledger
+
+Already run:
+
+- `pnpm -F @ludoforge/engine build` — pass; refreshed `packages/engine/dist` before the profiler consumed compiled artifacts.
+- `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000 --timeout-ms 600000 --profile-buckets --no-wasm --date 2026-05-17-phase-2-h2-smoke --output-dir /tmp/ludoforge-176-phase2-smoke` — pass; smoke validated `hotPathBuckets` output shape.
+- `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --profile-buckets --no-wasm --date 2026-05-17-phase-2-h2-ts-only-hot-paths` — pass; all 15 seeds completed and wrote the Phase 2 report/CSV artifacts.
+
+Final lanes:
+
+- `pnpm turbo test` — pass. All five Turbo tasks were cache hits; classified as cache-covered sanity for this report-only ticket because no source, tests, schemas, manifests, generated runtime artifacts, or package outputs changed after the fresh measurement artifacts were written.
+- `pnpm run check:ticket-deps` — pass after setting this ticket to `COMPLETED`; checked 5 active tickets and 2377 archived tickets.
+- `git diff --check` — pass for tracked changes.
+- `rg -n '[ \t]+$' tickets/176POLWASMPERF-003.md reports/176-phase-2-ts-only-hot-paths.md reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-2-h2-ts-only-hot-paths-no-wasm.md reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-2-h2-ts-only-hot-paths-no-wasm.csv` — pass; no trailing whitespace matches in the active ticket or retained untracked artifacts.
+
+### Schema / Generated Fallout
+
+None expected. This ticket adds Markdown/CSV measurement artifacts and updates this active ticket only.
+
+### Runtime Surface Breadth
+
+No runtime surface changed. This is an evidence-only report derived from existing profiler telemetry.
+
+### Deferred Scope
+
+H3 through H5 attribution and Phase 6 synthesis remain with tickets `176POLWASMPERF-004` through `176POLWASMPERF-007`.
+
+### Late Proof Validity
+
+Terminal status/proof transcription only. The status change records the already-produced report, the fresh Phase 2 measurement result, the just-run `pnpm turbo test` result, the post-status dependency-check result, and the final hygiene results; it does not change scope, acceptance criteria, command semantics, touched-file ownership, dependency ownership, or Phase 6 handoff. Exact transcription of the dependency-check and hygiene results does not require a second dependency-check rerun.

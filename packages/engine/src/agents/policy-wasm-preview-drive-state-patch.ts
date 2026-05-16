@@ -95,6 +95,7 @@ export const materializePolicyWasmPreviewStatePatch = (
       case 'setGlobalVar': {
         const varName = globalVarByCode.get(stablePayloadCode({ literal: op.varName }));
         if (varName !== op.varName) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown global variable "${op.varName}".`);
         }
         globalVars = { ...globalVars, [varName]: materializeScalar(op.value) };
@@ -105,6 +106,7 @@ export const materializePolicyWasmPreviewStatePatch = (
         const zoneId = zoneByCode.get(stablePayloadCode({ literal: op.zoneId }));
         const varName = zoneVarByCode.get(stablePayloadCode({ literal: op.varName }));
         if (zoneId !== op.zoneId || varName !== op.varName || zoneVars[zoneId] === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown zone variable "${op.zoneId}.${op.varName}".`);
         }
         zoneVars = {
@@ -122,10 +124,12 @@ export const materializePolicyWasmPreviewStatePatch = (
         const fromZoneId = zoneByCode.get(stablePayloadCode({ literal: op.fromZoneId }));
         const toZoneId = zoneByCode.get(stablePayloadCode({ literal: op.toZoneId }));
         if (tokenId !== op.tokenId || fromZoneId !== op.fromZoneId || toZoneId !== op.toZoneId) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown token move "${op.tokenId}".`);
         }
         const nextZones = movePolicyWasmPreviewToken(input.def, zones, tokenId, fromZoneId, toZoneId, op.position);
         if (nextZones === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch token move "${op.tokenId}" is not materializable.`);
         }
         zones = nextZones;
@@ -136,10 +140,12 @@ export const materializePolicyWasmPreviewStatePatch = (
         const tokenId = tokenByCode.get(stablePayloadCode({ literal: op.tokenId }));
         const prop = tokenPropByCode.get(stablePayloadCode({ literal: op.prop }));
         if (tokenId !== op.tokenId || prop !== op.prop) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown token property "${op.tokenId}.${op.prop}".`);
         }
         const nextZones = setPolicyWasmPreviewTokenProp(input.def, zones, tokenId, prop, materializeScalar(op.value));
         if (nextZones === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch token property "${op.tokenId}.${op.prop}" is not materializable.`);
         }
         zones = nextZones;
@@ -151,6 +157,7 @@ export const materializePolicyWasmPreviewStatePatch = (
         const marker = markerByCode.get(stablePayloadCode({ literal: op.marker }));
         const markerState = markerStateByCode.get(stablePayloadCode({ literal: op.state }));
         if (zoneId !== op.zoneId || marker !== op.marker || markerState !== op.state) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown marker "${op.zoneId}.${op.marker}".`);
         }
         markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), markerState);
@@ -160,6 +167,7 @@ export const materializePolicyWasmPreviewStatePatch = (
       case 'setActionUsage': {
         const actionId = actionByCode.get(stablePayloadCode({ literal: op.actionId }));
         if (actionId !== op.actionId) {
+          // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM state patch referenced unknown action usage "${op.actionId}".`);
         }
         actionUsage = {
@@ -184,14 +192,17 @@ export const materializePolicyWasmPreviewStatePatch = (
           microturn.kind !== 'chooseNStep'
           || microturn.frameId !== op.frameId
         ) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a mismatched chooseNStep continuation.');
         }
         const decisionContext = microturn.decisionContext as Extract<typeof microturn.decisionContext, { readonly kind: 'chooseNStep' }>;
         if (String(decisionContext.decisionKey) !== op.decisionKey) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a mismatched chooseNStep continuation.');
         }
         const opValue = op.value;
         if (op.command !== 'confirm' && opValue === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch chooseNStep add/remove materialization requires a value.');
         }
         const decision = microturn.legalActions.find((candidate): candidate is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
@@ -204,6 +215,7 @@ export const materializePolicyWasmPreviewStatePatch = (
               && opValue !== undefined
               && scalarCode(candidate.value as MoveParamScalar) === scalarCode(opValue)));
         if (decision === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a non-legal chooseNStep continuation decision.');
         }
         const applied = applyPublishedDecision(
@@ -223,10 +235,12 @@ export const materializePolicyWasmPreviewStatePatch = (
           microturn.kind !== 'chooseOne'
           || microturn.frameId !== op.frameId
         ) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a mismatched chooseOne continuation.');
         }
         const decisionContext = microturn.decisionContext as Extract<typeof microturn.decisionContext, { readonly kind: 'chooseOne' }>;
         if (String(decisionContext.decisionKey) !== op.decisionKey) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a mismatched chooseOne continuation.');
         }
         const decision = microturn.legalActions.find((candidate): candidate is Extract<Decision, { readonly kind: 'chooseOne' }> =>
@@ -235,6 +249,7 @@ export const materializePolicyWasmPreviewStatePatch = (
           && isMoveParamScalar(candidate.value)
           && scalarCode(candidate.value) === scalarCode(op.value));
         if (decision === undefined) {
+          // @policy-wasm-throw: contract-violation
           throw new Error('Policy WASM state patch referenced a non-legal chooseOne continuation decision.');
         }
         const applied = applyPublishedDecision(

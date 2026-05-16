@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — header-comment additions in two source files. No behavior change.
-**Deps**: `tickets/175WASMTSFALCON-002.md`
+**Deps**: `archive/tickets/175WASMTSFALCON-002.md`
 
 ## Problem
 

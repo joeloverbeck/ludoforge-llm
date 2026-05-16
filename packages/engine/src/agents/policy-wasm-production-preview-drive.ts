@@ -98,6 +98,7 @@ export const evaluateProductionPreviewDriveBatchWithWasm = (
     ...result,
     rows: result.rows.map((row) => {
       if (row.statePatch === undefined) {
+        // @policy-wasm-throw: contract-violation
         throw new Error('Policy WASM preview-drive supported row did not return a state patch.');
       }
       return {

@@ -1,6 +1,6 @@
 # 175WASMTSFALCON-002: Phase 1 — Convert unsupported-detection throws to null-return
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (and any other class-A sites Phase 0 identifies).
@@ -27,6 +27,73 @@ This ticket converts every class-A throw site (per ticket 001) to a null-return 
 3. **Foundation 20 alignment** (Preview Signal Integrity): The null-return path preserves `previewStatus`, `previewBranch`, `tiebreakAfterPreviewNoSignal`, and the `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory because the TS fallback evaluator runs through the same preview-signal pipeline. The throw path bypassed those signals by short-circuiting to `kind: 'failure'`. Verified by ensuring telemetry calls are preserved at converted sites.
 4. **No new abstractions**: The conversion uses each function's existing return shape — `null` for nullable returns, the existing `result.kind === 'unsupported'` discriminated-union variant for `tryScoreMoveConsiderationsWithWasm`. No new sentinels, types, or helpers introduced unless ticket 001's inventory explicitly authorizes one via 1-3-1.
 5. **Counter integrity preserved**: Every converted site keeps its `recordProductionPolicyWasm*` telemetry call. Acceptance criterion #5 (counters remain non-zero) depends on this being preserved across the conversion.
+
+## Implementation Outcome (2026-05-16)
+
+Terminal state: `COMPLETED`.
+
+What landed:
+
+- Converted both class-A sites from ticket 001's inventory in `packages/engine/src/agents/policy-wasm-score-routing.ts`:
+  - `evaluateWasmCandidateFeatureRow(...) === null` now records `recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported')`, carries `// @policy-wasm-unsupported: null-return`, and returns `false` so the caller's `!scoredWithWasm` branch evaluates the candidates in TypeScript.
+  - `evaluateWasmMoveConsiderationScoreRows(...)` unsupported results now record `recordProductionPolicyWasmScoreRows('unsupported')`, carry `// @policy-wasm-unsupported: null-return`, and return `false` for the same caller fallback.
+- Preserved the existing local null-handling branch for `materializePreviewDynamicRowsWithWasm(...) === null`, which evaluates the preview candidate feature in TypeScript and finalizes preview outcomes.
+- Added `// @policy-wasm-unsupported: null-return` markers to the existing canonical null-return branches and the two newly converted class-A branches.
+- Added `// @policy-wasm-throw: contract-violation` markers adjacent to all 83 preserved class-B/C throw sites under `packages/engine/src/agents/policy-wasm-*.ts`.
+- Updated `packages/engine/test/unit/agents/policy-runtime-encoded.test.ts` so the preloaded-WASM unsupported score-row case now expects the intended TypeScript fallback success path and verifies the unsupported counter increment.
+- Kept `policy-eval.ts`, WASM bytecode, ABI, marshaling, Phase 2 architecture tests, Phase 3 parity fixtures, and Phase 4 header documentation out of scope.
+- Generated the required witness files:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-1-post-conversion.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-1-post-conversion.csv`
+
+Authorization and file-size ledger:
+
+- User-approved option 1 on 2026-05-16: preserve full ticket fidelity by adding all class-B/C marker comments now, with an explicit file-size deferral for over-cap files rather than extracting during this ticket.
+- Source-size ledger: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+  - `packages/engine/src/agents/policy-wasm-preview-drive-completion.ts | 122 | 132 | no | +10 marker-only | under cap | none`
+  - `packages/engine/src/agents/policy-wasm-preview-drive-slots.ts | 68 | 71 | no | +3 marker-only | under cap | none`
+  - `packages/engine/src/agents/policy-wasm-preview-drive-state-patch-codec.ts | 202 | 209 | no | +7 marker-only | under cap | none`
+  - `packages/engine/src/agents/policy-wasm-preview-drive-state-patch.ts | 298 | 313 | no | +15 marker-only | under cap | none`
+  - `packages/engine/src/agents/policy-wasm-preview-drive.ts | 735 | 755 | no | +20 marker-only | near-cap marker comments; extraction would widen a Phase 1 classification seed | none`
+  - `packages/engine/src/agents/policy-wasm-production-preview-drive.ts | 881 | 882 | no, preexisting oversize | +1 marker-only | user-approved deferral; extraction would widen this fallback-contract ticket | none`
+  - `packages/engine/src/agents/policy-wasm-runtime-node-loader.ts | 70 | 71 | no | +1 marker-only | under cap | none`
+  - `packages/engine/src/agents/policy-wasm-runtime.ts | 1360 | 1382 | no, preexisting oversize | +22 marker-only | user-approved deferral; extraction would widen this fallback-contract ticket | none`
+  - `packages/engine/src/agents/policy-wasm-score-routing.ts | 569 | 556 | no | net -13 after conversion plus markers | under cap | none`
+
+Marker and invariant checks:
+
+- `rg -n "throw new PolicyRuntimeError" packages/engine/src/agents/policy-wasm-*.ts` now returns 4 rows, all preserved class-B sites in `policy-wasm-score-routing.ts`.
+- `rg -n "throw " packages/engine/src/agents/policy-wasm-*.ts | wc -l` now returns `83`, matching the 83 preserved class-B/C sites.
+- `rg -c "@policy-wasm-throw: contract-violation" packages/engine/src/agents/policy-wasm-*.ts` totals 83.
+- `rg -c "@policy-wasm-unsupported: null-return" packages/engine/src/agents/policy-wasm-*.ts` totals 5: the 2 newly converted class-A branches plus 3 already-canonical null-return branches.
+
+15-seed witness comparison:
+
+| Metric | Baseline `2026-05-17-post-fix-wasm` | Post-conversion `2026-05-17-phase-1-post-conversion` | Verdict |
+| --- | ---: | ---: | --- |
+| Seeds completed | 15/15 | 15/15 | pass |
+| WASM production preview-drive route count | 3125 | 3125 | pass, same |
+| WASM production preview-drive unsupported count | 1998 | 1998 | pass, same |
+| WASM production preview-drive batch count | 2648 | 2648 | pass, same |
+| Baseline slow-tier median reference, seed 1009 wall ms | 11536.43 ms | 12081.98 ms | pass, +4.73%, within +/-10% |
+
+Command ledger and proof status:
+
+| Ticket section | Literal command/shorthand | Current/final citation |
+| --- | --- | --- |
+| Commands | `pnpm -F @ludoforge/engine build` | Passed after implementation and before focused proof. |
+| Commands | `pnpm -F @ludoforge/engine test` | Initial run exposed a stale active-ticket unit expectation; after updating `policy-runtime-encoded.test.ts`, rerun passed: unit `5657/5657`, architecture `90/90`, default integration subset `85/85` files. |
+| Acceptance Criteria | focused WASM/TS parity oracle files | Passed after the final broad rebuild via `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-wasm-preview-drive-equivalence.test.js dist/test/integration/policy-bytecode-equivalence-partial-visibility.test.js dist/test/integration/arvn-tournament-wasm-equivalence.test.js`; 5 tests passed. |
+| Commands | `pnpm -F @ludoforge/engine test:e2e` | Passed: 6 tests. |
+| Commands | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-1-post-conversion` | Passed; wrote the report and CSV listed above. |
+| Acceptance Criteria | `pnpm turbo test` | Passed: 5/5 tasks successful; `@ludoforge/engine-wasm:build` was the only cache-hit replay, with engine/runner build and tests run fresh. |
+| Commands | `pnpm run check:ticket-deps` | Passed: dependency integrity check passed for 4 active tickets and 2371 archived tickets. |
+
+Generated/schema fallout:
+
+- Generated schema artifacts: none; no schema source or generated JSON contract changed.
+- Generated witness artifacts: the two ticket-named `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-1-post-conversion.*` files are new checked-in evidence artifacts.
+- Runtime surface breadth: policy/agent-only WASM score-routing fallback contract plus marker comments in WASM glue/codec files; no public GameDef, trace schema, runner, or UI contract change.
 
 ## What to Change
 
@@ -108,3 +175,31 @@ Likely surface — the exact `policy-wasm-*.ts` modification set is refined agai
 2. `pnpm -F @ludoforge/engine test:e2e` — end-to-end parity coverage.
 3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-1-post-conversion` — acceptance criterion #4 / #5 witness.
 4. `pnpm run check:ticket-deps` — dep integrity.
+
+## Outcome
+
+Completed: 2026-05-16.
+
+What changed:
+
+- Converted the two Phase 0 class-A WASM unsupported-detection branches in `packages/engine/src/agents/policy-wasm-score-routing.ts` from fail-closed `PolicyRuntimeError` throws to the existing `false`/TypeScript fallback sentinel while preserving `recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported')` and `recordProductionPolicyWasmScoreRows('unsupported')` telemetry.
+- Added `// @policy-wasm-unsupported: null-return` markers to the converted and existing null-return branches, and `// @policy-wasm-throw: contract-violation` markers to all 83 preserved class-B/C throw sites under `packages/engine/src/agents/policy-wasm-*.ts`.
+- Updated `packages/engine/test/unit/agents/policy-runtime-encoded.test.ts` so the preloaded-WASM unsupported score-row case asserts TypeScript fallback success plus unsupported-counter increment.
+- Added the Phase 1 witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-1-post-conversion.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-1-post-conversion.csv`
+
+Deviations from original plan:
+
+- User approved option 1 on 2026-05-16 to add all required class-B/C marker comments even in preexisting over-800-line files, with extraction explicitly deferred from this Phase 1 fallback-contract ticket. The source-size ledger in `Implementation Outcome` records every touched source file and the deferral rationale.
+- No schema, ABI, bytecode, marshaling, `policy-eval.ts`, runner, or public GameDef/trace contract changes landed.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `pnpm -F @ludoforge/engine test` passed after updating the stale active-ticket unit expectation: unit `5657/5657`, architecture `90/90`, default integration subset `85/85` files.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-wasm-preview-drive-equivalence.test.js dist/test/integration/policy-bytecode-equivalence-partial-visibility.test.js dist/test/integration/arvn-tournament-wasm-equivalence.test.js` passed: 5 tests.
+- `pnpm -F @ludoforge/engine test:e2e` passed: 6 tests.
+- `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-1-post-conversion` passed: 15/15 seeds, route count 3125, unsupported count 1998, batch count 2648, seed 1009 wall time +4.73% vs baseline.
+- `pnpm turbo test` passed: 5/5 tasks successful; `@ludoforge/engine-wasm:build` was cache-hit supplemental, while engine/runner build and tests ran fresh.
+- `pnpm run check:ticket-deps` passed before archival.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — adds test under `packages/engine/test/architecture/`. No source-code change.
-**Deps**: `tickets/175WASMTSFALCON-002.md`
+**Deps**: `archive/tickets/175WASMTSFALCON-002.md`
 
 ## Problem
 

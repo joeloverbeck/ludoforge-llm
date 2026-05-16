@@ -86,6 +86,8 @@ None — this is a measurement-and-report ticket. Manual verification consists o
 
 ## Outcome
 
+Outcome amended: 2026-05-16 — post-ticket-review archived this ticket and updated live-path references in the owning spec/report.
+
 Implementation completed on 2026-05-16. The decisive Phase 4 witness ran on 2026-05-16 and produced:
 
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.md`
@@ -129,4 +131,4 @@ Verification:
 
 Late-edit proof validity: the final ticket status/proof transcription happened after the source, report, spec, dependent-ticket, successor-ticket, witness, and broad proof lanes were complete. The follow-up dependency-check transcription is clerical and records the just-run graph result; it does not change source, command semantics, acceptance thresholds, touched-file ownership, dependency ownership, or residual owner.
 
-Archive status: completed and ready for post-ticket review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `archive/tickets/174WASMDEEPPRV-015.md` later completed the zero-counter owner slice.
+Archive status: archived by post-ticket-review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `archive/tickets/174WASMDEEPPRV-015.md` later completed the zero-counter owner slice.

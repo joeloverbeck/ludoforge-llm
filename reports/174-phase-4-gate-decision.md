@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-16
 **Verdict**: Fail
-**Decision owner**: `tickets/174WASMDEEPPRV-009.md`
+**Decision owner**: `archive/tickets/174WASMDEEPPRV-009.md`
 **Witness report**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.md`
 **Witness CSV**: `reports/fitl-arvn-15-seed-decomposition-2026-05-16-post-174-011.csv`
 **Command**: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date 2026-05-16-post-174-011 --profile-buckets`

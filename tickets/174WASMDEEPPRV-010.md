@@ -4,13 +4,13 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-wasm-score-routing.ts`, `policy-preview-inner-deepening.ts`, possibly `policy-agent-inner-preview.ts`
-**Deps**: `tickets/174WASMDEEPPRV-009.md`
+**Deps**: `archive/tickets/174WASMDEEPPRV-009.md`
 
 ## Problem
 
 If ticket 009's gate decision records a **Pass** (slow-tier median improves materially after Phase 3 activation), the WASM route is proven the production path for supported preview-drive rows. Foundation #14 (No Backwards Compatibility) requires the temporary A/B routing introduced for parity proof to be deleted once the route is defaulted — no alias paths, no deprecated fallbacks. This ticket flips the default and deletes the A/B wiring.
 
-**Gate condition**: Close this ticket with `Declined — Phase 4 gate failed; escalation report at reports/174-phase-4-architectural-blocker.md governs next owner` recorded in the Outcome if `tickets/174WASMDEEPPRV-009.md`'s gate decision report records a **Fail** verdict. No engine code changes are made on the Fail path.
+**Gate condition**: Close this ticket with `Declined — Phase 4 gate failed; escalation report at reports/174-phase-4-architectural-blocker.md governs next owner` recorded in the Outcome if `archive/tickets/174WASMDEEPPRV-009.md`'s gate decision report records a **Fail** verdict. No engine code changes are made on the Fail path.
 
 ## Assumption Reassessment (2026-05-15)
 

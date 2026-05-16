@@ -42,6 +42,12 @@ Before declaring completion or updating the ticket status, run one final accepta
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - when the touched oversized file is an established canonical table, lowerer, schema mirror, diagnostic registry, or comparable shared contract hub, a surgical adjacent addition may be the least risky ticket-sized change. Still record `preexisting oversize + active growth`, why extraction would widen or obscure the ticket seam, whether a narrow helper was considered, and the residual owner (`none` if no separate extraction ticket is justified).
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
+- source-size compliance recipe:
+  1. Run `wc -l <path>` for every touched source file that is near/over guidance or grew substantially.
+  2. For tracked modified files, run `git diff --numstat -- <path>` and compute `before = after - added + deleted`; for new files use `before = 0`.
+  3. Classify each path as `under cap`, `near cap`, `crossed cap`, or `preexisting oversize + active growth`.
+  4. If any path is `crossed cap` or `preexisting oversize + active growth`, resolve the hard gate before terminal status: narrow extraction, user-approved deferral through `1-3-1`, or nonterminal status.
+  5. Record the exact ledger shape in the ticket outcome or final closeout: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`.
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for completed tracked tickets, sweep the outcome/proof block for stale forward-looking closeout phrasing such as `planned`, `pending`, `expected`, `will run`, or `to be verified`. Replace it with final evidence or keep it only when explicitly describing historical pre-proof state.
@@ -186,6 +192,8 @@ When active work grows a source file that is already near/over repo guidance, or
 - `source-size ledger`: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
 If exact before counts were lost after compaction or late shared-contract fallout, reconstruct them mechanically for tracked modified files: capture `after` with `wc -l <path>`, capture added/deleted counts with `git diff --numstat -- <path>`, then compute `before = after - added + deleted`. For new files, use `before = 0`; for deleted files, use the pre-delete line count from Git when needed. If the file was also changed by unrelated user work in the same path, do not pretend the reconstructed count is ticket-local; classify the overlap before closeout.
+
+The ledger is evidence, not approval. If a path crossed the 800-line cap, ended over the cap because of active growth, or stayed preexisting-oversize while growing, terminal status still requires one of: narrow extraction completed, user-approved deferral through `1-3-1`, or a nonterminal ticket state that records the unresolved size gate.
 
 If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
 

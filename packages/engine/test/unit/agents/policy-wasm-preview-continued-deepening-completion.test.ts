@@ -120,7 +120,7 @@ describe('policy WASM preview-drive continued-deepening completion ABI', () => {
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
 
-    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(28 * 4, 999, true);
+    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(30 * 4, 999, true);
 
     assert.equal(await evaluateRawPreviewDriveStatus(input, 1), -12);
   });
@@ -155,6 +155,9 @@ const evaluateRawPreviewDriveStatus = async (
       outCompletionRecordsLen: number,
       outPreviewStateSlotMetadataPtr: number,
       outPreviewStateSlotMetadataLen: number,
+      outStatePatchCountsPtr: number,
+      outStatePatchOpsPtr: number,
+      outStatePatchOpsLen: number,
       outPreviewStateLen: number,
       outLen: number,
     ) => number;
@@ -176,6 +179,8 @@ const evaluateRawPreviewDriveStatus = async (
   const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(completionRecordBytes);
   const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+  const outStatePatchCountsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+  const outStatePatchOpsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   try {
     new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
     return exports.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -197,6 +202,9 @@ const evaluateRawPreviewDriveStatus = async (
       completionRecordWords,
       outPreviewStateSlotMetadataPtr,
       0,
+      outStatePatchCountsPtr,
+      outStatePatchOpsPtr,
+      0,
       0,
       1,
     );
@@ -213,6 +221,8 @@ const evaluateRawPreviewDriveStatus = async (
       outPolicyPreviewSignalUnavailablePtr,
       outDecisionStackPublicationPtr,
       outPreviewStateSlotMetadataPtr,
+      outStatePatchCountsPtr,
+      outStatePatchOpsPtr,
     ]) {
       exports.ludoforge_policy_vm_dealloc(ptr, outputBytes);
     }

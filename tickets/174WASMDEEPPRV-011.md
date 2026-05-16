@@ -1,23 +1,23 @@
 # 174WASMDEEPPRV-011: Phase 3b — Deep preview-drive materialized-state consumption
 
-**Status**: BLOCKED by prerequisite
+**Status**: PENDING
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — TypeScript host bridge consumption, deep preview dispatch after ABI prerequisite
-**Deps**: `tickets/174WASMDEEPPRV-008.md`, `tickets/174WASMDEEPPRV-012.md`
+**Deps**: `tickets/174WASMDEEPPRV-008.md`, `archive/tickets/174WASMDEEPPRV-012.md`
 
 ## Problem
 
 `174WASMDEEPPRV-008` can truthfully count broad preview-drive WASM activation, but live reassessment found that `runDeepPass` cannot consume `evaluateProductionPreviewDriveBatchWithWasm` as its implementation because the WASM row output does not include the materialized projected `GameState` required by `ChooseNStepInnerPreviewResult.state` and `projectedStateByOptionKey`. Counting a WASM row while still using TypeScript to produce the state would make fallback success look like route activation and would violate Foundations #9, #16, and #20.
 
-This ticket wires `runDeepPass` to consume WASM-produced projected state after the prerequisite state-patch/materialization ABI in `tickets/174WASMDEEPPRV-012.md` exists.
+This ticket wires `runDeepPass` to consume WASM-produced projected state after the prerequisite state-patch/materialization ABI in `archive/tickets/174WASMDEEPPRV-012.md` exists.
 
 ## Assumption Reassessment (2026-05-16)
 
 1. `evaluateProductionPreviewDriveBatchWithWasm` currently returns row/value/status metadata and preview-state slot values, not a full materialized `GameState`.
 2. `runDeepPass` must return `ChooseNStepInnerPreviewResult` objects whose `state` is the projected post-preview state; downstream callers expose that state through `projectedStateByOptionKey`.
 3. `174WASMDEEPPRV-008` records deep-phase unsupported counters and keeps the TypeScript fallback until this ABI/state contract exists.
-4. Additional reassessment on 2026-05-16 found that `runDeepPass` operates on `chooseNStep` microturn continuations, while the existing production preview-drive compiler is rooted in root action `Move` pipelines. A scalar/global-only bridge would still require TypeScript to apply the deep continuation to derive state deltas, so it is not a Foundation-aligned proof that WASM produced the consumed projected state. `tickets/174WASMDEEPPRV-012.md` owns the prerequisite generic state-patch/materialization ABI.
+4. Additional reassessment on 2026-05-16 found that `runDeepPass` operates on `chooseNStep` microturn continuations, while the existing production preview-drive compiler is rooted in root action `Move` pipelines. A scalar/global-only bridge would still require TypeScript to apply the deep continuation to derive state deltas, so it is not a Foundation-aligned proof that WASM produced the consumed projected state. `archive/tickets/174WASMDEEPPRV-012.md` owns the prerequisite generic state-patch/materialization ABI.
 
 ## Architecture Check
 
@@ -27,9 +27,13 @@ This ticket wires `runDeepPass` to consume WASM-produced projected state after t
 
 ## What to Change
 
+### 0. Source-size gate resolution
+
+Before terminal closeout, resolve the source-size gate inherited from the `174WASMDEEPPRV-012` substrate: the current implementation grew the canonical preview-drive TypeScript/Rust hubs past the repo's 800-line guidance. Because this ticket touches the same ABI and deep-consumption surfaces, it owns either a narrow extraction that keeps the deep-route seam clear or an explicit 1-3-1 decision documenting why extraction is deferred.
+
 ### 1. Materialized projected-state ABI
 
-Consume the preview-drive state-patch ABI from `tickets/174WASMDEEPPRV-012.md` so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
+Consume the preview-drive state-patch ABI from `archive/tickets/174WASMDEEPPRV-012.md` so a supported deep preview-drive row can return enough deterministic state data to reconstruct the projected `GameState` required by `runDeepPass`.
 
 ### 2. Deep-phase WASM consumption
 
@@ -91,25 +95,23 @@ Add tests that prove:
 
 ## Outcome
 
-Blocked on 2026-05-16 by prerequisite `tickets/174WASMDEEPPRV-012.md`.
+Unblocked on 2026-05-16 after `archive/tickets/174WASMDEEPPRV-012.md` landed the prerequisite generic state-patch/materialization ABI.
 
-Landed scope: reassessment only; no runtime code landed under this ticket.
+Landed scope so far: reassessment only; no runtime code has landed under this ticket.
 
-Missing prerequisite: a generic WASM state-patch/materialization ABI that can reconstruct the `GameState` consumed by `runDeepPass` without TypeScript applying the deep continuation and then calling that fallback state production "supported" WASM activation.
+Continuation owner: this ticket owns wiring `runDeepPass` to consume WASM-produced projected state and owns resolving the inherited source-size gate for the preview-drive ABI/deep-consumption hubs before terminal closeout.
 
-Successor or same-ticket continuation owner: `tickets/174WASMDEEPPRV-012.md` owns the prerequisite ABI design and proof substrate; this ticket remains the continuation owner for wiring `runDeepPass` after 012 lands.
-
-Dependency/spec/sibling rewrites: this ticket now depends on 012; Spec 174 lists 012 before 011; Phase 4 remains gated on 011.
+Dependency/spec/sibling rewrites: this ticket depends on archived 012; Spec 174 lists archived 012 before this active continuation; Phase 4 remains gated on 011.
 
 Verification:
 - `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 5 active tickets and 2358 archived tickets.
 - `git diff --check` — passed.
-- `git diff --no-index --check /dev/null tickets/174WASMDEEPPRV-012.md` — whitespace-clean; command exited 1 with no diagnostics because the new untracked file differs from `/dev/null`.
+- `git diff --no-index --check /dev/null archive/tickets/174WASMDEEPPRV-012.md` — whitespace-clean; command exited 1 with no diagnostics because the new untracked file differs from `/dev/null`.
 
 Schema/generated fallout: none; markdown/ticket graph only.
 
-Late-edit proof validity: proof transcription only after the graph/hygiene checks; no scope, dependency, source, test, schema, or acceptance boundary changed after those checks.
+Late-edit proof validity: review changed only this ticket's status/prose and archive-path references after 012 was archived. Dependency and markdown hygiene were rerun; no source, test, schema, or runtime acceptance boundary changed.
 
-Archive status: blocked and not archive-ready.
+Archive status: active and not archive-ready.
 
-Next workflow: continue with `$implement-ticket tickets/174WASMDEEPPRV-012.md`.
+Next workflow: continue with `$implement-ticket tickets/174WASMDEEPPRV-011.md`.

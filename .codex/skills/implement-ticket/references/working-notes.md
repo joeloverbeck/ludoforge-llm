@@ -36,6 +36,7 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant; when naming a sibling as owner, record whether that sibling was opened and confirmed, or why the active spec is sufficient
 - `source file size risk`: optional; include when a named source file is already near/over repo guidance and active work will add logic there, or when the ticket creates a substantial new source file likely to carry most of the implementation. Use `extract now`, `defer with rationale`, or `1-3-1 needed`. For profiling/investigation tickets, update this field when profiling selects an unlisted implementation file that may be near/over guidance. When retaining active growth in a near-cap or over-guidance source file, plan the closeout ledger in this exact shape: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`.
+  - In this repo, if any touched source file crosses the 800-line cap, ends over the cap because of active growth, or is already over the cap and grows further, classify the checkpoint as `1-3-1 needed` unless you will extract before terminal status or the ticket already contains explicit user authorization to defer the split. A ledger plus local rationale is not a substitute for resolving the hard gate.
   - After shared-contract, schema, generated-artifact, or fixture fallout is discovered, rerun the size check for every source file that grew in the final diff, not just source files named by the draft ticket. Add any new preexisting-oversize-plus-active-growth entries to the closeout ledger before terminal status.
 - `runtime surface breadth`: for performance, profiling, diagnostic, cleanup, shared-contract, schema, or serialized-trace tickets, classify the changed behavior as `ticket-specific`, `policy/agent-only`, `script/profile-only`, or `shared engine/kernel`; name non-agent downstream consumers when they matter to closeout.
 - `pre-existing dirty provenance`: before final closeout, classify referenced active tickets, specs, or siblings that were already dirty or untracked as `touched by this implementation`, `pre-existing and still unrelated`, `read-only context`, or `concurrent/sibling draft`
@@ -48,6 +49,16 @@ For tiny bounded local changes, keep the checkpoint complete but do not over-exp
 Terminal status stop: do not set a ticket's terminal status until no further source, test, schema, generated-artifact, ticket-scope, touched-file, dependency, or proof-story edits remain expected and the final proof set has run or been explicitly classified. If the active ticket needs an early closeout draft, write the intended terminal state in prose while leaving the status nonterminal, then apply the terminal status only as the final narrow edit after proof.
 
 If you resume from context compaction, interruption, or a long handoff summary, do not rely on a summary sentence that says the checkpoint happened unless the full ticket-named deliverables ledger is visible. Reconstruct the ledger from the active ticket's explicit `What to Change`, `Files to Touch`, named artifacts/tests, `git diff --name-only`, and `git status --short` before any further file edit or terminal closeout. Re-emit the reconstructed ledger when it changes the owned boundary, proof plan, or closeout status.
+
+Compact resumed-closeout example:
+
+- `active ticket/status`: `tickets/FOO-001.md`, still `PENDING`; intended `COMPLETED` only after final lanes
+- `remaining pending proof rows`: `pnpm turbo test`, `pnpm run check:ticket-deps`, `git diff --check`
+- `untracked artifacts`: `?? packages/engine/test/...new-test.ts` ticket-owned, whitespace check pending
+- `in-flight command/session`: none, or `session 123` polled before starting another `dist` producer
+- `post-proof edit class`: terminal status/proof transcription only, or list affected source/test/ticket/spec paths
+- `integrity lane`: `pnpm run check:ticket-deps` after terminal/status/dependency edits
+- `next status/handoff`: keep nonterminal until lanes pass; then `$post-ticket-review tickets/FOO-001.md`
 
 If you realize after editing that this checkpoint was missed, emit a recovery checkpoint immediately. Mark it as late, list which boundary decisions and proof lanes were already chosen or run, and do not present it as satisfying the pre-edit stop requirement in later audit or closeout language.
 

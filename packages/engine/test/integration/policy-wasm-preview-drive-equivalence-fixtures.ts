@@ -73,6 +73,7 @@ export interface PreviewDriveParityFixture {
   readonly def: GameDef;
   readonly state: GameState;
   readonly candidate: PolicyWasmProductionPreviewDriveCandidate;
+  readonly referencePreviewState: GameState;
   readonly expected: PreviewDriveRowOracle;
 }
 
@@ -133,6 +134,7 @@ export const createSupportedPreviewDriveParityFixtures = (): readonly PreviewDri
       def,
       state,
       candidate,
+      referencePreviewState: previewState,
       expected: {
         ...expected,
         rowDigest: digestPreviewDriveRow({

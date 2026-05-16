@@ -24,6 +24,17 @@ Blocked-but-landed slice: when the active ticket lands a truthful smaller slice 
 
 Pre-terminal flip guard: immediately before changing a ticket's `**Status**` to a terminal value, reopen or rescan the ticket outcome and command ledger for `pending`, `planned`, `TBD`, or unclassified red/non-final rows. If any ticket-named proof lane, checker, dependency/status graph check, or decisive metric transcription remains open, leave the status nonterminal and finish/classify that row first. Only flip the status after every named lane is green, classified, or explicitly substituted.
 
+Must-stop terminal blockers:
+
+| Blocker | Required action before terminal status |
+| --- | --- |
+| Explicit ticket deliverable still unresolved or silently substituted | Satisfy it, record `verified-no-edit`, or stop for `1-3-1` before rewriting the boundary. |
+| Red or unclassified ticket-named lane on a changed path, shared contract, or architectural invariant | Fix/classify it, rerun affected proof, or stop for `1-3-1`. |
+| Any source file ends over the repo cap because of active growth, crosses the cap, or remains preexisting-oversize with active growth | Split narrowly, get user-approved deferral through `1-3-1`, or keep status nonterminal. A source-size ledger alone is not enough. |
+| Post-proof edit changes scope, command coverage, touched-file ownership, dependency/sibling ownership, acceptance wording, or proof claims | Rerun the narrowest affected proof or integrity lane before terminal status. |
+| Dependency, status, active/archive classification, or successor/follow-up graph changes are unchecked | Run the narrow repo ticket-dependency or markdown-integrity lane, or record why no checker exists. |
+| New or ignored proof artifact/log/report is unclassified | Decide checked-in artifact, ignored ephemeral plus transcription, ignore-rule change, or stop for `1-3-1` if it contradicts the ticket. |
+
 Checkpoint tiers: always emit the compact core, then add only the triggered ledgers that apply to the ticket. The full list below is a routing checklist, not a requirement to paste every row into every ordinary ticket. For resumed closeout after compaction or interruption, the compact `resumed-closeout checkpoint` is sufficient until it exposes a boundary, deliverable, proof-lane, or graph/status change; then rebuild the fuller ticket-named deliverables ledger before editing.
 
 Mandatory compact core fields:
@@ -77,6 +88,7 @@ Triggered checkpoint ledgers:
   - For profiling or investigation tickets, repeat this check when live evidence selects an unlisted source file as the implementation target. If the file may be near or over repo guidance, run a cheap size check before or immediately after choosing that file and record whether extraction is in scope.
   - For new source files that grow past the repo's typical size band or are plausibly headed there, run a cheap size check before the first final-proof lane and decide whether to split now, defer with rationale, or stop for `1-3-1`.
   - If the session retains active growth in a near-cap or over-guidance source file, plan a compact before/after closeout ledger before final proof: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`. This applies both to files that were already over guidance and to files that cross the cap because of the current implementation.
+  - If any touched source file crosses the 800-line cap, ends over the cap because of active growth, or is already over the cap and grows further, `defer-with-rationale` is not enough by itself. Before terminal status, either perform a narrow extraction, obtain user approval through `1-3-1` for deferring extraction, or leave the ticket nonterminal until the size gate is resolved.
   - After shared-contract, schema, generated-artifact, or fixture fallout is discovered, rerun the size check for every source file that grew in the final diff, not just the source files named by the draft ticket. Add any new preexisting-oversize-plus-active-growth entries to the closeout ledger before terminal status.
 - `runtime surface breadth`: for performance, profiling, diagnostic, or cleanup tickets that touch shared code, classify the changed behavior as `ticket-specific`, `policy/agent-only`, `script/profile-only`, or `shared engine/kernel`. Name any non-agent paths that can reach the changed code when that matters to closeout or user expectations.
 - `resumed-closeout checkpoint`: when resuming from compaction, interruption, or a long handoff and the remaining work is proof polling, status/proof transcription, ticket/spec closeout, or final handoff rather than new implementation, re-emit this compact checkpoint before further edits: `active ticket/status`, `remaining pending proof rows`, `untracked artifacts`, `in-flight command/session`, `post-proof edit class`, `integrity lane`, and `next status/handoff`. If this checkpoint exposes a boundary, deliverable, or proof-lane change, rebuild the fuller ticket-named deliverables ledger before editing.

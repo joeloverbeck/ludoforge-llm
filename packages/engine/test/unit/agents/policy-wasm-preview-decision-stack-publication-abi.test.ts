@@ -98,6 +98,9 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outCompletionRecordsLen: number,
         outPreviewStateSlotMetadataPtr: number,
         outPreviewStateSlotMetadataLen: number,
+        outStatePatchCountsPtr: number,
+        outStatePatchOpsPtr: number,
+        outStatePatchOpsLen: number,
         outPreviewStateLen: number,
         outLen: number,
       ) => number;
@@ -116,7 +119,7 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
       }],
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
-    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(29 * 4, 999, true);
+    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(31 * 4, 999, true);
 
     const outputBytes = 4;
     const candidateGroupBytes = 3 * 4;
@@ -135,6 +138,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
     const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
     const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(completionRecordsBytes);
     const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+    const outStatePatchCountsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+    const outStatePatchOpsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     try {
       new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
       const status = exports.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -156,6 +161,9 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         0,
         outPreviewStateSlotMetadataPtr,
         0,
+        outStatePatchCountsPtr,
+        outStatePatchOpsPtr,
+        0,
         0,
         1,
       );
@@ -173,6 +181,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outTiebreakAfterPreviewNoSignalPtr,
         outPolicyPreviewSignalUnavailablePtr,
         outPreviewStateSlotMetadataPtr,
+        outStatePatchCountsPtr,
+        outStatePatchOpsPtr,
       ]) {
         exports.ludoforge_policy_vm_dealloc(ptr, outputBytes);
       }

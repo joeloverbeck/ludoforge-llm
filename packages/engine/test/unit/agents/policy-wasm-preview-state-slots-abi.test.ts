@@ -108,7 +108,7 @@ describe('policy WASM preview-drive preview-state slot ABI', () => {
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
     new DataView(invalidLifetimeInput.buffer, invalidLifetimeInput.byteOffset, invalidLifetimeInput.byteLength)
-      .setInt32(14 * 4, 999, true);
+      .setInt32(16 * 4, 999, true);
     assert.equal(await evaluateRawPreviewDriveStatus(invalidLifetimeInput, 2, 1, 0), -12);
 
     const outOfBoundSlotInput = encodePolicyWasmPreviewDriveInput({
@@ -160,6 +160,9 @@ const evaluateRawPreviewDriveStatus = async (
       outCompletionRecordsLen: number,
       outPreviewStateSlotMetadataPtr: number,
       outPreviewStateSlotMetadataLen: number,
+      outStatePatchCountsPtr: number,
+      outStatePatchOpsPtr: number,
+      outStatePatchOpsLen: number,
       outPreviewStateLen: number,
       outLen: number,
     ) => number;
@@ -186,6 +189,8 @@ const evaluateRawPreviewDriveStatus = async (
   const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
   const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(completionRecordBytes);
   const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(slotMetadataBytes);
+  const outStatePatchCountsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+  const outStatePatchOpsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   try {
     new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
     return exports.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -207,6 +212,9 @@ const evaluateRawPreviewDriveStatus = async (
       0,
       outPreviewStateSlotMetadataPtr,
       slotMetadataWords,
+      outStatePatchCountsPtr,
+      outStatePatchOpsPtr,
+      0,
       slotCount,
       candidateCount,
     );
@@ -228,5 +236,7 @@ const evaluateRawPreviewDriveStatus = async (
     exports.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, decisionStackBytes);
     exports.ludoforge_policy_vm_dealloc(outCompletionRecordsPtr, completionRecordBytes);
     exports.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, slotMetadataBytes);
+    exports.ludoforge_policy_vm_dealloc(outStatePatchCountsPtr, outputBytes);
+    exports.ludoforge_policy_vm_dealloc(outStatePatchOpsPtr, outputBytes);
   }
 };

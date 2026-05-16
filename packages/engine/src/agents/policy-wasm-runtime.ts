@@ -22,6 +22,7 @@ import {
   policyWasmPreviewDriveCandidateGroupMetadataWords,
   policyWasmPreviewDriveCompletionRecordWords,
   policyWasmPreviewDriveDecisionStackFrameWords,
+  policyWasmPreviewDriveStatePatchOpWords,
   type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
 } from './policy-wasm-preview-drive.js';
@@ -38,7 +39,7 @@ import {
 } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 15;
+export const POLICY_WASM_ABI_VERSION = 16;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -119,6 +120,9 @@ interface PolicyWasmExports {
     outCompletionRecordsLen: number,
     outPreviewStateSlotMetadataPtr: number,
     outPreviewStateSlotMetadataLen: number,
+    outStatePatchCountsPtr: number,
+    outStatePatchOpsPtr: number,
+    outStatePatchOpsLen: number,
     outPreviewStateLen: number,
     outLen: number,
   ) => number;
@@ -1215,6 +1219,12 @@ export const createPolicyWasmRuntime = (
       const completionRecordWordCount = policyWasmPreviewDriveCompletionRecordWords();
       const completionRecordWords = previewInput.candidates.length * completionRecordMaxCount * completionRecordWordCount;
       const completionRecordBytes = completionRecordWords * I32_BYTES;
+      const statePatchMaxOpCount = previewInput.materializeStatePatch === true
+        ? previewInput.candidates.reduce((maxCount, candidate) => Math.max(maxCount, candidate.statePatch?.ops.length ?? 0), 0)
+        : 0;
+      const statePatchOpWordCount = policyWasmPreviewDriveStatePatchOpWords();
+      const statePatchOpWords = previewInput.candidates.length * statePatchMaxOpCount * statePatchOpWordCount;
+      const statePatchOpBytes = statePatchOpWords * I32_BYTES;
       const candidateGroupMetadataWords = previewInput.candidates.length * policyWasmPreviewDriveCandidateGroupMetadataWords();
       const candidateGroupMetadataBytes = candidateGroupMetadataWords * I32_BYTES;
       const previewStateSlotMetadataWords = previewStateSlotCount * 3;
@@ -1232,6 +1242,8 @@ export const createPolicyWasmRuntime = (
       const outDecisionStackPublicationPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, decisionStackPublicationBytes));
       const outCompletionRecordsPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, completionRecordBytes));
       const outPreviewStateSlotMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateSlotMetadataBytes));
+      const outStatePatchCountsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outStatePatchOpsPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, statePatchOpBytes));
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -1253,6 +1265,9 @@ export const createPolicyWasmRuntime = (
           completionRecordWords,
           outPreviewStateSlotMetadataPtr,
           previewStateSlotMetadataWords,
+          outStatePatchCountsPtr,
+          outStatePatchOpsPtr,
+          statePatchOpWords,
           previewStateSlotCount,
           previewInput.candidates.length,
         );
@@ -1289,8 +1304,11 @@ export const createPolicyWasmRuntime = (
             outDecisionStackPublicationPtr,
             outCompletionRecordsPtr,
             outPreviewStateSlotMetadataPtr,
+            outStatePatchCountsPtr,
+            outStatePatchOpsPtr,
             decisionStackMaxDepth,
             completionRecordMaxCount,
+            statePatchMaxOpCount,
           ),
         };
       } finally {
@@ -1307,6 +1325,8 @@ export const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, Math.max(I32_BYTES, decisionStackPublicationBytes));
         wasm.ludoforge_policy_vm_dealloc(outCompletionRecordsPtr, Math.max(I32_BYTES, completionRecordBytes));
         wasm.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, Math.max(I32_BYTES, previewStateSlotMetadataBytes));
+        wasm.ludoforge_policy_vm_dealloc(outStatePatchCountsPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outStatePatchOpsPtr, Math.max(I32_BYTES, statePatchOpBytes));
       }
     },
   };

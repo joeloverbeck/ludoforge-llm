@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-012: Phase 3b prerequisite - Deep preview-drive state-patch ABI design
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes - WASM preview-drive state-patch ABI design, TypeScript host decoder, deep materialization proof
@@ -98,3 +98,50 @@ The proof must distinguish:
 1. `pnpm -F @ludoforge/engine build && node --test <compiled ABI materialization test>`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-16
+Outcome amended: 2026-05-16
+
+Landed scope:
+- Added preview-drive state-patch ABI version 16 across the TypeScript host and Rust guest.
+- Added an opt-in `materializeStatePatch` production preview-drive request path. Existing broad production preview-drive rows remain unchanged unless the caller requests materialized projected state.
+- Added WASM-returned state-patch rows for supported generic state classes: global variable values, zone variable values, token moves, numeric/boolean token scalar properties, marker state, action-usage counters, and microturn metadata needed for canonical preview-state identity.
+- Added TypeScript host materialization that reconstructs a canonical `GameState`, recomputes `stateHash`/`_runningHash`, and rejects mismatched or non-materializable payloads deterministically.
+- Kept production deep `runDeepPass` consumption out of scope; `tickets/174WASMDEEPPRV-011.md` remains the owner for dispatching deep `continuedDeepening` through this substrate.
+
+Unsupported/fail-closed scope:
+- Per-player variable patches and broader structural classes not encoded above remain unsupported for state-patch materialization.
+- Existing preview-drive unsupported/fallback reason surfaces remain explicit; production activation is still deferred to `tickets/174WASMDEEPPRV-011.md`.
+
+ABI identity:
+- `POLICY_WASM_ABI_VERSION` / Rust `ABI_VERSION`: `15 -> 16`.
+- Preview-drive FFI call shape now includes state-patch count and op buffers after preview-state slot metadata.
+- New state-patch op word width: 5 i32 words per op.
+
+Generated/schema fallout:
+- Rust WASM target rebuilt under ignored `packages/engine-wasm/policy-vm/target/`.
+- No schema, golden, GameSpecDoc, or checked-in generated JSON artifact changed.
+
+Source-size ledger:
+- `packages/engine/src/agents/policy-wasm-preview-drive.ts | before 768 | after 936 | crossed cap? yes | active growth state-patch ABI codec/type extension | extraction/defer rationale: canonical preview-drive ABI hub; extracting while the ABI is still changing would widen/obscure the substrate seam | successor if any: tickets/174WASMDEEPPRV-011.md`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts | before 786 | after 881 | crossed cap? yes | active growth opt-in state-patch emission/materialization | extraction/defer rationale: canonical production preview-drive compiler hub; surgical addition keeps the state-patch provenance beside supported/fail-closed lowering | successor if any: tickets/174WASMDEEPPRV-011.md`
+- `packages/engine/src/agents/policy-wasm-runtime.ts | before 1404 | after 1424 | crossed cap? no, preexisting oversize + active growth | active growth FFI pointer/length mirror | extraction/defer rationale: canonical WASM runtime FFI hub; narrow mirror update is safer than interface extraction in this ticket | successor if any: tickets/174WASMDEEPPRV-011.md`
+- `packages/engine-wasm/policy-vm/src/preview_drive.rs | before 757 | after 883 | crossed cap? yes | active growth ABI state-patch validation/output mirror | extraction/defer rationale: canonical Rust preview-drive ABI evaluator; split would obscure host/guest mirror proof | successor if any: tickets/174WASMDEEPPRV-011.md`
+- `packages/engine-wasm/policy-vm/src/lib.rs | before 1307 | after 1307 | crossed cap? no active growth beyond ABI version literal | extraction/defer rationale: preexisting canonical VM export hub | successor if any: none`
+
+Post-review correction (2026-05-16): `tickets/174WASMDEEPPRV-011.md` is now unblocked because this prerequisite ABI landed, and it explicitly owns resolving the inherited source-size gate while wiring deep materialized-state consumption. No runtime code changed during review.
+
+Verification:
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-state-patch-materialization.test.js` — passed.
+- `node --test packages/engine/dist/test/unit/agents/policy-wasm-preview-candidate-grouping-abi.test.js packages/engine/dist/test/unit/agents/policy-wasm-preview-decision-stack-publication-abi.test.js packages/engine/dist/test/unit/agents/policy-wasm-preview-state-slots-abi.test.js packages/engine/dist/test/unit/agents/policy-wasm-preview-continued-deepening-completion.test.js packages/engine/dist/test/integration/policy-wasm-preview-drive-equivalence.test.js packages/engine/dist/test/integration/policy-wasm-preview-drive-state-patch-materialization.test.js` — passed.
+- `pnpm -F @ludoforge/engine test:determinism` — passed 23/23 files.
+- `pnpm turbo build` — passed; runner emitted the existing Vite large-chunk advisory, and Turbo emitted a no-output warning for `@ludoforge/engine-wasm#build`; both are non-ticket-owned advisories.
+- `pnpm turbo test` — passed; 5 tasks successful, engine default lane reported 84/84 files passed. Runner tests replayed/passed with known jsdom canvas and crash-recovery stderr advisories.
+- `pnpm turbo lint` — passed; 2 tasks successful.
+- `pnpm turbo typecheck` — passed; 3 tasks successful.
+
+Late-edit proof validity: the terminal status and final verification transcription record the just-run proof results. Post-review edits changed only ticket/spec ownership prose and archive-path references, then reran dependency and markdown hygiene; no runtime, source, test, schema, ABI identity, or acceptance behavior changed, so no code proof rerun is required for this closeout edit.

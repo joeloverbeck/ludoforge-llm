@@ -33,13 +33,14 @@ import {
   type PolicyWasmPreviewZoneValues,
   type PolicyWasmPreviewZoneVarValues,
 } from './policy-wasm-production-preview-values.js';
+import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
 import {
   classifyPolicyWasmPreviewStateSlots,
   evalPolicyWasmPreviewSurfaceSlot,
   evalPolicyWasmPreviewStateFeature,
 } from './policy-wasm-production-preview-feature-slots.js';
 import { lowerProductionPreviewDriveIr } from './policy-wasm-production-preview-drive-lowering.js';
-import type { ConditionAST, EffectAST, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
+import type { ConditionAST, EffectAST, GameState, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
 import type {
   PolicyWasmProductionPreviewDriveInput,
   PolicyWasmProductionPreviewDriveIrOp,
@@ -47,6 +48,7 @@ import type {
 } from './policy-wasm-production-preview-drive-types.js';
 import type {
   PolicyWasmPreviewDriveResult,
+  PolicyWasmPreviewStatePatchOp,
   PolicyWasmPreviewDriveUnsupportedClass,
   PolicyWasmPreviewStateSlot,
 } from './policy-wasm-preview-drive.js';
@@ -88,7 +90,27 @@ export const evaluateProductionPreviewDriveBatchWithWasm = (
   }
 
   const batch = lowerProductionPreviewDriveIr(input, compiled.program);
-  return input.runtime.evaluatePreviewDriveBatch(batch);
+  const result = input.runtime.evaluatePreviewDriveBatch(batch);
+  if (result.kind !== 'supported' || input.materializeStatePatch !== true) {
+    return result;
+  }
+  return {
+    ...result,
+    rows: result.rows.map((row) => {
+      if (row.statePatch === undefined) {
+        throw new Error('Policy WASM preview-drive supported row did not return a state patch.');
+      }
+      return {
+        ...row,
+        projectedState: materializePolicyWasmPreviewStatePatch({
+          def: input.def,
+          state: input.state,
+          patch: row.statePatch,
+          ...(input.gameDefRuntime === undefined ? {} : { runtime: input.gameDefRuntime }),
+        }).state,
+      };
+    }),
+  };
 };
 
 let productionPreviewDriveBatchCount = 0;
@@ -155,6 +177,16 @@ const compileProductionPreviewDrive = (
     beforeFirstDecision: true,
     bindings: rootBindings,
     ops: [] as PolicyWasmProductionPreviewDriveIrOp[],
+    statePatchOps: (input.materializeStatePatch === true
+      ? [
+        nextActionUsagePatch(input.state, actionId),
+        {
+          kind: 'setMicroturnMetadata' as const,
+          nextFrameId: (input.state.nextFrameId ?? 0) + 2,
+          nextTurnId: input.originTurnId + 1,
+        },
+      ]
+      : []) as PolicyWasmPreviewStatePatchOp[],
     slotValues: [...rootValues],
     markerValues: buildPolicyWasmPreviewMarkerValues(input.state),
     zoneVarValues: buildPolicyWasmPreviewZoneVarValues(input.state),
@@ -193,12 +225,27 @@ const compileProductionPreviewDrive = (
     kind: 'supported',
     program: {
       rootValues,
+      ...(input.materializeStatePatch === true ? { statePatchOps: state.statePatchOps } : {}),
       ops: state.ops,
     },
   };
 };
 
-interface CompileState { beforeFirstDecision: boolean; bindings: Map<string, PolicyWasmPreviewValue>; ops: PolicyWasmProductionPreviewDriveIrOp[]; slotValues: number[]; markerValues: Map<string, string>; zoneVarValues: PolicyWasmPreviewZoneVarValues; zoneValues: PolicyWasmPreviewZoneValues; }
+interface CompileState { beforeFirstDecision: boolean; bindings: Map<string, PolicyWasmPreviewValue>; ops: PolicyWasmProductionPreviewDriveIrOp[]; statePatchOps: PolicyWasmPreviewStatePatchOp[]; slotValues: number[]; markerValues: Map<string, string>; zoneVarValues: PolicyWasmPreviewZoneVarValues; zoneValues: PolicyWasmPreviewZoneValues; }
+
+const nextActionUsagePatch = (
+  state: GameState,
+  actionId: string,
+): PolicyWasmPreviewStatePatchOp => {
+  const usage = state.actionUsage[actionId] ?? { turnCount: 0, phaseCount: 0, gameCount: 0 };
+  return {
+    kind: 'setActionUsage',
+    actionId,
+    turnCount: usage.turnCount + 1,
+    phaseCount: usage.phaseCount + 1,
+    gameCount: usage.gameCount + 1,
+  };
+};
 
 export const definePolicyWasmProductionPreviewStateSlots = (
   slotIds: readonly string[],
@@ -222,7 +269,12 @@ const compileEffects = (
         const current = zoneId === undefined || varName === undefined ? undefined : readPolicyWasmPreviewZoneVar(state.zoneVarValues, zoneId, varName);
         const nextZoneVars = current === undefined || delta === undefined ? undefined : setPolicyWasmPreviewZoneVar(input.def, state.zoneVarValues, zoneId!, varName!, current + delta);
         if (nextZoneVars === undefined) return unsupported('unsupported-effect', 'production-preview-drive.addVar', 'only deterministic integer zoneVar addVar effects are supported');
-        state.beforeFirstDecision = false; state.zoneVarValues = nextZoneVars; continue;
+        state.beforeFirstDecision = false;
+        state.zoneVarValues = nextZoneVars;
+        if (input.materializeStatePatch === true) {
+          state.statePatchOps.push({ kind: 'setZoneVar', zoneId: zoneId!, varName: varName!, value: current! + delta! });
+        }
+        continue;
       }
       if (slotIndex === undefined) {
         return unsupported('unsupported-effect', 'production-preview-drive.addVar', 'only matching global scalar addVar effects are supported');
@@ -247,6 +299,9 @@ const compileEffects = (
         state.ops.push(slotIndex === 0 ? { kind: 'addGlobal', delta } : { kind: 'addPreviewSlot', slotIndex, delta });
       }
       state.slotValues[slotIndex] = (state.slotValues[slotIndex] ?? 0) + delta;
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({ kind: 'setGlobalVar', varName: varName!, value: { kind: 'number', value: state.slotValues[slotIndex] ?? 0 } });
+      }
       continue;
     }
 
@@ -259,7 +314,12 @@ const compileEffects = (
         const value = evalI32NumericValue(payload.value, input, slotIndexByGlobalVar, state);
         const nextZoneVars = zoneId === undefined || varName === undefined || value === undefined ? undefined : setPolicyWasmPreviewZoneVar(input.def, state.zoneVarValues, zoneId, varName, value);
         if (nextZoneVars === undefined) return unsupported('unsupported-effect', 'production-preview-drive.setVar', 'only deterministic integer zoneVar setVar effects are supported');
-        state.beforeFirstDecision = false; state.zoneVarValues = nextZoneVars; continue;
+        state.beforeFirstDecision = false;
+        state.zoneVarValues = nextZoneVars;
+        if (input.materializeStatePatch === true) {
+          state.statePatchOps.push({ kind: 'setZoneVar', zoneId: zoneId!, varName: varName!, value: value! });
+        }
+        continue;
       }
       if (slotIndex === undefined) {
         return unsupported('unsupported-effect', 'production-preview-drive.setVar', 'only matching global scalar setVar effects are supported');
@@ -271,6 +331,9 @@ const compileEffects = (
       state.beforeFirstDecision = false;
       state.ops.push(slotIndex === 0 ? { kind: 'setGlobal', value } : { kind: 'setPreviewSlot', slotIndex, value });
       state.slotValues[slotIndex] = value;
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({ kind: 'setGlobalVar', varName: varName!, value: { kind: 'number', value } });
+      }
       continue;
     }
 
@@ -285,6 +348,9 @@ const compileEffects = (
       }
       state.beforeFirstDecision = false;
       state.markerValues.set(policyWasmPreviewMarkerKey(spaceId, effect.setMarker.marker), markerState);
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({ kind: 'setMarker', zoneId: spaceId, marker: effect.setMarker.marker, state: markerState });
+      }
       continue;
     }
 
@@ -304,6 +370,9 @@ const compileEffects = (
       }
       state.beforeFirstDecision = false;
       state.markerValues.set(policyWasmPreviewMarkerKey(spaceId, effect.shiftMarker.marker), shifted);
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({ kind: 'setMarker', zoneId: spaceId, marker: effect.shiftMarker.marker, state: shifted });
+      }
       continue;
     }
 
@@ -319,10 +388,22 @@ const compileEffects = (
       }
       state.beforeFirstDecision = false;
       state.zoneValues = nextZones;
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({
+          kind: 'moveToken',
+          tokenId: tokenId as string,
+          fromZoneId: fromZoneId!,
+          toZoneId: toZoneId!,
+          ...(effect.moveToken.position === 'bottom' ? { position: 'bottom' as const } : {}),
+        });
+      }
       continue;
     }
 
     if ('moveAll' in effect) {
+      if (input.materializeStatePatch === true) {
+        return unsupported('unsupported-effect', 'production-preview-drive.effect.moveAll', 'state-patch materialization does not yet support moveAll effects');
+      }
       const fromZoneId = resolveZoneLikeValue(effect.moveAll.from, input, slotIndexByGlobalVar, state);
       const toZoneId = resolveZoneLikeValue(effect.moveAll.to, input, slotIndexByGlobalVar, state);
       const filter = effect.moveAll.filter;
@@ -335,6 +416,9 @@ const compileEffects = (
     if ('setTokenProp' in effect) {
       const tokenId = typeof effect.setTokenProp.token === 'string' ? state.bindings.get(resolveBindingName(effect.setTokenProp.token, state)) : undefined;
       const value = evalScalarValue(effect.setTokenProp.value, input, slotIndexByGlobalVar, state);
+      if (input.materializeStatePatch === true && (typeof value === 'string' || Array.isArray(value))) {
+        return unsupported('unsupported-effect', 'production-preview-drive.effect.setTokenProp', 'state-patch materialization supports numeric and boolean token props only');
+      }
       const nextZones = typeof tokenId === 'string' && isPolicyWasmPreviewScalarValue(value)
         ? setPolicyWasmPreviewTokenProp(input.def, state.zoneValues, tokenId, effect.setTokenProp.prop, value)
         : undefined;
@@ -343,10 +427,21 @@ const compileEffects = (
       }
       state.beforeFirstDecision = false;
       state.zoneValues = nextZones;
+      if (input.materializeStatePatch === true) {
+        state.statePatchOps.push({
+          kind: 'setTokenProp',
+          tokenId: tokenId as string,
+          prop: effect.setTokenProp.prop,
+          value: typeof value === 'boolean' ? { kind: 'boolean', value } : { kind: 'number', value: value as number },
+        });
+      }
       continue;
     }
 
     if ('removeByPriority' in effect) {
+      if (input.materializeStatePatch === true) {
+        return unsupported('unsupported-effect', 'production-preview-drive.effect.removeByPriority', 'state-patch materialization does not yet support removeByPriority effects');
+      }
       const payload = effect.removeByPriority;
       let remaining = evalI32NumericValue(payload.budget, input, slotIndexByGlobalVar, state);
       const owner = 'production-preview-drive.effect.removeByPriority';

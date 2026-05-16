@@ -60,7 +60,7 @@ Hot-path buckets for the dominant train rows:
 
 Phase 4e is a diagnostic closeout with no retained runtime code. The measured owner is generic, but the safe implementation boundary is larger than this ticket: the deep continuation WASM path must materialize non-`chooseNStep` continuation decisions selected by the completion policy, while preserving unsupported provenance and TypeScript parity.
 
-The non-overlapping follow-up owner is `tickets/174WASMDEEPPRV-017.md`. It should extend the generic deep continuation materialization contract beyond `chooseNStep` continuations or explicitly prove a smaller safe substrate before attempting a full Phase 4 gate rerun.
+The non-overlapping follow-up owner was `archive/tickets/174WASMDEEPPRV-017.md`. It extended the generic deep continuation materialization contract beyond `chooseNStep` continuations and proved route activation without a Phase 4 performance-gate pass.
 
 ## Artifact Classification
 
@@ -72,4 +72,4 @@ The non-overlapping follow-up owner is `tickets/174WASMDEEPPRV-017.md`. It shoul
 
 ## Next Gate
 
-A full 15-seed Phase 4 gate rerun is not justified by this ticket alone because no runtime improvement was retained. The next gate candidate should wait until `tickets/174WASMDEEPPRV-017.md` or a later owner records nonzero generic support for the current `production-deep-choosenstep-continuation.pickInnerDecision` residual without hiding unsupported/fallback counts.
+A full 15-seed Phase 4 gate rerun is not justified by this ticket alone because no runtime improvement was retained. The next gate candidate should wait until `archive/tickets/174WASMDEEPPRV-017.md` or a later owner records nonzero generic support for the current `production-deep-choosenstep-continuation.pickInnerDecision` residual without hiding unsupported/fallback counts.

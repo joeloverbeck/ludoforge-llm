@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-017: Phase 4f — Materialize non-chooseNStep deep continuation decisions
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic deep preview-drive continuation ABI/runtime and parity coverage
@@ -88,3 +88,83 @@ Rerun the bounded seed-1005 witness and record whether the `production-deep-choo
 1. `pnpm -F @ludoforge/engine build`
 2. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005 --timeout-ms 400000 --date <YYYY-MM-DD>-phase-4f-non-choosenstep-continuation --profile-buckets`
 3. `pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implementation completed on 2026-05-16.
+
+### Continuation inventory
+
+The Phase 4e final report/CSV showed the dominant `production-deep-choosenstep-continuation.pickInnerDecision` unsupported owner came from completion-policy selections of `chooseOne` continuations after a `chooseNStep` root continuation. `chooseOne` is safe to materialize generically because it can be represented by the existing published microturn identity, legal action value, and state-patch replay contract without FITL-specific identifiers.
+
+The retained runtime support is intentionally narrow:
+
+- `chooseOne` and `chooseNStep` are the only materialized deep continuation kinds.
+- Mismatched microturn/decision kinds fail closed.
+- Terminal-boundary/projected-state unsupported rows remain explicit.
+- No profile bounds, GameSpecDoc shape, default routing, or A/B wiring changed.
+
+### Retained code
+
+- `packages/engine/src/agents/policy-preview-inner-deepening.ts` now uses a generic deep-continuation lowerer for `chooseOne` and `chooseNStep`.
+- `packages/engine/src/agents/policy-wasm-preview-choosenstep-continuation.ts` adds `lowerPolicyWasmDeepContinuationDecision` and generic `chooseOne` lowering.
+- `packages/engine/src/agents/policy-wasm-preview-drive-state-patch-codec.ts` adds state-patch op `9` for `applyChooseOneDecision`.
+- `packages/engine/src/agents/policy-wasm-preview-drive-state-patch.ts` materializes `chooseOne` continuations by republishing and applying a legal published decision through the kernel.
+- `packages/engine-wasm/policy-vm/src/preview_drive_state_patch.rs` validates op `9`.
+- `packages/engine/test/integration/policy-wasm-preview-choosenstep-continuation-materialization.test.ts` proves WASM-returned `chooseOne` continuation patches materialize byte-equivalent projected state.
+
+### Bounded Phase 4f witness
+
+Final command:
+
+```bash
+node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005 --timeout-ms 400000 --date 2026-05-16-phase-4f-non-choosenstep-continuation-final --profile-buckets
+```
+
+Artifacts:
+
+- `reports/174-phase-4f-non-choosenstep-continuation.md`
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4f-non-choosenstep-continuation-final.md`
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4f-non-choosenstep-continuation-final.csv`
+
+| Metric | Phase 4e baseline | Phase 4f final | Delta |
+|---|---:|---:|---:|
+| Seed wall ms | 62297.98 | 63872.98 | +1575.00 |
+| Decisions | 790 | 790 | 0 |
+| WASM production preview-drive routes | 12 | 310 | +298 |
+| WASM production preview-drive unsupported | 519 | 221 | -298 |
+| WASM production preview-drive batches | 199 | 199 | 0 |
+| `train:chooseNStep:add` pickInnerDecision rows | 143 | 0 | -143 |
+| `train:chooseNStep:confirm` pickInnerDecision rows | 94 | 0 | -94 |
+
+The final report/CSV contain no `production-deep-choosenstep-continuation.pickInnerDecision` rows and no `deep preview-drive selected a non-chooseNStep continuation decision` rows. Route activation is proven by the production preview-drive route count increasing from `12` to `310`.
+
+This is not a performance-gate pass. The bounded wall time regressed by about 2.53%, while `train:chooseNStep:add` and `train:chooseNStep:confirm` total time also increased. The retained value is generic support coverage and unsupported-owner reduction. `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+
+### Source-size ledger
+
+Post-change line counts:
+
+- `packages/engine/src/agents/policy-wasm-preview-choosenstep-continuation.ts`: 187
+- `packages/engine/src/agents/policy-wasm-preview-drive-state-patch-codec.ts`: 202
+- `packages/engine/src/agents/policy-wasm-preview-drive-state-patch.ts`: 289
+- `packages/engine/src/agents/policy-preview-inner-deepening.ts`: 416
+- `packages/engine-wasm/policy-vm/src/preview_drive_state_patch.rs`: 96
+- `packages/engine/test/integration/policy-wasm-preview-choosenstep-continuation-materialization.test.ts`: 255
+
+No retained source file crossed the repository line-count cap. `packages/engine-wasm/policy-vm/src/preview_drive.rs` was not retained as an edited file.
+
+### Command ledger
+
+Final proof:
+
+- PASS: `pnpm -F @ludoforge/engine-wasm build`
+- PASS: `pnpm -F @ludoforge/engine build`
+- PASS: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-preview-choosenstep-continuation-abi.test.js dist/test/integration/policy-wasm-preview-choosenstep-continuation-materialization.test.js` (`5` tests, `2` suites)
+- PASS: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005 --timeout-ms 400000 --date 2026-05-16-phase-4f-non-choosenstep-continuation-final --profile-buckets`
+- PASS: `pnpm turbo test` (`5` tasks successful, `0` cached; engine summary `85/85` files passed)
+- PASS: `pnpm turbo lint` (`2` tasks successful, `1` cached)
+- PASS: `pnpm turbo typecheck` (`3` tasks successful, `1` cached)
+- PASS: `pnpm run check:ticket-deps` (2 active tickets, 2366 archived tickets)
+
+Terminal verdict: completed for generic non-`chooseNStep` continuation materialization and bounded route activation. Not a Phase 4 performance gate pass.

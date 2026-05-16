@@ -102,12 +102,14 @@ Implementation completed on 2026-05-16.
 
 Outcome amended: 2026-05-16 after post-ticket-review archival.
 
+Outcome amended: 2026-05-16 after Phase 4f archival.
+
 Landed scope:
 - Produced the bounded Phase 4e witness at `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4e-train-choosenstep-baseline.md` and `.csv`.
 - Produced `reports/174-phase-4e-train-choosenstep-residual.md`.
 - Classified the dominant `train:chooseNStep` residual as `agent-guided-completion` / `production-deep-choosenstep-continuation.pickInnerDecision`: the completion policy selects a non-`chooseNStep` continuation decision, while the current deep WASM continuation path only lowers `chooseNStep` continuations.
 - Retained no runtime code because the safe implementation owner is a broader generic continuation-ABI/runtime coverage slice, not a Phase 4e micro-optimization.
-- Created `tickets/174WASMDEEPPRV-017.md` as the next non-overlapping owner for generic non-`chooseNStep` deep continuation materialization.
+- Created `archive/tickets/174WASMDEEPPRV-017.md` as the next non-overlapping owner for generic non-`chooseNStep` deep continuation materialization; that owner has now completed route/support coverage without a Phase 4 performance-gate pass.
 - Updated `specs/174-wasm-preview-drive-coverage-extension.md` with the Phase 4e diagnostic result and Phase 4f ticket-list parity.
 
 Residual classification:
@@ -137,4 +139,4 @@ Late-edit proof validity:
 - No-invalidation: the ticket-dependency result transcription is exact command-result recording only and does not change graph edges or status.
 
 Archive status: archived by `$post-ticket-review` on 2026-05-16.
-Next workflow: `$implement-ticket tickets/174WASMDEEPPRV-017.md`.
+Next workflow: Phase 4f completed in `archive/tickets/174WASMDEEPPRV-017.md`; `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.

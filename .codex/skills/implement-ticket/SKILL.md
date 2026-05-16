@@ -49,16 +49,13 @@ Must-stop terminal blockers:
 
 Checkpoint tiers: always emit the compact core, then add only the triggered ledgers that apply to the ticket. The full list below is a routing checklist, not a requirement to paste every row into every ordinary ticket. For resumed closeout after compaction or interruption, the compact `resumed-closeout checkpoint` is sufficient until it exposes a boundary, deliverable, proof-lane, or graph/status change; then rebuild the fuller ticket-named deliverables ledger before editing.
 
-Mandatory compact core fields:
+Mandatory compact core fields use the five hard-stop concepts as the canonical shape. The longer labels below are aliases for the same checkpoint, not a second mandatory format:
 
-- `draft/untracked status`
-- `discrepancy class`
-- `authoritative boundary`
-- `reference guidance loaded`
-- `acceptance-proof lanes`
-- `ticket graph/status integrity lane`
-- `output contention / sequencing`
-- `terminal status plan`
+- `status/dirt`: maps to `draft/untracked status`, relevant dirty/untracked paths, and `discrepancy class`
+- `ticket deliverables`: maps to the ticket-named deliverables ledger, generated fallout, graph/status changes, and reference guidance loaded
+- `boundary`: maps to `authoritative boundary`, semantic corrections, deferred sibling/spec scope, and proof-noun alignment
+- `proof lanes`: maps to acceptance-proof lanes, ticket graph/status integrity lane, output contention/sequencing, cache classification, and open probes
+- `terminal-status plan`: maps to the intended terminal or nonterminal status and the conditions required before applying it
 
 Triggered checkpoint ledgers:
 
@@ -95,7 +92,7 @@ Triggered checkpoint ledgers:
   - A user-approved reset authorizes only the named mismatch class and scope. If later evidence changes a different named file, artifact, seed/corpus, witness noun, acceptance lane, terminal gate, or durable proof path, stop for a new `1-3-1` before terminal status unless the earlier approval explicitly covered that class.
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant; when naming a sibling as owner, record whether that sibling was opened and confirmed, or why the active spec is sufficient
-- `source file size risk`: optional but expected when a named source file is already near or over repo guidance and the ticket will add logic there, or when the ticket creates a substantial new source file likely to carry most of the implementation; record extract-now, defer-with-rationale, or stop-for-`1-3-1` before the risk becomes a final-proof surprise
+- `source file size risk`: optional but expected when a named source file is already near or over repo guidance and the ticket will add logic there, or when the ticket creates a substantial new source file likely to carry most of the implementation. Use `source-size risk check` for cheap under-cap sanity counts, and reserve `source-size hard-gate ledger` for crossed-cap, over-cap active growth, preexisting-oversize-plus-growth, or user-deferral cases. Record extract-now, defer-with-rationale, or stop-for-`1-3-1` before the risk becomes a final-proof surprise.
   - If a ticket explicitly names a source-size gate, include every named gate file in the closeout ledger even when the implementation does not edit it. Classify each path as `extracted`, `verified-no-edit`, `preexisting oversize with no active growth`, or `user-approved deferral`; do not leave a named gate surface implicit just because it is outside the final diff.
   - In repos with an 800-line cap, treat an existing named source file at `>=600` lines, or any source file expected to gain `>=100` lines, as near-cap for this checkpoint. Run a cheap size check before coding when practical and record whether the implementation will split now, stay local with a deferral rationale, or stop for `1-3-1`.
   - For profiling or investigation tickets, repeat this check when live evidence selects an unlisted source file as the implementation target. If the file may be near or over repo guidance, run a cheap size check before or immediately after choosing that file and record whether extraction is in scope.

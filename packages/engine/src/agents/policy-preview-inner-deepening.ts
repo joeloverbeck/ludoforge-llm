@@ -18,16 +18,14 @@ import {
 import {
   continueChooseNStepInnerPreviewDrive,
   syntheticDecisionTraceEntry,
-  type ChooseNStepDecision,
   type ChooseNStepInnerPreviewResult,
   type ChooseNStepInnerPreviewRun,
-  type ChooseNStepMicroturn,
   type RunChooseNStepInnerPreviewInput,
 } from './policy-preview-inner-choosenstep.js';
 import {
   pickInnerDecision,
 } from './policy-preview.js';
-import { lowerPolicyWasmChooseNStepContinuation } from './policy-wasm-preview-choosenstep-continuation.js';
+import { lowerPolicyWasmDeepContinuationDecision } from './policy-wasm-preview-choosenstep-continuation.js';
 import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
 import {
   getInitializedPolicyWasmRuntime,
@@ -266,19 +264,27 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     if (nextDecisionResult.usedFallback) {
       completionPolicyFallbackCount += 1;
     }
-    if (nextDecision === undefined || nextDecision.kind !== 'chooseNStep') {
+    if (nextDecision === undefined) {
       return unsupportedWasmDeepDrive(
         'agent-guided-completion',
         'production-deep-choosenstep-continuation.pickInnerDecision',
-        'deep preview-drive selected a non-chooseNStep continuation decision',
+        'deep preview-drive completion policy did not select a materializable continuation decision',
       );
     }
-    const chooseNStepMicroturn = microturn as ChooseNStepMicroturn;
-    const chooseNStepDecision = nextDecision as ChooseNStepDecision;
-    const lowered = lowerPolicyWasmChooseNStepContinuation({
+    if (
+      (microturn.kind !== 'chooseOne' && microturn.kind !== 'chooseNStep')
+      || (nextDecision.kind !== 'chooseOne' && nextDecision.kind !== 'chooseNStep')
+    ) {
+      return unsupportedWasmDeepDrive(
+        'agent-guided-completion',
+        'production-deep-choosenstep-continuation.pickInnerDecision',
+        'deep preview-drive selected an unsupported continuation decision kind',
+      );
+    }
+    const lowered = lowerPolicyWasmDeepContinuationDecision({
       state,
-      microturn: chooseNStepMicroturn,
-      decision: chooseNStepDecision,
+      microturn: microturn as Parameters<typeof lowerPolicyWasmDeepContinuationDecision>[0]['microturn'],
+      decision: nextDecision,
       initialValue: 0,
     });
     if (lowered.kind !== 'supported') {
@@ -286,8 +292,8 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     }
     const result = runtime.evaluatePreviewDriveBatch({
       profileId: 'production-deep-choosenstep-continuation',
-      originSeatId: chooseNStepMicroturn.seatId,
-      originTurnId: chooseNStepMicroturn.turnId,
+      originSeatId: microturn.seatId,
+      originTurnId: microturn.turnId,
       depthCap,
       candidates: [lowered.candidate],
       steps: [],
@@ -305,7 +311,7 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
       );
     }
     const traceEntry = syntheticDecisionTraceEntry(
-      chooseNStepDecision,
+      nextDecision,
       syntheticDecisions.length + 1,
       nextDecisionResult.usedFallback ? 'greedy' : completionPolicy,
     );

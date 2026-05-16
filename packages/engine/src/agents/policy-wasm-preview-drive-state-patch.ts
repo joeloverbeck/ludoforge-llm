@@ -204,6 +204,49 @@ export const materializePolicyWasmPreviewStatePatch = (
         }
         break;
       }
+      case 'applyChooseOneDecision': {
+        const microturn = publishMicroturn(input.def, structuralState, input.runtime);
+        if (
+          microturn.kind !== 'chooseOne'
+          || microturn.frameId !== op.frameId
+        ) {
+          throw new Error('Policy WASM state patch referenced a mismatched chooseOne continuation.');
+        }
+        const decisionContext = microturn.decisionContext as Extract<typeof microturn.decisionContext, { readonly kind: 'chooseOne' }>;
+        if (String(decisionContext.decisionKey) !== op.decisionKey) {
+          throw new Error('Policy WASM state patch referenced a mismatched chooseOne continuation.');
+        }
+        const decision = microturn.legalActions.find((candidate): candidate is Extract<Decision, { readonly kind: 'chooseOne' }> =>
+          candidate.kind === 'chooseOne'
+          && candidate.decisionKey === decisionContext.decisionKey
+          && isMoveParamScalar(candidate.value)
+          && scalarCode(candidate.value) === scalarCode(op.value));
+        if (decision === undefined) {
+          throw new Error('Policy WASM state patch referenced a non-legal chooseOne continuation decision.');
+        }
+        const applied = applyPublishedDecision(
+          input.def,
+          structuralState,
+          microturn,
+          decision,
+          { advanceToDecisionPoint: true },
+          input.runtime,
+        ).state;
+        structuralState = applied;
+        globalVars = applied.globalVars;
+        actionUsage = applied.actionUsage;
+        nextFrameId = applied.nextFrameId;
+        nextTurnId = applied.nextTurnId;
+        zoneVars = applied.zoneVars;
+        zones = buildPolicyWasmPreviewZoneValues(applied);
+        markerValues.clear();
+        for (const [zoneId, markers] of Object.entries(applied.markers)) {
+          for (const [marker, state] of Object.entries(markers)) {
+            markerValues.set(policyWasmPreviewMarkerKey(zoneId, marker), state);
+          }
+        }
+        break;
+      }
     }
   }
 
@@ -241,3 +284,6 @@ export const materializePolicyWasmPreviewStatePatch = (
     stateHash,
   };
 };
+
+const isMoveParamScalar = (value: unknown): value is MoveParamScalar =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';

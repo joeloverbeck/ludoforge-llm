@@ -64,6 +64,12 @@ pub fn validate_state_patch_op(
             }
             Ok(())
         }
+        9 => {
+            if word1 < 0 || word2 <= 0 || word3 <= 0 || word4 != 0 {
+                return Err(STATUS_BAD_OPERAND);
+            }
+            Ok(())
+        }
         _ => Err(STATUS_BAD_OPERAND),
     }
 }

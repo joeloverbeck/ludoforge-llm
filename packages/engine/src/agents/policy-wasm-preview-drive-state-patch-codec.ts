@@ -26,6 +26,12 @@ export type PolicyWasmPreviewStatePatchOp =
       readonly decisionKey: string;
       readonly command: PolicyWasmChooseNStepContinuationCommand;
       readonly value?: MoveParamScalar;
+    }
+  | {
+      readonly kind: 'applyChooseOneDecision';
+      readonly frameId: NonNullable<GameState['decisionStack']>[number]['frameId'];
+      readonly decisionKey: string;
+      readonly value: MoveParamScalar;
     };
 
 export interface PolicyWasmPreviewStatePatch {
@@ -127,6 +133,14 @@ const encodeStatePatchOp = (op: PolicyWasmPreviewStatePatchOp): readonly number[
         stablePayloadCode({ literal: op.decisionKey }),
         chooseNStepCommandCode(op.command),
         op.value === undefined ? 0 : stablePayloadCode({ literal: op.value }),
+      ];
+    case 'applyChooseOneDecision':
+      return [
+        9,
+        op.frameId,
+        stablePayloadCode({ literal: op.decisionKey }),
+        stablePayloadCode({ literal: op.value }),
+        0,
       ];
   }
 };

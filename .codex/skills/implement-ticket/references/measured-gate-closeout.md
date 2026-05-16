@@ -104,6 +104,34 @@ Use this terminal-status decision table:
 
 If qualitative language such as `significant`, `meaningful`, or `not tiny` appears in the ticket, spec, or reviewer note, classify the final same-command delta as `material`, `minor`, or `not demonstrated` before applying a red-plus-successor closeout.
 
+## Support/Coverage Completion With Diagnostic Regression
+
+Use this pattern when the ticket owns route support, materialization coverage,
+classification, or activation proof, and the same witness also reports a
+diagnostic wall-clock or aggregate metric that regresses but is not the ticket's
+terminal acceptance gate.
+
+Before terminal status, record a compact support/diagnostic ledger in the
+active ticket or report:
+
+- `owned support metric`: route count, unsupported-owner count, parity witness,
+  artifact coverage, or other support/coverage field the ticket actually owns
+- `diagnostic wall metric`: elapsed time, aggregate row total, broad-suite
+  timing, or other non-terminal metric that regressed or stayed red
+- `terminal allowed?`: why the owned support metric satisfies the ticket
+  without claiming a performance pass
+- `no gate/default flip`: explicit statement that the regressed diagnostic
+  metric does not justify a default flip, A/B deletion, or performance-gate pass
+- `residual owner`: successor ticket, active spec backlog/phase, same-ticket
+  continuation, or `none` with rationale when the ticket does not own the
+  residual metric
+
+If the ticket also states a qualitative performance bar such as `meaningful`,
+`measurably faster`, or `no regression`, this pattern is not enough by itself.
+Classify that bar as terminal acceptance, diagnostic evidence, or successor
+input first. Use `1-3-1` when that classification changes an explicit
+deliverable, witness noun, or terminal gate.
+
 ## Blocked Retained-Substrate Closeout
 
 Use this pattern when a measured-gate ticket lands correct reusable substrate, focused correctness proof is green, but the explicit measured gate remains red and the ticket does not have an explicit red-plus-successor completion contract.

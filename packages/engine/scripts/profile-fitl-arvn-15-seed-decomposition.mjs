@@ -18,6 +18,13 @@ import {
   renderCsv,
   renderMarkdown,
 } from './profile-fitl-arvn-15-seed-report-rendering.mjs';
+import {
+  addTimingBuckets,
+  deltaTimingBuckets,
+  timingDelta,
+  timingDeltaMs,
+  timingRows,
+} from './profile-fitl-arvn-15-seed-timing.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -40,6 +47,8 @@ const config = {
   childOutput: flagValue('child-output', undefined),
   child: flagBoolean('child'),
   profileBuckets: flagBoolean('profile-buckets'),
+  noWasm: flagBoolean('no-wasm'),
+  wasmTimingProfile: process.env.POLICY_WASM_TIMING_PROFILE === '1',
 };
 
 if (config.child) {
@@ -79,7 +88,7 @@ async function runParent() {
   }
 
   const rollup = buildRollup(perSeed, decisions);
-  const baseName = `fitl-arvn-15-seed-decomposition-${config.date}`;
+  const baseName = `fitl-arvn-15-seed-decomposition-${config.date}${config.noWasm && !config.date.includes('no-wasm') ? '-no-wasm' : ''}`;
   const csvPath = join(config.outputDir, `${baseName}.csv`);
   const mdPath = join(config.outputDir, `${baseName}.md`);
   writeFileSync(csvPath, renderCsv(decisions), 'utf8');
@@ -111,6 +120,9 @@ function runSeedChild(seed) {
     ];
     if (config.profileBuckets) {
       childArgs.push('--profile-buckets');
+    }
+    if (config.noWasm) {
+      childArgs.push('--no-wasm');
     }
     const child = spawn(process.execPath, childArgs, {
       cwd: REPO_ROOT,
@@ -244,7 +256,9 @@ async function runSeedInProcess(seed, maxTurns) {
   ]);
   const staticRebuildCounters = await createStaticRebuildCounterAccess(DIST_ROOT);
 
-  initializePolicyWasmRuntimeSync({ wasmPath: defaultPolicyWasmPath() });
+  if (!config.noWasm) {
+    initializePolicyWasmRuntimeSync({ wasmPath: defaultPolicyWasmPath() });
+  }
   const def = assertValidatedGameDef(
     runGameSpecStagesFromBundle(
       loadGameSpecBundleFromEntrypoint(GAME_SPEC_ENTRYPOINT),
@@ -357,6 +371,11 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
             before.wasmProductionPreviewDriveUnsupportedReasonCounts,
           ),
           wasmProductionPreviewDriveBatchCount: delta(after, before, 'wasmProductionPreviewDriveBatchCount'),
+          marshalingMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'marshalingNs'),
+          executionMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'executionNs'),
+          deserializationMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'deserializationNs'),
+          wasmCallCount: timingDelta(after.wasmTimingBuckets, before.wasmTimingBuckets, 'callCount'),
+          wasmTimingBuckets: deltaTimingBuckets(after.wasmTimingBuckets, before.wasmTimingBuckets),
           tokenStateIndexBuildCount: delta(after, before, 'tokenStateIndexBuildCount'),
           persistentTokenStateIndexCacheHitCount: delta(after, before, 'persistentTokenStateIndexCacheHitCount'),
           persistentTokenStateIndexCacheMissCount: delta(after, before, 'persistentTokenStateIndexCacheMissCount'),
@@ -379,6 +398,7 @@ function resetCounters(internals) {
   internals.tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   internals.zobristInternals.resetZobristKeyCounters();
   internals.policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  internals.policyWasmRuntimeInternals.resetPolicyWasmTimingBuckets();
   internals.policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   internals.policyEncodedStateCacheInternals.resetCounts();
 }
@@ -410,6 +430,8 @@ function readCounters(internals) {
       internals.policyWasmRuntimeInternals.getProductionPreviewDriveUnsupportedReasonCounts(),
     wasmProductionPreviewDriveBatchCount:
       internals.policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
+    wasmTimingBuckets:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmTimingBuckets(),
     policyEncodedStateObjectHitCount:
       internals.policyEncodedStateCacheInternals.getObjectHitCount(),
     policyEncodedStateHashHitCount:
@@ -462,7 +484,9 @@ function buildRollup(perSeed, decisions) {
 
   return {
     date: config.date,
-    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}${config.profileBuckets ? ' --profile-buckets' : ''}`,
+    command: `${config.wasmTimingProfile ? 'POLICY_WASM_TIMING_PROFILE=1 ' : ''}node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}${config.profileBuckets ? ' --profile-buckets' : ''}${config.noWasm ? ' --no-wasm' : ''}`,
+    noWasm: config.noWasm,
+    wasmTimingProfile: config.wasmTimingProfile,
     maxTurns: config.maxTurns,
     timeoutMs: config.timeoutMs,
     seedCount: config.seeds.length,
@@ -499,6 +523,11 @@ function aggregateRows(rows, keyFn) {
       wasmProductionPreviewDriveUnsupportedCount: 0,
       wasmProductionPreviewDriveUnsupportedReasons: new Map(),
       wasmProductionPreviewDriveBatchCount: 0,
+      marshalingMs: 0,
+      executionMs: 0,
+      deserializationMs: 0,
+      wasmCallCount: 0,
+      wasmTimingBuckets: new Map(),
       tokenStateIndexBuildCount: 0,
       staticRebuildCount: 0,
       hotPathBuckets: new Map(),
@@ -516,6 +545,11 @@ function aggregateRows(rows, keyFn) {
     bucket.wasmProductionPreviewDriveUnsupportedCount += row.wasmProductionPreviewDriveUnsupportedCount;
     addReasonCounts(bucket.wasmProductionPreviewDriveUnsupportedReasons, row.wasmProductionPreviewDriveUnsupportedReasons);
     bucket.wasmProductionPreviewDriveBatchCount += row.wasmProductionPreviewDriveBatchCount;
+    bucket.marshalingMs += row.marshalingMs;
+    bucket.executionMs += row.executionMs;
+    bucket.deserializationMs += row.deserializationMs;
+    bucket.wasmCallCount += row.wasmCallCount;
+    addTimingBuckets(bucket.wasmTimingBuckets, row.wasmTimingBuckets);
     bucket.tokenStateIndexBuildCount += row.tokenStateIndexBuildCount;
     bucket.staticRebuildCount += row.staticRebuildCount;
     for (const hotPathBucket of row.hotPathBuckets ?? []) {
@@ -546,6 +580,11 @@ function aggregateRows(rows, keyFn) {
       wasmProductionPreviewDriveUnsupportedCount: bucket.wasmProductionPreviewDriveUnsupportedCount,
       wasmProductionPreviewDriveUnsupportedReasons: reasonRows(bucket.wasmProductionPreviewDriveUnsupportedReasons),
       wasmProductionPreviewDriveBatchCount: bucket.wasmProductionPreviewDriveBatchCount,
+      marshalingMs: round4(bucket.marshalingMs),
+      executionMs: round4(bucket.executionMs),
+      deserializationMs: round4(bucket.deserializationMs),
+      wasmCallCount: bucket.wasmCallCount,
+      wasmTimingBuckets: timingRows(bucket.wasmTimingBuckets),
       tokenStateIndexBuildCount: bucket.tokenStateIndexBuildCount,
       staticRebuildCount: bucket.staticRebuildCount,
       hotPathBuckets: [...bucket.hotPathBuckets.entries()]

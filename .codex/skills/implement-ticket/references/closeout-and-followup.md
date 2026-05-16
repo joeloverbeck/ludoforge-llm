@@ -36,6 +36,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - when a source-size ledger was drafted earlier, reconstructed after compaction, or transcribed from a handoff summary, rerun the cheap line-count probe for every ledger path immediately before the terminal ticket/status patch and reconcile the durable ledger with those exact counts
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - reconcile date-stamped sections such as reassessment headings, approval notes, outcome dates, and verification dates against the current session date and any explicit user-provided dates. If a date is intentionally historical, label it as historical evidence rather than leaving it ambiguous.
+- for generated reports, CSVs, traces, benchmark artifacts, or other durable evidence outputs, reconcile the embedded reproducer command and artifact metadata against the command that actually produced the file. Include env vars, cwd assumptions, feature flags, mode labels, seed/corpus labels, and output-path/date labels when they affect the artifact or metric.
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - hard source-size gate: if any touched source file ends over the repo cap (800 lines in this repo), crosses the cap because of active growth, or remains preexisting-oversize with active growth, do not set terminal status until the active ticket or final closeout contains the exact source-size ledger and one of these is true: narrow extraction is done, user-approved deferral exists, or a `1-3-1` decision resolves why extraction would widen the ticket
 - exact source-size ledger means the durable ticket/final closeout names every field, not just current counts: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
@@ -511,7 +512,8 @@ completion is allowed only when all of these are true:
    boundary through `1-3-1`.
 2. The checked-in report or active ticket includes the exact command,
    reproducibility identity, decisive metrics, unsupported/fallback or owner
-   classification, and artifact paths.
+   classification, and artifact paths. If env vars, cwd, flags, or output labels
+   affect the measured artifact, they must appear in the durable reproducer text.
 3. Any successor is concrete, dependency-valid, and non-overlapping using the
    diagnostic successor ledger above.
 4. The active ticket records `no retained runtime/source diff` and classifies
@@ -580,3 +582,5 @@ Evidence-ticket compact closeout pattern when the deliverable is primarily a scr
 - `measured result`: `<top-line quantitative or categorical outcome>`
 - `mapping gaps`: `<top-N entries or observations not yet covered by the starter taxonomy>` or `none`
 - `verification set`: `<commands run directly in final proof order>`
+
+For profiler/report tickets, use a cheap output smoke before the expensive or decisive run when practical. Run the smallest representative command that writes the same report/CSV shape, then inspect at least the headers, mode labels, embedded reproducer command, env-sensitive flags, and filename/output-path shape. Treat a smoke that only proves process exit as insufficient when the ticket-owned deliverable is the artifact content.

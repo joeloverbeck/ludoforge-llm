@@ -19,6 +19,11 @@ export function renderCsv(rows) {
     'wasmProductionPreviewDriveUnsupportedCount',
     'wasmProductionPreviewDriveUnsupportedReasons',
     'wasmProductionPreviewDriveBatchCount',
+    'marshalingMs',
+    'executionMs',
+    'deserializationMs',
+    'wasmCallCount',
+    'wasmTimingBuckets',
     'tokenStateIndexBuildCount',
     'persistentTokenStateIndexCacheHitCount',
     'persistentTokenStateIndexCacheMissCount',
@@ -58,9 +63,12 @@ export function renderMarkdown(rollup, options) {
     `- Hot class with slow:fast ratio >3x: ${rollup.acceptance.hotAxisOver3x ? 'yes' : 'no'}`,
     `- Per-seed timeout: ${rollup.timeoutMs} ms`,
     `- Hot-path buckets: ${profileBuckets ? 'enabled' : 'disabled'}`,
+    `- WASM mode: ${rollup.noWasm ? 'disabled via --no-wasm' : 'enabled'}`,
+    `- WASM timing profile: ${rollup.wasmTimingProfile ? 'enabled' : 'disabled'}`,
     `- WASM production preview-drive route count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveRouteCount')}`,
     `- WASM production preview-drive unsupported count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveUnsupportedCount')}`,
     `- WASM production preview-drive batch count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveBatchCount')}`,
+    `- WASM timing call count: ${sumAggregateField(rollup.perDecisionClass, 'wasmCallCount')}`,
     '',
     '## Per-Seed Wall Time',
     '',
@@ -78,8 +86,8 @@ export function renderMarkdown(rollup, options) {
     '',
     '## Per-Microturn-Class Rollup',
     '',
-    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | Token index builds | Static rebuilds |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|',
+    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | WASM timing calls | Marshaling ms | Execution ms | Deserialization ms | Token index builds | Static rebuilds |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|',
     ...rollup.perDecisionClass.map((row) => renderAggregateRow(row.key, row)),
     '',
     '## Top Hot Axes In Slow-Tier Seeds',
@@ -99,6 +107,7 @@ export function renderMarkdown(rollup, options) {
       `${formatNumber(row.maxMs)} |`,
     ].join(' | ')),
     ...(profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
+    ...renderWasmTimingSection(rollup.perDecisionClass),
     ...renderUnsupportedReasonSection(rollup.perDecisionClass),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
@@ -121,6 +130,7 @@ export function renderMarkdown(rollup, options) {
     '',
     '- `elapsedMs` is measured around the per-decision `PolicyAgent.chooseDecision` call. It excludes simulator apply/delta work and report rendering.',
     '- Child processes enforce the per-seed timeout. Each child loads the built engine and production FITL GameSpecDoc, using the repo GameDef cache when available.',
+    '- WASM timing buckets are emitted only when `POLICY_WASM_TIMING_PROFILE=1` is set before the child process imports the WASM runtime module.',
     '- The script does not modify engine source or production profile data.',
     '',
   ];
@@ -145,9 +155,50 @@ function renderAggregateRow(label, row) {
     row.wasmProductionPreviewDriveUnsupportedCount,
     formatReasonCounts(row.wasmProductionPreviewDriveUnsupportedReasons),
     row.wasmProductionPreviewDriveBatchCount,
+    row.wasmCallCount,
+    formatNumber(row.marshalingMs),
+    formatNumber(row.executionMs),
+    formatNumber(row.deserializationMs),
     row.tokenStateIndexBuildCount,
     `${row.staticRebuildCount} |`,
   ].join(' | ');
+}
+
+function renderWasmTimingSection(rows) {
+  const timingRows = rows
+    .flatMap((row) => (row.wasmTimingBuckets ?? []).map((bucket) => ({
+      microturnClass: row.key,
+      ...bucket,
+    })))
+    .filter((row) => row.callCount > 0)
+    .sort((left, right) =>
+      right.callCount - left.callCount
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.routeClass, right.routeClass),
+    );
+  if (timingRows.length === 0) {
+    return [
+      '',
+      '## WASM Timing Buckets',
+      '',
+      '_No WASM timing buckets recorded._',
+    ];
+  }
+  return [
+    '',
+    '## WASM Timing Buckets',
+    '',
+    '| Microturn class | Route class | Calls | Marshaling ms | Execution ms | Deserialization ms |',
+    '|---|---|---:|---:|---:|---:|',
+    ...timingRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.routeClass,
+      row.callCount,
+      formatNumber(row.marshalingMs),
+      formatNumber(row.executionMs),
+      `${formatNumber(row.deserializationMs)} |`,
+    ].join(' | ')),
+  ];
 }
 
 function renderUnsupportedReasonSection(rows) {

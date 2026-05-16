@@ -163,3 +163,17 @@ Reference reports (informing the strategic context):
 - Phase 0 feature-flag mechanism — env var, build-time flag, or runtime API. Default: env var (`POLICY_WASM_TIMING_PROFILE=1`) for consistency with existing profiler conventions.
 - Whether Phase 5 should also instrument bytecode-input-cache write cost separately. Default: yes, since the cache write is part of the serialization-cost path.
 - Whether to formally pre-register a "no significant finding" outcome — i.e., what does Phase 6 commit to if the per-hypothesis verdicts are all "no dominant cause"? Default: Keep-as-correctness-only with a named acceptance ticket recording the perf-neutrality finding.
+
+## 12. Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-17:
+
+- [`archive/tickets/176POLWASMPERF-001.md`](../archive/tickets/176POLWASMPERF-001.md) — Phase 0 — Baseline reproduction + feature-flagged WASM timing instrumentation (covers §5 Phase 0)
+- [`tickets/176POLWASMPERF-002.md`](../tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
+- [`tickets/176POLWASMPERF-003.md`](../tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
+- [`tickets/176POLWASMPERF-004.md`](../tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
+- [`tickets/176POLWASMPERF-005.md`](../tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
+- [`tickets/176POLWASMPERF-006.md`](../tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
+- [`tickets/176POLWASMPERF-007.md`](../tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
+
+Note: namespace `176POLWASMPERF` was chosen at decomposition time, superseding the spec's proposed `176WASMPERFYLD`.

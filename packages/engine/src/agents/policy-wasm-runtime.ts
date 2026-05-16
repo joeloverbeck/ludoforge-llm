@@ -1,9 +1,7 @@
 import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
-import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
-import type { PolicyWasmBytecodeInputCache, PolicyWasmBytecodeStateWordsCache } from '../kernel/index.js';
-import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, GameDef } from '../kernel/index.js';
 import {
   getCachedScoreRowBytecode,
 } from './policy-wasm-score-bytecode-cache.js';
@@ -21,7 +19,6 @@ import {
   policyWasmPreviewDriveCompletionRecordWords,
   policyWasmPreviewDriveDecisionStackFrameWords,
   policyWasmPreviewDriveStatePatchOpWords,
-  type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
 } from './policy-wasm-preview-drive.js';
 import {
@@ -31,11 +28,47 @@ import {
 import {
   productionPolicyWasmCounterInternals,
 } from './policy-wasm-runtime-counters.js';
+import {
+  beginPolicyWasmTiming,
+  isPolicyWasmTimingProfileEnabled,
+  resetPolicyWasmTimingBuckets,
+  snapshotPolicyWasmTimingBuckets,
+} from './policy-wasm-timing-profile.js';
 import type { PolicyScheduleFallbackFired, PolicyScheduleFallbackKind } from './policy-evaluation-core.js';
 import {
   encodeWasmPhaseScheduleValue,
   resolveWasmScheduleDistanceRef,
 } from './policy-wasm-phase-schedule-encoding.js';
+import type {
+  PolicyWasmBatchCandidate,
+  PolicyWasmBatchPrecomputedInput,
+  PolicyWasmBytecodeContext,
+  PolicyWasmMoveConsideration,
+  PolicyWasmPrecomputedAggregate,
+  PolicyWasmPrecomputedCandidateFeature,
+  PolicyWasmPrecomputedDynamicCandidateFeature,
+  PolicyWasmPrecomputedPreviewCandidateFeature,
+  PolicyWasmPrecomputedStateFeature,
+  PolicyWasmPreviewOutcome,
+  PolicyWasmRuntime,
+  PolicyWasmScoreRowsResult,
+} from './policy-wasm-runtime-types.js';
+
+export type {
+  PolicyWasmBatchCandidate,
+  PolicyWasmBytecodeContext,
+  PolicyWasmMoveConsideration,
+  PolicyWasmPrecomputedAggregate,
+  PolicyWasmPrecomputedCandidateFeature,
+  PolicyWasmPrecomputedDynamicCandidateFeature,
+  PolicyWasmPrecomputedPreviewCandidateFeature,
+  PolicyWasmPrecomputedStateFeature,
+  PolicyWasmPreviewOutcome,
+  PolicyWasmRuntime,
+  PolicyWasmRuntimeOptions,
+  PolicyWasmScoreRow,
+  PolicyWasmScoreRowsResult,
+} from './policy-wasm-runtime-types.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
 export const POLICY_WASM_ABI_VERSION = 16;
@@ -127,111 +160,7 @@ interface PolicyWasmExports {
   ) => number;
 }
 
-export interface PolicyWasmRuntimeOptions {
-  readonly wasmPath?: string;
-  readonly wasmBytes?: Uint8Array | ArrayBuffer;
-}
-
-export interface PolicyWasmBytecodeContext {
-  readonly def: GameDef;
-  readonly layout: EncodedStateLayout;
-  readonly state: GameState;
-  readonly playerId?: number;
-  readonly expectedLayoutId?: number;
-  readonly bytecodeInputCache?: PolicyWasmBytecodeInputCache;
-  readonly bytecodeStateWordsCache?: PolicyWasmBytecodeStateWordsCache;
-  readonly gameDefRuntime?: GameDefRuntime;
-}
-
-export interface PolicyWasmBatchCandidate {
-  readonly actionId: string;
-  readonly stableMoveKey: string;
-  readonly params?: Readonly<Record<string, unknown>>;
-  readonly tags?: readonly string[];
-}
-
-export interface PolicyWasmScoreRow {
-  readonly stableMoveKey: string;
-  readonly score: number;
-  readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
-}
-
-export interface PolicyWasmMoveConsideration {
-  readonly id: string;
-  readonly consideration: CompiledPolicyConsideration;
-}
-
-export interface PolicyWasmPrecomputedCandidateFeature {
-  readonly id: string;
-  readonly values: readonly PolicyValue[];
-}
-
-export type PolicyWasmPreviewOutcome = 'ready' | 'stochastic' | 'gated' | 'failed' | 'unresolved';
-
-export interface PolicyWasmPrecomputedPreviewCandidateFeature {
-  readonly id: string;
-  readonly outcomes: readonly PolicyWasmPreviewOutcome[];
-  readonly values: readonly PolicyValue[];
-}
-
-export interface PolicyWasmPrecomputedDynamicCandidateFeature {
-  readonly code: number;
-  readonly values: readonly PolicyValue[];
-}
-
-export interface PolicyWasmPrecomputedAggregate {
-  readonly id: string;
-  readonly value: PolicyValue;
-}
-
-export interface PolicyWasmPrecomputedStateFeature {
-  readonly id: string;
-  readonly value: PolicyValue;
-}
-
-export type PolicyWasmScoreRowsResult =
-  | {
-      readonly kind: 'supported';
-      readonly rows: readonly PolicyWasmScoreRow[];
-    }
-  | {
-      readonly kind: 'unsupported';
-      readonly reason: string;
-    };
-
-export interface PolicyWasmRuntime {
-  readonly wasmPath?: string;
-  evaluateSmokeAdd(left: number, right: number, layoutId?: number): number;
-  evaluatePolicyBytecode(
-    bytecode: PolicyBytecode,
-    encoded: EncodedState,
-    context: PolicyWasmBytecodeContext,
-  ): PolicyValue;
-  evaluatePolicyBytecodeBatch(
-    bytecode: PolicyBytecode,
-    encoded: EncodedState,
-    context: PolicyWasmBytecodeContext,
-    candidates: readonly PolicyWasmBatchCandidate[],
-    precomputed?: {
-      readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
-      readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
-      readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
-      readonly dynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
-      readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
-    },
-  ): readonly PolicyValue[];
-  evaluatePreviewDriveBatch(input: PolicyWasmPreviewDriveBatchInput): PolicyWasmPreviewDriveResult;
-}
-
 let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
-
-type PolicyWasmBatchPrecomputedInput = {
-  readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
-  readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
-  readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
-  readonly dynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
-  readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
-};
 
 const assertFiniteI32 = (label: string, value: number): void => {
   if (!Number.isInteger(value) || value < -0x8000_0000 || value > 0x7fff_ffff) {
@@ -1155,24 +1084,31 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecode: (bytecode, encoded, context): PolicyValue => {
+      const timing = beginPolicyWasmTiming(context.timingRouteClass);
       const input = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagPtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
       const outValuePtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
+        timing?.finishMarshaling();
+        timing?.startExecution();
         const status = wasm.ludoforge_policy_vm_evaluate_bytecode(
           inputPtr,
           input.byteLength,
           outTagPtr,
           outValuePtr,
         );
+        timing?.finishExecution();
         if (status !== 0) {
           // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM bytecode evaluation failed with status ${status}.`);
         }
+        timing?.startDeserialization();
         const view = new DataView(wasm.memory.buffer);
-        return decodePolicyValue(view.getInt32(outTagPtr, true), view.getInt32(outValuePtr, true));
+        const value = decodePolicyValue(view.getInt32(outTagPtr, true), view.getInt32(outValuePtr, true));
+        timing?.record();
+        return value;
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
         wasm.ludoforge_policy_vm_dealloc(outTagPtr, I32_BYTES);
@@ -1180,6 +1116,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates, precomputed): readonly PolicyValue[] => {
+      const timing = beginPolicyWasmTiming(context.timingRouteClass);
       const program = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const input = encodeBatchInput(program, context, candidates, precomputed);
       const outputBytes = candidates.length * I32_BYTES;
@@ -1188,6 +1125,8 @@ export const createPolicyWasmRuntime = (
       const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
+        timing?.finishMarshaling();
+        timing?.startExecution();
         const status = wasm.ludoforge_policy_vm_evaluate_bytecode_batch(
           inputPtr,
           input.byteLength,
@@ -1195,15 +1134,19 @@ export const createPolicyWasmRuntime = (
           outValuesPtr,
           candidates.length,
         );
+        timing?.finishExecution();
         if (status !== 0) {
           // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM bytecode batch evaluation failed with status ${status}.`);
         }
+        timing?.startDeserialization();
         const view = new DataView(wasm.memory.buffer);
-        return candidates.map((_candidate, index) => decodePolicyValue(
+        const values = candidates.map((_candidate, index) => decodePolicyValue(
           view.getInt32(outTagsPtr + (index * I32_BYTES), true),
           view.getInt32(outValuesPtr + (index * I32_BYTES), true),
         ));
+        timing?.record();
+        return values;
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
         wasm.ludoforge_policy_vm_dealloc(outTagsPtr, outputBytes);
@@ -1211,6 +1154,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePreviewDriveBatch: (previewInput): PolicyWasmPreviewDriveResult => {
+      const timing = beginPolicyWasmTiming('productionPreviewDrive');
       const input = encodePolicyWasmPreviewDriveInput(
         previewInput,
         POLICY_WASM_ABI_MAGIC,
@@ -1260,6 +1204,8 @@ export const createPolicyWasmRuntime = (
       const outStatePatchOpsPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, statePatchOpBytes));
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
+        timing?.finishMarshaling();
+        timing?.startExecution();
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
           inputPtr,
           input.byteLength,
@@ -1285,23 +1231,27 @@ export const createPolicyWasmRuntime = (
           previewStateSlotCount,
           previewInput.candidates.length,
         );
+        timing?.finishExecution();
+        timing?.startDeserialization();
         if (status === -14) {
           const unsupportedDriveClass = firstUnsupportedPreviewDriveClass(previewInput) ?? 'unknown';
           const unsupportedOwner = firstUnsupportedPreviewDriveOwner(previewInput);
-          return {
+          const result = {
             kind: 'unsupported',
             profileId: previewInput.profileId,
             candidateCount: previewInput.candidates.length,
             unsupportedDriveClass,
             ...(unsupportedOwner === undefined ? {} : { unsupportedOwner }),
             reason: `unsupported preview-drive class ${unsupportedDriveClass}`,
-          };
+          } satisfies PolicyWasmPreviewDriveResult;
+          timing?.record();
+          return result;
         }
         if (status !== 0) {
           // @policy-wasm-throw: contract-violation
           throw new Error(`Policy WASM preview-drive batch failed with status ${status}.`);
         }
-        return {
+        const result = {
           kind: 'supported',
           profileId: previewInput.profileId,
           rows: decodePolicyWasmPreviewDriveRows(
@@ -1325,7 +1275,9 @@ export const createPolicyWasmRuntime = (
             completionRecordMaxCount,
             statePatchMaxOpCount,
           ),
-        };
+        } satisfies PolicyWasmPreviewDriveResult;
+        timing?.record();
+        return result;
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
         wasm.ludoforge_policy_vm_dealloc(outOutcomesPtr, outputBytes);
@@ -1365,6 +1317,9 @@ export const __internal_for_tests = {
     productionPolicyWasmRuntime = runtime;
   },
   ...productionPolicyWasmCounterInternals,
+  isPolicyWasmTimingProfileEnabled,
+  resetPolicyWasmTimingBuckets,
+  snapshotPolicyWasmTimingBuckets,
   encodePolicyBytecodeInputForTest(
     bytecode: PolicyBytecode,
     encoded: EncodedState,

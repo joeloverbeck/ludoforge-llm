@@ -350,16 +350,36 @@ export function refreshCachedTokenStateIndexEntries(
         return;
       }
       scannedZoneIds.push(zoneId);
-      const tokens = state.zones[zoneId];
-      if (tokens === undefined) {
-        return;
+      const zoneOccurrences = getZoneOccurrences(zoneId).get(tokenId);
+      if (zoneOccurrences !== undefined) {
+        occurrences.push(...zoneOccurrences);
       }
-      for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
-        const token = tokens[tokenIndex];
-        if (token !== undefined && String(token.id) === tokenId) {
-          occurrences.push({ zoneId, index: tokenIndex, token });
+    };
+    const zoneOccurrenceCache = new Map<string, ReadonlyMap<string, readonly TokenOccurrence[]>>();
+    const getZoneOccurrences = (zoneId: string): ReadonlyMap<string, readonly TokenOccurrence[]> => {
+      const cachedOccurrences = zoneOccurrenceCache.get(zoneId);
+      if (cachedOccurrences !== undefined) {
+        return cachedOccurrences;
+      }
+      const occurrencesByToken = new Map<string, TokenOccurrence[]>();
+      const tokens = state.zones[zoneId];
+      if (tokens !== undefined) {
+        for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+          const token = tokens[tokenIndex];
+          if (token === undefined) {
+            continue;
+          }
+          const tokenId = String(token.id);
+          const occurrences = occurrencesByToken.get(tokenId);
+          if (occurrences !== undefined) {
+            occurrences.push({ zoneId, index: tokenIndex, token });
+          } else {
+            occurrencesByToken.set(tokenId, [{ zoneId, index: tokenIndex, token }]);
+          }
         }
       }
+      zoneOccurrenceCache.set(zoneId, occurrencesByToken);
+      return occurrencesByToken;
     };
 
     for (const tokenId of affectedTokenIds) {

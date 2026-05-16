@@ -36,6 +36,38 @@ artifact before final transcription. Do not let a later broad-suite sample
 silently replace the metric artifact that the report/ticket cites as the
 decisive gate.
 
+### Measured Profile Report Checklist
+
+When a profiling ticket needs a checked-in measured-profile report, include the
+rows that let the next owner distinguish the ticket-owned improvement from
+residual cost or fallback masking:
+
+- `baseline`: exact command, artifact path, wall-clock or owned metric, and
+  decisive comparison fields
+- `final`: same command shape, artifact path, wall-clock or owned metric, and
+  decisive comparison fields
+- `delta`: absolute and percent change, with `material`, `minor`, `red`, or
+  ticket-family verdict language
+- `activation`: route counts, hit/reuse counters, compile/cache counters, or
+  other proof that the owned fast path actually ran
+- `fallback/unsupported`: unsupported, fallback, rejected-default, or
+  no-signal counts before and after; state when they are intentionally
+  unchanged
+- `hot buckets`: top owned buckets before/after, including count and elapsed
+  fields when available
+- `residual owner`: successor ticket, active spec phase, same-ticket
+  continuation, or `none` with rationale
+- `artifacts`: checked-in report, raw profiler files, CSV/markdown summaries,
+  ignored ephemeral paths, and which artifact is decisive
+- `default/status verdict`: whether the result allows a default flip, keeps a
+  red/blocked gate, completes a bounded slice, or only supplies diagnostic
+  evidence
+
+For WASM, VM, cache, bytecode, or other accelerator profile work, keep route
+activation separate from correctness parity. A passing profile command is not
+enough if route counts, unsupported/fallback rows, or bucket ownership would let
+fallback success hide an inactive fast path.
+
 ### Measured Engine Refactor Terminal Checklist
 
 For a measured engine/kernel refactor that produces a checked-in report,
@@ -103,6 +135,34 @@ Use this terminal-status decision table:
 - `user-approved close-enough red gate`: record an acceptance exception, not a passing gate; terminal status depends on the ticket family's explicit exception wording.
 
 If qualitative language such as `significant`, `meaningful`, or `not tiny` appears in the ticket, spec, or reviewer note, classify the final same-command delta as `material`, `minor`, or `not demonstrated` before applying a red-plus-successor closeout.
+
+## Support/Coverage Completion With Diagnostic Regression
+
+Use this pattern when the ticket owns route support, materialization coverage,
+classification, or activation proof, and the same witness also reports a
+diagnostic wall-clock or aggregate metric that regresses but is not the ticket's
+terminal acceptance gate.
+
+Before terminal status, record a compact support/diagnostic ledger in the
+active ticket or report:
+
+- `owned support metric`: route count, unsupported-owner count, parity witness,
+  artifact coverage, or other support/coverage field the ticket actually owns
+- `diagnostic wall metric`: elapsed time, aggregate row total, broad-suite
+  timing, or other non-terminal metric that regressed or stayed red
+- `terminal allowed?`: why the owned support metric satisfies the ticket
+  without claiming a performance pass
+- `no gate/default flip`: explicit statement that the regressed diagnostic
+  metric does not justify a default flip, A/B deletion, or performance-gate pass
+- `residual owner`: successor ticket, active spec backlog/phase, same-ticket
+  continuation, or `none` with rationale when the ticket does not own the
+  residual metric
+
+If the ticket also states a qualitative performance bar such as `meaningful`,
+`measurably faster`, or `no regression`, this pattern is not enough by itself.
+Classify that bar as terminal acceptance, diagnostic evidence, or successor
+input first. Use `1-3-1` when that classification changes an explicit
+deliverable, witness noun, or terminal gate.
 
 ## Blocked Retained-Substrate Closeout
 

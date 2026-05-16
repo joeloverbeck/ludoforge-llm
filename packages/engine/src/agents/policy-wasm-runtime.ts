@@ -6,8 +6,6 @@ import type { PolicyWasmBytecodeInputCache, PolicyWasmBytecodeStateWordsCache } 
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   getCachedScoreRowBytecode,
-  getScoreRowBytecodeCompileCount,
-  resetScoreRowBytecodeCompileCount,
 } from './policy-wasm-score-bytecode-cache.js';
 import {
   cachedLayoutIdentity,
@@ -19,15 +17,20 @@ import {
   encodePolicyWasmPreviewDriveInput,
   firstUnsupportedPreviewDriveClass,
   firstUnsupportedPreviewDriveOwner,
+  policyWasmPreviewDriveCandidateGroupMetadataWords,
+  policyWasmPreviewDriveCompletionRecordWords,
+  policyWasmPreviewDriveDecisionStackFrameWords,
+  policyWasmPreviewDriveStatePatchOpWords,
   type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
 } from './policy-wasm-preview-drive.js';
 import {
   getCachedPolicyWasmBytecodeInput,
-  getPolicyWasmBytecodeInputCacheCounters,
   policyWasmBytecodeInputCacheKey,
-  resetPolicyWasmBytecodeInputCacheCounters,
 } from './policy-wasm-bytecode-input-cache.js';
+import {
+  productionPolicyWasmCounterInternals,
+} from './policy-wasm-runtime-counters.js';
 import type { PolicyScheduleFallbackFired, PolicyScheduleFallbackKind } from './policy-evaluation-core.js';
 import {
   encodeWasmPhaseScheduleValue,
@@ -35,7 +38,7 @@ import {
 } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 10;
+export const POLICY_WASM_ABI_VERSION = 16;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -104,6 +107,21 @@ interface PolicyWasmExports {
     outDepthsPtr: number,
     outValuesPtr: number,
     outPreviewStatePtr: number,
+    outPreviewStatusesPtr: number,
+    outPreviewBranchesPtr: number,
+    outTiebreakAfterPreviewNoSignalPtr: number,
+    outPolicyPreviewSignalUnavailablePtr: number,
+    outCandidateGroupMetadataPtr: number,
+    outCandidateGroupMetadataLen: number,
+    outDecisionStackPublicationPtr: number,
+    outDecisionStackPublicationLen: number,
+    outCompletionRecordsPtr: number,
+    outCompletionRecordsLen: number,
+    outPreviewStateSlotMetadataPtr: number,
+    outPreviewStateSlotMetadataLen: number,
+    outStatePatchCountsPtr: number,
+    outStatePatchOpsPtr: number,
+    outStatePatchOpsLen: number,
     outPreviewStateLen: number,
     outLen: number,
   ) => number;
@@ -206,10 +224,6 @@ export interface PolicyWasmRuntime {
 }
 
 let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
-let productionScoreRowRouteCount = 0;
-let productionScoreRowUnsupportedCount = 0;
-let productionPreviewCandidateFeatureRowRouteCount = 0;
-let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
 
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
@@ -1184,11 +1198,45 @@ export const createPolicyWasmRuntime = (
       const outputBytes = previewInput.candidates.length * I32_BYTES;
       const previewStateSlotCount = previewInput.previewStateSlots?.length ?? 0;
       const previewStateOutputBytes = previewInput.candidates.length * previewStateSlotCount * I32_BYTES;
+      const decisionStackMaxDepth = previewInput.candidates.reduce(
+        (maxDepth, candidate) => Math.max(maxDepth, candidate.decisionStackPublication?.maxDepth ?? 0),
+        0,
+      );
+      const decisionStackFrameWordCount = policyWasmPreviewDriveDecisionStackFrameWords();
+      const decisionStackPublicationWords = previewInput.candidates.length * decisionStackMaxDepth * decisionStackFrameWordCount;
+      const decisionStackPublicationBytes = decisionStackPublicationWords * I32_BYTES;
+      const completionRecordMaxCount = previewInput.candidates.reduce(
+        (maxCount, candidate) => Math.max(maxCount, candidate.continuedDeepeningCompletionRecords?.length ?? 0),
+        0,
+      );
+      const completionRecordWordCount = policyWasmPreviewDriveCompletionRecordWords();
+      const completionRecordWords = previewInput.candidates.length * completionRecordMaxCount * completionRecordWordCount;
+      const completionRecordBytes = completionRecordWords * I32_BYTES;
+      const statePatchMaxOpCount = previewInput.materializeStatePatch === true
+        ? previewInput.candidates.reduce((maxCount, candidate) => Math.max(maxCount, candidate.statePatch?.ops.length ?? 0), 0)
+        : 0;
+      const statePatchOpWordCount = policyWasmPreviewDriveStatePatchOpWords();
+      const statePatchOpWords = previewInput.candidates.length * statePatchMaxOpCount * statePatchOpWordCount;
+      const statePatchOpBytes = statePatchOpWords * I32_BYTES;
+      const candidateGroupMetadataWords = previewInput.candidates.length * policyWasmPreviewDriveCandidateGroupMetadataWords();
+      const candidateGroupMetadataBytes = candidateGroupMetadataWords * I32_BYTES;
+      const previewStateSlotMetadataWords = previewStateSlotCount * 3;
+      const previewStateSlotMetadataBytes = previewStateSlotMetadataWords * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outOutcomesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outDepthsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outPreviewStatePtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateOutputBytes));
+      const outPreviewStatusesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outPreviewBranchesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outTiebreakAfterPreviewNoSignalPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outPolicyPreviewSignalUnavailablePtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outCandidateGroupMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, candidateGroupMetadataBytes));
+      const outDecisionStackPublicationPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, decisionStackPublicationBytes));
+      const outCompletionRecordsPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, completionRecordBytes));
+      const outPreviewStateSlotMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateSlotMetadataBytes));
+      const outStatePatchCountsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outStatePatchOpsPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, statePatchOpBytes));
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -1198,6 +1246,21 @@ export const createPolicyWasmRuntime = (
           outDepthsPtr,
           outValuesPtr,
           outPreviewStatePtr,
+          outPreviewStatusesPtr,
+          outPreviewBranchesPtr,
+          outTiebreakAfterPreviewNoSignalPtr,
+          outPolicyPreviewSignalUnavailablePtr,
+          outCandidateGroupMetadataPtr,
+          candidateGroupMetadataWords,
+          outDecisionStackPublicationPtr,
+          decisionStackPublicationWords,
+          outCompletionRecordsPtr,
+          completionRecordWords,
+          outPreviewStateSlotMetadataPtr,
+          previewStateSlotMetadataWords,
+          outStatePatchCountsPtr,
+          outStatePatchOpsPtr,
+          statePatchOpWords,
           previewStateSlotCount,
           previewInput.candidates.length,
         );
@@ -1226,6 +1289,19 @@ export const createPolicyWasmRuntime = (
             outDepthsPtr,
             outValuesPtr,
             outPreviewStatePtr,
+            outPreviewStatusesPtr,
+            outPreviewBranchesPtr,
+            outTiebreakAfterPreviewNoSignalPtr,
+            outPolicyPreviewSignalUnavailablePtr,
+            outCandidateGroupMetadataPtr,
+            outDecisionStackPublicationPtr,
+            outCompletionRecordsPtr,
+            outPreviewStateSlotMetadataPtr,
+            outStatePatchCountsPtr,
+            outStatePatchOpsPtr,
+            decisionStackMaxDepth,
+            completionRecordMaxCount,
+            statePatchMaxOpCount,
           ),
         };
       } finally {
@@ -1234,6 +1310,16 @@ export const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outDepthsPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outPreviewStatePtr, Math.max(I32_BYTES, previewStateOutputBytes));
+        wasm.ludoforge_policy_vm_dealloc(outPreviewStatusesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outPreviewBranchesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outTiebreakAfterPreviewNoSignalPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outPolicyPreviewSignalUnavailablePtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outCandidateGroupMetadataPtr, Math.max(I32_BYTES, candidateGroupMetadataBytes));
+        wasm.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, Math.max(I32_BYTES, decisionStackPublicationBytes));
+        wasm.ludoforge_policy_vm_dealloc(outCompletionRecordsPtr, Math.max(I32_BYTES, completionRecordBytes));
+        wasm.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, Math.max(I32_BYTES, previewStateSlotMetadataBytes));
+        wasm.ludoforge_policy_vm_dealloc(outStatePatchCountsPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outStatePatchOpsPtr, Math.max(I32_BYTES, statePatchOpBytes));
       }
     },
   };
@@ -1242,56 +1328,21 @@ export const createPolicyWasmRuntime = (
 export const getInitializedPolicyWasmRuntime = (): PolicyWasmRuntime | null =>
   productionPolicyWasmRuntime;
 
-export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsupported'): void => {
-  if (kind === 'supported') {
-    productionScoreRowRouteCount += 1;
-  } else {
-    productionScoreRowUnsupportedCount += 1;
-  }
-};
-
-export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'supported' | 'unsupported'): void => {
-  if (kind === 'supported') {
-    productionPreviewCandidateFeatureRowRouteCount += 1;
-  } else {
-    productionPreviewCandidateFeatureRowUnsupportedCount += 1;
-  }
-};
+export {
+  getProductionPolicyWasmPreviewDriveRouteCount,
+  getProductionPolicyWasmPreviewDriveUnsupportedCount,
+  getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts,
+  type PolicyWasmPreviewDriveUnsupportedDetail,
+  recordProductionPolicyWasmPreviewCandidateFeatureRows,
+  recordProductionPolicyWasmPreviewDrive,
+  recordProductionPolicyWasmScoreRows,
+} from './policy-wasm-runtime-counters.js';
 
 export const __internal_for_tests = {
   setInitializedPolicyWasmRuntime(runtime: PolicyWasmRuntime | null): void {
     productionPolicyWasmRuntime = runtime;
   },
-  getProductionScoreRowRouteCount(): number {
-    return productionScoreRowRouteCount;
-  },
-  getProductionScoreRowUnsupportedCount(): number {
-    return productionScoreRowUnsupportedCount;
-  },
-  getProductionScoreRowBytecodeCompileCount(): number {
-    return getScoreRowBytecodeCompileCount();
-  },
-  getPolicyWasmBytecodeInputCacheCounters(): {
-    readonly hitCount: number;
-    readonly missCount: number;
-    readonly writeCount: number;
-  } {
-    return getPolicyWasmBytecodeInputCacheCounters();
-  },
-  getProductionPreviewCandidateFeatureRowRouteCount(): number {
-    return productionPreviewCandidateFeatureRowRouteCount;
-  },
-  getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
-    return productionPreviewCandidateFeatureRowUnsupportedCount;
-  },
-  resetProductionScoreRowCounters(): void {
-    productionScoreRowRouteCount = 0;
-    productionScoreRowUnsupportedCount = 0;
-    productionPreviewCandidateFeatureRowRouteCount = 0;
-    productionPreviewCandidateFeatureRowUnsupportedCount = 0;
-    resetScoreRowBytecodeCompileCount();
-    resetPolicyWasmBytecodeInputCacheCounters();
-  },
+  ...productionPolicyWasmCounterInternals,
   encodePolicyBytecodeInputForTest(
     bytecode: PolicyBytecode,
     encoded: EncodedState,

@@ -169,7 +169,7 @@ const isSupportedContinuationResult = (
   state: GameState,
   move: Move,
   continuation: DecisionContinuationResult,
-  runtime?: GameDefRuntime,
+  runtime?: GameDefRuntime, probeMove = true,
 ): boolean => {
   if (continuation.illegal !== undefined) {
     return false;
@@ -177,15 +177,15 @@ const isSupportedContinuationResult = (
   if (!isPublishedMoveAdmitted(def, state, move, runtime)) {
     return false;
   }
-  const moveViability = probeMoveViability(def, state, move, runtime);
+  const moveViability = probeMove ? probeMoveViability(def, state, move, runtime) : null;
   if (continuation.stochasticDecision !== undefined) {
     return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
-    return continuation.complete && moveViability.viable;
+    return continuation.complete && (moveViability?.viable ?? true);
   }
   if (
-    !moveViability.viable
+    moveViability !== null && !moveViability.viable
     && moveViability.code === 'ILLEGAL_MOVE'
     && moveViability.context.reason !== 'moveHasIncompleteParams'
   ) {
@@ -216,7 +216,7 @@ const isSupportedFrameContinuationMove = (
   }
   try {
     const continuation = resumeSuspendedEffectFrame(def, suspendedFrame, move, runtime);
-    return isSupportedContinuationResult(def, state, move, continuation, runtime);
+    return isSupportedContinuationResult(def, state, move, continuation, runtime, false);
   } catch {
     return false;
   }
@@ -668,7 +668,7 @@ const publishStackTop = (
   def: GameDef,
   state: GameState,
   top: DecisionStackFrame,
-  runtime?: GameDefRuntime,
+  runtime?: GameDefRuntime, includeProjectedObservation = true,
 ): MicroturnState => {
   const seatId = top.context.seatId;
   const root = findRootFrame(state, top);
@@ -696,7 +696,7 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions,
-      projectedState: buildProjectedState(def, state, seatId),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
       turnId: top.turnId,
       frameId: top.frameId,
       compoundTurnTrace,
@@ -731,7 +731,7 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions,
-      projectedState: buildProjectedState(def, state, seatId),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
       turnId: top.turnId,
       frameId: top.frameId,
       compoundTurnTrace,
@@ -749,7 +749,7 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions,
-      projectedState: buildProjectedState(def, state, seatId),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
       turnId: top.turnId,
       frameId: top.frameId,
       compoundTurnTrace,
@@ -762,7 +762,7 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions: toStochasticResolveDecisions(context),
-      projectedState: buildProjectedState(def, state, seatId),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
       turnId: top.turnId,
       frameId: top.frameId,
       compoundTurnTrace,
@@ -775,7 +775,7 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions: toTurnRetirementDecision(context),
-      projectedState: buildProjectedState(def, state, seatId),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
       turnId: top.turnId,
       frameId: top.frameId,
       compoundTurnTrace,
@@ -845,7 +845,7 @@ export const publishMicroturnFromPreviewStateNoHash = (
   if (top === undefined) {
     return publishActionSelection(def, state, runtime);
   }
-  return publishStackTop(def, state, top, runtime);
+  return publishStackTop(def, state, top, runtime, false);
 };
 
 /**

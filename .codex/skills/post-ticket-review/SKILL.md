@@ -45,7 +45,7 @@ Inspect `git status --short` early. Separate unrelated dirty files from the impl
 
 When searching markdown literals, code spans, or command text, quote shell patterns so markdown backticks are not executed by the shell. Prefer single-quoted `rg` patterns, `rg -F` for fixed strings, or separate plain-string anchors instead of one broad interpolated regex.
 
-If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice. If an in-flight verification command from before compaction cannot be polled or its result is otherwise unobservable, rerun the idempotent check instead of treating the lost session as evidence.
+If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice. If an in-flight verification command from before compaction cannot be polled or its result is otherwise unobservable, rerun the idempotent check instead of treating the lost session as evidence. Compaction-preserved proof may be cited only when it includes the command, exit status, decisive output or metric, and no unresolved invalidating edit; otherwise rerun the lane or mark it unobserved.
 
 ## Evidence Model
 
@@ -178,6 +178,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - always run `pnpm run check:ticket-deps` after archiving or changing ticket dependencies
    - run `git diff --check -- <all-review-created-edited-files>` after must-fix cleanup or archive edits; for markdown-only archive fallout, the edited ticket/spec/archive markdown files are the minimum
    - for untracked review-created files, remember that `git diff --check` does not inspect them; run `git diff --no-index --check /dev/null <file>` or a targeted trailing-whitespace scan such as `rg -n '[ \t]+$' <file>` before final handoff
+   - for `git diff --no-index --check /dev/null <file>`, exit code `1` with empty stdout/stderr is the normal content-difference result and is whitespace-clean; treat reported whitespace diagnostics or command errors as failures
    - if review-created edits changed production runtime, compiler, schema, or shared tests, rerun the affected original acceptance lanes before archival closeout
 
 ## Ticket Authoring Rules

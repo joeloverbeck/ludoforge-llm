@@ -10,6 +10,7 @@ import {
   type PolicyWasmPreviewZoneValues,
   type PolicyWasmPreviewZoneVarValues,
 } from './policy-wasm-production-preview-values.js';
+import type { PolicyWasmPreviewStateSlot } from './policy-wasm-preview-drive.js';
 
 export interface PolicyWasmPreviewFeatureSlot { readonly slotIndex: number; readonly featureId: string; }
 export interface PolicyWasmPreviewSurfaceSlot {
@@ -47,7 +48,7 @@ const parsePolicyWasmPreviewSurfaceSlot = (
 };
 
 export const classifyPolicyWasmPreviewStateSlots = (
-  previewStateSlots: readonly string[],
+  previewStateSlots: readonly PolicyWasmPreviewStateSlot[],
   parseGlobalSlot: (slot: string) => string | null,
 ): {
   readonly slotIndexByGlobalVar: Map<string, number>;
@@ -59,21 +60,24 @@ export const classifyPolicyWasmPreviewStateSlots = (
   const featureSlots: PolicyWasmPreviewFeatureSlot[] = [];
   const surfaceSlots: PolicyWasmPreviewSurfaceSlot[] = [];
   for (const [index, slot] of previewStateSlots.entries()) {
-    const globalVar = parseGlobalSlot(slot);
-    if (globalVar !== null) {
+    if (slot.kind === 'global') {
+      const globalVar = parseGlobalSlot(slot.id);
+      if (globalVar === null) {
+        return { slotIndexByGlobalVar, featureSlots, surfaceSlots, unsupportedSlot: slot.id };
+      }
       slotIndexByGlobalVar.set(globalVar, index);
       continue;
     }
-    if (slot.startsWith('feature.') && slot.length > 'feature.'.length) {
-      featureSlots.push({ slotIndex: index, featureId: slot.slice('feature.'.length) });
+    if (slot.kind === 'feature' && slot.id.startsWith('feature.') && slot.id.length > 'feature.'.length) {
+      featureSlots.push({ slotIndex: index, featureId: slot.id.slice('feature.'.length) });
       continue;
     }
-    const surfaceSlot = parsePolicyWasmPreviewSurfaceSlot(slot, index);
+    const surfaceSlot = slot.kind === 'surface' ? parsePolicyWasmPreviewSurfaceSlot(slot.id, index) : undefined;
     if (surfaceSlot !== undefined) {
       surfaceSlots.push(surfaceSlot);
       continue;
     }
-    return { slotIndexByGlobalVar, featureSlots, surfaceSlots, unsupportedSlot: slot };
+    return { slotIndexByGlobalVar, featureSlots, surfaceSlots, unsupportedSlot: slot.id };
   }
   return { slotIndexByGlobalVar, featureSlots, surfaceSlots };
 };

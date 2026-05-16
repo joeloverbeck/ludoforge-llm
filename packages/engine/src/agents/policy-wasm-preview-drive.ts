@@ -1,10 +1,107 @@
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
+import type { GameState } from '../kernel/index.js';
+import {
+  decodeStatePatch,
+  encodeStatePatch,
+  maxStatePatchOpCount,
+  type PolicyWasmPreviewStatePatch,
+} from './policy-wasm-preview-drive-state-patch-codec.js';
+import {
+  decodePreviewStateSlots,
+  inferPolicyWasmPreviewStateSlotKind,
+  previewStateSlotKindCode,
+  previewStateSlotLifetimeCode,
+} from './policy-wasm-preview-drive-slots.js';
+import {
+  decodeCompletionRecords,
+  encodeCompletionRecords,
+  maxCompletionRecordCount,
+  type PolicyWasmPreviewDriveCompletionRecord,
+} from './policy-wasm-preview-drive-completion.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0014;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0018;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
+export type {
+  PolicyWasmPreviewDriveCompletionOutcome,
+  PolicyWasmPreviewDriveCompletionRecord,
+} from './policy-wasm-preview-drive-completion.js';
+
+export type PolicyWasmPreviewStatus =
+  | 'ready'
+  | 'stochastic'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'gated';
+
+export type PolicyWasmPreviewBranch = 'none' | 'greedy' | 'continuedDeepening';
+
+export type PolicyWasmPreviewStateSlotKind = 'global' | 'feature' | 'surface' | 'generic';
+export type PolicyWasmPreviewStateSlotLifetime = 'singleIteration' | 'crossIteration';
+
+export interface PolicyWasmPreviewStateSlot {
+  readonly id: string;
+  readonly kind: PolicyWasmPreviewStateSlotKind;
+  readonly lifetime: PolicyWasmPreviewStateSlotLifetime;
+}
+
+export const definePolicyWasmPreviewStateSlot = (
+  id: string,
+  options?: {
+    readonly kind?: PolicyWasmPreviewStateSlotKind;
+    readonly lifetime?: PolicyWasmPreviewStateSlotLifetime;
+  },
+): PolicyWasmPreviewStateSlot => ({
+  id,
+  kind: options?.kind ?? inferPolicyWasmPreviewStateSlotKind(id),
+  lifetime: options?.lifetime ?? 'singleIteration',
+});
+
+export type PolicyWasmDecisionStackFrameVariant =
+  | 'actionSelection'
+  | 'chooseOne'
+  | 'chooseNStep'
+  | 'stochasticResolve'
+  | 'outcomeGrantResolve'
+  | 'turnRetirement';
+
+export interface PolicyWasmDecisionStackPublicationFrame {
+  readonly frameId: number;
+  readonly parentFrameId: number | null;
+  readonly turnId: number;
+  readonly depth: number;
+  readonly variant: PolicyWasmDecisionStackFrameVariant;
+  readonly contextId: string;
+}
+
+export interface PolicyWasmDecisionStackPublication {
+  readonly maxDepth: number;
+  readonly frames: readonly PolicyWasmDecisionStackPublicationFrame[];
+}
+
+export interface PolicyWasmPreviewSignalCarrier {
+  readonly previewStatus: PolicyWasmPreviewStatus;
+  readonly previewBranch: PolicyWasmPreviewBranch;
+  readonly tiebreakAfterPreviewNoSignal: boolean;
+  readonly policyPreviewSignalUnavailable: boolean;
+}
+
+export interface PolicyWasmPreviewCandidateGroup {
+  readonly groupId: string;
+  readonly ordinalInGroup: number;
+  readonly groupSize: number;
+}
+
+export type {
+  PolicyWasmPreviewStatePatch,
+  PolicyWasmPreviewStatePatchOp,
+  PolicyWasmPreviewStatePatchScalar,
+} from './policy-wasm-preview-drive-state-patch-codec.js';
+export { policyWasmPreviewDriveStatePatchOpWords } from './policy-wasm-preview-drive-state-patch-codec.js';
 
 export type PolicyWasmPreviewDriveUnsupportedClass =
   | 'gated'
@@ -63,7 +160,13 @@ export interface PolicyWasmPreviewDriveCandidate {
   readonly actionId: string;
   readonly stableMoveKey: string;
   readonly initialValue: number;
+  readonly candidateGroup?: PolicyWasmPreviewCandidateGroup;
   readonly initialPreviewStateValues?: readonly number[];
+  readonly previewBranch?: PolicyWasmPreviewBranch;
+  readonly previewSignalCarrier?: PolicyWasmPreviewSignalCarrier;
+  readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
+  readonly continuedDeepeningCompletionRecords?: readonly PolicyWasmPreviewDriveCompletionRecord[];
+  readonly statePatch?: PolicyWasmPreviewStatePatch;
 }
 
 export interface PolicyWasmPreviewDriveBatchInput {
@@ -73,9 +176,10 @@ export interface PolicyWasmPreviewDriveBatchInput {
   readonly originSeatId: string;
   readonly originTurnId: number;
   readonly depthCap: number;
-  readonly previewStateSlots?: readonly string[];
+  readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
   readonly candidates: readonly PolicyWasmPreviewDriveCandidate[];
   readonly steps: readonly PolicyWasmPreviewDriveStep[];
+  readonly materializeStatePatch?: boolean;
 }
 
 export interface PolicyWasmPreviewDriveRow {
@@ -83,7 +187,14 @@ export interface PolicyWasmPreviewDriveRow {
   readonly outcome: PolicyWasmPreviewDriveOutcome;
   readonly depth: number;
   readonly value: number;
+  readonly candidateGroup?: PolicyWasmPreviewCandidateGroup;
   readonly previewStateValues?: Readonly<Record<string, number>>;
+  readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
+  readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
+  readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
+  readonly continuedDeepeningCompletionRecords?: readonly PolicyWasmPreviewDriveCompletionRecord[];
+  readonly statePatch?: PolicyWasmPreviewStatePatch;
+  readonly projectedState?: GameState;
 }
 
 export type PolicyWasmPreviewDriveResult =
@@ -108,6 +219,11 @@ export const encodePolicyWasmPreviewDriveInput = (
 ): Uint8Array => {
   const layoutId = input.layoutId ?? POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID;
   const expectedLayoutId = input.expectedLayoutId ?? layoutId;
+  const decisionStackMaxDepth = maxDecisionStackPublicationDepth(input.candidates);
+  const completionRecordMaxCount = maxCompletionRecordCount(input.candidates, input.depthCap);
+  const statePatchMaxOpCount = input.materializeStatePatch === true
+    ? maxStatePatchOpCount(input.candidates, input.depthCap)
+    : 0;
   const words = [
     abiMagic,
     abiVersion,
@@ -119,9 +235,17 @@ export const encodePolicyWasmPreviewDriveInput = (
     input.originTurnId,
     input.steps.length,
     input.previewStateSlots?.length ?? 0,
+    decisionStackMaxDepth,
+    completionRecordMaxCount,
+    input.materializeStatePatch === true ? 1 : 0,
+    statePatchMaxOpCount,
   ];
   for (const slot of input.previewStateSlots ?? []) {
-    words.push(stablePayloadCode({ literal: slot }));
+    words.push(
+      stablePayloadCode({ literal: slot.id }),
+      previewStateSlotKindCode(slot.kind),
+      previewStateSlotLifetimeCode(slot.lifetime),
+    );
   }
 
   for (const candidate of input.candidates) {
@@ -133,8 +257,17 @@ export const encodePolicyWasmPreviewDriveInput = (
       stablePayloadCode({ literal: candidate.actionId }),
       stablePayloadCode({ literal: candidate.stableMoveKey }),
       candidate.initialValue,
+      ...encodeCandidateGroup(candidate),
       ...initialPreviewStateValues,
+      candidate.previewSignalCarrier === undefined ? 0 : 1,
+      previewStatusCode(candidate.previewSignalCarrier?.previewStatus ?? 'ready'),
+      previewBranchCode(candidate.previewSignalCarrier?.previewBranch ?? candidate.previewBranch ?? 'none'),
+      candidate.previewSignalCarrier?.tiebreakAfterPreviewNoSignal === true ? 1 : 0,
+      candidate.previewSignalCarrier?.policyPreviewSignalUnavailable === true ? 1 : 0,
     );
+    encodeDecisionStackPublication(words, candidate, decisionStackMaxDepth);
+    encodeCompletionRecords(words, candidate, completionRecordMaxCount, input.depthCap);
+    encodeStatePatch(words, candidate, statePatchMaxOpCount, input.materializeStatePatch === true);
   }
   for (const step of input.steps) {
     encodeStep(words, input, step);
@@ -156,6 +289,19 @@ export const decodePolicyWasmPreviewDriveRows = (
   outDepthsPtr: number,
   outValuesPtr: number,
   outPreviewStatePtr: number,
+  outPreviewStatusesPtr: number,
+  outPreviewBranchesPtr: number,
+  outTiebreakAfterPreviewNoSignalPtr: number,
+  outPolicyPreviewSignalUnavailablePtr: number,
+  outCandidateGroupMetadataPtr: number,
+  outDecisionStackPublicationPtr: number,
+  outCompletionRecordsPtr: number,
+  outPreviewStateSlotMetadataPtr: number,
+  outStatePatchCountsPtr: number,
+  outStatePatchOpsPtr: number,
+  decisionStackMaxDepth: number,
+  completionRecordMaxCount: number,
+  statePatchMaxOpCount: number,
 ): readonly PolicyWasmPreviewDriveRow[] => {
   const view = new DataView(memory);
   const slots = input.previewStateSlots ?? [];
@@ -163,17 +309,120 @@ export const decodePolicyWasmPreviewDriveRows = (
     const previewStateValues = slots.length === 0
       ? undefined
       : Object.fromEntries(slots.map((slot, slotIndex) => [
-        slot,
+        slot.id,
         view.getInt32(outPreviewStatePtr + (((index * slots.length) + slotIndex) * I32_BYTES), true),
       ]));
+    const previewStateSlots = slots.length === 0
+      ? undefined
+      : decodePreviewStateSlots(
+        slots,
+        view,
+        outPreviewStateSlotMetadataPtr,
+      );
     return {
       stableMoveKey: candidate.stableMoveKey,
       outcome: decodeOutcome(view.getInt32(outOutcomesPtr + (index * I32_BYTES), true)),
       depth: view.getInt32(outDepthsPtr + (index * I32_BYTES), true),
       value: view.getInt32(outValuesPtr + (index * I32_BYTES), true),
+      ...decodeCandidateGroup(
+        input,
+        view,
+        outCandidateGroupMetadataPtr,
+        index,
+      ),
+      previewSignalCarrier: {
+        previewStatus: decodePreviewStatus(view.getInt32(outPreviewStatusesPtr + (index * I32_BYTES), true)),
+        previewBranch: decodePreviewBranch(view.getInt32(outPreviewBranchesPtr + (index * I32_BYTES), true)),
+        tiebreakAfterPreviewNoSignal: decodeBoolFlag(view.getInt32(outTiebreakAfterPreviewNoSignalPtr + (index * I32_BYTES), true)),
+        policyPreviewSignalUnavailable: decodeBoolFlag(view.getInt32(outPolicyPreviewSignalUnavailablePtr + (index * I32_BYTES), true)),
+      },
       ...(previewStateValues === undefined ? {} : { previewStateValues }),
+      ...(previewStateSlots === undefined ? {} : { previewStateSlots }),
+      ...decodeDecisionStackPublication(
+        input,
+        view,
+        outDecisionStackPublicationPtr,
+        decisionStackMaxDepth,
+        index,
+      ),
+      ...decodeCompletionRecords(
+        input,
+        view,
+        outCompletionRecordsPtr,
+        completionRecordMaxCount,
+        index,
+      ),
+      ...decodeStatePatch(
+        input,
+        view,
+        outStatePatchCountsPtr,
+        outStatePatchOpsPtr,
+        statePatchMaxOpCount,
+        index,
+      ),
     };
   });
+};
+
+const CANDIDATE_GROUP_METADATA_WORDS = 3;
+
+export const policyWasmPreviewDriveCandidateGroupMetadataWords = (): number => CANDIDATE_GROUP_METADATA_WORDS;
+
+const encodeCandidateGroup = (candidate: PolicyWasmPreviewDriveCandidate): readonly number[] => {
+  const group = candidate.candidateGroup;
+  if (group === undefined) {
+    return [0, 0, 0];
+  }
+  if (group.ordinalInGroup < 0 || !Number.isInteger(group.ordinalInGroup)) {
+    throw new Error('Policy WASM candidate group ordinal must be a non-negative integer.');
+  }
+  if (group.groupSize <= 0 || !Number.isInteger(group.groupSize)) {
+    throw new Error('Policy WASM candidate group size must be a positive integer.');
+  }
+  if (group.ordinalInGroup >= group.groupSize) {
+    throw new Error('Policy WASM candidate group ordinal must be smaller than group size.');
+  }
+  return [
+    stablePayloadCode({ literal: group.groupId }),
+    group.ordinalInGroup,
+    group.groupSize,
+  ];
+};
+
+const decodeCandidateGroup = (
+  input: PolicyWasmPreviewDriveBatchInput,
+  view: DataView,
+  outCandidateGroupMetadataPtr: number,
+  candidateIndex: number,
+): Pick<PolicyWasmPreviewDriveRow, 'candidateGroup'> => {
+  const candidateGroup = input.candidates[candidateIndex]?.candidateGroup;
+  const base = outCandidateGroupMetadataPtr + (candidateIndex * CANDIDATE_GROUP_METADATA_WORDS * I32_BYTES);
+  const groupCode = view.getInt32(base, true);
+  const ordinalInGroup = view.getInt32(base + I32_BYTES, true);
+  const groupSize = view.getInt32(base + (2 * I32_BYTES), true);
+  if (candidateGroup === undefined) {
+    if (groupCode !== 0 || ordinalInGroup !== 0 || groupSize !== 0) {
+      throw new Error(`Policy WASM candidate group metadata unexpectedly present for candidate ${candidateIndex}.`);
+    }
+    return {};
+  }
+  const expectedGroupCode = stablePayloadCode({ literal: candidateGroup.groupId });
+  if (groupCode !== expectedGroupCode) {
+    throw new Error(`Policy WASM candidate group id code mismatch for candidate ${candidateIndex}.`);
+  }
+  if (ordinalInGroup !== candidateGroup.ordinalInGroup) {
+    throw new Error(`Policy WASM candidate group ordinal mismatch for candidate ${candidateIndex}.`);
+  }
+  if (groupSize !== candidateGroup.groupSize) {
+    throw new Error(`Policy WASM candidate group size mismatch for candidate ${candidateIndex}.`);
+  }
+  return {
+    candidateGroup: {
+      groupId: candidateGroup.groupId,
+      ordinalInGroup,
+      groupSize,
+    },
+  };
 };
 
 export const firstUnsupportedPreviewDriveClass = (
@@ -258,6 +507,80 @@ const decodeOutcome = (code: number): PolicyWasmPreviewDriveOutcome => {
   }
 };
 
+const previewStatusCode = (previewStatus: PolicyWasmPreviewStatus): number => {
+  switch (previewStatus) {
+    case 'ready':
+      return 1;
+    case 'stochastic':
+      return 2;
+    case 'hidden':
+      return 3;
+    case 'unresolved':
+      return 4;
+    case 'failed':
+      return 5;
+    case 'depthCap':
+      return 6;
+    case 'gated':
+      return 7;
+  }
+};
+
+const decodePreviewStatus = (code: number): PolicyWasmPreviewStatus => {
+  switch (code) {
+    case 1:
+      return 'ready';
+    case 2:
+      return 'stochastic';
+    case 3:
+      return 'hidden';
+    case 4:
+      return 'unresolved';
+    case 5:
+      return 'failed';
+    case 6:
+      return 'depthCap';
+    case 7:
+      return 'gated';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview status ${code}.`);
+  }
+};
+
+const previewBranchCode = (previewBranch: PolicyWasmPreviewBranch): number => {
+  switch (previewBranch) {
+    case 'none':
+      return 0;
+    case 'greedy':
+      return 1;
+    case 'continuedDeepening':
+      return 2;
+  }
+};
+
+const decodePreviewBranch = (code: number): PolicyWasmPreviewBranch => {
+  switch (code) {
+    case 0:
+      return 'none';
+    case 1:
+      return 'greedy';
+    case 2:
+      return 'continuedDeepening';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview branch ${code}.`);
+  }
+};
+
+const decodeBoolFlag = (code: number): boolean => {
+  if (code === 0) {
+    return false;
+  }
+  if (code === 1) {
+    return true;
+  }
+  throw new Error(`Policy WASM preview-drive returned unknown boolean flag ${code}.`);
+};
+
 const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupportedClass): number => {
   switch (unsupportedClass) {
     case 'gated':
@@ -270,6 +593,138 @@ const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupporte
       return 4;
     case 'unknown':
       return 5;
+  }
+};
+
+const DECISION_STACK_FRAME_WORDS = 6;
+
+export const policyWasmPreviewDriveDecisionStackFrameWords = (): number => DECISION_STACK_FRAME_WORDS;
+
+export { policyWasmPreviewDriveCompletionRecordWords } from './policy-wasm-preview-drive-completion.js';
+
+const maxDecisionStackPublicationDepth = (
+  candidates: readonly PolicyWasmPreviewDriveCandidate[],
+): number => {
+  let maxDepth = 0;
+  for (const candidate of candidates) {
+    const publication = candidate.decisionStackPublication;
+    if (publication === undefined) {
+      continue;
+    }
+    if (publication.maxDepth < 0 || !Number.isInteger(publication.maxDepth)) {
+      throw new Error('Policy WASM decision-stack publication maxDepth must be a non-negative integer.');
+    }
+    if (publication.frames.length > publication.maxDepth) {
+      throw new Error('Policy WASM decision-stack publication frame count must not exceed maxDepth.');
+    }
+    maxDepth = Math.max(maxDepth, publication.maxDepth);
+  }
+  return maxDepth;
+};
+
+const encodeDecisionStackPublication = (
+  words: number[],
+  candidate: PolicyWasmPreviewDriveCandidate,
+  decisionStackMaxDepth: number,
+): void => {
+  const publication = candidate.decisionStackPublication;
+  if (publication === undefined) {
+    words.push(0, 0);
+    return;
+  }
+  if (publication.maxDepth > decisionStackMaxDepth) {
+    throw new Error('Policy WASM decision-stack publication maxDepth exceeds batch maxDepth.');
+  }
+  words.push(publication.maxDepth, publication.frames.length);
+  let previousDepth = -1;
+  for (const frame of publication.frames) {
+    if (frame.depth <= previousDepth) {
+      throw new Error('Policy WASM decision-stack publication frame depth must be strictly ordered.');
+    }
+    previousDepth = frame.depth;
+    words.push(
+      frame.frameId,
+      frame.parentFrameId ?? -1,
+      frame.turnId,
+      frame.depth,
+      decisionStackFrameVariantCode(frame.variant),
+      stablePayloadCode({ literal: frame.contextId }),
+    );
+  }
+};
+
+const decodeDecisionStackPublication = (
+  input: PolicyWasmPreviewDriveBatchInput,
+  view: DataView,
+  outDecisionStackPublicationPtr: number,
+  decisionStackMaxDepth: number,
+  candidateIndex: number,
+): Pick<PolicyWasmPreviewDriveRow, 'decisionStackPublication'> => {
+  const candidatePublication = input.candidates[candidateIndex]?.decisionStackPublication;
+  if (candidatePublication === undefined || decisionStackMaxDepth === 0) {
+    return {};
+  }
+  const frames: PolicyWasmDecisionStackPublicationFrame[] = [];
+  const candidateBaseWord = candidateIndex * decisionStackMaxDepth * DECISION_STACK_FRAME_WORDS;
+  for (let frameIndex = 0; frameIndex < candidatePublication.frames.length; frameIndex += 1) {
+    const base = outDecisionStackPublicationPtr + ((candidateBaseWord + (frameIndex * DECISION_STACK_FRAME_WORDS)) * I32_BYTES);
+    frames.push({
+      frameId: view.getInt32(base, true),
+      parentFrameId: decodeParentFrameId(view.getInt32(base + I32_BYTES, true)),
+      turnId: view.getInt32(base + (2 * I32_BYTES), true),
+      depth: view.getInt32(base + (3 * I32_BYTES), true),
+      variant: decodeDecisionStackFrameVariant(view.getInt32(base + (4 * I32_BYTES), true)),
+      contextId: candidatePublication.frames[frameIndex]!.contextId,
+    });
+    const contextCode = view.getInt32(base + (5 * I32_BYTES), true);
+    const expectedContextCode = stablePayloadCode({ literal: candidatePublication.frames[frameIndex]!.contextId });
+    if (contextCode !== expectedContextCode) {
+      throw new Error(`Policy WASM decision-stack publication context code mismatch for candidate ${candidateIndex}, frame ${frameIndex}.`);
+    }
+  }
+  return {
+    decisionStackPublication: {
+      maxDepth: candidatePublication.maxDepth,
+      frames,
+    },
+  };
+};
+
+const decodeParentFrameId = (code: number): number | null => code === -1 ? null : code;
+
+const decisionStackFrameVariantCode = (variant: PolicyWasmDecisionStackFrameVariant): number => {
+  switch (variant) {
+    case 'actionSelection':
+      return 1;
+    case 'chooseOne':
+      return 2;
+    case 'chooseNStep':
+      return 3;
+    case 'stochasticResolve':
+      return 4;
+    case 'outcomeGrantResolve':
+      return 5;
+    case 'turnRetirement':
+      return 6;
+  }
+};
+
+const decodeDecisionStackFrameVariant = (code: number): PolicyWasmDecisionStackFrameVariant => {
+  switch (code) {
+    case 1:
+      return 'actionSelection';
+    case 2:
+      return 'chooseOne';
+    case 3:
+      return 'chooseNStep';
+    case 4:
+      return 'stochasticResolve';
+    case 5:
+      return 'outcomeGrantResolve';
+    case 6:
+      return 'turnRetirement';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown decision-stack frame variant ${code}.`);
   }
 };
 

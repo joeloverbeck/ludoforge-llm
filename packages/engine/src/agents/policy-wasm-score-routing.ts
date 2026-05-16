@@ -15,12 +15,15 @@ import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeE
 import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 import {
+  definePolicyWasmProductionPreviewStateSlots,
   evaluateProductionPreviewDriveBatchWithWasm,
   type PolicyWasmProductionPreviewDriveCandidate,
 } from './policy-wasm-production-preview-drive.js';
+import type { PolicyWasmPreviewStatus } from './policy-wasm-preview-drive.js';
 import {
   evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
+  recordProductionPolicyWasmPreviewDrive,
   recordProductionPolicyWasmPreviewCandidateFeatureRows,
   recordProductionPolicyWasmScoreRows,
   type PolicyWasmPrecomputedDynamicCandidateFeature,
@@ -76,20 +79,9 @@ const previewDynamicRefCode = (ref: CompiledAgentPolicyRef): number => {
   return stablePayloadCode(ref);
 };
 
-const previewTraceOutcomeFromWasm = (
-  outcome: 'completed' | 'stochastic' | 'depthCap' | 'failed',
-): PolicyPreviewTraceOutcome => {
-  switch (outcome) {
-    case 'completed':
-      return 'ready';
-    case 'stochastic':
-      return 'stochastic';
-    case 'depthCap':
-      return 'depthCap';
-    case 'failed':
-      return 'failed';
-  }
-};
+const previewTraceOutcomeFromWasmStatus = (
+  status: PolicyWasmPreviewStatus,
+): PolicyPreviewTraceOutcome => status === 'ready' ? 'ready' : status;
 
 const collectPreviewDynamicRefs = (expr: CompiledPolicyExpr): readonly CompiledAgentPolicyRef[] => {
   const refs: CompiledAgentPolicyRef[] = [];
@@ -170,18 +162,35 @@ const previewGlobalSlotsForRef = (
     : [`feature.${ref.id}`, ...def.globalVars.map((variable) => `global.${variable.name}`)];
 };
 
+const compareOrdinalStrings = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
 const groupPreviewCandidatesByAction = (
   candidates: readonly PolicyWasmScoreRoutingCandidate[],
 ): readonly (readonly PolicyWasmProductionPreviewDriveCandidate[])[] => {
-  return candidates.flatMap((candidate) => (
-    candidate.previewOutcome === 'gated'
-      ? []
-      : [[{
+  const groups = new Map<string, PolicyWasmScoreRoutingCandidate[]>();
+  for (const candidate of candidates) {
+    if (candidate.previewOutcome === 'gated') {
+      continue;
+    }
+    const group = groups.get(candidate.actionId);
+    if (group === undefined) {
+      groups.set(candidate.actionId, [candidate]);
+    } else {
+      group.push(candidate);
+    }
+  }
+  return [...groups.entries()].map(([actionId, group]) =>
+    group.map((candidate, ordinalInGroup) => ({
       move: candidate.move,
       stableMoveKey: candidate.stableMoveKey,
       actionId: candidate.actionId,
-    }]]
-  ));
+      candidateGroup: {
+        groupId: `action:${actionId}`,
+        ordinalInGroup,
+        groupSize: group.length,
+      },
+    })));
 };
 
 const hasCardEventActionCandidate = (
@@ -213,6 +222,11 @@ const materializePreviewDynamicRowsWithWasm = (
     return [];
   }
   if (hasCardEventActionCandidate(input.def, input.candidates)) {
+    recordProductionPolicyWasmPreviewDrive('unsupported', {
+      unsupportedDriveClass: 'unsupported-effect',
+      unsupportedOwner: 'production-preview-drive.cardEventAction',
+      reason: 'production preview-drive does not route card event action candidates',
+    });
     return null;
   }
   const slotsByCode = new Map<number, readonly string[]>();
@@ -220,23 +234,14 @@ const materializePreviewDynamicRowsWithWasm = (
     const slots = previewGlobalSlotsForRef(input.catalog, input.def, ref);
     if (slots === undefined || slots.length === 0) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: `Policy WASM production preview-drive route failed closed for profile "${input.profileId}": unsupported preview ref.`,
-        detail: {
-          route: 'wasmProductionPreviewDriveRows',
-          profileId: input.profileId,
-          seatId: input.seatId,
-          candidateCount: input.candidates.length,
-          unsupportedRowClass: 'unsupported preview-drive ref',
-          unsupportedRef: ref,
-        },
-      });
+      return null;
     }
     slotsByCode.set(previewDynamicRefCode(ref), slots);
   }
 
-  const previewStateSlots = [...new Set([...slotsByCode.values()].flat())].sort((left, right) => left.localeCompare(right));
+  const previewStateSlots = definePolicyWasmProductionPreviewStateSlots(
+    [...new Set([...slotsByCode.values()].flat())].sort(compareOrdinalStrings),
+  );
   const rowsByKey = new Map<string, {
     readonly outcome: PolicyPreviewTraceOutcome;
     readonly depth: number;
@@ -252,28 +257,25 @@ const materializePreviewDynamicRowsWithWasm = (
       originSeatId: input.seatId,
       originTurnId: input.state.turnCount,
       depthCap: input.profile.preview.completionDepthCap ?? 6,
+      previewBranch: input.profile.preview.inner?.strategy === 'continuedDeepening'
+        ? 'continuedDeepening'
+        : 'greedy',
       previewStateSlots,
       candidates: group,
     });
     if (result.kind !== 'supported') {
-      recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: `Policy WASM production preview-drive route failed closed for profile "${input.profileId}": ${result.reason}.`,
-        detail: {
-          route: 'wasmProductionPreviewDriveRows',
-          profileId: input.profileId,
-          seatId: input.seatId,
-          candidateCount: group.length,
-          unsupportedDriveClass: result.unsupportedDriveClass,
-          unsupportedOwner: result.unsupportedOwner,
-          unsupportedRowClass: result.reason,
-        },
+      recordProductionPolicyWasmPreviewDrive('unsupported', {
+        unsupportedDriveClass: result.unsupportedDriveClass,
+        ...(result.unsupportedOwner === undefined ? {} : { unsupportedOwner: result.unsupportedOwner }),
+        reason: result.reason,
       });
+      recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
+      return null;
     }
+    recordProductionPolicyWasmPreviewDrive('supported');
     for (const row of result.rows) {
       rowsByKey.set(row.stableMoveKey, {
-        outcome: previewTraceOutcomeFromWasm(row.outcome),
+        outcome: previewTraceOutcomeFromWasmStatus(row.previewSignalCarrier.previewStatus),
         depth: row.depth,
         ...(row.previewStateValues === undefined ? {} : { previewStateValues: row.previewStateValues }),
       });

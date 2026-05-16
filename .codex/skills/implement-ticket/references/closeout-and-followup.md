@@ -4,6 +4,7 @@
    - Set ticket status to its completed state when appropriate.
    - Add or amend the ticket outcome with what landed, boundary corrections, and verification that ran.
    - If the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome. A named file that required no edit should appear as `already satisfied / verified-no-edit`, not as an unexplained omission.
+   - In this repo, if an explicitly named file/artifact remained untouched and that omission was not optional/inspection-only, a stale source-path correction with the same hook/witness, or user-authorized by `1-3-1`, do not mark the ticket complete. Reopen the boundary decision, run the repo `1-3-1` flow, or patch the active ticket to the approved narrower contract before final proof.
 2. Summarize what changed, what was verified, and any residual risk. Include:
    - Audited schema/artifact ripple effects (even if none needed)
    - Deferred verification owned by another ticket
@@ -24,6 +25,8 @@
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 
+For a landed slice that remains blocked by a prerequisite or successor, make the nonterminal outcome just as durable as a completed closeout. The active ticket should name `landed scope`, `missing prerequisite`, `successor or same-ticket continuation owner`, `dependency/spec/sibling rewrites`, `archive status`, and `next workflow`. The final response should say the ticket is blocked/not archive-ready and point to the continuation workflow, not `$post-ticket-review`.
+
 ## Final Acceptance Sweep
 
 Before declaring completion or updating the ticket status, run one final acceptance sweep against the ticket text and your final diff:
@@ -32,19 +35,28 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - when a source-size ledger was drafted earlier, reconstructed after compaction, or transcribed from a handoff summary, rerun the cheap line-count probe for every ledger path immediately before the terminal ticket/status patch and reconcile the durable ledger with those exact counts
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
+- reconcile date-stamped sections such as reassessment headings, approval notes, outcome dates, and verification dates against the current session date and any explicit user-provided dates. If a date is intentionally historical, label it as historical evidence rather than leaving it ambiguous.
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - hard source-size gate: if any touched source file ends over the repo cap (800 lines in this repo), crosses the cap because of active growth, or remains preexisting-oversize with active growth, do not set terminal status until the active ticket or final closeout contains the exact source-size ledger and one of these is true: narrow extraction is done, user-approved deferral exists, or a `1-3-1` decision resolves why extraction would widen the ticket
 - exact source-size ledger means the durable ticket/final closeout names every field, not just current counts: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - when the touched oversized file is an established canonical table, lowerer, schema mirror, diagnostic registry, or comparable shared contract hub, a surgical adjacent addition may be the least risky ticket-sized change. Still record `preexisting oversize + active growth`, why extraction would widen or obscure the ticket seam, whether a narrow helper was considered, and the residual owner (`none` if no separate extraction ticket is justified).
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
+- distinguish cheap source-size checks from hard-gate ledgers. `source-size risk check` is enough when touched files stay under cap and no active-growth gate is triggered. `source-size hard-gate ledger` is required when a file crosses the cap, ends over the cap because of active growth, was already over cap and grew, or needs explicit deferral.
+- source-size compliance recipe:
+  1. Run `wc -l <path>` for every touched source file that is near/over guidance or grew substantially.
+  2. For tracked modified files, run `git diff --numstat -- <path>` and compute `before = after - added + deleted`; for new files use `before = 0`.
+  3. Classify each path as `under cap`, `near cap`, `crossed cap`, or `preexisting oversize + active growth`.
+  4. If any path is `crossed cap` or `preexisting oversize + active growth`, resolve the hard gate before terminal status: narrow extraction, user-approved deferral through `1-3-1`, or nonterminal status.
+  5. Record the exact ledger shape in the ticket outcome or final closeout: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`.
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for completed tracked tickets, sweep the outcome/proof block for stale forward-looking closeout phrasing such as `planned`, `pending`, `expected`, `will run`, or `to be verified`. Replace it with final evidence or keep it only when explicitly describing historical pre-proof state.
 - when the active ticket corresponds to a parent spec checklist, MVP item, phase row, or other explicit completion marker, update that marker before final proof and include it in the touched-file/proof ledger. If this changes status, ticket-list parity, dependency ownership, or active/archive classification, run the repo's dependency or markdown-integrity checker before closeout.
-- reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run.
+- reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run; use `ticket section | literal command/shorthand | ran directly/subsumed/split/replaced/not run | final citation` for stale, split, replaced, subsumed, or skipped literal commands.
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
+- for repo Ticket Fidelity, confirm every `verified-no-edit` named file/artifact is justified by optional/inspection-only ticket text, stale source-path correction with the same hook/witness, or prior user authorization; otherwise stop for `1-3-1` before terminal status
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - when the implementation added a status/result union, stable reason strings, or new ready/unavailable branches not already enumerated by the ticket, confirm the ticket outcome or final closeout classifies each branch as `tested`, `unreachable by construction`, or `deferred to confirmed sibling`
@@ -77,6 +89,13 @@ Use this compact classifier for late closeout edits after the first final-proof 
 
 After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
 
+If final proof ran before required outcome, scope, or command-ledger corrections were written, recover explicitly instead of treating the earlier lanes as automatically final:
+
+1. Patch the active ticket while its status remains nonterminal when practical, recording the corrected boundary and intended final proof set.
+2. Classify each already-run lane as `still valid`, `stale diagnostic only`, or `needs rerun` against the corrected ticket story.
+3. Rerun the narrowest affected proof lane before terminal status; if no lane is affected, record why the correction was proof-story transcription only.
+4. Apply terminal status only as the final narrow ticket edit once all lanes are green, classified, or explicitly substituted, then record the no-invalidation rationale for that final edit.
+
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
 Suggested late-edit proof-validity ledger:
@@ -108,6 +127,8 @@ When the active tracked ticket was truthfully narrowed or rewritten and the owne
 - `PENDING untouched`: reassessment showed the ticket should stay forward-looking because implementation did not yet land any owned deliverable.
 
 Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.
+
+For `BLOCKED by prerequisite`, prefer this minimum outcome shape when the ticket landed reusable substrate or telemetry: `landed scope`, `missing prerequisite`, `successor or same-ticket continuation owner`, `dependency/spec/sibling rewrites`, `verification`, `schema/generated fallout`, `late-edit proof validity`, `archive status`, and `next workflow`.
 
 If an explicit ticket-named broad acceptance lane is still red, `COMPLETED` is only truthful when the active ticket has first been rewritten to remove that lane from the owned boundary or the failures have been proven unrelated/pre-existing. A red changed-path, serialized-contract, or architectural-invariant failure should normally become `BLOCKED by prerequisite` or trigger 1-3-1 rather than a completed ticket plus an implicit follow-up.
 
@@ -173,6 +194,8 @@ When active work grows a source file that is already near/over repo guidance, or
 
 If exact before counts were lost after compaction or late shared-contract fallout, reconstruct them mechanically for tracked modified files: capture `after` with `wc -l <path>`, capture added/deleted counts with `git diff --numstat -- <path>`, then compute `before = after - added + deleted`. For new files, use `before = 0`; for deleted files, use the pre-delete line count from Git when needed. If the file was also changed by unrelated user work in the same path, do not pretend the reconstructed count is ticket-local; classify the overlap before closeout.
 
+The ledger is evidence, not approval. If a path crossed the 800-line cap, ended over the cap because of active growth, or stayed preexisting-oversize while growing, terminal status still requires one of: narrow extraction completed, user-approved deferral through `1-3-1`, or a nonterminal ticket state that records the unresolved size gate.
+
 If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
 
 ## Same-Series Draft Delta
@@ -181,7 +204,7 @@ When new same-series draft tickets appear after the initial checkpoint and the a
 
 - `new same-series drafts`: `paths | opened because | dependency role | active-boundary impact | final classification`
 
-Use `final classification` values from the main skill guidance: `read-only sibling context`, `concurrent unrelated draft`, or `boundary-changing sibling`. If the classification is boundary-changing, update the active ticket/spec before final proof and rerun affected lanes; if it is read-only sibling context, keep the ledger as closeout evidence rather than expanding the active ticket.
+Use `final classification` values from the main skill guidance: `read-only sibling context`, `concurrent unrelated draft`, or `boundary-changing sibling`. If the classification is boundary-changing, update the active ticket/spec before final proof and rerun affected lanes. If it appears during closeout as read-only sibling context with no boundary/proof impact, keep the ledger in final handoff rather than reopening the active ticket outcome.
 
 ## Split Phase Completion
 
@@ -270,6 +293,16 @@ When proof is only partially complete after compaction or a long handoff, use th
 5. Apply terminal status as a final narrow patch only after the final lanes are green, classified, or explicitly substituted.
 6. Run the dependency/markdown integrity check if status, dependency edges, sibling ownership, active/archive classification, or same-series ownership changed, then finish with hygiene and untracked-aware status checks.
 
+Compact resumed-closeout checkpoint example:
+
+- `active ticket/status`: `tickets/ID.md` / `PENDING`
+- `remaining pending proof rows`: `turbo test`, `turbo lint`, `turbo typecheck`, focused compiled witness after any rebuild
+- `untracked artifacts`: new source/test paths from `git status --short`
+- `in-flight command/session`: `session 123 running turbo test`; poll before any command that can contend with `dist` or package caches
+- `post-proof edit class`: terminal status/proof transcription plus any prerequisite-dependent sibling unblock
+- `integrity lane`: `pnpm run check:ticket-deps` after status/dependency/sibling edits
+- `next status/handoff`: terminal status only after green/classified lanes, then `$post-ticket-review <ticket>`
+
 ### Status-Only Terminal Patch Sequence
 
 When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
@@ -279,19 +312,29 @@ When all final proof lanes are already green/classified and the only remaining c
 3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
    - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
+   - Use a compact terminal checker ledger when helpful: `dependency checker: <command> -> <result>`; `checker transcription: clerical`; `no-invalidation: terminal status/proof/checker transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
 5. Run the final hygiene and untracked-aware status sweep before the user handoff. The final hygiene check is allowed to live in the final response instead of the ticket outcome; if it is transcribed after the check, rerun the hygiene check once after that transcription and do not keep editing only to record the rerun.
 
 Use this compact final handoff shape when implementation stops before archival:
 
 - `implemented ticket`: active path and terminal status
 - `archive status`: `implemented but not archived`, `archived`, or `post-ticket-review already ran`
-- `tracked modified`: tracked files changed by this implementation
-- `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
+- `tracked modified`: exact tracked paths, or tight path groups only when every member is already visible in the ticket outcome
+- `untracked added`: exact new source, test, fixture, report, ticket, or artifact paths; use `none` only after checking `git status --short`
 - `green proof lanes`: commands that passed and are final for the owned slice
+- `advisory emissions`: warning/stderr rows from passing lanes, classified as `ticket-owned`, `known sibling/spec-owned`, or `non-ticket-owned`
 - `cached broad lanes`: `none`, `cache-covered`, `cache-hit supplemental`, or `cache-hit proof pending`; for mixed Turbo output, name which broad lanes replayed cached logs and why the ticket-owned surface is still proven
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` for implemented/complete tickets unless archival already ran or the user explicitly asked to pause; for `BLOCKED`, `PARTIAL`, or retained-substrate red-gate tickets, name the successor or same active ticket continuation and do not suggest review/archive
+
+Before writing the final handoff, gather the facts with this mini-template so untracked files, cached lanes, and advisory diagnostics are not lost:
+
+- `status sweep`: latest `git status --short`, grouped into tracked implementation edits, untracked additions, and unrelated/preexisting paths if any
+- `proof ledger`: final commands, pass/fail/classification, cache classification, and whether a later producer required rerunning a focused consumer
+- `advisories`: warning/stderr rows from passing lanes, with owner classification (`ticket-owned`, `same-series/sibling-owned`, `non-ticket-owned`, or `known repo advisory`)
+- `graph/status edits`: terminal status, dependency/sibling/active-archive changes, and the integrity command that checked them
+- `review/archive state`: whether `post-ticket-review` ran, and the exact next workflow sentence when it did not
 
 Cache-hit classification quick table:
 
@@ -305,9 +348,10 @@ Cache-hit classification quick table:
 For a large implementation diff, prefer this concrete final-response skeleton over a vague summary:
 
 - `implemented ticket`: `<path>` — `<terminal status>`
-- `tracked modified`: `<path group or exact list>; source-size ledger in <ticket/report section if triggered>`
+- `tracked modified`: `<exact list, or path group only when ticket outcome already lists members>; source-size ledger in <ticket/report section if triggered>`
 - `untracked added`: `<exact new tests/fixtures/reports/tickets, or none>`
 - `green proof lanes`: `<focused lanes>; <root/package lanes>`
+- `advisory emissions`: `<none, or warning/stderr -> owner classification>`
 - `cached broad lanes`: `<classification and direct-proof rationale, or none>`
 - `classified red/non-final lanes`: `<none, or lane -> owner/substitution>`
 - `archive status`: `<implemented but not archived | archived | post-ticket-review already ran>`
@@ -369,6 +413,16 @@ For red-gate successor closeout, include a compact post-metric proof-validity le
 - `post-metric graph edits`: `<successor/spec/dependency/status files changed after the decisive metric>`
 - `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "metric-only ownership transcription; no code, command, threshold, scope, or acceptance-boundary change">`
 
+For sequential measured tickets where the active submetric is complete but the parent spec/campaign gate remains red, use this compact parent-residual handoff before terminal status:
+
+- `active metric`: `<ticket-owned metric, baseline, decisive final, delta/materiality, command/artifact>`
+- `parent gate`: `<parent/spec headline target, decisive current verdict, why it remains active>`
+- `new dominant residual`: `<class/phase/owner now blocking the parent gate>`
+- `default flip / broad enablement`: `<allowed, still blocked, or out of scope, with reason>`
+- `residual owner`: `<existing active ticket/spec backlog, new follow-up, same-ticket continuation, or user-approved no-successor rationale>`
+- `archive state`: `implemented but not archived` for terminal active-slice completion, or `blocked and not archive-ready` when the active ticket itself remains nonterminal`
+- `next workflow`: `$post-ticket-review <ticket>` for implemented active-slice completion, or `$implement-ticket <successor-or-active-ticket>` for nonterminal continuation
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
@@ -392,6 +446,16 @@ patterns, for example `rg -n '150FITLWASM-027.md' tickets specs`. If the
 target text appears inside markdown backticks, search for the path or id without
 the backticks instead of using a double-quoted pattern that contains a code
 span.
+
+When a new or updated successor comes from diagnostic/profiling evidence rather
+than a retained code slice, include a compact non-overlap ledger in the active
+ticket, report, or successor before final proof:
+
+- `completed active scope`: `<artifact/report/verdict and exact command>`
+- `residual evidence`: `<metric, owner stack, unsupported reason, or failed gate>`
+- `successor owns`: `<specific remaining seam and why it is outside the completed scope>`
+- `exclusions`: `<work the successor must not reopen or duplicate>`
+- `rerun condition`: `<command/artifact that should change when the successor lands>`
 
 ## Sibling Absorbed Ownership
 
@@ -437,6 +501,28 @@ When a measured/profiling candidate is fully reverted and the active ticket need
 4. If the remaining owner is concrete and non-overlapping, create or update the successor before final handoff and include the rejected evidence that establishes why it is not duplicate work.
 5. Use a nonterminal durable status such as `BLOCKED`, `PARTIAL`, or the series-local equivalent unless the active ticket explicitly allows terminal completion on diagnostic evidence plus successor ownership.
 6. Run dependency integrity after the successor/spec/status graph changes. Do not rerun source/test proof solely for the reverted candidate when no runtime/test code remains; instead record that final code proof is not applicable because the source diff was removed.
+
+For diagnostic measured tickets where no runtime candidate is retained and the
+ticket's owned deliverable is the measurement verdict/report itself, terminal
+completion is allowed only when all of these are true:
+
+1. The ticket/spec acceptance story allows completion by durable diagnostic
+   evidence and concrete residual ownership, or the user has approved that
+   boundary through `1-3-1`.
+2. The checked-in report or active ticket includes the exact command,
+   reproducibility identity, decisive metrics, unsupported/fallback or owner
+   classification, and artifact paths.
+3. Any successor is concrete, dependency-valid, and non-overlapping using the
+   diagnostic successor ledger above.
+4. The active ticket records `no retained runtime/source diff` and classifies
+   generated reports, CSVs, raw logs, profiles, or traces as checked-in evidence
+   or ephemeral transcription sources.
+5. Final proof is limited to the fresh diagnostic command, graph/status
+   integrity, artifact hygiene, and any broad no-code lanes needed by the repo;
+   do not invent a source/test proof requirement when no source or test code
+   changed.
+6. The final handoff says `implemented but not archived` and points to
+   `$post-ticket-review <ticket>` unless the user explicitly requested archival.
 
 For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
 

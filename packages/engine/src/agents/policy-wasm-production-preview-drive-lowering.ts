@@ -22,9 +22,16 @@ export const lowerProductionPreviewDriveIr = (
       actionId: candidate.actionId ?? String(candidate.move.actionId),
       stableMoveKey: candidate.stableMoveKey,
       initialValue: program.rootValues[0] ?? 0,
+      ...(candidate.candidateGroup === undefined ? {} : { candidateGroup: candidate.candidateGroup }),
       initialPreviewStateValues: program.rootValues,
+      ...(candidate.decisionStackPublication === undefined ? {} : { decisionStackPublication: candidate.decisionStackPublication }),
+      ...(candidate.continuedDeepeningCompletionRecords === undefined ? {} : { continuedDeepeningCompletionRecords: candidate.continuedDeepeningCompletionRecords }),
+      ...(input.materializeStatePatch === true ? { statePatch: { ops: program.statePatchOps ?? [] } } : {}),
+      ...(input.previewBranch === undefined ? {} : { previewBranch: input.previewBranch }),
+      ...(program.previewSignalCarrier === undefined ? {} : { previewSignalCarrier: program.previewSignalCarrier }),
     })),
     steps: program.ops.flatMap(lowerProductionPreviewDriveIrOp),
+    ...(input.materializeStatePatch === true ? { materializeStatePatch: true } : {}),
   };
   return batch;
 };

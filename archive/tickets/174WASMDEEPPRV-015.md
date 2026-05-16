@@ -10,7 +10,7 @@
 
 `reports/174-phase-4c-residual-owner.md` shows that the dominant post-011 residual class is not a production preview-drive route failure. `coupArvnRedeployPolice:chooseOne` recorded `278705.94 ms` of measured agent-call time with `0` production preview-drive route count, `0` unsupported count, and `0` batch count. Its slow-tier top axis is dominated by token/query hot-path buckets, especially `tokenStateIndex:refreshCachedEntries` and `evalQuery:countMatchingTokens`.
 
-The rejected default-flip ticket `tickets/174WASMDEEPPRV-010.md` remains non-actionable until the zero-counter runtime residual is reduced or disproved as the primary blocker.
+The rejected default-flip ticket `archive/tickets/174WASMDEEPPRV-010.md` remains non-actionable until the zero-counter runtime residual is reduced or disproved as the primary blocker.
 
 ## Assumption Reassessment (2026-05-16)
 
@@ -211,5 +211,5 @@ Command ledger:
 
 Late-edit proof validity: reverting the rejected source/test candidates invalidated their earlier focused green tests as implementation proof, so they are retained only as rejected-candidate evidence. The bounded rejected-candidate witnesses remain valid as evidence for the rejected candidates because they were intentionally captured before each revert and are transcribed as candidate evidence, not as proof of retained runtime behavior. The owner-probe, token-index shape-probe, choose-one drive publication, post-preview owner, publish legal-actions, and continuation-support witnesses are valid as diagnostic evidence captured under explicitly temporary instrumentation; the instrumentation was reverted and the engine was rebuilt afterward, so they are not implementation proof. The prior-zone skip witness is valid as rejected-candidate evidence only; its source diff was reverted and the engine was rebuilt afterward. The zone-occurrence reuse, preview publication state-only, and suspended viability-skip correctness tests and bounded witnesses remain valid for retained source because no later source edit has changed those retained implementations.
 
-Post-review archive status: archived. The ticket-owned zero-counter residual is reduced and no longer dominant in the bounded witness; `tickets/174WASMDEEPPRV-010.md` remains blocked by the broader Phase 4 gate until a later measured gate records a pass.
-Next workflow: do not reopen `tickets/174WASMDEEPPRV-010.md` until a later measured gate records a pass. Any successor should target the new dominant reason-granular unsupported `train:chooseNStep` continued-deepening classes, not duplicate this zero-counter owner.
+Post-review archive status: archived. The ticket-owned zero-counter residual is reduced and no longer dominant in the bounded witness; `archive/tickets/174WASMDEEPPRV-010.md` remains blocked by the broader Phase 4 gate until a later measured gate records a pass.
+Next workflow: do not reopen `archive/tickets/174WASMDEEPPRV-010.md` until a later measured gate records a pass. Any successor should target the new dominant reason-granular unsupported `train:chooseNStep` continued-deepening classes, not duplicate this zero-counter owner.

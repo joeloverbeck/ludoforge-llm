@@ -55,4 +55,4 @@ The current witness exposes unsupported production preview-drive activity by mic
 - add or expose reason-granular unsupported preview-drive telemetry for the witness rows, without weakening Foundation 20 fallback provenance;
 - explain the zero-counter high-wall-time classes, especially `coupArvnRedeployPolice:chooseOne`;
 - determine whether the residual owner is another generic WASM preview-drive coverage extension, a token/query lifetime optimization, or a measurement-boundary correction;
-- keep `tickets/174WASMDEEPPRV-010.md` rejected unless a later gate decision records a Pass.
+- keep `archive/tickets/174WASMDEEPPRV-010.md` rejected unless a later gate decision records a Pass.

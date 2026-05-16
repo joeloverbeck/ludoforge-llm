@@ -101,7 +101,7 @@ Landed scope:
 - Augmented `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` so the witness CSV records `wasmProductionPreviewDriveRouteCount` and `wasmProductionPreviewDriveUnsupportedCount` per decision and the Markdown report summarizes route, unsupported, and batch totals by microturn class.
 - Extracted report rendering to `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` to resolve the source-size hard gate on the touched script.
 - Created the gate-decision report and fail-path blocker report.
-- Rejected `tickets/174WASMDEEPPRV-010.md` without code changes because the default flip is not authorized.
+- Rejected `archive/tickets/174WASMDEEPPRV-010.md` without code changes because the default flip is not authorized.
 - Added `archive/tickets/174WASMDEEPPRV-014.md` as the next non-overlapping owner for the failed gate residual.
 
 Generated/artifact fallout: checked-in witness Markdown/CSV and two Phase 4 reports were created. No schema, golden, GameSpecDoc, WASM ABI, or checked-in generated JSON artifact changed.
@@ -131,4 +131,4 @@ Verification:
 
 Late-edit proof validity: the final ticket status/proof transcription happened after the source, report, spec, dependent-ticket, successor-ticket, witness, and broad proof lanes were complete. The follow-up dependency-check transcription is clerical and records the just-run graph result; it does not change source, command semantics, acceptance thresholds, touched-file ownership, dependency ownership, or residual owner.
 
-Archive status: archived by post-ticket-review. `tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `archive/tickets/174WASMDEEPPRV-015.md` later completed the zero-counter owner slice.
+Archive status: archived by post-ticket-review. `archive/tickets/174WASMDEEPPRV-010.md` is rejected without implementation; `archive/tickets/174WASMDEEPPRV-014.md` completed the diagnostic owner slice, and `archive/tickets/174WASMDEEPPRV-015.md` later completed the zero-counter owner slice.

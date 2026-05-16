@@ -41,7 +41,7 @@ node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds
 | WASM production preview-drive unsupported | 221 | 221 | 0 |
 | WASM production preview-drive batches | 199 | 199 | 0 |
 
-The bounded single-seed wall time improved by about `6.67%`. This is useful bounded evidence for the retained generic reuse, but it is not the broad 15-seed Phase 4 gate and does not authorize `tickets/174WASMDEEPPRV-010.md`.
+The bounded single-seed wall time improved by about `6.67%`. This is useful bounded evidence for the retained generic reuse, but it is not the broad 15-seed Phase 4 gate and does not authorize `archive/tickets/174WASMDEEPPRV-010.md`.
 
 ## Top Continued-Deepening Axes
 
@@ -73,4 +73,4 @@ Unsupported provenance is unchanged and remains explicit:
 
 Phase 4g retained a generic hash-reuse optimization for WASM continuation state-patch materialization. It preserves projected-state identity, keeps fork/run-local digest cache isolation, and records route activation separately from unsupported provenance.
 
-This is not a default-flip or A/B deletion gate pass. `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass. The remaining repeated decision-stack digest/encode counts in the train continued-deepening axes are still visible residual work for future profiling, but this ticket's retained slice is complete.
+This is not a default-flip or A/B deletion gate pass. `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass. The remaining repeated decision-stack digest/encode counts in the train continued-deepening axes are still visible residual work for future profiling, but this ticket's retained slice is complete.

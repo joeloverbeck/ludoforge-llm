@@ -11,7 +11,7 @@
 
 The Phase 4c rerun completed all 15 seeds and preserved the prior activation totals: production preview-drive route count `181`, unsupported count `3394`, and batch count `1712`.
 
-The residual owner is not the rejected default flip in `tickets/174WASMDEEPPRV-010.md`. The dominant residual class is still `coupArvnRedeployPolice:chooseOne`, with `278705.94 ms` of measured agent-call time and `0` production preview-drive route, unsupported, and batch counts. The top slow-tier axis for the same class records `129057.88 ms` and is dominated by token/query buckets: `tokenStateIndex:refreshCachedEntries` at `23099.70 ms` and `evalQuery:countMatchingTokens` at `8391.55 ms`.
+The residual owner is not the rejected default flip in `archive/tickets/174WASMDEEPPRV-010.md`. The dominant residual class is still `coupArvnRedeployPolice:chooseOne`, with `278705.94 ms` of measured agent-call time and `0` production preview-drive route, unsupported, and batch counts. The top slow-tier axis for the same class records `129057.88 ms` and is dominated by token/query buckets: `tokenStateIndex:refreshCachedEntries` at `23099.70 ms` and `evalQuery:countMatchingTokens` at `8391.55 ms`.
 
 ## Dominant Residual Classification
 
@@ -40,6 +40,6 @@ The residual owner is not the rejected default flip in `tickets/174WASMDEEPPRV-0
 
 ## Decision
 
-The next non-overlapping owner was `archive/tickets/174WASMDEEPPRV-015.md`: a generic token/query lifetime optimization for zero-counter `continuedDeepening` chooseOne residuals. That owner is separate from the rejected default flip in `tickets/174WASMDEEPPRV-010.md` because the dominant class records no production preview-drive route, unsupported, or batch activity to flip.
+The next non-overlapping owner was `archive/tickets/174WASMDEEPPRV-015.md`: a generic token/query lifetime optimization for zero-counter `continuedDeepening` chooseOne residuals. That owner is separate from the rejected default flip in `archive/tickets/174WASMDEEPPRV-010.md` because the dominant class records no production preview-drive route, unsupported, or batch activity to flip.
 
 The reason-granular unsupported evidence remains useful successor input, but it is not the first owner because the dominant residual wall time is outside the production preview-drive route. A later WASM coverage ticket may use the reason rows above after the zero-counter token/query owner has either reduced or disproved the dominant residual.

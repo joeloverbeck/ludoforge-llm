@@ -58,4 +58,4 @@ These rows rank microturn classes with nonzero production preview-drive unsuppor
 
 ## Decision
 
-Ticket `tickets/174WASMDEEPPRV-010.md` must not proceed with the default flip or A/B deletion. The fail-path blocker report is `reports/174-phase-4-architectural-blocker.md`, and the diagnostic owner is `archive/tickets/174WASMDEEPPRV-014.md`.
+Ticket `archive/tickets/174WASMDEEPPRV-010.md` must not proceed with the default flip or A/B deletion. The fail-path blocker report is `reports/174-phase-4-architectural-blocker.md`, and the diagnostic owner is `archive/tickets/174WASMDEEPPRV-014.md`.

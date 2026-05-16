@@ -8,13 +8,13 @@
 
 ## Problem
 
-Spec 174 still cannot reopen the default-flip path in `tickets/174WASMDEEPPRV-010.md`. The Phase 4d zero-counter owner reduced `coupArvnRedeployPolice:chooseOne | continuedDeepening` from the dominant residual to rank 3 in the bounded seed-1005 witness, but the same report says the bounded sample is now dominated by reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening classes.
+Spec 174 still cannot reopen the default-flip path in `archive/tickets/174WASMDEEPPRV-010.md`. The Phase 4d zero-counter owner reduced `coupArvnRedeployPolice:chooseOne | continuedDeepening` from the dominant residual to rank 3 in the bounded seed-1005 witness, but the same report says the bounded sample is now dominated by reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening classes.
 
 This ticket owns the next non-overlapping Phase 4 slice: diagnose those `train:chooseNStep` unsupported classes, determine whether they are actionable generic WASM preview-drive coverage, generic deep-continuation runtime work, or a measurement-boundary blocker, and retain only a proven generic improvement. It does not reopen the rejected default flip.
 
 ## Assumption Reassessment (2026-05-16)
 
-1. `tickets/174WASMDEEPPRV-010.md` is rejected because `reports/174-phase-4-gate-decision.md` recorded a Fail verdict; no default flip or A/B deletion is authorized until a later gate records a Pass.
+1. `archive/tickets/174WASMDEEPPRV-010.md` is rejected because `reports/174-phase-4-gate-decision.md` recorded a Fail verdict; no default flip or A/B deletion is authorized until a later gate records a Pass.
 2. `archive/tickets/174WASMDEEPPRV-015.md` completed the zero-counter owner slice and archived after reducing the previously dominant `coupArvnRedeployPolice:chooseOne | continuedDeepening` residual.
 3. `reports/174-phase-4d-zero-counter-residual.md` now names reason-granular unsupported `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening classes as the dominant bounded-sample residual, so a new ticket is needed instead of reusing 010.
 
@@ -22,7 +22,7 @@ This ticket owns the next non-overlapping Phase 4 slice: diagnose those `train:c
 
 1. Foundation #20 requires unsupported preview-drive provenance to stay explicit. This ticket must preserve reason-granular unsupported/fallback evidence instead of letting fallback success count as WASM activation.
 2. Foundation #1 forbids FITL-specific runtime branches. Any retained implementation must be generic over encoded preview-drive, chooseNStep continuation, token/query, or publication mechanics.
-3. Foundation #14 keeps `tickets/174WASMDEEPPRV-010.md` rejected until the measured gate passes; this ticket may produce the evidence or implementation needed for a later gate, but it does not delete A/B wiring or flip defaults.
+3. Foundation #14 keeps `archive/tickets/174WASMDEEPPRV-010.md` rejected until the measured gate passes; this ticket may produce the evidence or implementation needed for a later gate, but it does not delete A/B wiring or flip defaults.
 
 ## What to Change
 
@@ -62,7 +62,7 @@ Produce `reports/174-phase-4e-train-choosenstep-residual.md` with the before/aft
 
 ## Out of Scope
 
-- No default flip or A/B wiring deletion; `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+- No default flip or A/B wiring deletion; `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
 - No FITL-specific identifiers, faction/card branches, or profile-name checks in runtime code.
 - No GameSpecDoc, policy profile, `depthCap`, `maxOptions`, `chooseNBeamWidth`, or `capClass` changes.
 - No broad 15-seed final gate rerun unless the bounded Phase 4e evidence justifies it and the ticket outcome records the exact command.
@@ -139,4 +139,4 @@ Late-edit proof validity:
 - No-invalidation: the ticket-dependency result transcription is exact command-result recording only and does not change graph edges or status.
 
 Archive status: archived by `$post-ticket-review` on 2026-05-16.
-Next workflow: Phase 4f completed in `archive/tickets/174WASMDEEPPRV-017.md`; `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+Next workflow: Phase 4f completed in `archive/tickets/174WASMDEEPPRV-017.md`; `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.

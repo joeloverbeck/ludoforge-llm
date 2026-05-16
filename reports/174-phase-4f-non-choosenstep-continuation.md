@@ -62,6 +62,6 @@ unknown/production-deep-choosenstep-continuation.projectedState/deep preview-dri
 
 Phase 4f is complete for generic continuation materialization and route activation. The safe non-`chooseNStep` continuation class was `chooseOne`, and it now materializes through the WASM state-patch contract with TypeScript parity coverage.
 
-The bounded witness does not improve wall time. It shifts formerly unsupported work into active route execution and leaves terminal-boundary/projected-state residuals explicit. `tickets/174WASMDEEPPRV-010.md` remains rejected.
+The bounded witness does not improve wall time. It shifts formerly unsupported work into active route execution and leaves terminal-boundary/projected-state residuals explicit. `archive/tickets/174WASMDEEPPRV-010.md` remains rejected.
 
 The next non-overlapping owner was `archive/tickets/174WASMDEEPPRV-018.md`, which owned the post-017 repeated `zobrist:digestDecisionStackFrame` and `zobrist:encodeDecisionStackFrame` cost visible in the dominant continued-deepening hot-path buckets. That owner recorded a bounded measured improvement before archival; a renewed gate/default-flip decision still requires a later measured gate.

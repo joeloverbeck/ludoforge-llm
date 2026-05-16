@@ -22,7 +22,7 @@ This ticket owns the next non-overlapping generic implementation slice. It must 
 
 1. Foundation #20 requires the unsupported/fallback rows to remain explicit. Support for new continuation classes must not let fallback success count as route activation.
 2. Foundation #1 forbids FITL-specific train/card/faction branches. The implementation must operate on generic published microturn decisions and state patches.
-3. Foundation #14 keeps `tickets/174WASMDEEPPRV-010.md` rejected until a later measured gate records a Pass; this ticket must not delete A/B wiring or flip defaults.
+3. Foundation #14 keeps `archive/tickets/174WASMDEEPPRV-010.md` rejected until a later measured gate records a Pass; this ticket must not delete A/B wiring or flip defaults.
 
 ## What to Change
 
@@ -57,7 +57,7 @@ Rerun the bounded seed-1005 witness and record whether the `production-deep-choo
 
 ## Out of Scope
 
-- No default flip or A/B wiring deletion; `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+- No default flip or A/B wiring deletion; `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
 - No FITL-specific identifiers, train/card branches, faction branches, or profile-name checks in runtime code.
 - No GameSpecDoc, policy profile, `depthCap`, `maxOptions`, `chooseNBeamWidth`, or `capClass` changes.
 - No broad 15-seed final gate rerun unless the bounded Phase 4f evidence justifies it and the ticket outcome records the exact command.
@@ -139,7 +139,7 @@ Artifacts:
 
 The final report/CSV contain no `production-deep-choosenstep-continuation.pickInnerDecision` rows and no `deep preview-drive selected a non-chooseNStep continuation decision` rows. Route activation is proven by the production preview-drive route count increasing from `12` to `310`.
 
-This is not a performance-gate pass. The bounded wall time regressed by about 2.53%, while `train:chooseNStep:add` and `train:chooseNStep:confirm` total time also increased. The retained value is generic support coverage and unsupported-owner reduction. `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+This is not a performance-gate pass. The bounded wall time regressed by about 2.53%, while `train:chooseNStep:add` and `train:chooseNStep:confirm` total time also increased. The retained value is generic support coverage and unsupported-owner reduction. `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
 
 ### Source-size ledger
 

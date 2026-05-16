@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic decision-stack digest/cache reuse and bounded Phase 4g witness
-**Deps**: `archive/tickets/174WASMDEEPPRV-017.md`, `reports/174-phase-4f-non-choosenstep-continuation.md`, `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4f-non-choosenstep-continuation-final.md`, `tickets/174WASMDEEPPRV-010.md`
+**Deps**: `archive/tickets/174WASMDEEPPRV-017.md`, `reports/174-phase-4f-non-choosenstep-continuation.md`, `reports/fitl-arvn-15-seed-decomposition-2026-05-16-phase-4f-non-choosenstep-continuation-final.md`, `archive/tickets/174WASMDEEPPRV-010.md`
 
 ## Problem
 
-`archive/tickets/174WASMDEEPPRV-017.md` completed generic `chooseOne` deep continuation materialization and eliminated the Phase 4e `production-deep-choosenstep-continuation.pickInnerDecision` unsupported owner, but the bounded seed-1005 witness regressed from `62297.98 ms` to `63872.98 ms`. That is not a Phase 4 gate pass and does not authorize `tickets/174WASMDEEPPRV-010.md`.
+`archive/tickets/174WASMDEEPPRV-017.md` completed generic `chooseOne` deep continuation materialization and eliminated the Phase 4e `production-deep-choosenstep-continuation.pickInnerDecision` unsupported owner, but the bounded seed-1005 witness regressed from `62297.98 ms` to `63872.98 ms`. That is not a Phase 4 gate pass and does not authorize `archive/tickets/174WASMDEEPPRV-010.md`.
 
 The post-017 report shows the same `train:chooseNStep:add | continuedDeepening` and `train:chooseNStep:confirm | continuedDeepening` axes still dominate the bounded sample. Their hot-path buckets are now led by repeated decision-stack digest/encode work:
 
@@ -28,7 +28,7 @@ This ticket owns the next non-overlapping generic cost-reduction slice: reduce r
 
 1. Foundation #1: any retained optimization must be game-agnostic and operate on generic decision-stack frame identity, parent digest, runtime cache state, or preview-drive publication data. No FITL action names, factions, cards, profile labels, or microturn-class string branches are allowed in runtime code.
 2. Foundation #20: unsupported/fallback rows remain explicit. Reducing digest/encode cost cannot reclassify unsupported rows as supported routes or suppress unavailable-preview provenance.
-3. Foundation #14: `tickets/174WASMDEEPPRV-010.md` remains rejected. This ticket does not delete A/B routing, flip defaults, or claim a gate pass without measured evidence.
+3. Foundation #14: `archive/tickets/174WASMDEEPPRV-010.md` remains rejected. This ticket does not delete A/B routing, flip defaults, or claim a gate pass without measured evidence.
 4. Determinism boundary: any digest/cache reuse must preserve canonical `computeFullHash` output, decision-stack frame digest values, replay identity, and forked-runtime isolation.
 
 ## What to Change
@@ -75,7 +75,7 @@ Rerun the bounded seed-1005 witness with hot-path buckets and record:
 - production preview-drive route, unsupported, and batch counts
 - reason-granular unsupported rows
 
-If the bounded witness does not improve materially, record that truth and keep `tickets/174WASMDEEPPRV-010.md` rejected.
+If the bounded witness does not improve materially, record that truth and keep `archive/tickets/174WASMDEEPPRV-010.md` rejected.
 
 ## Files to Touch
 
@@ -92,7 +92,7 @@ If the bounded witness does not improve materially, record that truth and keep `
 
 ## Out of Scope
 
-- No default flip or A/B wiring deletion; `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+- No default flip or A/B wiring deletion; `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
 - No FITL-specific identifiers, action names, card names, faction branches, profile labels, or microturn-class branches in runtime code.
 - No GameSpecDoc, policy profile, `depthCap`, `maxOptions`, `chooseNBeamWidth`, or `capClass` changes.
 - No broad 15-seed final gate rerun unless the bounded Phase 4g evidence justifies it and the ticket outcome records the exact command.
@@ -195,7 +195,7 @@ The retained route is active in the top train axes: `policyWasmStatePatch:reuseA
 
 Unsupported provenance is unchanged: the final bounded witness still records `5` terminal-boundary/projected-state unsupported rows for `train:chooseNStep:add` and `3` for `train:chooseNStep:confirm`; card-event and shared-scalar unsupported rows remain explicit. Fallback success does not count as route activation.
 
-This is not a broad Phase 4 gate pass and does not authorize the default flip or A/B deletion. `tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
+This is not a broad Phase 4 gate pass and does not authorize the default flip or A/B deletion. `archive/tickets/174WASMDEEPPRV-010.md` remains rejected until a later measured gate records a Pass.
 
 ### Source-size ledger
 

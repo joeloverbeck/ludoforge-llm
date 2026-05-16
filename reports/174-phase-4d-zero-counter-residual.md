@@ -53,7 +53,7 @@ The candidate also emitted `tokenStateIndex:refreshCachedEntriesPriorIndexHit=42
 
 The rejected candidates are not retained. The retained Phase 4d runtime change is limited to per-refresh zone occurrence reuse inside `refreshCachedTokenStateIndexEntries`, with a focused parity test covering a multi-token, multi-zone refresh.
 
-The zero-counter `continuedDeepening` residual is reduced but remains active and still blocks reopening `tickets/174WASMDEEPPRV-010.md`. A later diagnostic-only continuation identified a new concrete generic runtime owner: choose-one preview-drive continuation publication, specifically `publishMicroturnFromPreviewStateNoHash` inside `driveOption`. The retained implementation against that owner keeps preview no-hash stack publication state-only, avoiding observer projection work that preview-drive callers do not consume.
+The zero-counter `continuedDeepening` residual is reduced but remains active and still blocks reopening `archive/tickets/174WASMDEEPPRV-010.md`. A later diagnostic-only continuation identified a new concrete generic runtime owner: choose-one preview-drive continuation publication, specifically `publishMicroturnFromPreviewStateNoHash` inside `driveOption`. The retained implementation against that owner keeps preview no-hash stack publication state-only, avoiding observer projection work that preview-drive callers do not consume.
 
 ## Artifact Classification
 
@@ -195,7 +195,7 @@ Measured result:
 | `tokenStateIndex:refreshCachedEntries` timed bucket | 7207.27 | 6551.81 | improved |
 | `evalQuery:countMatchingTokens` timed bucket | 2598.61 | 2651.23 | still active |
 
-The retained optimization reduces the token-index refresh owner identified by the shape probe, but the zero-counter class remains dominant and query-count work remains active. This is a partial Phase 4d landing, not enough evidence to reopen the default-flip path in `tickets/174WASMDEEPPRV-010.md`.
+The retained optimization reduces the token-index refresh owner identified by the shape probe, but the zero-counter class remains dominant and query-count work remains active. This is a partial Phase 4d landing, not enough evidence to reopen the default-flip path in `archive/tickets/174WASMDEEPPRV-010.md`.
 
 ## Rejected Prior-Zone Skip Candidate
 
@@ -287,7 +287,7 @@ Measured result:
 | `tokenStateIndex:refreshCachedEntries` timed bucket | 6551.81 | 6410.68 | still active |
 | `evalQuery:countMatchingTokens` timed bucket | 2651.23 | 2497.73 | still active |
 
-The retained preview-publication slice improves the bounded witness and keeps the residual distinct from preview-drive fallback activity. It still does not prove the full default-flip gate; `tickets/174WASMDEEPPRV-010.md` remains blocked until a later measured gate records a pass.
+The retained preview-publication slice improves the bounded witness and keeps the residual distinct from preview-drive fallback activity. It still does not prove the full default-flip gate; `archive/tickets/174WASMDEEPPRV-010.md` remains blocked until a later measured gate records a pass.
 
 ## Post-Preview Publication Owner Probes
 
@@ -344,4 +344,4 @@ Measured result:
 | `tokenStateIndex:refreshCachedEntries` timed bucket | 6410.68 | 1572.76 | improved |
 | `evalQuery:countMatchingTokens` timed bucket | 2497.73 | 226.50 | improved |
 
-The retained candidate reduces and deprioritizes the ticket-owned zero-counter residual. It still does not prove the full Phase 4 default-flip gate: the bounded sample is now dominated by `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening classes with reason-granular unsupported preview-drive activity. `tickets/174WASMDEEPPRV-010.md` remains blocked until a later measured gate records a pass.
+The retained candidate reduces and deprioritizes the ticket-owned zero-counter residual. It still does not prove the full Phase 4 default-flip gate: the bounded sample is now dominated by `train:chooseNStep:add` and `train:chooseNStep:confirm` continued-deepening classes with reason-granular unsupported preview-drive activity. `archive/tickets/174WASMDEEPPRV-010.md` remains blocked until a later measured gate records a pass.

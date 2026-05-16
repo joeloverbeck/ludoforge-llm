@@ -96,6 +96,9 @@ The architecture test is picked up automatically by `pnpm turbo test` because it
 
 Completed on 2026-05-16.
 
+Outcome amended: 2026-05-16 — Phase 3 and Phase 4 sibling references now point
+at their archived ticket paths after both follow-on slices completed.
+
 What landed:
 
 - Added `packages/engine/test/architecture/policy-wasm-throw-contract.test.ts` with `// @test-class: architectural-invariant`.
@@ -108,7 +111,7 @@ Live reassessment and corrections:
 
 - Focused command correction: engine tests run compiled `dist` files. The targeted proof is `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-wasm-throw-contract.test.js`, not the source-path argument form from the draft command.
 - Throw-count correction: Phase 1's inventory now has 83 preserved throws, including the marked `throw error` rethrow in `policy-wasm-runtime.ts`; the architecture test enforces every `throw` statement, not only `throw new Error` / `throw new PolicyRuntimeError`.
-- Same-series scope: `tickets/175WASMTSFALCON-004.md` and `tickets/175WASMTSFALCON-005.md` remain pending; post-review updated only their `**Deps**` lines to record the Phase 2 prerequisite explicitly. Phase 3 parity fixtures and Phase 4 source headers are still out of scope here.
+- Same-series scope: `archive/tickets/175WASMTSFALCON-004.md` and `archive/tickets/175WASMTSFALCON-005.md` later completed the remaining Phase 3 parity fixtures and Phase 4 source headers. Those slices stayed out of this Phase 2 architecture-test ticket.
 - Schema/generated fallout: none expected; this ticket adds tests and a text fixture only.
 - Source-size check: the new architecture test is 179 lines and the fixture is 8 lines, both below the repository file-size ceiling.
 - Post-review correction: replaced the test file's default `localeCompare` sort with a byte-stable string comparator so violation ordering does not depend on system locale.

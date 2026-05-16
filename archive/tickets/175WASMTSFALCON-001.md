@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — analysis-only output
-**Deps**: `specs/175-wasm-ts-fallback-contract-enforcement.md`
+**Deps**: `archive/specs/175-wasm-ts-fallback-contract-enforcement.md`
 
 ## Problem
 
@@ -134,6 +134,9 @@ The total throw count in the report MUST equal `grep -rn "throw " packages/engin
 ## Outcome
 
 Completed: 2026-05-16.
+
+Outcome amended: 2026-05-17 — updated the Spec 175 dependency path after the
+spec was archived.
 
 What changed:
 

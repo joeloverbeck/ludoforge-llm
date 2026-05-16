@@ -3,7 +3,7 @@
 ## Date & Spec Link
 
 - Date: 2026-05-16
-- Spec: `specs/175-wasm-ts-fallback-contract-enforcement.md`
+- Spec: `archive/specs/175-wasm-ts-fallback-contract-enforcement.md`
 - Ticket: `archive/tickets/175WASMTSFALCON-001.md`
 - Inventory commit: `ed23802274c5941c4578cae84770fe7555d1de48`
 

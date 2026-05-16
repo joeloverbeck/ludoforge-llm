@@ -1,6 +1,6 @@
 # Spec 175 — WASM↔TS Fallback Contract Enforcement
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — addresses a structural correctness weakness exposed by commit `278003969` (`fix(wasm): graceful preview-drive fallback restores WASM/TS equivalence`).
 **Complexity**: M — bounded scope; no new WASM coverage; no perf changes.
 **Date**: 2026-05-17
@@ -115,4 +115,20 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`archive/tickets/175WASMTSFALCON-002.md`](../archive/tickets/175WASMTSFALCON-002.md) — Phase 1 — Convert unsupported-detection throws to null-return (covers §4 Phase 1)
 - [`archive/tickets/175WASMTSFALCON-003.md`](../archive/tickets/175WASMTSFALCON-003.md) — Phase 2 — Architecture test enforcing null-return contract (covers §4 Phase 2)
 - [`archive/tickets/175WASMTSFALCON-004.md`](../archive/tickets/175WASMTSFALCON-004.md) — Phase 3 — Parity oracle coverage for every unsupported reason (covers §4 Phase 3)
-- [`tickets/175WASMTSFALCON-005.md`](../tickets/175WASMTSFALCON-005.md) — Phase 4 — Contract documentation in WASM glue files (covers §4 Phase 4)
+- [`archive/tickets/175WASMTSFALCON-005.md`](../archive/tickets/175WASMTSFALCON-005.md) — Phase 4 — Contract documentation in WASM glue files (covers §4 Phase 4)
+
+## Outcome
+
+Completion date: 2026-05-17.
+
+Spec 175 is complete. The full ticket series landed and was archived:
+
+- Phase 0 inventoried and classified WASM throw sites.
+- Phase 1 converted unsupported-detection branches to the null-return or typed fallback contract.
+- Phase 2 added the architecture test enforcing marker-backed throw classification.
+- Phase 3 added parity-oracle fixtures for every enumerated unsupported preview-drive reason.
+- Phase 4 added source-level header comments documenting the WASM/TS fallback contract at the two named glue files.
+
+Deviation from the original plan: none. The strategic WASM-coverage/performance question remains outside this spec and belongs to Spec 176.
+
+Verification is recorded in the archived phase tickets. Final series integrity check: `pnpm run check:ticket-deps` passed after archiving the Phase 4 ticket and Spec 175.

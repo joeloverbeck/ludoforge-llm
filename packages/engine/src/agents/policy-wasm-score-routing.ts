@@ -31,6 +31,26 @@ import {
   type PolicyWasmRuntime,
 } from './policy-wasm-runtime.js';
 
+/*
+ * Spec 175 WASM/TS fallback contract:
+ *
+ * This file routes policy scoring through the WASM module when supported.
+ * WASM-side branches that detect an unsupported preview-drive shape must return
+ * null, or this function's typed fallback sentinel, so the caller can run the
+ * TypeScript evaluator. That TypeScript fallback is the correctness oracle for
+ * unsupported shapes; do not throw from unsupported-detection branches when a
+ * fallback is available.
+ *
+ * Throws are reserved for genuine contract violations such as unknown policy
+ * ids, unknown candidate-feature ids, and corrupt codec/ABI output. Those
+ * throws carry the contract-violation marker adjacent to the throw, while
+ * unsupported fallback branches carry the null-return marker adjacent to the
+ * fallback return. The marker convention is enforced by
+ * packages/engine/test/architecture/policy-wasm-throw-contract.test.ts.
+ *
+ * Reference: archive/specs/175-wasm-ts-fallback-contract-enforcement.md.
+ */
+
 interface EncodedPolicyView {
   readonly layout: EncodedStateLayout;
   readonly encoded: EncodedState;

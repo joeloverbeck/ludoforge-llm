@@ -1,6 +1,6 @@
 # 178POLWASMPERF-003: Split terminal-boundary and no-counter policy-agent residual owners
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected - measurement/report helper changes only unless live evidence proves a tiny profiler attribution gap
@@ -115,3 +115,35 @@ No automated tests are expected if this remains report-only. If a profiler/repor
 2. `git diff --check`
 3. If a profiler/report helper changes: `pnpm -F @ludoforge/engine build`
 4. If a profiler/report helper changes: run the focused script/test that proves the new attribution output
+
+## Outcome (2026-05-17)
+
+**Completion date:** 2026-05-17.
+
+**Durable state:** `COMPLETED` as a report-only investigation ticket. The recommendation is a narrower follow-up investigation, not an implementation spec.
+
+**Landed scope:** `reports/178-phase-2-terminal-boundary-no-counter-split.md` classifies the two Phase 1 residual owners using existing checked-in Phase 0 and Phase 2 CSV artifacts plus source inspection of the current counter emitters. No runtime, WASM ABI, policy profile, GameSpecDoc, runner, profiler helper, or report-rendering helper changed.
+
+**Deliverable ledger:**
+
+- `reports/178-phase-2-terminal-boundary-no-counter-split.md` — done; checked-in report artifact.
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — verified-no-edit; existing row fields expose route/unsupported deltas, preview branch, microturn class, unsupported-reason JSON, hot buckets, and selected move metadata, which are enough to classify the current evidence limit.
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — verified-no-edit; this ticket's durable artifact is the checked-in split report, and no generated report section was needed.
+- `reports/178-phase-1-fallback-wall-time-attribution.md` — verified-no-edit; Phase 2 refines the next investigation owner without changing the Phase 1 interpretation.
+
+**Decision:** `create-investigation-ticket: Add same-run terminal-boundary and no-counter attribution counters`. The report found no implementation-ready owner: the `projectedState` unsupported reason remains a material but collapsed terminal-boundary carrier, and the no-counter `coupArvnRedeployPolice:chooseOne | continuedDeepening` axis remains material but lacks same-run attribution. Cross-run TS-only buckets implicate `tokenStateIndex:*` at `1,365.2646 ms`, or `1.86%` of slow-tier wall time, below the `5%` spec-ready materiality bar.
+
+**Post-review follow-up:** Created `tickets/178POLWASMPERF-004.md` to own the recommended same-run terminal-boundary and no-counter attribution counters before archiving this report-only ticket. The follow-up is non-overlapping: this ticket produced the Phase 2 split report; `178POLWASMPERF-004` must add the missing same-run attribution substrate and produce the next decision report.
+
+**Generated/schema fallout:** none. This is markdown/report-only; no source, schema, generated JSON, GameSpecDoc, or visual config changed.
+
+**Verification:**
+
+- `pnpm run check:ticket-deps` — passed before terminal status; checked 1 active ticket and 2387 archived tickets.
+- `git diff --check` — passed before terminal status.
+- `git diff --no-index --check /dev/null reports/178-phase-2-terminal-boundary-no-counter-split.md` — whitespace-clean for the new untracked report; command exited with ordinary no-index diff status and no diagnostics.
+- `pnpm run check:ticket-deps` — passed after terminal status; checked 1 active ticket and 2387 archived tickets.
+
+**Late-edit proof validity:** terminal status/proof transcription only after the report and outcome were already truthful; no source, test, schema, generated artifact, command semantics, dependency ownership, acceptance boundary, or touched-file scope changed. Post-status dependency integrity passed; the post-status result transcription is clerical and does not change scope, status, deps, sibling ownership, or command semantics.
+
+**Runtime surface breadth:** no runtime surface change; report-only planning/evidence surface.

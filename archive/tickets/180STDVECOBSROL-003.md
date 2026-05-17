@@ -89,6 +89,8 @@ Thread the new field through the authored profile schema, compiled IR, runtime e
 
 Completed on 2026-05-17.
 
+Outcome amended: 2026-05-17 - Phase 3 sibling path updated after `180STDVECOBSROL-004` archival; no scope or proof change.
+
 What landed:
 
 - `seatAgg.availability` now supports `requireAllReady`, `requireAnyReady`, `selfAndTargetReady`, and `skipUnavailable` in the authored and compiled policy expression contracts.
@@ -100,7 +102,7 @@ What landed:
 
 Deferred scope:
 
-- `previewUsage.seatMatrix` remains owned by `tickets/180STDVECOBSROL-004.md`.
+- `previewUsage.seatMatrix` remains owned by `archive/tickets/180STDVECOBSROL-004.md`.
 - Role primitives remain owned by `tickets/180STDVECOBSROL-005.md`.
 - FITL ARVN witness, cookbook text, and Foundations appendix text remain owned by `tickets/180STDVECOBSROL-006.md`.
 

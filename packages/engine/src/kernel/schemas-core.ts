@@ -2414,6 +2414,24 @@ const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewSeatMatrixCellTraceSchema = z
+  .discriminatedUnion('status', [
+    z.object({ status: z.literal('ready'), value: NumberSchema }).strict(),
+    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'noPreviewDecision', 'gated']) }).strict(),
+  ]);
+
+const PolicyPreviewSeatMatrixCandidateTraceSchema = z
+  .object({
+    perSeatRefs: z.record(StringSchema, z.record(StringSchema, PolicyPreviewSeatMatrixCellTraceSchema)),
+  })
+  .strict();
+
+const PolicyPreviewSeatMatrixTraceSchema = z
+  .object({
+    byCandidate: z.record(StringSchema, PolicyPreviewSeatMatrixCandidateTraceSchema),
+  })
+  .strict();
+
 const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
@@ -2422,6 +2440,7 @@ const PolicyPreviewUsageTraceSchema = z
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
+    seatMatrix: PolicyPreviewSeatMatrixTraceSchema.optional(),
     outcomeGrantContinuation: PolicyPreviewOutcomeGrantContinuationTraceSchema.optional(),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,

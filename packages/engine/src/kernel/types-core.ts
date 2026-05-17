@@ -2007,6 +2007,35 @@ export interface PolicyTieBreakStepTrace {
   readonly candidateCountAfter: number;
 }
 
+export type PolicyPreviewSeatMatrixStatusTrace =
+  | 'ready'
+  | 'stochastic'
+  | 'random'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'postGrantCap'
+  | 'noPreviewDecision'
+  | 'gated';
+
+export type PolicyPreviewSeatMatrixCellTrace =
+  | {
+      readonly status: 'ready';
+      readonly value: number;
+    }
+  | {
+      readonly status: Exclude<PolicyPreviewSeatMatrixStatusTrace, 'ready'>;
+    };
+
+export interface PolicyPreviewSeatMatrixCandidateTrace {
+  readonly perSeatRefs: Readonly<Record<string, Readonly<Record<string, PolicyPreviewSeatMatrixCellTrace>>>>;
+}
+
+export interface PolicyPreviewSeatMatrixTrace {
+  readonly byCandidate: Readonly<Record<string, PolicyPreviewSeatMatrixCandidateTrace>>;
+}
+
 export interface PolicyPreviewUsageTrace {
   readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
@@ -2014,6 +2043,7 @@ export interface PolicyPreviewUsageTrace {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
+  readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
   readonly outcomeGrantContinuation?: PolicyPreviewOutcomeGrantContinuationTrace;
   readonly utility: PolicyPreviewUtilityTrace;
   readonly widenedBecauseUniform: boolean;

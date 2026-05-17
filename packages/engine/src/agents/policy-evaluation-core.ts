@@ -33,6 +33,7 @@ import type {
   GameState,
   LookupUnavailabilityReason,
   MoveParamValue,
+  PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
   ZoneDef,
@@ -144,6 +145,7 @@ export class PolicyRuntimeError extends Error {
 export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
+  previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
   readonly unknownCandidateParamRefs: Map<string, CandidateParamUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
@@ -366,6 +368,7 @@ export class PolicyEvaluationContext {
   private currentCandidates: PolicyEvaluationCandidate[];
   private activeState: GameState;
   private currentSeatContext: string | undefined;
+  private currentSeatMatrixContext: { readonly seatId: string } | undefined;
   private candidateParamUnavailableDuringValue = false;
   private previewUnavailableEventCount = 0;
   private scheduleUnavailableDuringValue = false;
@@ -411,6 +414,7 @@ export class PolicyEvaluationContext {
     this.transientZoneReadContext = null;
     this.currentCandidates = [];
     this.currentSeatContext = undefined;
+    this.currentSeatMatrixContext = undefined;
     this.runtimeProviders.dispose();
   }
 
@@ -483,6 +487,7 @@ export class PolicyEvaluationContext {
       this.resolvedPreviewRefValues.set(candidate.stableMoveKey, candidateValues);
     }
     candidateValues.set(refId, value);
+    this.recordSeatMatrixCell(candidate, refId, { status: 'ready', value });
   }
 
   getResolvedPreviewRefValue(candidate: PolicyEvaluationCandidate, refId: string): number | undefined {
@@ -813,7 +818,27 @@ export class PolicyEvaluationContext {
   ): void {
     candidate?.unknownPreviewRefs.set(refId, reason);
     this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+    if (candidate !== undefined) {
+      this.recordSeatMatrixCell(candidate, refId, { status: reason });
+    }
     this.previewUnavailableEventCount += 1;
+  }
+
+  private recordSeatMatrixCell(
+    candidate: PolicyEvaluationCandidate,
+    refId: string,
+    cell: PolicyPreviewSeatMatrixCellTrace,
+  ): void {
+    const context = this.currentSeatMatrixContext;
+    if (context === undefined || candidate.previewSeatMatrix === undefined) {
+      return;
+    }
+    let refCells = candidate.previewSeatMatrix.get(refId);
+    if (refCells === undefined) {
+      refCells = new Map<string, PolicyPreviewSeatMatrixCellTrace>();
+      candidate.previewSeatMatrix.set(refId, refCells);
+    }
+    refCells.set(context.seatId, cell);
   }
 
   private unknownLookupRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
@@ -1463,13 +1488,22 @@ export class PolicyEvaluationContext {
     const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
     const values: number[] = []; let anySeatUnavailable = false;
     const evaluateForSeat = (seatId: string, collectValue: boolean): void => {
-      const previousSeatContext = this.currentSeatContext, seatPreviewUnavailableEventsBefore = this.previewUnavailableEventCount;
+      const previousSeatContext = this.currentSeatContext;
+      const previousSeatMatrixContext = this.currentSeatMatrixContext;
+      const seatPreviewUnavailableEventsBefore = this.previewUnavailableEventCount;
       this.currentSeatContext = seatId;
+      if (candidate !== undefined) {
+        candidate.previewSeatMatrix ??= new Map();
+        this.currentSeatMatrixContext = { seatId };
+      }
       try {
         const value = inner(candidate);
         anySeatUnavailable ||= this.previewUnavailableEventCount > seatPreviewUnavailableEventsBefore;
         if (collectValue && typeof value === 'number') values.push(value);
-      } finally { this.currentSeatContext = previousSeatContext; }
+      } finally {
+        this.currentSeatContext = previousSeatContext;
+        this.currentSeatMatrixContext = previousSeatMatrixContext;
+      }
     };
 
     if (availability === 'selfAndTargetReady' && !seatIds.includes(this.input.seatId)) evaluateForSeat(this.input.seatId, false);

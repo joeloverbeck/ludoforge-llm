@@ -201,6 +201,8 @@ The ledger is evidence, not approval. If a path crossed the 800-line cap, ended 
 
 If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
 
+For canonical hubs retained with active growth, use this compact deferral sequence before terminal status: `line counts + numstat -> preexisting oversize + active growth classification -> 1-3-1 user approval -> active-ticket approval note -> final source-size ledger -> residual owner or none`. Do not treat the approval comment alone as durable; the active ticket outcome or final closeout must preserve the approved option, why extraction was deferred, and whether any successor is needed.
+
 ## Same-Series Draft Delta
 
 When new same-series draft tickets appear after the initial checkpoint and the active ticket/spec references deferred sibling scope, carry this compact field into the running note or durable outcome:

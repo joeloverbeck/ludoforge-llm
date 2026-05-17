@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Profile/docs/report only unless integration proof exposes focused fallout.
-**Deps**: `archive/tickets/180STDVECOBSROL-002.md`, `archive/tickets/180STDVECOBSROL-003.md`, `tickets/180STDVECOBSROL-004.md`, `tickets/180STDVECOBSROL-005.md`
+**Deps**: `archive/tickets/180STDVECOBSROL-002.md`, `archive/tickets/180STDVECOBSROL-003.md`, `archive/tickets/180STDVECOBSROL-004.md`, `tickets/180STDVECOBSROL-005.md`
 
 ## Problem
 

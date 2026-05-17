@@ -45,6 +45,15 @@ const previewStandingRef = (): AgentPolicyExpr => ({
     selector: { kind: 'role', seatToken: '$seat' },
   },
 });
+const previewSelfStandingRef = (): AgentPolicyExpr => ({
+  kind: 'ref',
+  ref: {
+    kind: 'previewSurface',
+    family: 'victoryCurrentMargin',
+    id: 'currentMargin',
+    selector: { kind: 'player', player: 'self' },
+  },
+});
 const previewStandingSum = (options: {
   readonly availability?: SeatAggAvailability;
   readonly expr?: AgentPolicyExpr;
@@ -68,6 +77,7 @@ export function createStandingPreviewDef(options: {
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
   readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly useSelfPreviewRef?: boolean;
   readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
 }): GameDef {
   const initialStandings = options.initialStandings ?? {};
@@ -189,6 +199,7 @@ export function runStandingPreviewTrace(options: {
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
   readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly useSelfPreviewRef?: boolean;
   readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
 }): PolicyAgentDecisionTrace {
   const def = createStandingPreviewDef(options);
@@ -225,6 +236,7 @@ function createStandingCatalog(options: {
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
   readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly useSelfPreviewRef?: boolean;
 }): AgentPolicyCatalog {
   const considerations = options.primeUnknownPreviewRef
     ? ['primeOpponentProjectedStandingSum', considerationId]
@@ -288,11 +300,13 @@ function createStandingCatalog(options: {
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
-          value: previewStandingSum({
-            ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
-            ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
-            ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
-          }),
+          value: options.useSelfPreviewRef === true
+            ? previewSelfStandingRef()
+            : previewStandingSum({
+                ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
+                ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
+                ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
+              }),
           previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
@@ -300,11 +314,13 @@ function createStandingCatalog(options: {
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
-          value: previewStandingSum({
-            ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
-            ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
-            ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
-          }),
+          value: options.useSelfPreviewRef === true
+            ? previewSelfStandingRef()
+            : previewStandingSum({
+                ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
+                ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
+                ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
+              }),
           previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },

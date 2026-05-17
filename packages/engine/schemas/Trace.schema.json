@@ -2079,6 +2079,86 @@
                       "additionalProperties": false
                     }
                   },
+                  "seatMatrix": {
+                    "type": "object",
+                    "properties": {
+                      "byCandidate": {
+                        "type": "object",
+                        "propertyNames": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "perSeatRefs": {
+                              "type": "object",
+                              "propertyNames": {
+                                "$ref": "#/definitions/anon_4682db72"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "additionalProperties": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "const": "ready"
+                                        },
+                                        "value": {
+                                          "$ref": "#/definitions/anon_c0e4ebfe"
+                                        }
+                                      },
+                                      "required": [
+                                        "status",
+                                        "value"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stochastic",
+                                            "random",
+                                            "hidden",
+                                            "unresolved",
+                                            "failed",
+                                            "depthCap",
+                                            "postGrantCap",
+                                            "noPreviewDecision",
+                                            "gated"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "status"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "perSeatRefs"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "byCandidate"
+                    ],
+                    "additionalProperties": false
+                  },
                   "outcomeGrantContinuation": {
                     "type": "object",
                     "properties": {

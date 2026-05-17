@@ -18,6 +18,8 @@ import type {
   LookupUnavailabilityReason,
   Move,
   PolicyPreviewOutcomeBreakdownTrace,
+  PolicyPreviewSeatMatrixCellTrace,
+  PolicyPreviewSeatMatrixTrace,
   Rng,
   TrustedExecutableMove,
 } from '../kernel/types.js';
@@ -208,6 +210,7 @@ export interface PolicyEvaluationPreviewUsage {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
+  readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
   readonly outcomeGrantContinuation?: PolicyEvaluationOutcomeGrantContinuationUsage;
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
@@ -355,6 +358,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewDrive?: PolicyPreviewDriveTrace;
   outcomeGrantContinuationDepth?: number;
   completionPolicyFallbackCount?: number;
+  previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
   candidateParamFallbackFired?: Map<string, number>;
   grantedOperation?: PolicyPreviewGrantedOperation;
@@ -1127,6 +1131,7 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
       scoreContributions: [],
       previewRefIds: new Set<string>(),
       unknownPreviewRefs: new Map<string, PolicyPreviewUnavailabilityReason>(),
+      previewSeatMatrix: new Map(),
       unknownLookupRefs: new Map<string, LookupUnavailabilityReason>(),
       unknownCandidateParamRefs: new Map<string, CandidateParamUnavailabilityReason>(),
       score: Number.NEGATIVE_INFINITY,
@@ -1182,6 +1187,10 @@ function scoreCandidateForGateFlipProbe(
     scoreContributions: [],
     previewRefIds: new Set(candidate.previewRefIds),
     unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
+    previewSeatMatrix: new Map(
+      [...candidate.previewSeatMatrix?.entries() ?? []]
+        .map(([refId, seatCells]) => [refId, new Map(seatCells)]),
+    ),
     unknownLookupRefs: new Map(candidate.unknownLookupRefs),
     unknownCandidateParamRefs: new Map(candidate.unknownCandidateParamRefs),
     ...(candidate.scheduleInputRefs === undefined ? {} : { scheduleInputRefs: new Map(candidate.scheduleInputRefs) }),
@@ -1260,6 +1269,7 @@ function summarizePreviewUsage(
   }
   const sortedRefIds = [...refIds].sort();
   const readyRefStats = summarizeReadyRefStats(candidates, sortedRefIds, evaluation);
+  const seatMatrix = summarizeSeatMatrix(evaluatedCandidates);
   return {
     mode,
     evaluatedCandidateCount: evaluatedCandidates.length,
@@ -1272,6 +1282,7 @@ function summarizePreviewUsage(
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
+    ...(seatMatrix === undefined ? {} : { seatMatrix }),
     ...(outcomeGrantContinuation?.enabled === true
       ? { outcomeGrantContinuation: summarizeOutcomeGrantContinuation(evaluatedCandidates, outcomeGrantContinuation) }
       : {}),
@@ -1291,6 +1302,26 @@ function summarizePreviewUsage(
       capClass: 'standard256',
     },
   };
+}
+
+function summarizeSeatMatrix(evaluatedCandidates: readonly CandidateEntry[]): PolicyPreviewSeatMatrixTrace | undefined {
+  const byCandidate: Record<string, PolicyPreviewSeatMatrixTrace['byCandidate'][string]> = {};
+  for (const candidate of [...evaluatedCandidates].sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey))) {
+    if (candidate.previewSeatMatrix === undefined || candidate.previewSeatMatrix.size === 0) {
+      continue;
+    }
+    const perSeatRefs: Record<string, PolicyPreviewSeatMatrixTrace['byCandidate'][string]['perSeatRefs'][string]> = {};
+    for (const [refId, seatCells] of [...candidate.previewSeatMatrix.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (seatCells.size === 0) {
+        continue;
+      }
+      perSeatRefs[refId] = Object.fromEntries([...seatCells.entries()].sort(([left], [right]) => left.localeCompare(right)));
+    }
+    if (Object.keys(perSeatRefs).length > 0) {
+      byCandidate[candidate.stableMoveKey] = { perSeatRefs };
+    }
+  }
+  return Object.keys(byCandidate).length === 0 ? undefined : { byCandidate };
 }
 
 function summarizeOutcomeGrantContinuation(

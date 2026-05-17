@@ -191,8 +191,22 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 
 - [`archive/tickets/178CONTDEEPINNER-001.md`](../archive/tickets/178CONTDEEPINNER-001.md) — Phase 0 — Inner-preview subroutine split instrumentation + witness report (covers §5 Phase 0)
 - [`archive/tickets/178CONTDEEPINNER-002.md`](../archive/tickets/178CONTDEEPINNER-002.md) — Phase 1 — Targeted optimization of named subroutine owner + outcome-parity test (covers §5 Phase 1)
-- [`tickets/178CONTDEEPINNER-003.md`](../tickets/178CONTDEEPINNER-003.md) — Phase 2 — End-to-end witness validation + wall-time delta report (covers §5 Phase 2)
+- [`tickets/178CONTDEEPINNER-003.md`](../tickets/178CONTDEEPINNER-003.md) — Phase 2 — End-to-end witness validation + wall-time delta report (covers §5 Phase 2; measured gate red)
+- [`tickets/178CONTDEEPINNER-004.md`](../tickets/178CONTDEEPINNER-004.md) — Phase 3 — Investigate residual driveOption wall time after failed Phase 2 gate
 
 ## 13. Outcome
 
-(Recorded at completion.)
+Phase 2 outcome recorded on 2026-05-17:
+
+- Report: `reports/178-phase-2-post-optimization-wall-time.md`.
+- Generated witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-2-post-optimization-wall-time.csv`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-2-post-optimization-wall-time.md`
+- Acceptance verdict:
+  - Named primary-axis owner `policyInnerPreviewSubroutine:driveOption` dropped `6.19%` (`6,804.08 ms -> 6,382.68 ms`), failing the required `>= 40%` reduction.
+  - Primary-axis inclusive bucket dropped directionally by `6.13%` (`7,578.43 ms -> 7,114.21 ms`), passing the directional-drop sub-criterion.
+  - Sister-axis owner dropped `9.34%` (`1,453.32 ms -> 1,317.64 ms`), failing the required `>= 25%` reduction.
+  - Route and unsupported counters were unchanged (`1,299` routes, `751` unsupported counts), so no carrier collapse was observed.
+- Final recommendation: create-investigation-ticket: 178CONTDEEPINNER-004 residual `policyInnerPreviewSubroutine:driveOption` wall time after Phase 1 under-delivery.
+
+Spec 178 remains open because the Phase 2 measured gate is red.

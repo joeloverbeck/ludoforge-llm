@@ -36,8 +36,10 @@ import type {
   CompiledAgentParameterDef,
   CompiledAgentPreviewBudgetConfig,
   CompiledAgentPreviewInnerConfig,
+  CompiledAgentPreviewOutcomeGrantContinuationConfig,
   ContinuedDeepeningConfig,
   DeepTrigger,
+  AgentPreviewPostGrantCapClass,
   CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
@@ -114,8 +116,12 @@ export const CAP_CLASS_BUDGETS: Record<CapClass, number> = {
   standard256: INNER_PREVIEW_HARD_CAP,
   deep1024: 1024,
 };
+export const POST_GRANT_CAP_CLASS_BUDGETS: Record<AgentPreviewPostGrantCapClass, number> = {
+  postGrant16: 4,
+};
 const PREVIEW_INNER_STRATEGIES = new Set(['singlePass', 'continuedDeepening']);
 const PREVIEW_INNER_CAP_CLASSES = new Set(['standard256', 'deep1024']);
+const PREVIEW_POST_GRANT_CAP_CLASSES = new Set(['postGrant16']);
 const DEEP_TRIGGERS = new Set(['allRequestedRefsDepthCapped', 'allReadyValuesUniform']);
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
@@ -866,6 +872,7 @@ function lowerPreviewConfig(
     completionDepthCap,
     budget,
     inner,
+    outcomeGrantContinuation,
     phase1,
     phase1CompletionsPerAction,
   } = authored;
@@ -992,6 +999,15 @@ function lowerPreviewConfig(
   if (loweredInner === undefined && inner !== undefined) {
     return undefined;
   }
+  const loweredOutcomeGrantContinuation = lowerPreviewOutcomeGrantContinuationConfig(
+    profileId,
+    path,
+    outcomeGrantContinuation,
+    diagnostics,
+  );
+  if (loweredOutcomeGrantContinuation === undefined && outcomeGrantContinuation !== undefined) {
+    return undefined;
+  }
 
   if (phase1 !== undefined && typeof phase1 !== 'boolean') {
     diagnostics.push({
@@ -1041,8 +1057,93 @@ function lowerPreviewConfig(
     ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
     ...(loweredBudget === undefined ? {} : { budget: loweredBudget }),
     ...(loweredInner === undefined ? {} : { inner: loweredInner }),
+    ...(loweredOutcomeGrantContinuation === undefined
+      ? {}
+      : { outcomeGrantContinuation: loweredOutcomeGrantContinuation }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
+  };
+}
+
+function lowerPreviewOutcomeGrantContinuationConfig(
+  profileId: string,
+  path: string,
+  block: NonNullable<GameSpecAgentProfileDef['preview']>['outcomeGrantContinuation'] | undefined,
+  diagnostics: Diagnostic[],
+): CompiledAgentPreviewOutcomeGrantContinuationConfig | undefined {
+  if (block === undefined) {
+    return undefined;
+  }
+  if (block === null || typeof block !== 'object' || Array.isArray(block)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${path}.outcomeGrantContinuation`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation must be an object.`,
+      suggestion: 'Use preview.outcomeGrantContinuation with enabled, extraDepthCap, and capClass.',
+    });
+    return undefined;
+  }
+
+  const enabled = block.enabled ?? false;
+  if (typeof enabled !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${path}.outcomeGrantContinuation.enabled`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.enabled must be a boolean, got ${typeof enabled}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.enabled to true or false.',
+    });
+    return undefined;
+  }
+  if (!enabled) {
+    return { enabled: false, extraDepthCap: POST_GRANT_CAP_CLASS_BUDGETS.postGrant16, capClass: 'postGrant16' };
+  }
+
+  const extraDepthCap = block.extraDepthCap;
+  if (
+    typeof extraDepthCap !== 'number'
+    || !Number.isSafeInteger(extraDepthCap)
+    || extraDepthCap <= 0
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${path}.outcomeGrantContinuation.extraDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap must be a positive safe integer when outcomeGrantContinuation is enabled, got ${String(extraDepthCap)}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.extraDepthCap to the selected cap-class budget, such as 4.',
+    });
+    return undefined;
+  }
+
+  const capClass = block.capClass;
+  if (typeof capClass !== 'string' || !PREVIEW_POST_GRANT_CAP_CLASSES.has(capClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN,
+      path: `${path}.outcomeGrantContinuation.capClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.capClass must be postGrant16, got ${String(capClass)}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.capClass to postGrant16.',
+    });
+    return undefined;
+  }
+
+  const expectedCap = POST_GRANT_CAP_CLASS_BUDGETS[capClass as AgentPreviewPostGrantCapClass];
+  if (extraDepthCap !== expectedCap) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${path}.outcomeGrantContinuation.extraDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap ${extraDepthCap} must equal capClass ${capClass} budget ${expectedCap}.`,
+      suggestion: `Set preview.outcomeGrantContinuation.extraDepthCap to ${expectedCap} for capClass ${capClass}.`,
+    });
+    return undefined;
+  }
+
+  return {
+    enabled: true,
+    extraDepthCap,
+    capClass: capClass as AgentPreviewPostGrantCapClass,
   };
 }
 

@@ -1,6 +1,6 @@
 # 179ACTSELPRE-002: Phase 1a — Schema/compiler/validator wiring for `outcomeGrantContinuation`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types.ts` (or `types-core.ts`), `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/validate-agents.ts`, `packages/engine/src/cnl/game-spec-doc.ts`, `packages/engine/schemas/*.json`.
@@ -130,3 +130,59 @@ Add a compiler-rejection test at `packages/engine/test/architecture/preview-conf
 3. Full engine: `pnpm -F @ludoforge/engine test`
 4. Full turbo: `pnpm turbo test`
 5. Lint + typecheck: `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-05-17
+
+Post-review: no must-fix-now cleanup, reopen-original-ticket item, or follow-up ticket was required. The landed schema/compiler/validator slice satisfies ticket 002 and remains bounded to Phase 1a; driver behavior, trace aggregation, FITL witness/cookbook, and optional WASM routing remain with active tickets 003-006.
+
+Authorization ledger:
+- Approved option: surgical additions in canonical schema/compiler hubs despite preexisting oversize files.
+- Scope effect: preserves ticket boundary; no extraction in this ticket.
+- Basis: `types-core.ts`, `schemas-core.ts`, `compile-agents.ts`, and `game-spec-doc.ts` are established contract hubs; extracting preview schema/compiler tables would widen this Phase 1a slice and obscure the additive wiring.
+
+What landed:
+- Added `AgentPreviewPostGrantCapClass = 'postGrant16'` and optional compiled `preview.outcomeGrantContinuation` config with `enabled`, `extraDepthCap`, and `capClass`.
+- Added authored `GameSpecAgentProfileDef.preview.outcomeGrantContinuation`.
+- Added compiler lowering for `preview.outcomeGrantContinuation`, including mandatory `extraDepthCap`/`capClass` when `enabled: true`, `postGrant16` cap-class validation, and `extraDepthCap === 4` budget validation.
+- Added validator diagnostics for malformed enabled post-grant continuation blocks.
+- Added architecture tests for old production profile opt-out compatibility and post-grant cap-class validation.
+- Regenerated schema artifacts; persisted diff is `packages/engine/schemas/GameDef.schema.json` only. `Trace.schema.json` and `EvalReport.schema.json` were rewritten byte-identically by the generator.
+
+Touched-file scope:
+- Done: `packages/engine/src/kernel/types-core.ts`
+- Done: `packages/engine/src/kernel/schemas-core.ts`
+- Done: `packages/engine/src/cnl/compile-agents.ts`
+- Done: `packages/engine/src/cnl/validate-agents.ts`
+- Done: `packages/engine/src/cnl/game-spec-doc.ts`
+- Done: `packages/engine/schemas/GameDef.schema.json`
+- Done: `packages/engine/test/architecture/preview-config-back-compat/old-profiles-compile.test.ts`
+- Done: `packages/engine/test/architecture/preview-config-back-compat/post-grant-cap-class-validation.test.ts`
+- Owned fallout: `packages/engine/src/cnl/compiler-diagnostic-codes.ts`
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| `packages/engine/src/kernel/types-core.ts` | 2324 | 2332 | no; preexisting oversize + active growth | +8 | Approved surgical addition in canonical compiled type hub; extraction would widen the ticket. | none |
+| `packages/engine/src/kernel/schemas-core.ts` | 2751 | 2759 | no; preexisting oversize + active growth | +8 | Approved surgical addition in canonical Zod schema hub; extraction would widen the ticket. | none |
+| `packages/engine/src/cnl/compile-agents.ts` | 4619 | 4720 | no; preexisting oversize + active growth | +101 | Approved surgical addition in canonical agent compiler hub; extraction would widen the ticket. | none |
+| `packages/engine/src/cnl/game-spec-doc.ts` | 877 | 882 | no; preexisting oversize + active growth | +5 | Approved surgical addition in canonical authored spec type hub; extraction would widen the ticket. | none |
+
+Final proof:
+- `pnpm -F @ludoforge/engine build` — pass.
+- Engine build reproducibility — pass. Two consecutive `pnpm -F @ludoforge/engine build` runs produced identical SHA-256 manifests for 5,923 files under `packages/engine/dist`.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-config-back-compat/*.test.js` — pass: 2 suites, 4 tests, 0 failures.
+- `pnpm turbo schema:artifacts` — pass, run twice for idempotence. Persisted diff is `GameDef.schema.json`; generated `Trace.schema.json` and `EvalReport.schema.json` were byte-identical.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — pass as a fresh package-local schema check after the root schema task.
+- `pnpm -F @ludoforge/engine test` — pass: 92/92 files passed; unit block 5,668 tests passed; architecture block 101 tests passed.
+- `pnpm turbo lint` — pass. Engine lint executed; runner lint was a Turbo cache hit replay.
+- `pnpm turbo typecheck` — pass. Engine and runner typecheck tasks executed; engine build dependency was a Turbo cache hit replay.
+- `pnpm turbo test` — pass: 5/5 tasks successful. Engine and runner tests executed; build dependencies were Turbo cache hit replays. Runner emitted preexisting jsdom canvas `getContext()` warnings and a Vite chunk-size advisory, both non-ticket-owned.
+- `pnpm run check:ticket-deps` — pass: ticket dependency integrity check passed for 5 active tickets and 2,396 archived tickets.
+- `git diff --check` — pass.
+- New-file whitespace checks — pass. `git diff --no-index --check /dev/null ...` exited 1 for each new test file because the files are new, with no whitespace diagnostics.
+
+Late-edit proof validity:
+- Terminal status and final proof transcription only. No code, schema, acceptance-boundary, dependency, touched-file, or follow-up scope changed after the final proof set.

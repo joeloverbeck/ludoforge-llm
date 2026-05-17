@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts` (the bounded driver and its exit conditions).
-**Deps**: `tickets/179ACTSELPRE-002.md`
+**Deps**: `archive/tickets/179ACTSELPRE-002.md`
 
 ## Problem
 

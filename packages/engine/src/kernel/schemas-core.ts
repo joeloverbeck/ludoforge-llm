@@ -1348,6 +1348,14 @@ const CompiledAgentProfileSchema = z
           })
           .strict()
           .optional(),
+        outcomeGrantContinuation: z
+          .object({
+            enabled: z.boolean(),
+            extraDepthCap: z.number().int().positive(),
+            capClass: z.literal('postGrant16'),
+          })
+          .strict()
+          .optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })

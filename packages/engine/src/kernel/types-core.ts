@@ -965,6 +965,7 @@ export type AgentPreviewFallbackCompletionPolicy = 'greedy' | 'fail';
 export type AgentPreviewBudgetStrategy = 'balancedCoverage';
 export type AgentPreviewInnerStrategy = 'singlePass' | 'continuedDeepening';
 export type AgentPreviewInnerCapClass = 'standard256' | 'deep1024';
+export type AgentPreviewPostGrantCapClass = 'postGrant16';
 export type DeepTrigger = 'allRequestedRefsDepthCapped' | 'allReadyValuesUniform';
 
 export interface CompiledAgentPreviewBudgetConfig {
@@ -998,6 +999,12 @@ export interface ContinuedDeepeningConfig {
   };
 }
 
+export interface CompiledAgentPreviewOutcomeGrantContinuationConfig {
+  readonly enabled: boolean;
+  readonly extraDepthCap: number;
+  readonly capClass: AgentPreviewPostGrantCapClass;
+}
+
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewAuthoredCompletionPolicy;
@@ -1005,6 +1012,7 @@ export interface CompiledAgentPreviewConfig {
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly inner?: CompiledAgentPreviewInnerConfig;
+  readonly outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }

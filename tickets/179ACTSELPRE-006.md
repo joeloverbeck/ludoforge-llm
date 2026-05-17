@@ -10,15 +10,15 @@
 
 Spec 179 Open Question §8.4 flags WASM-route alignment as an open question. Spec 176/178's WASM preview-drive currently fails closed on complex previews and falls back to TS. This ticket either (a) mirrors the `outcomeGrantContinuation` opt-in behavior in the WASM path, or (b) explicitly documents that the WASM path falls back to TS when the opt-in is set. Operator preference (path a vs. path b) is the user-facing decision this ticket resolves.
 
-This ticket is **optional** per spec §10 — descope path documented in Out of Scope below. The default close condition is "documented fallback (path b)" if the repaired witness data from ticket 007 shows the WASM path is rarely active on opt-in profiles.
+This ticket is **optional** per spec §10 — descope path documented in Out of Scope below. The default close condition is "documented fallback (path b)" if replacement Phase 2 witness data shows the WASM path is rarely active on opt-in profiles. Ticket 007 classified the original ARVN operation witness as the wrong contract surface for `outcomeGrantResolve`, so this optional WASM decision must not rely on the old operation witness.
 
 ## Assumption Reassessment (2026-05-17)
 
 1. The WASM preview-drive route lives at `packages/engine/src/agents/policy-wasm-preview-drive.ts` (file path inferred from Spec 178's ticket archaeology; verify during `/implement-ticket` reassessment).
 2. Spec 176/178 established the TS-fallback contract — WASM fails closed on complex previews. This ticket either extends the WASM path's behavior to include the new opt-in, or formalizes the existing TS fallback for opt-in cases.
-3. Ticket 005's Phase 2 witness did not classify WASM active-route percentage; its TS-only probes showed the red activation gap is not WASM-only. Ticket 007 now owns repairing the witness activation gap before this optional WASM alignment decision should use the Phase 2 data.
+3. Ticket 005's Phase 2 witness did not classify WASM active-route percentage; its TS-only probes showed the red activation gap is not WASM-only. Ticket 007 classified the activation gap as a witness contract mismatch, so this optional WASM alignment decision should wait for a user-approved replacement witness contract before using Phase 2 data.
 
-**Gate condition**: Close this ticket via path (b) — documented TS fallback — if the repaired Phase 2 witness from `tickets/179ACTSELPRE-007.md` shows the WASM path was active on <10% of opt-in-profile decisions. The cost of path (a) — actively mirroring the opt-in in WASM — exceeds the value when WASM is rarely the runtime.
+**Gate condition**: Close this ticket via path (b) — documented TS fallback — if replacement Phase 2 witness data shows the WASM path was active on <10% of opt-in-profile decisions. The cost of path (a) — actively mirroring the opt-in in WASM — exceeds the value when WASM is rarely the runtime.
 
 ## Architecture Check
 
@@ -33,7 +33,7 @@ This ticket is **optional** per spec §10 — descope path documented in Out of 
 If chosen:
 1. Extend WASM-side `driveSyntheticCompletion` analog with the same `outcomeGrantContinuation` logic as ticket 003's TS implementation.
 2. Add a cross-route determinism test: same profile + same seed → byte-identical trace whether TS or WASM was the active route.
-3. Update `reports/179-phase-2-post-opt-in-witness.md` after ticket 007 repairs the witness activation gap, including WASM-active-decision percentages.
+3. Update `reports/179-phase-2-post-opt-in-witness.md` after the Phase 2 witness contract is reset and rerun, including WASM-active-decision percentages.
 
 ### Path (b) - Document TS fallback
 
@@ -44,7 +44,7 @@ If chosen:
 
 ### Default selection rule
 
-Choose path (b) unless ticket 007's repaired witness data shows WASM was active on >= 10% of `arvn-evolved` decisions. If WASM is rarely active anyway, path (b) is correct and cheaper. If WASM is materially active, path (a) prevents perf regression for opt-in profiles.
+Choose path (b) unless replacement Phase 2 witness data shows WASM was active on >= 10% of opt-in-profile decisions. If WASM is rarely active anyway, path (b) is correct and cheaper. If WASM is materially active, path (a) prevents perf regression for opt-in profiles.
 
 ## Files to Touch
 
@@ -54,7 +54,7 @@ Choose path (b) unless ticket 007's repaired witness data shows WASM was active 
 
 ## Out of Scope
 
-- **Descope path**: If the repaired ticket 007 witness shows WASM was active on <10% of opt-in decisions AND no operator preference for path (a) is expressed, close this ticket with "Declined - TS fallback documented in the cookbook addendum; explicit WASM early-return deferred until WASM-route activity exceeds 10% on opt-in profiles." Outcome: no code change; cookbook addendum carries the operator-facing contract.
+- **Descope path**: If replacement Phase 2 witness data shows WASM was active on <10% of opt-in decisions AND no operator preference for path (a) is expressed, close this ticket with "Declined - TS fallback documented in the cookbook addendum; explicit WASM early-return deferred until WASM-route activity exceeds 10% on opt-in profiles." Outcome: no code change; cookbook addendum carries the operator-facing contract.
 - Tuning the 10% threshold - chosen for proportionality; future specs adjust.
 - Adding new WASM capabilities beyond the opt-in mirror - out of scope for this ticket.
 

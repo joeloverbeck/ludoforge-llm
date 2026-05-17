@@ -1,6 +1,6 @@
 # Spec 179 Phase 2 — Post-Opt-In FITL ARVN Witness
 
-**Status**: RED — blocked on witness/profile repair.
+**Status**: RED — blocked on witness contract reset.
 **Date**: 2026-05-17
 **Repo HEAD**: `e3a7eb4647d0d8ba3b5c6ff8b4307bbd9496cebb`
 **Profile source baseline commit**: `data/games/fire-in-the-lake/92-agents.md` last committed at `4415d65a4f7828a66c0df65d1c2f3ecb69b57763`
@@ -108,8 +108,41 @@ Both probes showed the opt-in block present with `exitCounts.completed=0`, `post
 ## Adjacent Findings
 
 - No `preview.feature.vcGuerrillaCount`, `preview.feature.vcBaseCount`, or `preview.feature.vcFriendlyCapCount` ready-ref rows were emitted by this profile configuration, so the optional feature-lift spot check could not be evaluated from the 005 witness.
-- A sampled ARVN `assault` candidate in the TS-only probe completed at preview depth 2 after one `chooseOne` synthetic decision and did not reach `outcomeGrantResolve`; its opponent-margin refs stayed ready but uniform. This supports a successor focused on witness/profile activation rather than immediate WASM-route work.
+- A sampled ARVN `assault` candidate in the TS-only probe completed at preview depth 2 after one `chooseOne` synthetic decision and did not reach `outcomeGrantResolve`; its opponent-margin refs stayed ready but uniform. Ticket 007 later classified this as a witness contract mismatch rather than a profile-weight or WASM-route activation problem.
+
+## 007 Contract Reassessment
+
+Ticket 007 reopened the activation gap against `docs/FOUNDATIONS.md` and the live one-rules-protocol contract. The important finding is that this Phase 2 witness targets ordinary FITL ARVN operation candidates, while `outcomeGrantResolve` is the resolver for pending free-operation grants. The current witness therefore does not exercise the frame type that Spec 179 extended.
+
+Fresh bounded probes on 2026-05-17:
+
+```bash
+pnpm -F @ludoforge/engine build
+node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --trace-default all --concurrency 1 --no-wasm
+```
+
+The saved trace contained no `outcomeGrantResolve` moves:
+
+```json
+{
+  "actionSelection": 20,
+  "chooseNStep": 12,
+  "chooseOne": 25,
+  "outcomeGrantResolve": 0
+}
+```
+
+A temporary profile trial that heavily weighted ARVN `assault` caused the one-seed witness to choose `assault` on 4 / 5 main-phase action-selection decisions, but `previewUsage.outcomeGrantContinuation.exitCounts` still remained zero. That rules out simple action-mix starvation: ordinary operation action resolution does not publish `outcomeGrantResolve`.
+
+Kernel and FITL contract anchors:
+
+- `packages/engine/src/kernel/microturn/publish.ts` publishes `outcomeGrantResolve` from an `OutcomeGrantResolveContext`.
+- `packages/engine/src/kernel/microturn/apply.ts` applies an `outcomeGrantResolve` decision only when `turnOrderState.runtime.pendingFreeOperationGrants` contains the grant.
+- `packages/engine/src/kernel/effects-turn-flow.ts` appends pending grants from `grantFreeOperation` / event free-operation grant flow.
+- `data/games/fire-in-the-lake/30-rules-actions.md` declares ordinary `train`, `patrol`, `sweep`, `assault`, `rally`, `march`, `attack`, and `terror` actions as main-phase operations; `freeOperationActionIds` makes those actions grantable by event/free-operation flow, but does not make ordinary operation candidates publish grant-resolution frames.
+
+The ticket therefore stops as blocked rather than changing engine/profile code. The user approved a bounded reset/discovery path; `tickets/179ACTSELPRE-008.md` owns choosing the next architecture: retarget Phase 2 to an event/free-operation-grant witness, replace the acceptance surface with a different preview-effect contract, or close Spec 179 as limited to event/free-operation grant continuation.
 
 ## Follow-Up Owner
 
-`tickets/179ACTSELPRE-007.md` owns repairing the FITL ARVN Phase 2 witness/profile so candidates actually enter post-grant continuation and the opponent-margin gates can be rerun. Ticket 005 remains blocked and not archive-ready.
+`tickets/179ACTSELPRE-008.md` owns the Phase 2 witness contract reset. Tickets 005 and 007 remain blocked and not archive-ready.

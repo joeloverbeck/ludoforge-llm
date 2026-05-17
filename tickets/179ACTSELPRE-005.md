@@ -1,6 +1,6 @@
 # 179ACTSELPRE-005: Phase 2 — FITL ARVN witness + cookbook addendum
 
-**Status**: BLOCKED by successor `tickets/179ACTSELPRE-007.md`
+**Status**: BLOCKED by reset owner `tickets/179ACTSELPRE-008.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only (campaign profile YAML edit + docs).
@@ -115,7 +115,7 @@ Spec §7 notes that opponent-tied features (`preview.feature.vcGuerrillaCount`, 
 
 - WASM-route alignment (ticket 006 — optional, parallel).
 - Spec 180 standing-vector observability (separate spec, dependent on this one).
-- Tuning `extraDepthCap` beyond `postGrant16: 4` — Phase 2 kept this default fixed; ticket 007 owns repairing witness activation before any future tuning decision.
+- Tuning `extraDepthCap` beyond `postGrant16: 4` — Phase 2 kept this default fixed; ticket 007 classified the activation gap as a witness contract mismatch, so any future tuning requires a user-approved witness contract reset first.
 - Migrating other profiles (`vc-evolved`, etc.) to opt in — `arvn-evolved` is the witness; other profiles opt in via separate tickets when they have an opponent-aware authoring use case.
 - Spec 179 §7 Direction B fallback (separate `previewEffect.*` surface) — that escalation path opens a NEW spec (Spec 180 or 181) if the Phase 2 perf gate fails; not in scope for this ticket.
 
@@ -156,14 +156,15 @@ This ticket is witness-driven, not test-suite-driven. The new trace-surface and 
 
 ## Outcome (2026-05-17)
 
-Blocked, not archive-ready. User approved Option 3 after the red Phase 2 witness: preserve the red report, keep the opt-in/profile/cookbook substrate visible, and split a non-overlapping successor for the remaining witness activation repair.
+Blocked, not archive-ready. User approved Option 3 after the red Phase 2 witness: preserve the red report, keep the opt-in/profile/cookbook substrate visible, and split a non-overlapping successor for the remaining witness activation repair. Ticket 007 later classified that remaining activation gap as a witness contract mismatch: the original ARVN operation witness does not exercise `outcomeGrantResolve`, which resolves pending event/free-operation grants.
 
 What landed in this ticket:
 
 - `data/games/fire-in-the-lake/92-agents.md` now enables `arvn-evolved.preview.outcomeGrantContinuation` with `extraDepthCap: 4` and `capClass: postGrant16`, and re-adds `penalizeOpponentMargin` plus the supporting opponent-margin features.
 - `docs/agent-dsl-cookbook.md` documents per-seat opponent preview refs, the `outcomeGrantContinuation` opt-in, cost/trace expectations, and partial-coverage behavior without claiming the FITL ARVN witness passed.
 - `reports/179-phase-2-post-opt-in-witness.md` records the decisive red 15-seed witness.
-- `tickets/179ACTSELPRE-007.md` owns repairing the FITL ARVN witness/profile activation gap.
+- `tickets/179ACTSELPRE-007.md` classified the activation gap as a witness contract mismatch.
+- `tickets/179ACTSELPRE-008.md` owns the user-approved Phase 2 witness contract reset.
 
 Measured result:
 
@@ -177,11 +178,11 @@ Measured result:
 Acceptance classification:
 
 - Cookbook addendum: landed.
-- Profile opt-in and `penalizeOpponentMargin`: landed as substrate for the successor.
+- Profile opt-in and `penalizeOpponentMargin`: landed as substrate, but the original operation witness is no longer valid closing proof for `outcomeGrantResolve`.
 - Phase 2 signal gate: red.
 - Phase 2 trace activation gate: red.
 - Archive status: blocked and not archive-ready.
-- Residual owner: `tickets/179ACTSELPRE-007.md`.
+- Residual owner: `tickets/179ACTSELPRE-008.md`.
 
 Generated/schema fallout: none. This ticket changed profile YAML, docs, report, tickets, and spec prose only; no engine source/schema artifacts were modified.
 
@@ -193,8 +194,8 @@ Command ledger:
 | Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs` | run against preserved 15-seed trace dir | red witness report |
 | Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-ready-ref-stats.mjs` | run against preserved 15-seed trace dir | red witness report |
 | Test Plan | wall-time comparison | run by report transcription against Phase 0 baseline | red witness report |
-| Acceptance | `pnpm -F @ludoforge/engine test` | pending; required before any future terminal closeout | successor 007 |
+| Acceptance | `pnpm -F @ludoforge/engine test` | pending; required before any future terminal closeout after a witness contract reset | blocked Phase 2 |
 | Test Plan | `pnpm turbo test` | not run after red gate; blocked before terminal closeout | not final evidence |
 | Test Plan | `pnpm turbo lint && pnpm turbo typecheck` | not run after red gate; blocked before terminal closeout | not final evidence |
 
-Proof validity: the red measured witness is final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; successor 007 must rerun the affected Phase 2 proof after repairing the activation gap.
+Proof validity: the red measured witness is final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; `tickets/179ACTSELPRE-008.md` owns the Phase 2 witness contract reset before any rerun can become closing proof.

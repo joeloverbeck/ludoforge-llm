@@ -1,22 +1,31 @@
-# 179ACTSELPRE-007: Phase 2b — Repair FITL ARVN post-grant witness activation
+# 179ACTSELPRE-007: Phase 2b — Classify FITL ARVN post-grant witness activation
 
-**Status**: PENDING
+**Status**: BLOCKED by reset owner `tickets/179ACTSELPRE-008.md`
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Unknown — prefer profile/witness repair; use TDD and 1-3-1 if live evidence proves a generic engine defect.
+**Engine Changes**: None in this ticket; generic contract investigation found the witness targets the wrong live surface.
 **Deps**: `tickets/179ACTSELPRE-005.md`
 
 ## Problem
 
 Ticket 005 configured `arvn-evolved.preview.outcomeGrantContinuation` and re-added `penalizeOpponentMargin`, but the Phase 2 witness stayed red. `reports/179-phase-2-post-opt-in-witness.md` shows the opt-in block was present and enabled on all 159 main-phase action-selection decisions, yet `previewUsage.outcomeGrantContinuation.exitCounts` remained zero. Opponent-margin refs stayed effectively uniform (`currentMargin.nva` differentiated on 0 / 146 reporting decisions; `currentMargin.vc` on 16 / 146).
 
-This successor owns making the FITL ARVN witness actually exercise post-grant opponent-effect paths, then rerunning the Spec 179 Phase 2 gate.
+This successor originally owned making the FITL ARVN witness actually exercise post-grant opponent-effect paths, then rerunning the Spec 179 Phase 2 gate. The 2026-05-17 reassessment found that the witness is aimed at the wrong contract surface: ordinary FITL operations such as `assault`, `sweep`, and `patrol` are main-phase operation actions, while `outcomeGrantResolve` resolves pending free-operation grants produced by event/free-operation grant flow. The Phase 2 witness therefore cannot prove ordinary operation opponent effects via `previewUsage.outcomeGrantContinuation.exitCounts`.
 
 ## Assumption Reassessment (2026-05-17)
 
 1. The red witness is not just WASM masking: TS-only one-seed probes with `--no-wasm`, including `--profile-completion arvn-evolved=agentGuided`, also produced zero post-grant continuation exit counts.
 2. The profile opt-in is compiled and traced: ticket 005's report records `withBlock=159`, `enabledBlocks=159`, and `extraDepthReached=0`.
 3. A sampled ARVN `assault` candidate completed before `outcomeGrantResolve`, so the next owner must classify whether the current profile/witness path fails to select value-bearing continuations or whether a generic preview-driver seam is incomplete.
+
+## Contract Reassessment (2026-05-17)
+
+1. The saved TS-only one-seed trace contains `actionSelection`, `chooseNStep`, and `chooseOne` decisions, but zero `outcomeGrantResolve` moves.
+2. A profile trial that heavily weighted ARVN `assault` made the witness choose `assault` on 4 / 5 main-phase action-selection decisions in the one-seed probe, yet `previewUsage.outcomeGrantContinuation.exitCounts` remained all zero. This rules out simple action-mix starvation as the activation gap.
+3. Kernel inspection shows `outcomeGrantResolve` is published from an `OutcomeGrantResolveContext` and applies only when `turnOrderState.runtime.pendingFreeOperationGrants` contains the matching grant. Pending free-operation grants are built by `grantFreeOperation` / event free-operation grant flow, not by ordinary main-phase operation action resolution.
+4. FITL `30-rules-actions.md` declares `freeOperationActionIds` so event grants can offer operation actions as free operations, but the ordinary `train`, `patrol`, `sweep`, `assault`, `rally`, `march`, `attack`, and `terror` actions themselves are main-phase operations. Driving normal ARVN operation candidates deeper cannot create an `outcomeGrantResolve` frame unless they are being exercised as a granted free operation.
+5. Under `docs/FOUNDATIONS.md`, especially Foundations #1, #5, #10, #15, #16, and #20, the correct outcome is to preserve the red evidence and stop for a user decision. Retargeting the witness to event/free-operation grants or replacing this with a different preview-effect surface is a boundary change beyond this ticket's approved repair.
+6. The user approved the reset/discovery path on 2026-05-17; `tickets/179ACTSELPRE-008.md` owns that next step.
 
 ## Architecture Check
 
@@ -36,20 +45,21 @@ Use the saved red report and a bounded live probe to determine the first missing
 - the preview driver completes before free-operation / outcome-grant frames are published,
 - or a generic engine bug prevents post-grant continuation from observing the expected frame.
 
+**Result**: classified as witness contract mismatch. The Phase 2 ARVN operation witness does not exercise the event/free-operation `outcomeGrantResolve` contract that Spec 179 extended.
+
 ### 2. Repair the smallest owned surface
 
-Prefer a profile or witness repair in `data/games/fire-in-the-lake/92-agents.md` or campaign diagnostics if the engine is working as designed. If live evidence proves a generic engine defect, add the smallest focused failing test first and repair that generic seam without FITL-specific branches.
+Do not modify engine code or profile weights under this ticket. The live evidence did not prove a generic engine defect; it proved the witness is stale relative to the live one-rules-protocol contract.
 
 ### 3. Rerun the Phase 2 gate
 
-Rerun the same 15-seed witness and update `reports/179-phase-2-post-opt-in-witness.md` with the decisive final result.
+Do not rerun the same 15-seed gate as a closing proof. The current gate cannot satisfy the `outcomeGrantContinuation` activation criteria because the ARVN operation witness does not produce `outcomeGrantResolve` frames.
 
 ## Files to Touch
 
-- `data/games/fire-in-the-lake/92-agents.md` (likely modify — profile/witness repair)
-- `reports/179-phase-2-post-opt-in-witness.md` (modify — decisive rerun result)
-- `docs/agent-dsl-cookbook.md` (modify only if the repair changes operator-facing opt-in guidance)
-- `packages/engine/src/**` and `packages/engine/test/**` (only if TDD proves a generic engine defect)
+- `reports/179-phase-2-post-opt-in-witness.md` (modify — contract reassessment result)
+- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify — Phase 2 witness handoff truthing)
+- No source/profile edits unless a later user-approved ticket retargets the witness or changes the preview architecture.
 
 ## Out of Scope
 
@@ -59,30 +69,28 @@ Rerun the same 15-seed witness and update `reports/179-phase-2-post-opt-in-witne
 
 ## Acceptance Criteria
 
-### Tests That Must Pass
+### Blocked Verdict
 
-1. `reports/179-phase-2-post-opt-in-witness.md` records a final 15-seed witness where `currentMargin.nva` and `currentMargin.vc` each differentiate on >= 50% of reporting decisions with avg range >= 0.5.
-2. The same witness records slow-tier wall-time regression <= 5% versus `reports/179-phase-0-pre-opt-in-baseline.md`, or stops for 1-3-1 with exact metrics.
-3. `previewUsage.outcomeGrantContinuation.exitCounts` is non-zero and the report classifies completed / capped / stochastic exits.
-4. Existing engine suite green: `pnpm -F @ludoforge/engine test`.
+1. `reports/179-phase-2-post-opt-in-witness.md` preserves the 005 red gate and records the 007 contract reassessment.
+2. The ticket stops before changing the witness target, adding FITL-specific engine logic, or lowering the Phase 2 gate.
+3. `tickets/179ACTSELPRE-008.md` must choose whether to retarget the witness to event/free-operation grants, replace the witness with a different preview-effect surface, or close Spec 179 as limited to event/free-operation grant continuation.
 
 ### Invariants
 
 1. No FITL-specific engine branches.
-2. The profile/witness repair must prove real post-grant activation, not just presence of the opt-in config block.
-3. If the gate remains red, the ticket must preserve exact red evidence and stop for user decision rather than lowering thresholds.
+2. Do not claim the current ARVN operation witness proves post-grant activation.
+3. Preserve exact red evidence and stop for user decision rather than lowering thresholds.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. Add or modify a focused test only if the activation gap is a generic engine defect. Otherwise the decisive evidence remains the campaign witness report.
+1. No focused engine test was added because no generic engine defect was proven.
+2. The decisive evidence is the campaign witness report plus the bounded contract probes recorded there.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --trace-default all --concurrency 8`
-3. `node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs`
-4. `node campaigns/fitl-arvn-agent-evolution/diagnose-ready-ref-stats.mjs`
-5. `pnpm -F @ludoforge/engine test`
-6. `pnpm run check:ticket-deps`
+2. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --trace-default all --concurrency 1 --no-wasm`
+3. Contract probe over `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json` showing zero `outcomeGrantResolve` moves.
+4. `pnpm run check:ticket-deps`

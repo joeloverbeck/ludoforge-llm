@@ -149,7 +149,7 @@ Outcome amended: 2026-05-17
 
 No new spec or ticket was created during implementation; the deliverable was the recommendation report only.
 
-Post-review created follow-up `tickets/178POLWASMPERF-002.md` to own the recommended bounded attribution investigation.
+Post-review created follow-up `archive/tickets/178POLWASMPERF-002.md` to own the recommended bounded attribution investigation. That follow-up was later completed and archived.
 
 ### Ticket Corrections Applied
 
@@ -178,7 +178,7 @@ No runtime surface change; report-only planning/evidence surface.
 
 ### Post-Review / Archive Review
 
-- Created follow-up `tickets/178POLWASMPERF-002.md` for the recommended bounded attribution investigation.
+- Created follow-up `archive/tickets/178POLWASMPERF-002.md` for the recommended bounded attribution investigation. That follow-up was later completed and archived.
 - Archived this ticket to `archive/tickets/178POLWASMPERF-001.md`.
 - Updated `reports/178-policy-agent-bottleneck-discovery.md` to cite the archived ticket path.
 - Post-archive `pnpm run check:ticket-deps` passed for `1` active ticket and `2386` archived tickets.

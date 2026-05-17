@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-17
 **Status**: Phase 1 attribution report complete.
-**Ticket**: `tickets/178POLWASMPERF-002.md`
+**Ticket**: `archive/tickets/178POLWASMPERF-002.md`
 
 ## Question
 

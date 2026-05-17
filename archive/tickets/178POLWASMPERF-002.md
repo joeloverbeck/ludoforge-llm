@@ -126,6 +126,8 @@ No automated tests are expected if this remains report-only. If a profiler/repor
 
 **Decision:** `create-investigation-ticket: Split terminal-boundary projected-state unsupported time from no-counter continued-deepening chooseOne policy work`. The report found material evidence, but not an implementation-ready owner: `production-deep-choosenstep-continuation.projectedState` is large but may be a terminal-boundary semantic exit, and `coupArvnRedeployPolice:chooseOne | continuedDeepening` is large but has no route or unsupported counter signal.
 
+**Post-review follow-up:** Created `tickets/178POLWASMPERF-003.md` to own the recommended bounded investigation before archiving this evidence ticket. The follow-up is non-overlapping: this ticket produced the attribution report; `178POLWASMPERF-003` must split the two remaining ambiguous owners into implementation-ready or stop-worthy evidence.
+
 **Generated/schema fallout:** none. This was markdown/report-only; no source, schema, generated JSON, GameSpecDoc, or visual config changed.
 
 **Verification:**

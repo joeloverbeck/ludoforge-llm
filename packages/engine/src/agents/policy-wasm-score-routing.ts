@@ -214,6 +214,25 @@ const groupPreviewCandidatesByAction = (
     })));
 };
 
+const policyWasmBytecodeCacheAxisLabel = (
+  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
+  candidates: readonly PolicyWasmScoreRoutingCandidate[],
+): string => {
+  return policyWasmAxisLabelFromActionIds(profile, candidates.map((candidate) => candidate.actionId));
+};
+
+const policyWasmAxisLabelFromActionIds = (
+  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
+  actionIdsRaw: readonly string[],
+): string => {
+  const actionIds = [...new Set(actionIdsRaw)].sort(compareOrdinalStrings);
+  const microturnClass = actionIds.length === 1 ? actionIds[0]! : 'actionSelection';
+  const previewBranch = profile.preview.inner?.strategy === 'continuedDeepening'
+    ? 'continuedDeepening'
+    : 'none';
+  return `${microturnClass}|${previewBranch}`;
+};
+
 const hasCardEventActionCandidate = (
   def: GameDef,
   candidates: readonly PolicyWasmScoreRoutingCandidate[],
@@ -283,6 +302,7 @@ const materializePreviewDynamicRowsWithWasm = (
       previewBranch: input.profile.preview.inner?.strategy === 'continuedDeepening'
         ? 'continuedDeepening'
         : 'greedy',
+      serializationAxisLabel: policyWasmAxisLabelFromActionIds(input.profile, group.map((candidate) => candidate.actionId ?? String(candidate.move.actionId))),
       previewStateSlots,
       candidates: group,
     });
@@ -413,6 +433,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
     id,
     value: encodeWasmPrecomputedPolicyValue(input.evaluation.evaluateStateFeature(id)),
   }));
+  const bytecodeCacheAxisLabel = policyWasmBytecodeCacheAxisLabel(input.profile, input.candidates);
   const candidateFeatureRows: {
     readonly id: string;
     readonly costClass: string;
@@ -469,6 +490,8 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
           bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
           bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
         }),
+        timingRouteClass: 'previewCandidateFeatureRows',
+        bytecodeCacheAxisLabel,
       },
       parameterValues: input.profile.params,
       expr: feature.expr,
@@ -518,6 +541,8 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
         bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
         bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
       }),
+      timingRouteClass: 'scoreRows',
+      bytecodeCacheAxisLabel,
     },
     parameterValues: input.profile.params,
     considerations,

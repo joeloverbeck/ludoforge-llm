@@ -68,6 +68,35 @@ activation separate from correctness parity. A passing profile command is not
 enough if route counts, unsupported/fallback rows, or bucket ownership would let
 fallback success hide an inactive fast path.
 
+### Measured Classification Verdicts
+
+Use this pattern when a profiling or investigation ticket produces a bounded
+classification verdict rather than a classic optimization pass/fail gate, such
+as cache amortization, route ownership, support coverage, or diagnostic bucket
+classification.
+
+1. Prewrite the active ticket/report with the exact verdict enum or allowed
+   classification labels, the threshold logic for each label, the decisive
+   command, artifact paths, retained raw-output decision, and planned final
+   proof lanes while terminal status remains pending.
+2. Run any syntax/focused/smoke lanes needed to prove the new counters, columns,
+   and report rendering before the decisive full witness.
+3. Run the decisive classification command on the final code path and transcribe
+   the exact counts, rates, timings, selected verdict label, and threshold
+   comparison into the checked-in report and active ticket.
+4. Record `residual owner: none` with rationale when the classification itself
+   completes the ticket and no successor is needed. If the verdict creates a
+   residual owner, name the successor, active spec phase, or same-ticket
+   continuation before terminal status.
+5. Keep terminal status pending until the verdict, artifact delivery decision,
+   source-size ledger when triggered, proof-validity/no-invalidation story, and
+   ticket-dependency lane are all settled. Do not describe a diagnostic
+   classification as a performance win or default flip unless the ticket's
+   threshold logic explicitly allows that conclusion.
+6. In the final handoff, name the classification verdict, decisive artifact,
+   retained report/CSV paths, any advisory output classification, and whether
+   `$post-ticket-review` ran.
+
 ### Measured Engine Refactor Terminal Checklist
 
 For a measured engine/kernel refactor that produces a checked-in report,

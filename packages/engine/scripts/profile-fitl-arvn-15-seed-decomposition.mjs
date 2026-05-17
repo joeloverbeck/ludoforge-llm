@@ -18,6 +18,26 @@ import {
   renderCsv,
   renderMarkdown,
 } from './profile-fitl-arvn-15-seed-report-rendering.mjs';
+import {
+  addSerializationStats,
+  addTimingBuckets,
+  deltaTimingBuckets,
+  deltaSerializationStats,
+  serializationDelta,
+  serializationRows,
+  timingDelta,
+  timingDeltaMs,
+  timingRows,
+} from './profile-fitl-arvn-15-seed-timing.mjs';
+import { classifyMicroturn } from './profile-fitl-arvn-15-seed-classify.mjs';
+import {
+  flagBoolean,
+  flagPositiveInt,
+  flagValue,
+  formatSeedRange,
+  parsePositiveInt,
+  parseSeedRange,
+} from './profile-fitl-arvn-15-seed-cli.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -30,16 +50,18 @@ const FAST_TIER_SEEDS = new Set([1000, 1006, 1007, 1010, 1014]);
 
 const args = process.argv.slice(2);
 const config = {
-  seeds: parseSeedRange(flagValue('seeds', '1000..1014')),
-  timeoutMs: flagPositiveInt('timeout-ms', 400000),
-  maxTurns: flagPositiveInt('max-turns', 200),
-  date: flagValue('date', new Date().toISOString().slice(0, 10)),
-  outputDir: resolve(REPO_ROOT, flagValue('output-dir', 'reports')),
-  topN: flagPositiveInt('top-n', 10),
-  childSeed: flagValue('child-seed', undefined),
-  childOutput: flagValue('child-output', undefined),
-  child: flagBoolean('child'),
-  profileBuckets: flagBoolean('profile-buckets'),
+  seeds: parseSeedRange(flagValue(args, 'seeds', '1000..1014')),
+  timeoutMs: flagPositiveInt(args, 'timeout-ms', 400000),
+  maxTurns: flagPositiveInt(args, 'max-turns', 200),
+  date: flagValue(args, 'date', new Date().toISOString().slice(0, 10)),
+  outputDir: resolve(REPO_ROOT, flagValue(args, 'output-dir', 'reports')),
+  topN: flagPositiveInt(args, 'top-n', 10),
+  childSeed: flagValue(args, 'child-seed', undefined),
+  childOutput: flagValue(args, 'child-output', undefined),
+  child: flagBoolean(args, 'child'),
+  profileBuckets: flagBoolean(args, 'profile-buckets'),
+  noWasm: flagBoolean(args, 'no-wasm'),
+  wasmTimingProfile: process.env.POLICY_WASM_TIMING_PROFILE === '1',
 };
 
 if (config.child) {
@@ -79,7 +101,7 @@ async function runParent() {
   }
 
   const rollup = buildRollup(perSeed, decisions);
-  const baseName = `fitl-arvn-15-seed-decomposition-${config.date}`;
+  const baseName = `fitl-arvn-15-seed-decomposition-${config.date}${config.noWasm && !config.date.includes('no-wasm') ? '-no-wasm' : ''}`;
   const csvPath = join(config.outputDir, `${baseName}.csv`);
   const mdPath = join(config.outputDir, `${baseName}.md`);
   writeFileSync(csvPath, renderCsv(decisions), 'utf8');
@@ -111,6 +133,9 @@ function runSeedChild(seed) {
     ];
     if (config.profileBuckets) {
       childArgs.push('--profile-buckets');
+    }
+    if (config.noWasm) {
+      childArgs.push('--no-wasm');
     }
     const child = spawn(process.execPath, childArgs, {
       cwd: REPO_ROOT,
@@ -244,7 +269,9 @@ async function runSeedInProcess(seed, maxTurns) {
   ]);
   const staticRebuildCounters = await createStaticRebuildCounterAccess(DIST_ROOT);
 
-  initializePolicyWasmRuntimeSync({ wasmPath: defaultPolicyWasmPath() });
+  if (!config.noWasm) {
+    initializePolicyWasmRuntimeSync({ wasmPath: defaultPolicyWasmPath() });
+  }
   const def = assertValidatedGameDef(
     runGameSpecStagesFromBundle(
       loadGameSpecBundleFromEntrypoint(GAME_SPEC_ENTRYPOINT),
@@ -346,6 +373,11 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
           encodedStateCacheHashHitCount: delta(after, before, 'policyEncodedStateHashHitCount'),
           encodedStateCacheMissCount: delta(after, before, 'policyEncodedStateMissCount'),
           bytecodeCacheCompileCount: delta(after, before, 'wasmScoreRowBytecodeCompileCount'),
+          cacheHits: config.wasmTimingProfile ? delta(after, before, 'wasmScoreRowBytecodeCacheHitCount') : '',
+          cacheMisses: config.wasmTimingProfile ? delta(after, before, 'wasmScoreRowBytecodeCacheMissCount') : '',
+          cacheCompileTimeMs: config.wasmTimingProfile
+            ? round4(delta(after, before, 'wasmScoreRowBytecodeCompileTimeMs'))
+            : '',
           wasmScoreRowRouteCount: delta(after, before, 'wasmScoreRowRouteCount'),
           wasmScoreRowUnsupportedCount: delta(after, before, 'wasmScoreRowUnsupportedCount'),
           wasmPreviewCandidateFeatureRowRouteCount: delta(after, before, 'wasmPreviewCandidateFeatureRowRouteCount'),
@@ -357,6 +389,17 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
             before.wasmProductionPreviewDriveUnsupportedReasonCounts,
           ),
           wasmProductionPreviewDriveBatchCount: delta(after, before, 'wasmProductionPreviewDriveBatchCount'),
+          marshalingMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'marshalingNs'),
+          executionMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'executionNs'),
+          deserializationMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'deserializationNs'),
+          wasmCallCount: timingDelta(after.wasmTimingBuckets, before.wasmTimingBuckets, 'callCount'),
+          wasmTimingBuckets: deltaTimingBuckets(after.wasmTimingBuckets, before.wasmTimingBuckets),
+          bytesSerialized: serializationDelta(after.wasmSerializationStats, before.wasmSerializationStats, 'totalBytes'),
+          serializationCallCount: serializationDelta(after.wasmSerializationStats, before.wasmSerializationStats, 'callCount'),
+          wasmSerializationStats: deltaSerializationStats(after.wasmSerializationStats, before.wasmSerializationStats),
+          cacheWriteMs: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'totalWriteMs'),
+          cacheWriteBytes: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'totalWriteBytes'),
+          cacheWriteCount: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'writeCount'),
           tokenStateIndexBuildCount: delta(after, before, 'tokenStateIndexBuildCount'),
           persistentTokenStateIndexCacheHitCount: delta(after, before, 'persistentTokenStateIndexCacheHitCount'),
           persistentTokenStateIndexCacheMissCount: delta(after, before, 'persistentTokenStateIndexCacheMissCount'),
@@ -379,6 +422,8 @@ function resetCounters(internals) {
   internals.tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   internals.zobristInternals.resetZobristKeyCounters();
   internals.policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  internals.policyWasmRuntimeInternals.resetPolicyWasmTimingBuckets();
+  internals.policyWasmRuntimeInternals.resetPolicyWasmSerializationStats();
   internals.policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   internals.policyEncodedStateCacheInternals.resetCounts();
 }
@@ -398,6 +443,12 @@ function readCounters(internals) {
     wasmScoreRowUnsupportedCount: internals.policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     wasmScoreRowBytecodeCompileCount:
       internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmScoreRowBytecodeCacheHitCount:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCacheHitCount(),
+    wasmScoreRowBytecodeCacheMissCount:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCacheMissCount(),
+    wasmScoreRowBytecodeCompileTimeMs:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileTimeMs(),
     wasmPreviewCandidateFeatureRowRouteCount:
       internals.policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount:
@@ -410,6 +461,12 @@ function readCounters(internals) {
       internals.policyWasmRuntimeInternals.getProductionPreviewDriveUnsupportedReasonCounts(),
     wasmProductionPreviewDriveBatchCount:
       internals.policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
+    wasmTimingBuckets:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmTimingBuckets(),
+    wasmSerializationStats:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmSerializationStats(),
+    bytecodeInputCacheWriteStats:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmBytecodeInputCacheWriteStats(),
     policyEncodedStateObjectHitCount:
       internals.policyEncodedStateCacheInternals.getObjectHitCount(),
     policyEncodedStateHashHitCount:
@@ -462,7 +519,9 @@ function buildRollup(perSeed, decisions) {
 
   return {
     date: config.date,
-    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}${config.profileBuckets ? ' --profile-buckets' : ''}`,
+    command: `${config.wasmTimingProfile ? 'POLICY_WASM_TIMING_PROFILE=1 ' : ''}node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}${config.profileBuckets ? ' --profile-buckets' : ''}${config.noWasm ? ' --no-wasm' : ''}`,
+    noWasm: config.noWasm,
+    wasmTimingProfile: config.wasmTimingProfile,
     maxTurns: config.maxTurns,
     timeoutMs: config.timeoutMs,
     seedCount: config.seeds.length,
@@ -495,10 +554,24 @@ function aggregateRows(rows, keyFn) {
       encodedStateCacheHashHitCount: 0,
       encodedStateCacheMissCount: 0,
       bytecodeCacheCompileCount: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      cacheCompileTimeMs: 0,
       wasmProductionPreviewDriveRouteCount: 0,
       wasmProductionPreviewDriveUnsupportedCount: 0,
       wasmProductionPreviewDriveUnsupportedReasons: new Map(),
       wasmProductionPreviewDriveBatchCount: 0,
+      marshalingMs: 0,
+      executionMs: 0,
+      deserializationMs: 0,
+      wasmCallCount: 0,
+      wasmTimingBuckets: new Map(),
+      bytesSerialized: 0,
+      serializationCallCount: 0,
+      wasmSerializationStats: new Map(),
+      cacheWriteMs: 0,
+      cacheWriteBytes: 0,
+      cacheWriteCount: 0,
       tokenStateIndexBuildCount: 0,
       staticRebuildCount: 0,
       hotPathBuckets: new Map(),
@@ -512,10 +585,24 @@ function aggregateRows(rows, keyFn) {
     bucket.encodedStateCacheHashHitCount += row.encodedStateCacheHashHitCount;
     bucket.encodedStateCacheMissCount += row.encodedStateCacheMissCount;
     bucket.bytecodeCacheCompileCount += row.bytecodeCacheCompileCount;
+    bucket.cacheHits += Number(row.cacheHits || 0);
+    bucket.cacheMisses += Number(row.cacheMisses || 0);
+    bucket.cacheCompileTimeMs += Number(row.cacheCompileTimeMs || 0);
     bucket.wasmProductionPreviewDriveRouteCount += row.wasmProductionPreviewDriveRouteCount;
     bucket.wasmProductionPreviewDriveUnsupportedCount += row.wasmProductionPreviewDriveUnsupportedCount;
     addReasonCounts(bucket.wasmProductionPreviewDriveUnsupportedReasons, row.wasmProductionPreviewDriveUnsupportedReasons);
     bucket.wasmProductionPreviewDriveBatchCount += row.wasmProductionPreviewDriveBatchCount;
+    bucket.marshalingMs += row.marshalingMs;
+    bucket.executionMs += row.executionMs;
+    bucket.deserializationMs += row.deserializationMs;
+    bucket.wasmCallCount += row.wasmCallCount;
+    addTimingBuckets(bucket.wasmTimingBuckets, row.wasmTimingBuckets);
+    bucket.bytesSerialized += row.bytesSerialized;
+    bucket.serializationCallCount += row.serializationCallCount;
+    addSerializationStats(bucket.wasmSerializationStats, row.wasmSerializationStats);
+    bucket.cacheWriteMs += row.cacheWriteMs;
+    bucket.cacheWriteBytes += row.cacheWriteBytes;
+    bucket.cacheWriteCount += row.cacheWriteCount;
     bucket.tokenStateIndexBuildCount += row.tokenStateIndexBuildCount;
     bucket.staticRebuildCount += row.staticRebuildCount;
     for (const hotPathBucket of row.hotPathBuckets ?? []) {
@@ -542,10 +629,24 @@ function aggregateRows(rows, keyFn) {
       encodedStateCacheHashHitCount: bucket.encodedStateCacheHashHitCount,
       encodedStateCacheMissCount: bucket.encodedStateCacheMissCount,
       bytecodeCacheCompileCount: bucket.bytecodeCacheCompileCount,
+      cacheHits: bucket.cacheHits,
+      cacheMisses: bucket.cacheMisses,
+      cacheCompileTimeMs: round4(bucket.cacheCompileTimeMs),
       wasmProductionPreviewDriveRouteCount: bucket.wasmProductionPreviewDriveRouteCount,
       wasmProductionPreviewDriveUnsupportedCount: bucket.wasmProductionPreviewDriveUnsupportedCount,
       wasmProductionPreviewDriveUnsupportedReasons: reasonRows(bucket.wasmProductionPreviewDriveUnsupportedReasons),
       wasmProductionPreviewDriveBatchCount: bucket.wasmProductionPreviewDriveBatchCount,
+      marshalingMs: round4(bucket.marshalingMs),
+      executionMs: round4(bucket.executionMs),
+      deserializationMs: round4(bucket.deserializationMs),
+      wasmCallCount: bucket.wasmCallCount,
+      wasmTimingBuckets: timingRows(bucket.wasmTimingBuckets),
+      bytesSerialized: bucket.bytesSerialized,
+      serializationCallCount: bucket.serializationCallCount,
+      wasmSerializationStats: serializationRows(bucket.wasmSerializationStats),
+      cacheWriteMs: round4(bucket.cacheWriteMs),
+      cacheWriteBytes: bucket.cacheWriteBytes,
+      cacheWriteCount: bucket.cacheWriteCount,
       tokenStateIndexBuildCount: bucket.tokenStateIndexBuildCount,
       staticRebuildCount: bucket.staticRebuildCount,
       hotPathBuckets: [...bucket.hotPathBuckets.entries()]
@@ -568,6 +669,7 @@ function deltaReasonCounts(afterRows, beforeRows) {
       unsupportedDriveClass: row.unsupportedDriveClass,
       ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
       reason: row.reason,
+      ...projectedStateReasonFields(row),
       count: row.count - (beforeByKey.get(reasonKey(row)) ?? 0),
     }))
     .filter((row) => row.count > 0)
@@ -582,6 +684,7 @@ function addReasonCounts(target, rows) {
       unsupportedDriveClass: row.unsupportedDriveClass,
       ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
       reason: row.reason,
+      ...projectedStateReasonFields(row),
       count: (current?.count ?? 0) + row.count,
     });
   }
@@ -592,18 +695,32 @@ function reasonRows(rowsByKey) {
 }
 
 function reasonKey(row) {
-  return `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`;
+  return `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`
+    + `\u0000${row.projectedStateBoundaryKind ?? ''}\u0000${row.projectedStateClassification ?? ''}`;
 }
 
 function compareReasonRows(left, right) {
   return right.count - left.count
     || compareCodepoint(left.unsupportedDriveClass, right.unsupportedDriveClass)
     || compareCodepoint(left.unsupportedOwner ?? '', right.unsupportedOwner ?? '')
-    || compareCodepoint(left.reason, right.reason);
+    || compareCodepoint(left.reason, right.reason)
+    || compareCodepoint(left.projectedStateBoundaryKind ?? '', right.projectedStateBoundaryKind ?? '')
+    || compareCodepoint(left.projectedStateClassification ?? '', right.projectedStateClassification ?? '');
 }
 
 function compareCodepoint(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function projectedStateReasonFields(row) {
+  const fields = {};
+  if (row.projectedStateBoundaryKind !== undefined) {
+    fields.projectedStateBoundaryKind = row.projectedStateBoundaryKind;
+  }
+  if (row.projectedStateClassification !== undefined) {
+    fields.projectedStateClassification = row.projectedStateClassification;
+  }
+  return fields;
 }
 
 function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {
@@ -617,38 +734,6 @@ function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {
     .sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
 }
 
-function classifyMicroturn(decision, def) {
-  if (decision.kind === 'actionSelection') {
-    return String(decision.actionId);
-  }
-  const decisionKey = String(decision.decisionKey ?? '');
-  const pipelineIndex = Number(decisionKey.match(/doc\.actionPipelines\.(\d+)/)?.[1]);
-  const actionIndex = Number(decisionKey.match(/doc\.actions\.(\d+)/)?.[1]);
-  const base = Number.isSafeInteger(pipelineIndex)
-    ? String(def.actionPipelines?.[pipelineIndex]?.actionId ?? decision.kind)
-    : Number.isSafeInteger(actionIndex)
-      ? String(def.actions?.[actionIndex]?.id ?? decision.kind)
-      : decisionKey.includes('doc.eventDecks.')
-        ? 'event-decision'
-        : decision.kind;
-  if (decision.kind === 'chooseNStep') {
-    return `${base}:chooseNStep:${decision.command}`;
-  }
-  if (decision.kind === 'chooseOne') {
-    return `${base}:chooseOne`;
-  }
-  if (decision.kind === 'stochasticResolve') {
-    return `${base}:stochasticResolve`;
-  }
-  if (decision.kind === 'outcomeGrantResolve') {
-    return `outcomeGrantResolve:${decision.grantId}`;
-  }
-  if (decision.kind === 'turnRetirement') {
-    return 'turnRetirement';
-  }
-  return decision.kind;
-}
-
 function formatSeedProgress(summary) {
   if (summary.status === 'OK') {
     return `seed ${summary.seed}: DONE ${summary.elapsedMs}ms stop=${summary.stopReason} decisions=${summary.decisions}\n`;
@@ -658,49 +743,6 @@ function formatSeedProgress(summary) {
 
 function childOutputPath(seed) {
   return join('/tmp', `ludoforge-173-decomposition-${process.pid}-${seed}.json`);
-}
-
-function parseSeedRange(raw) {
-  if (raw.includes('..')) {
-    const [left, right] = raw.split('..').map((part) => parsePositiveInt(part, 'seeds'));
-    if (right < left) {
-      fail(`--seeds range must be ascending; got ${raw}`);
-    }
-    return Array.from({ length: right - left + 1 }, (_unused, index) => left + index);
-  }
-  return raw.split(',').filter(Boolean).map((part) => parsePositiveInt(part.trim(), 'seeds'));
-}
-
-function formatSeedRange(seeds) {
-  if (seeds.length > 1 && seeds.every((seed, index) => index === 0 || seed === seeds[index - 1] + 1)) {
-    return `${seeds[0]}..${seeds.at(-1)}`;
-  }
-  return seeds.join(',');
-}
-
-function flagBoolean(name) {
-  return args.includes(`--${name}`);
-}
-
-function flagValue(name, fallback) {
-  const index = args.indexOf(`--${name}`);
-  if (index === -1) {
-    return fallback;
-  }
-  return args[index + 1];
-}
-
-function flagPositiveInt(name, fallback) {
-  const raw = flagValue(name, undefined);
-  return raw === undefined ? fallback : parsePositiveInt(raw, name);
-}
-
-function parsePositiveInt(raw, name) {
-  const value = Number.parseInt(String(raw), 10);
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    fail(`--${name} must be a positive integer; got "${raw}"`);
-  }
-  return value;
 }
 
 function findRepoRoot(start) {

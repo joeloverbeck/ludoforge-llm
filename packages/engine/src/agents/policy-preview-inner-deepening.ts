@@ -216,6 +216,7 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     state: ChooseNStepInnerPreviewResult['state'],
     depth: number,
     outcome: DriveResult['outcome'],
+    boundaryKind: string,
   ): { readonly kind: 'supported'; readonly drive: DriveResult } | { readonly kind: 'unsupported'; readonly detail: PolicyWasmPreviewDriveUnsupportedDetail } => producedProjectedState
     ? {
         kind: 'supported',
@@ -232,6 +233,10 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
         'unknown',
         'production-deep-choosenstep-continuation.projectedState',
         'deep preview-drive reached a terminal boundary before materializing a WASM projected state',
+        {
+          projectedStateBoundaryKind: boundaryKind,
+          projectedStateClassification: 'expected-terminal-boundary',
+        },
       );
   let state = stateAfterRoot;
   let depth = initialDepth;
@@ -245,13 +250,16 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
       || microturn.seatId !== input.microturn.seatId
       || microturn.turnId !== input.microturn.turnId
     ) {
-      return finish(state, depth, 'ready');
+      const boundaryKind = microturn.seatId !== input.microturn.seatId || microturn.turnId !== input.microturn.turnId
+        ? 'seat-or-turn-boundary'
+        : microturn.kind;
+      return finish(state, depth, 'ready', boundaryKind);
     }
     if (microturn.kind === 'stochasticResolve') {
-      return finish(state, depth, 'stochastic');
+      return finish(state, depth, 'stochastic', 'stochasticResolve');
     }
     if (depth >= depthCap) {
-      return finish(state, depth, 'depthCap');
+      return finish(state, depth, 'depthCap', 'depthCap');
     }
 
     const nextDecisionResult = pickInnerDecision(
@@ -309,6 +317,7 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     }
     const result = runtime.evaluatePreviewDriveBatch({
       profileId: 'production-deep-choosenstep-continuation',
+      serializationAxisLabel: 'production-deep-choosenstep-continuation|continuedDeepening',
       originSeatId: microturn.seatId,
       originTurnId: microturn.turnId,
       depthCap,
@@ -350,12 +359,14 @@ const unsupportedWasmDeepDrive = (
   unsupportedDriveClass: NonNullable<PolicyWasmPreviewDriveUnsupportedDetail['unsupportedDriveClass']>,
   unsupportedOwner: string | undefined,
   reason: string,
+  detail: Partial<PolicyWasmPreviewDriveUnsupportedDetail> = {},
 ): { readonly kind: 'unsupported'; readonly detail: PolicyWasmPreviewDriveUnsupportedDetail } => ({
   kind: 'unsupported',
   detail: {
     unsupportedDriveClass,
     ...(unsupportedOwner === undefined ? {} : { unsupportedOwner }),
     reason,
+    ...detail,
   },
 });
 

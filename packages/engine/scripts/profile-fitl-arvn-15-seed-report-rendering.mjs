@@ -1,4 +1,5 @@
 export function renderCsv(rows) {
+  const batchSizeHeaders = batchSizeCsvHeaders();
   const headers = [
     'seed',
     'decisionIndex',
@@ -11,6 +12,9 @@ export function renderCsv(rows) {
     'encodedStateCacheHashHitCount',
     'encodedStateCacheMissCount',
     'bytecodeCacheCompileCount',
+    'cacheHits',
+    'cacheMisses',
+    'cacheCompileTimeMs',
     'wasmScoreRowRouteCount',
     'wasmScoreRowUnsupportedCount',
     'wasmPreviewCandidateFeatureRowRouteCount',
@@ -19,6 +23,17 @@ export function renderCsv(rows) {
     'wasmProductionPreviewDriveUnsupportedCount',
     'wasmProductionPreviewDriveUnsupportedReasons',
     'wasmProductionPreviewDriveBatchCount',
+    'marshalingMs',
+    'executionMs',
+    'deserializationMs',
+    'wasmCallCount',
+    'wasmTimingBuckets',
+    'bytesSerialized',
+    'serializationCallCount',
+    'wasmSerializationStats',
+    'cacheWriteMs',
+    'cacheWriteBytes',
+    'cacheWriteCount',
     'tokenStateIndexBuildCount',
     'persistentTokenStateIndexCacheHitCount',
     'persistentTokenStateIndexCacheMissCount',
@@ -27,6 +42,10 @@ export function renderCsv(rows) {
     'zobristKeyCacheMissCount',
     'staticRebuildCount',
     'hotPathBuckets',
+    'hotPathBucketFamilies',
+    'sameRunNoCounterAttribution',
+    'continuedDeepeningResidualSplit',
+    'terminalBoundaryProjectionSplit',
     'seatId',
     'profileId',
     'turnCount',
@@ -34,10 +53,11 @@ export function renderCsv(rows) {
     'decisionKind',
     'previewCapClass',
     'selectedStableMoveKey',
+    ...batchSizeHeaders,
   ];
   return [
     headers.join(','),
-    ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(',')),
+    ...rows.map((row) => headers.map((header) => csvCell(csvValue(row, header))).join(',')),
   ].join('\n') + '\n';
 }
 
@@ -47,7 +67,7 @@ export function renderMarkdown(rollup, options) {
     '# FITL ARVN 15-Seed Per-Microturn-Class Decomposition',
     '',
     `**Date**: ${rollup.date}`,
-    '**Status**: Spec 173 measurement witness.',
+    '**Status**: FITL ARVN measurement witness.',
     `**Command**: \`${rollup.command}\``,
     `**CSV**: \`${relativeToRepo(csvPath)}\``,
     '',
@@ -58,9 +78,14 @@ export function renderMarkdown(rollup, options) {
     `- Hot class with slow:fast ratio >3x: ${rollup.acceptance.hotAxisOver3x ? 'yes' : 'no'}`,
     `- Per-seed timeout: ${rollup.timeoutMs} ms`,
     `- Hot-path buckets: ${profileBuckets ? 'enabled' : 'disabled'}`,
+    `- WASM mode: ${rollup.noWasm ? 'disabled via --no-wasm' : 'enabled'}`,
+    `- WASM timing profile: ${rollup.wasmTimingProfile ? 'enabled' : 'disabled'}`,
     `- WASM production preview-drive route count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveRouteCount')}`,
     `- WASM production preview-drive unsupported count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveUnsupportedCount')}`,
     `- WASM production preview-drive batch count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveBatchCount')}`,
+    `- WASM timing call count: ${sumAggregateField(rollup.perDecisionClass, 'wasmCallCount')}`,
+    `- WASM serialized input bytes: ${sumAggregateField(rollup.perDecisionClass, 'bytesSerialized')}`,
+    `- Bytecode input cache write bytes: ${sumAggregateField(rollup.perDecisionClass, 'cacheWriteBytes')}`,
     '',
     '## Per-Seed Wall Time',
     '',
@@ -78,16 +103,16 @@ export function renderMarkdown(rollup, options) {
     '',
     '## Per-Microturn-Class Rollup',
     '',
-    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | Token index builds | Static rebuilds |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|',
+    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | Cache hits | Cache misses | Cache compile ms | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | WASM timing calls | Marshaling ms | Execution ms | Deserialization ms | Bytes serialized | Cache write ms | Cache write bytes | Cache write count | Token index builds | Static rebuilds |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
     ...rollup.perDecisionClass.map((row) => renderAggregateRow(row.key, row)),
     '',
     '## Top Hot Axes In Slow-Tier Seeds',
     '',
     'Slow tier: `1005`, `1011`, `1008`, `1013`, `1009`. Axes are `microturnClass + previewBranch`, ranked by total measured agent-call time.',
     '',
-    '| Rank | Microturn class | Preview branch | Decisions | Total ms | Mean ms | p95 ms | Max ms |',
-    '|---:|---|---|---:|---:|---:|---:|---:|',
+    '| Rank | Microturn class | Preview branch | Decisions | Total ms | Mean ms | p95 ms | Max ms | Cache hits | Cache misses | Cache compile ms |',
+    '|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|',
     ...rollup.topNHotAxes.map((row, index) => [
       `| ${index + 1}`,
       row.microturnClass,
@@ -96,10 +121,17 @@ export function renderMarkdown(rollup, options) {
       formatNumber(row.totalMs),
       formatNumber(row.meanMs),
       formatNumber(row.p95Ms),
-      `${formatNumber(row.maxMs)} |`,
+      formatNumber(row.maxMs),
+      row.cacheHits,
+      row.cacheMisses,
+      `${formatNumber(row.cacheCompileTimeMs)} |`,
     ].join(' | ')),
     ...(profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
+    ...(profileBuckets ? renderContinuedDeepeningResidualSplitSection(rollup.topNHotAxes) : []),
+    ...renderWasmTimingSection(rollup.perDecisionClass),
+    ...renderWasmSerializationSection(rollup.perDecisionClass),
     ...renderUnsupportedReasonSection(rollup.perDecisionClass),
+    ...renderTerminalBoundaryProjectionSection(rollup.perDecisionClass),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
     '',
@@ -121,6 +153,7 @@ export function renderMarkdown(rollup, options) {
     '',
     '- `elapsedMs` is measured around the per-decision `PolicyAgent.chooseDecision` call. It excludes simulator apply/delta work and report rendering.',
     '- Child processes enforce the per-seed timeout. Each child loads the built engine and production FITL GameSpecDoc, using the repo GameDef cache when available.',
+    '- WASM timing buckets are emitted only when `POLICY_WASM_TIMING_PROFILE=1` is set before the child process imports the WASM runtime module.',
     '- The script does not modify engine source or production profile data.',
     '',
   ];
@@ -141,13 +174,167 @@ function renderAggregateRow(label, row) {
     row.encodedStateCacheHashHitCount,
     row.encodedStateCacheMissCount,
     row.bytecodeCacheCompileCount,
+    row.cacheHits,
+    row.cacheMisses,
+    formatNumber(row.cacheCompileTimeMs),
     row.wasmProductionPreviewDriveRouteCount,
     row.wasmProductionPreviewDriveUnsupportedCount,
     formatReasonCounts(row.wasmProductionPreviewDriveUnsupportedReasons),
     row.wasmProductionPreviewDriveBatchCount,
+    row.wasmCallCount,
+    formatNumber(row.marshalingMs),
+    formatNumber(row.executionMs),
+    formatNumber(row.deserializationMs),
+    row.bytesSerialized,
+    formatNumber(row.cacheWriteMs),
+    row.cacheWriteBytes,
+    row.cacheWriteCount,
     row.tokenStateIndexBuildCount,
     `${row.staticRebuildCount} |`,
   ].join(' | ');
+}
+
+function renderWasmTimingSection(rows) {
+  const timingRows = rows
+    .flatMap((row) => (row.wasmTimingBuckets ?? []).map((bucket) => ({
+      microturnClass: row.key,
+      ...bucket,
+    })))
+    .filter((row) => row.callCount > 0)
+    .sort((left, right) =>
+      right.callCount - left.callCount
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.routeClass, right.routeClass),
+    );
+  if (timingRows.length === 0) {
+    return [
+      '',
+      '## WASM Timing Buckets',
+      '',
+      '_No WASM timing buckets recorded._',
+    ];
+  }
+  return [
+    '',
+    '## WASM Timing Buckets',
+    '',
+    '| Microturn class | Route class | Calls | Marshaling ms | Execution ms | Deserialization ms | Batch size mean | Batch size min | Batch size max | Batch size histogram |',
+    '|---|---|---:|---:|---:|---:|---:|---:|---:|---|',
+    ...timingRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.routeClass,
+      row.callCount,
+      formatNumber(row.marshalingMs),
+      formatNumber(row.executionMs),
+      formatNumber(row.deserializationMs),
+      formatNumber(row.batchSizeMean),
+      row.batchSizeMin,
+      row.batchSizeMax,
+      `${formatCompactJson(row.batchSizeHistogram)} |`,
+    ].join(' | ')),
+  ];
+}
+
+const WASM_TIMING_ROUTE_CLASSES = [
+  'scoreRows',
+  'previewCandidateFeatureRows',
+  'productionPreviewDrive',
+];
+
+function batchSizeCsvHeaders() {
+  return WASM_TIMING_ROUTE_CLASSES.flatMap((routeClass) => [
+    `${routeClass}BatchSizeMean`,
+    `${routeClass}BatchSizeMin`,
+    `${routeClass}BatchSizeMax`,
+    `${routeClass}BatchSizeHistogram`,
+  ]);
+}
+
+function timingBucketForRoute(row, routeClass) {
+  return (row.wasmTimingBuckets ?? []).find((bucket) => bucket.routeClass === routeClass);
+}
+
+function csvValue(row, header) {
+  if (header === 'hotPathBucketFamilies') {
+    return formatHotPathBucketFamilies(row);
+  }
+  if (header === 'sameRunNoCounterAttribution') {
+    return formatSameRunNoCounterAttribution(row);
+  }
+  if (header === 'continuedDeepeningResidualSplit') {
+    return formatContinuedDeepeningResidualSplit(row);
+  }
+  if (header === 'terminalBoundaryProjectionSplit') {
+    return formatTerminalBoundaryProjectionSplit(row);
+  }
+  for (const routeClass of WASM_TIMING_ROUTE_CLASSES) {
+    if (header === `${routeClass}BatchSizeMean`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      if (bucket === undefined) {
+        return '';
+      }
+      return bucket.batchSizeMean ?? (bucket.callCount > 0 ? round4(bucket.batchSizeSum / bucket.callCount) : 0);
+    }
+    if (header === `${routeClass}BatchSizeMin`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket?.batchSizeMin ?? '';
+    }
+    if (header === `${routeClass}BatchSizeMax`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket?.batchSizeMax ?? '';
+    }
+    if (header === `${routeClass}BatchSizeHistogram`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket === undefined ? '' : bucket.batchSizeHistogram;
+    }
+  }
+  return row[header];
+}
+
+function formatCompactJson(value) {
+  return JSON.stringify(value ?? {});
+}
+
+function renderWasmSerializationSection(rows) {
+  const serializationRows = rows
+    .flatMap((row) => (row.wasmSerializationStats ?? []).map((stats) => ({
+      microturnClass: row.key,
+      ...stats,
+    })))
+    .filter((row) => row.callCount > 0 || row.totalBytes > 0)
+    .sort((left, right) =>
+      right.totalBytes - left.totalBytes
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.axisLabel, right.axisLabel),
+    );
+  if (serializationRows.length === 0) {
+    return [
+      '',
+      '## WASM Serialization Stats',
+      '',
+      '_No WASM serialization stats recorded._',
+    ];
+  }
+  return [
+    '',
+    '## WASM Serialization Stats',
+    '',
+    '| Microturn class | Axis label | Calls | Total bytes | Bytes/call | Cache write ms | Cache write bytes | Cache write count |',
+    '|---|---|---:|---:|---:|---:|---:|---:|',
+    ...serializationRows.map((row) => {
+      const aggregate = rows.find((candidate) => candidate.key === row.microturnClass);
+      return [
+        `| ${row.microturnClass}`,
+        row.axisLabel,
+        row.callCount,
+        row.totalBytes,
+        formatNumber(row.callCount > 0 ? row.totalBytes / row.callCount : 0),
+        formatNumber(aggregate?.cacheWriteMs ?? 0),
+        aggregate?.cacheWriteBytes ?? 0,
+        `${aggregate?.cacheWriteCount ?? 0} |`,
+      ].join(' | ');
+    }),
+  ];
 }
 
 function renderUnsupportedReasonSection(rows) {
@@ -192,13 +379,54 @@ function renderUnsupportedReasonSection(rows) {
   ];
 }
 
+function renderTerminalBoundaryProjectionSection(rows) {
+  const splitRows = rows
+    .flatMap((row) => terminalBoundaryProjectionRows(row).map((split) => ({
+      microturnClass: row.key,
+      ...split,
+    })))
+    .filter((row) => row.count > 0)
+    .sort((left, right) =>
+      right.count - left.count
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.classification, right.classification)
+      || compareCodepoint(left.boundaryKind, right.boundaryKind),
+    );
+  if (splitRows.length === 0) {
+    return [
+      '',
+      '## Terminal-Boundary Projected-State Split',
+      '',
+      '_No terminal-boundary projected-state split rows recorded._',
+    ];
+  }
+  return [
+    '',
+    '## Terminal-Boundary Projected-State Split',
+    '',
+    '| Microturn class | Classification | Boundary kind | Count |',
+    '|---|---|---|---:|',
+    ...splitRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.classification,
+      row.boundaryKind,
+      `${row.count} |`,
+    ].join(' | ')),
+  ];
+}
+
 function formatReasonCounts(rows) {
   if ((rows ?? []).length === 0) {
     return '';
   }
   return rows.map((row) => {
     const owner = row.unsupportedOwner === undefined ? 'unknown' : row.unsupportedOwner;
-    return `${row.unsupportedDriveClass}/${owner}/${row.reason}:${row.count}`;
+    const projectedStateDetail = [
+      row.projectedStateClassification,
+      row.projectedStateBoundaryKind,
+    ].filter((part) => part !== undefined).join('/');
+    const detail = projectedStateDetail === '' ? '' : `/${projectedStateDetail}`;
+    return `${row.unsupportedDriveClass}/${owner}/${row.reason}${detail}:${row.count}`;
   }).join('; ');
 }
 
@@ -233,6 +461,193 @@ function renderHotPathBucketSection(rows) {
     );
   }
   return lines;
+}
+
+function summarizeHotPathBucketFamilies(row) {
+  const families = new Map();
+  for (const bucket of row.hotPathBuckets ?? []) {
+    const family = String(bucket.key).split(':')[0] ?? 'unknown';
+    const current = families.get(family) ?? { count: 0, totalMs: 0 };
+    families.set(family, {
+      count: current.count + Number(bucket.count ?? 0),
+      totalMs: current.totalMs + Number(bucket.totalMs ?? 0),
+    });
+  }
+  return [...families.entries()]
+    .map(([family, bucket]) => ({ family, ...bucket }))
+    .filter((bucket) => bucket.count > 0 || bucket.totalMs > 0)
+    .sort((left, right) => right.totalMs - left.totalMs || compareCodepoint(left.family, right.family));
+}
+
+function formatHotPathBucketFamilies(row) {
+  return summarizeHotPathBucketFamilies(row)
+    .map((bucket) => `${bucket.family}:${bucket.count}/${formatNumber(bucket.totalMs)}ms`)
+    .join('; ');
+}
+
+function formatSameRunNoCounterAttribution(row) {
+  const routeOrUnsupportedCount =
+    Number(row.wasmScoreRowRouteCount ?? 0)
+    + Number(row.wasmScoreRowUnsupportedCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowRouteCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowUnsupportedCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveRouteCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveUnsupportedCount ?? 0);
+  if (routeOrUnsupportedCount > 0) {
+    return '';
+  }
+  const families = formatHotPathBucketFamilies(row);
+  return families === ''
+    ? 'no-route-or-unsupported-counter; no-same-run-hot-path-buckets'
+    : `no-route-or-unsupported-counter; same-run-hot-path-families=${families}`;
+}
+
+function continuedDeepeningResidualSplitRows(row) {
+  if (row.previewBranch !== 'continuedDeepening') {
+    return [];
+  }
+  const routeOrUnsupportedCount =
+    Number(row.wasmScoreRowRouteCount ?? 0)
+    + Number(row.wasmScoreRowUnsupportedCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowRouteCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowUnsupportedCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveRouteCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveUnsupportedCount ?? 0);
+  if (routeOrUnsupportedCount > 0) {
+    return [];
+  }
+  const rows = [];
+  const bucketsByClass = new Map();
+  let bucketTotalMs = 0;
+  let topLevelBucketTotalMs = 0;
+  for (const bucket of row.hotPathBuckets ?? []) {
+    const classification = classifyContinuedDeepeningBucket(bucket.key);
+    const current = bucketsByClass.get(classification) ?? { count: 0, totalMs: 0 };
+    const count = Number(bucket.count ?? 0);
+    const totalMs = Number(bucket.totalMs ?? 0);
+    bucketTotalMs += totalMs;
+    if (classification === 'continued-deepening-orchestration-inclusive') {
+      topLevelBucketTotalMs += totalMs;
+    }
+    bucketsByClass.set(classification, {
+      count: current.count + count,
+      totalMs: current.totalMs + totalMs,
+    });
+  }
+  for (const [classification, bucket] of bucketsByClass) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ classification, count: bucket.count, totalMs: round4(bucket.totalMs) });
+    }
+  }
+  const residualBasisMs = topLevelBucketTotalMs > 0 ? topLevelBucketTotalMs : bucketTotalMs;
+  const residualMs = Math.max(0, Number(row.totalMs ?? row.elapsedMs ?? 0) - residualBasisMs);
+  if (residualMs > 0) {
+    rows.push({
+      classification: topLevelBucketTotalMs > 0
+        ? 'unattributed-after-top-level-orchestration'
+        : 'unbucketed-orchestration-or-policy-search-residual',
+      count: '',
+      totalMs: round4(residualMs),
+    });
+  }
+  return rows.sort((left, right) =>
+    right.totalMs - left.totalMs
+    || compareCodepoint(left.classification, right.classification),
+  );
+}
+
+function classifyContinuedDeepeningBucket(key) {
+  const text = String(key);
+  if (text.startsWith('policyInnerPreviewSubroutine:')) {
+    return 'inner-preview-subroutine-nested';
+  }
+  if (text.startsWith('policyInnerPreviewDriveOption:')) {
+    return 'drive-option-subroutine-nested';
+  }
+  if (text.startsWith('policyInnerPreview:')) {
+    return 'continued-deepening-orchestration-inclusive';
+  }
+  if (text.startsWith('policyMicroturnSearch:')) {
+    return 'policy-search-candidate-scoring-nested';
+  }
+  if (
+    text.startsWith('tokenStateIndex:')
+    || text.startsWith('evalQuery:')
+    || text.startsWith('zobrist:')
+    || text.startsWith('policyWasmRuntime:')
+    || text.startsWith('policyWasmStatePatch:')
+  ) {
+    return 'existing-hot-path-bucket-nested';
+  }
+  return 'other-instrumented-bucket-nested';
+}
+
+function formatContinuedDeepeningResidualSplit(row) {
+  return continuedDeepeningResidualSplitRows(row)
+    .map((split) => `${split.classification}:${split.count}/${formatNumber(split.totalMs)}ms`)
+    .join('; ');
+}
+
+function renderContinuedDeepeningResidualSplitSection(rows) {
+  const splitRows = rows
+    .flatMap((row) => continuedDeepeningResidualSplitRows(row).map((split) => ({
+      microturnClass: row.microturnClass ?? row.key,
+      previewBranch: row.previewBranch ?? '',
+      axisTotalMs: row.totalMs ?? row.elapsedMs ?? 0,
+      ...split,
+    })))
+    .filter((row) => row.totalMs > 0)
+    .sort((left, right) =>
+      right.totalMs - left.totalMs
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.classification, right.classification),
+    );
+  if (splitRows.length === 0) {
+    return [
+      '',
+      '## Continued-Deepening No-Counter Residual Split',
+      '',
+      '_No no-counter continued-deepening rows recorded._',
+    ];
+  }
+  return [
+    '',
+    '## Continued-Deepening No-Counter Residual Split',
+    '',
+    'Rows include only `continuedDeepening` axes with zero route/unsupported counters. `continued-deepening-orchestration-inclusive` is a top-level same-run bucket; `*-nested` rows are child hot-path evidence inside that orchestration bucket and are not additive with it. The residual row is the measured axis wall time not explained by the top-level orchestration bucket.',
+    '',
+    '| Microturn class | Preview branch | Classification | Count | Total ms | Share of axis wall |',
+    '|---|---|---|---:|---:|---:|',
+    ...splitRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.previewBranch,
+      row.classification,
+      row.count,
+      formatNumber(row.totalMs),
+      `${formatNumber(row.axisTotalMs > 0 ? (row.totalMs / row.axisTotalMs) * 100 : 0)}% |`,
+    ].join(' | ')),
+  ];
+}
+
+function terminalBoundaryProjectionRows(row) {
+  const buckets = new Map();
+  for (const reason of row.wasmProductionPreviewDriveUnsupportedReasons ?? []) {
+    if (reason.unsupportedOwner !== 'production-deep-choosenstep-continuation.projectedState') {
+      continue;
+    }
+    const classification = reason.projectedStateClassification ?? 'ambiguous';
+    const boundaryKind = reason.projectedStateBoundaryKind ?? 'unknown';
+    const key = `${classification}\u0000${boundaryKind}`;
+    const current = buckets.get(key) ?? { classification, boundaryKind, count: 0 };
+    buckets.set(key, { ...current, count: current.count + Number(reason.count ?? 0) });
+  }
+  return [...buckets.values()];
+}
+
+function formatTerminalBoundaryProjectionSplit(row) {
+  return terminalBoundaryProjectionRows(row)
+    .map((split) => `${split.classification}/${split.boundaryKind}:${split.count}`)
+    .join('; ');
 }
 
 function sumAggregateField(rows, field) {

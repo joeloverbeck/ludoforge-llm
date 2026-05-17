@@ -848,26 +848,10 @@ export const publishMicroturnFromPreviewStateNoHash = (
   return publishStackTop(def, state, top, runtime, false);
 };
 
-/**
- * Combined publish + greedy-pick fast path for `chooseOne` continuations.
- *
- * `publishStackTop` for `chooseOne` runs `isSupportedFrameContinuationMove`
- * for EVERY non-illegal option (typical 5-10 per pick) and computes a
- * projected-state observation (66-zone iteration). The synthetic-completion
- * driver then takes only the first legal action (`pickGreedyChooseOneDecision`).
- *
- * This variant short-circuits both:
- * - iterates options in declaration order, returning at the first one whose
- *   move passes `isSupportedFrameContinuationMove`,
- * - omits the projected-state observation (not consumed by
- *   `applyPublishedDecisionFromCanonicalState`).
- *
- * Returns `null` when no legal+supported option exists. Caller MUST guarantee
- * `state.stateHash` is canonical.
- */
-export const publishMicroturnGreedyChooseOne = (
+export const publishMicroturnPreferredChooseOne = (
   def: GameDef,
   state: GameState,
+  preferredValues: readonly MoveParamScalar[] | undefined,
   runtime?: GameDefRuntime,
 ): { readonly microturn: MicroturnState; readonly decision: ChooseOneDecision } | null => {
   const top = state.decisionStack?.at(-1);
@@ -878,8 +862,16 @@ export const publishMicroturnGreedyChooseOne = (
   const root = findRootFrame(state, top);
   const baseMove = rebuildMoveFromFrame(root);
   const compoundTurnTrace = rootDecisionHistory(root);
+  const options = preferredValues === undefined
+    ? context.options
+    : preferredValues
+      .map((value) => context.options.find((option) =>
+        !Array.isArray(option.value)
+        && Object.is(option.value as MoveParamScalar, value),
+      ))
+      .filter((option): option is ChoiceOption => option !== undefined);
 
-  for (const option of context.options) {
+  for (const option of options) {
     if (option.legality === 'illegal') {
       continue;
     }
@@ -913,6 +905,13 @@ export const publishMicroturnGreedyChooseOne = (
   }
   return null;
 };
+
+export const publishMicroturnGreedyChooseOne = (
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+): { readonly microturn: MicroturnState; readonly decision: ChooseOneDecision } | null =>
+  publishMicroturnPreferredChooseOne(def, state, undefined, runtime);
 
 export const createRootFrameSnapshot = (
   decisionHistory: readonly CompoundTurnTraceEntry[],

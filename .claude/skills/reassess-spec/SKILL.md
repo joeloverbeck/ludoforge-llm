@@ -35,7 +35,7 @@ Follow these steps in order. Do not skip any step.
 
 Read ALL of these files before any analysis:
 
-1. **The spec file** (from the argument) — read the entire file. For XL specs exceeding Read's token limit (~25000 tokens, commonly >~900 lines), consume the full content via paginated reads (`offset`/`limit`) — do not substitute a summary or skip sections. Use `wc -l` first to size the file and plan the chunk boundaries.
+1. **The spec file** (from the argument) — read the entire file. For XL specs exceeding Read's token limit (~25000 tokens, commonly >~600 lines OR any file whose average line length exceeds ~200 characters — dense paragraph-style markdown files routinely exceed 25000 tokens below the 900-line mark), consume the full content via paginated reads (`offset`/`limit`) — do not substitute a summary or skip sections. Use `wc -l` first to size the file and plan the chunk boundaries; check the byte size too (`wc -c`) when the line count is borderline, since dense files at ~80+ tokens/line breach the limit far below the line-count rule of thumb.
 2. **`docs/FOUNDATIONS.md`** — architectural commandments; every spec must align with these principles
 3. **Existing follow-on tickets**: glob `tickets/<spec-id>*` and `archive/tickets/<spec-id>*`. If matches exist, read each. Tickets already decomposing this spec encode naming conventions, scope assumptions, and Status fields that the reassessment should harmonize with — drift between spec and ticket is itself a finding (see Step 2.12). When the user references a specific ticket inline with the invocation (e.g., "a ticket from that spec already exists at tickets/X.md"), reading it is mandatory regardless of glob results.
 
@@ -132,6 +132,8 @@ Review each section of the spec against `docs/FOUNDATIONS.md`:
    - **Foundation 11** (Immutability) — does the spec mutate state?
    - **Foundation 14** (No Backwards Compatibility) — does the spec leave compatibility shims or defer migration?
    - **Foundation 15** (Architectural Completeness) — does the spec patch a symptom instead of fixing root cause?
+   - **Foundation 16** (Testing as Proof) — are the architectural properties claimed by the spec proven via automated tests rather than asserted?
+   - **Foundation 20** (Preview Signal Integrity) — for specs touching policy preview, agent scoring, or evaluation refs, do unavailable preview refs remain explicit and non-silently-coerced?
 3. Record each alignment issue with the specific Foundation number and what conflicts.
 
 ### Step 4: Classify Findings

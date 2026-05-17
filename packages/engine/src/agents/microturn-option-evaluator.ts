@@ -12,6 +12,7 @@ import type {
   MoveParamValue,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { perfHotPathCount, perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import {
   selectChoiceOptionsByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
@@ -96,6 +97,7 @@ export function selectBestMicroturnChooseOneValue(
   if (selectableOptions.length <= 1) {
     return undefined;
   }
+  perfHotPathCount('policyMicroturnSearch:chooseOneSelectableOptions', selectableOptions.length);
 
   let bestSelection: Omit<
     MicroturnChoiceSelection,
@@ -113,6 +115,7 @@ export function selectBestMicroturnChooseOneValue(
   const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
   const scheduleInputRefsByOption = new Map<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>();
   const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
+  const scoreStartedAt = perfHotPathStart();
   for (const [optionIndex, option] of selectableOptions.entries()) {
     const optionKey = scoreContributionsKeyForChooseOne(request, option.value);
     const scored = scoreMicroturnOptionWithContributions(
@@ -154,6 +157,7 @@ export function selectBestMicroturnChooseOneValue(
       bestSelection = { value: option.value, score };
     }
   }
+  perfHotPathEnd('policyMicroturnSearch:chooseOneScoreOptions', scoreStartedAt);
 
   if (bestSelection === undefined) {
     return undefined;
@@ -192,6 +196,7 @@ export function buildMicroturnChooseCallback(
       if (optionCount === 0) {
         return undefined;
       }
+      perfHotPathCount('policyMicroturnSearch:chooseNSelectableValues', optionCount);
 
       const min = request.min ?? 0;
       const declaredMax = request.max ?? optionCount;
@@ -209,6 +214,7 @@ export function buildMicroturnChooseCallback(
       const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
       const scheduleInputRefsByOption = new Map<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>();
       const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
+      const scoreStartedAt = perfHotPathStart();
       const scoredValues = selectableValues.map((value, index) => ({
         value,
         index,
@@ -228,6 +234,7 @@ export function buildMicroturnChooseCallback(
           input.previewOptionProjectedStateByOptionKey?.get(scoreContributionsKeyForChooseNStepAdd(request, value)),
         ),
       }));
+      perfHotPathEnd('policyMicroturnSearch:chooseNScoreOptions', scoreStartedAt);
       for (const entry of scoredValues) {
         const optionKey = scoreContributionsKeyForChooseNStepAdd(request, entry.value);
         scoreContributionsByOption.set(optionKey, entry.scored.scoreContributions);
@@ -250,6 +257,7 @@ export function buildMicroturnChooseCallback(
           candidateParamFallbackFiredByOption.set(optionKey, entry.scored.candidateParamFallbackFired);
         }
       }
+      const rankStartedAt = perfHotPathStart();
       const rankedValues = [...scoredValues].sort((left, right) => {
         if (right.scored.score !== left.scored.score) {
           return right.scored.score - left.scored.score;
@@ -257,6 +265,7 @@ export function buildMicroturnChooseCallback(
         return left.index - right.index;
       });
       const positiveValues = rankedValues.filter((entry) => entry.scored.score > 0);
+      perfHotPathEnd('policyMicroturnSearch:chooseNRankOptions', rankStartedAt);
       if (positiveValues.length > 0) {
         const selected = positiveValues.slice(0, max).map((entry) => entry.value as MoveParamScalar);
         if (selected.length >= min) {

@@ -9,19 +9,24 @@ import {
 } from '../kernel/microturn/drive.js';
 import {
   publishMicroturnFromPreviewStateNoHash,
+  publishMicroturnPreferredChooseOne,
 } from '../kernel/microturn/publish.js';
+import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import { createResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
+import { selectBestMicroturnChooseOneValue } from './microturn-option-evaluator.js';
 import type {
   AgentPreviewAuthoredCompletionPolicy,
   AgentPreviewFallbackCompletionPolicy,
   AgentPolicyCatalog,
+  ChoicePendingChooseOneRequest,
   CompiledAgentPolicyRef,
   CompiledAgentProfile,
   CompiledSurfaceRefBase,
   GameDef,
   GameState,
+  MoveParamScalar,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicyPreviewDriveTrace,
   SyntheticDecisionTraceEntry,
@@ -235,6 +240,37 @@ const selectedOptionStableKey = (decision: Decision): string => {
   }
 };
 
+const createChooseOneRequest = (
+  microturn: ChooseOneMicroturn,
+): ChoicePendingChooseOneRequest => ({
+  kind: 'pending',
+  complete: false,
+  decisionKey: microturn.decisionContext.decisionKey,
+  name: String(microturn.decisionContext.decisionKey),
+  options: microturn.decisionContext.options,
+  targetKinds: [],
+  type: 'chooseOne',
+});
+
+const preferredPolicyGuidedChooseOneValue = (
+  input: RunChooseOneInnerPreviewInput,
+  state: GameState,
+  microturn: ChooseOneMicroturn,
+): MoveParamScalar | undefined => {
+  const selected = selectBestMicroturnChooseOneValue({
+    state,
+    def: input.def,
+    catalog: input.catalog,
+    playerId: input.playerId,
+    seatId: input.seatId,
+    profile: input.profile,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+  }, createChooseOneRequest(microturn), { requirePositiveScore: false })?.value;
+  return typeof selected === 'string' || typeof selected === 'number' || typeof selected === 'boolean'
+    ? selected
+    : undefined;
+};
+
 const targetVisibilityContext = (
   def: GameDef,
   state: GameState,
@@ -335,9 +371,8 @@ const driveOption = (
     syntheticDecisions: [...syntheticDecisions],
     completionPolicyFallbackCount,
   });
-  const draftTokenStateIndex = createDraftTokenStateIndex(input.state, input.runtime?.tokenStateIndexCache);
-  draftTokenStateIndex.attachPreviewState(input.state);
   const refCache = createResolveRefCache();
+  const initialDecisionStartedAt = perfHotPathStart();
   let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
     input.def,
     input.state,
@@ -347,21 +382,35 @@ const driveOption = (
     input.runtime,
     refCache,
   ).state;
-  draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
-  draftTokenStateIndex.attachPreviewState(state);
+  perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
+  let draftTokenStateIndex: ReturnType<typeof createDraftTokenStateIndex> | undefined;
   let depth = 1;
   let stateIsCanonical = false;
 
+  const syncDraftTokenStateIndex = (prevState: GameState, nextState: GameState): void => {
+    const syncStartedAt = perfHotPathStart();
+    if (draftTokenStateIndex === undefined) {
+      draftTokenStateIndex = createDraftTokenStateIndex(prevState, input.runtime?.tokenStateIndexCache);
+      draftTokenStateIndex.attachPreviewState(prevState);
+    }
+    draftTokenStateIndex.applyZoneDelta(prevState.zones, nextState.zones);
+    draftTokenStateIndex.attachPreviewState(nextState);
+    perfHotPathEnd('policyInnerPreviewDriveOption:syncDraftTokenStateIndex', syncStartedAt);
+  };
+
   const canonicalizeForExit = (): GameState => {
+    const canonicalizeStartedAt = perfHotPathStart();
     if (stateIsCanonical) {
-      draftTokenStateIndex.attachAsCanonical(state);
+      draftTokenStateIndex?.attachAsCanonical(state);
+      perfHotPathEnd('policyInnerPreviewDriveOption:canonicalizeForExit', canonicalizeStartedAt);
       return state;
     }
     const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
-    draftTokenStateIndex.applyZoneDelta(state.zones, canonical.zones);
-    draftTokenStateIndex.attachAsCanonical(canonical);
+    draftTokenStateIndex?.applyZoneDelta(state.zones, canonical.zones);
+    draftTokenStateIndex?.attachAsCanonical(canonical);
     state = canonical;
     stateIsCanonical = true;
+    perfHotPathEnd('policyInnerPreviewDriveOption:canonicalizeForExit', canonicalizeStartedAt);
     return canonical;
   };
 
@@ -388,30 +437,58 @@ const driveOption = (
     if (depth >= depthCap) {
       return finish(canonicalizeForExit(), depth, 'depthCap');
     }
-    const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
-    const nextDecisionResult = pickInnerDecision(
-      state,
-      input.def,
-      microturn,
-      completionPolicy,
-      fallbackCompletionPolicy,
-      {
-        def: input.def,
-        state: input.state,
-        playerId: input.playerId,
-        seatId: input.seatId,
-        trustedMoveIndex: new Map(),
-        previewMode: input.profile.preview.mode,
-        completionPolicy,
-        fallbackCompletionPolicy,
-        completionDepthCap: depthCap,
-        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-        policyGuidedDeps: {
-          catalog: input.catalog,
-          profile: input.profile,
-        },
-      },
-    );
+    if (draftTokenStateIndex === undefined) {
+      syncDraftTokenStateIndex(input.state, state);
+    }
+    const publishStartedAt = perfHotPathStart();
+    const topChooseOne = ctxKind === 'chooseOne'
+      ? {
+          kind: 'chooseOne' as const,
+          seatId: topSeatId,
+          decisionContext: top.context,
+          legalActions: [],
+          projectedState: { state },
+          turnId: top.turnId,
+          frameId: top.frameId,
+          compoundTurnTrace: [],
+        } satisfies ChooseOneMicroturn
+      : undefined;
+    const preferredValue = completionPolicy === 'policyGuided' && topChooseOne !== undefined
+      ? preferredPolicyGuidedChooseOneValue(input, state, topChooseOne)
+      : undefined;
+    const preferredPublication = preferredValue === undefined
+      ? null
+      : publishMicroturnPreferredChooseOne(input.def, state, [preferredValue], input.runtime);
+    const microturn = preferredPublication?.microturn
+      ?? publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+    perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
+    const pickStartedAt = perfHotPathStart();
+    const nextDecisionResult = preferredPublication === null
+      ? pickInnerDecision(
+          state,
+          input.def,
+          microturn,
+          completionPolicy,
+          fallbackCompletionPolicy,
+          {
+            def: input.def,
+            state: input.state,
+            playerId: input.playerId,
+            seatId: input.seatId,
+            trustedMoveIndex: new Map(),
+            previewMode: input.profile.preview.mode,
+            completionPolicy,
+            fallbackCompletionPolicy,
+            completionDepthCap: depthCap,
+            ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+            policyGuidedDeps: {
+              catalog: input.catalog,
+              profile: input.profile,
+            },
+          },
+        )
+      : { decision: preferredPublication.decision, usedFallback: false };
+    perfHotPathEnd('policyInnerPreviewDriveOption:pickInnerDecision', pickStartedAt);
     const nextDecision = nextDecisionResult.decision;
     if (nextDecisionResult.usedFallback) {
       completionPolicyFallbackCount += 1;
@@ -436,6 +513,7 @@ const driveOption = (
       });
     }
     const prevState = state;
+    const continuationApplyStartedAt = perfHotPathStart();
     state = applyPublishedDecisionFromPreviewStateNoFinalHash(
       input.def,
       prevState,
@@ -445,8 +523,8 @@ const driveOption = (
       input.runtime,
       refCache,
     ).state;
-    draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
-    draftTokenStateIndex.attachPreviewState(state);
+    perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
+    syncDraftTokenStateIndex(prevState, state);
     stateIsCanonical = false;
     depth += 1;
   }
@@ -509,6 +587,7 @@ export const resolveRefs = (
 };
 
 export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): ChooseOneInnerPreviewRun {
+  const surfaceSetupStartedAt = perfHotPathStart();
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
   const surfaceContext: SurfaceResolutionContext = {
     def: input.def,
@@ -520,11 +599,16 @@ export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): 
       return buildPolicyVictorySurface(input.def, state, input.runtime);
     },
   };
+  perfHotPathEnd('policyInnerPreviewSubroutine:surfaceSetup', surfaceSetupStartedAt);
   const options = input.microturn.legalActions
     .filter((decision: Decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> => decision.kind === 'chooseOne')
     .map((decision): ChooseOneInnerPreviewResult => {
+      const driveOptionStartedAt = perfHotPathStart();
       const drive = driveOption(input, decision);
+      perfHotPathEnd('policyInnerPreviewSubroutine:driveOption', driveOptionStartedAt);
+      const resolveRefsStartedAt = perfHotPathStart();
       const resolved = resolveRefs(input, drive, surfaceContext, seatResolutionIndex);
+      perfHotPathEnd('policyInnerPreviewSubroutine:resolveRefs', resolveRefsStartedAt);
       const outcome = resolved.hidden ? 'hidden' : drive.outcome;
       const withOutcome = new Map(resolved.refs);
       for (const ref of input.refs) {

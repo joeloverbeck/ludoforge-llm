@@ -22,6 +22,7 @@
    - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `cached broad-lane classifications`, `classified non-final lanes or none`, `archive status`, and the exact review/archive or blocked-continuation sentence that matches the durable ticket state
    - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
+   - Large-diff final-response skeleton trigger: use the concrete path-list skeleton instead of a prose-only summary when any of these are true: five or more paths changed; any retained untracked source, test, fixture, ticket, spec, markdown report, CSV, or generated artifact remains in `git status --short`; any durable report/test/artifact was added; any broad lane has cache-hit classifications that matter to proof; any source-size ledger was triggered; or advisory diagnostics/non-final lanes need ownership classification.
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 
@@ -36,6 +37,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - when a source-size ledger was drafted earlier, reconstructed after compaction, or transcribed from a handoff summary, rerun the cheap line-count probe for every ledger path immediately before the terminal ticket/status patch and reconcile the durable ledger with those exact counts
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - reconcile date-stamped sections such as reassessment headings, approval notes, outcome dates, and verification dates against the current session date and any explicit user-provided dates. If a date is intentionally historical, label it as historical evidence rather than leaving it ambiguous.
+- for generated reports, CSVs, traces, benchmark artifacts, or other durable evidence outputs, reconcile the embedded reproducer command and artifact metadata against the command that actually produced the file. Include env vars, cwd assumptions, feature flags, mode labels, seed/corpus labels, and output-path/date labels when they affect the artifact or metric.
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - hard source-size gate: if any touched source file ends over the repo cap (800 lines in this repo), crosses the cap because of active growth, or remains preexisting-oversize with active growth, do not set terminal status until the active ticket or final closeout contains the exact source-size ledger and one of these is true: narrow extraction is done, user-approved deferral exists, or a `1-3-1` decision resolves why extraction would widen the ticket
 - exact source-size ledger means the durable ticket/final closeout names every field, not just current counts: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
@@ -67,6 +69,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for completed active tickets, use the explicit repo-local terminal status already used by the ticket or series, such as `IMPLEMENTED` or `COMPLETED`; do not normalize to `COMPLETED` when the family uses a different terminal implementation status
 - when the active ticket is still `PENDING` and the terminal wording is not obvious from the ticket itself, inspect the nearest completed sibling ticket, series spec ticket list, or established family convention before choosing the terminal label. Record the rationale briefly when the series mixes terminal states or exception statuses.
 - when adding files, do not summarize the touched-file surface from `git diff --stat` alone. Pair it with `git status --short` or explicitly list untracked files, because new tests, fixtures, reports, and tickets may otherwise disappear from the closeout.
+- when the large-diff final-response skeleton trigger fired, prepare the final response with these fields named explicitly: `tracked modified paths`, `untracked additions`, `green proof lanes`, `green lanes with advisory emissions`, `classified non-final lanes or none`, `cached broad lanes`, `archive status`, and the exact review/archive or blocked-continuation sentence. Keep it concise, but do not collapse the path lists into directory-level summaries when untracked durable artifacts are present.
 
 ## Acceptance-Proof Invalidation
 
@@ -511,7 +514,8 @@ completion is allowed only when all of these are true:
    boundary through `1-3-1`.
 2. The checked-in report or active ticket includes the exact command,
    reproducibility identity, decisive metrics, unsupported/fallback or owner
-   classification, and artifact paths.
+   classification, and artifact paths. If env vars, cwd, flags, or output labels
+   affect the measured artifact, they must appear in the durable reproducer text.
 3. Any successor is concrete, dependency-valid, and non-overlapping using the
    diagnostic successor ledger above.
 4. The active ticket records `no retained runtime/source diff` and classifies
@@ -580,3 +584,5 @@ Evidence-ticket compact closeout pattern when the deliverable is primarily a scr
 - `measured result`: `<top-line quantitative or categorical outcome>`
 - `mapping gaps`: `<top-N entries or observations not yet covered by the starter taxonomy>` or `none`
 - `verification set`: `<commands run directly in final proof order>`
+
+For profiler/report tickets, use a cheap output smoke before the expensive or decisive run when practical. Run the smallest representative command that writes the same report/CSV shape and, when the decisive artifact is checked in, writes to the same target directory or otherwise proves that directory is writable in the current sandbox/permission mode. Then inspect at least the headers, mode labels, embedded reproducer command, env-sensitive flags, filename/output-path shape, and writeability result. Treat a smoke that only proves process exit as insufficient when the ticket-owned deliverable is the artifact content. If writeability fails only because of sandbox permissions, request escalation before the expensive decisive run instead of paying for a full measurement that can finish but fail at final artifact write.

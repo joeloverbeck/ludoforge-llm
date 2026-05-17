@@ -1,6 +1,6 @@
 # Spec 176 — Policy WASM Perf-Yield Investigation
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High-strategic — answers a foundational question about whether the policy WASM architecture is worth continued investment.
 **Complexity**: L — investigation-style spec; deliverables are measurement experiments and a decision report, not engine code changes.
 **Date**: 2026-05-17
@@ -102,6 +102,7 @@ The Phase 6 synthesis must select one of three decision outcomes based on Phases
 | H3 alone, H2 not dominant | Spec 174-style coverage extension (now with measured perf hypothesis upfront) | Closing the unsupported gap might yield real perf if the cheap paths aren't the bottleneck |
 | H4 (cache misses) | Accelerate — small follow-up ticket to fix cache amortization | Localized fix, likely cheap |
 | H5 (serialization cost) | Accelerate — follow-up spec to reduce state-serialization overhead | Requires ABI / encoding work |
+| H5 mixed overhead (material marshaling, positive but non-linear byte correlation) | Weigh with H1 before choosing Keep / Accelerate / Retire | Indicates serialization/marshaling is material but not proven to be solved by byte-size reduction alone |
 | No single dominant cause (all contribute) | Keep-as-correctness-only OR Retire | Strong signal that WASM is structurally perf-neutral on this workload; decision is then a complexity-cost vs correctness-rationalization tradeoff |
 
 Phase 6 MUST commit to one decision branch, MUST name the follow-up artifact, and MUST record the decision rationale in terms a future reader can audit against the Phase 1–5 reports.
@@ -163,3 +164,23 @@ Reference reports (informing the strategic context):
 - Phase 0 feature-flag mechanism — env var, build-time flag, or runtime API. Default: env var (`POLICY_WASM_TIMING_PROFILE=1`) for consistency with existing profiler conventions.
 - Whether Phase 5 should also instrument bytecode-input-cache write cost separately. Default: yes, since the cache write is part of the serialization-cost path.
 - Whether to formally pre-register a "no significant finding" outcome — i.e., what does Phase 6 commit to if the per-hypothesis verdicts are all "no dominant cause"? Default: Keep-as-correctness-only with a named acceptance ticket recording the perf-neutrality finding.
+
+## 12. Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-17:
+
+- [`archive/tickets/176POLWASMPERF-001.md`](../tickets/176POLWASMPERF-001.md) — Phase 0 — Baseline reproduction + feature-flagged WASM timing instrumentation (covers §5 Phase 0)
+- [`archive/tickets/176POLWASMPERF-002.md`](../tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
+- [`archive/tickets/176POLWASMPERF-003.md`](../tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
+- [`archive/tickets/176POLWASMPERF-004.md`](../tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
+- [`archive/tickets/176POLWASMPERF-005.md`](../tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
+- [`archive/tickets/176POLWASMPERF-006.md`](../tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
+- [`archive/tickets/176POLWASMPERF-007.md`](../tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
+
+Note: namespace `176POLWASMPERF` was chosen at decomposition time, superseding the spec's proposed `176WASMPERFYLD`.
+
+## 13. Outcome
+
+Completed: 2026-05-17.
+
+Phase 6 selected **Accelerate WASM**. The decision report is `reports/176-phase-6-decision-and-rationale.md`, and the named follow-up artifact is [`specs/177-policy-wasm-batched-call-overhead-reduction.md`](../../specs/177-policy-wasm-batched-call-overhead-reduction.md). The follow-up is scoped to reducing policy-WASM per-call marshaling / serialization overhead through batched host/guest work or an equivalent transfer-reduction design; it does not claim that Spec 176 itself implemented an optimization or changed the production default.

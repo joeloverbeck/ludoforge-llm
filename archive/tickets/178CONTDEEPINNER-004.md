@@ -1,6 +1,6 @@
 # 178CONTDEEPINNER-004: Phase 3 - Investigate residual driveOption wall time after failed Phase 2 gate
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected at investigation start - measure and localize first
@@ -86,3 +86,35 @@ To be selected after live reassessment. If the investigation adds profiler/repor
 2. Decisive residual-split witness command selected during reassessment
 3. Focused test for any new report/profiler output contract
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Result date**: 2026-05-17
+**Outcome amended**: 2026-05-17 - post-archive path/status cleanup
+
+- **Landed scope**: measurement/report/spec closeout plus profiler/reporting instrumentation only. No behavior optimization, GameSpecDoc, visual-config, schema, WASM ABI, policy-profile, or game-specific branch changed in this ticket.
+- **Generated witness artifacts**:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-3-residual-drive-option-split.csv`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-3-residual-drive-option-split.md`
+- **Investigation report**: `reports/178-phase-3-residual-drive-option-investigation.md`.
+- **Profiler/reporting source changes**:
+  - Added nested `policyInnerPreviewDriveOption:*` hot-path buckets inside `driveOption`.
+  - Extended the existing report renderer to classify those rows as `drive-option-subroutine-nested`.
+  - Extended the focused report-rendering test to prove the new bucket family appears in CSV and Markdown.
+- **Measured classification**:
+  - Witness command completed 5/5 seeds and wrote both generated artifacts.
+  - Same-run wall time was `90,695.79 ms`; 5% materiality bar was `4,534.79 ms`.
+  - Primary `policyInnerPreviewSubroutine:driveOption` remained material at `6,494.10 ms`, or `7.1603%` of same-run wall.
+  - Largest measured child row was `policyInnerPreviewDriveOption:publishMicroturn` at `3,056.07 ms`, or `47.0558%` of the primary-axis `driveOption` wrapper.
+  - Sister-axis `publishMicroturn` was also the largest child row at `357.82 ms`, or `26.4895%` of that axis' `driveOption` wrapper.
+  - Route and unsupported counters remained unchanged from Phase 2 (`1,299` routes, `751` unsupported counts); unsupported reason rows were unchanged. Advisory parity remains covered by the Phase 1 outcome-parity test because this profiler artifact does not emit a separate advisory-total column.
+- **Final recommendation**: create-implementation-ticket: `tickets/178CONTDEEPINNER-005.md` optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`.
+- **Schema/generated fallout**: no schema artifacts, GameDef artifacts, visual config, or generated JSON schema changes. Generated witness CSV/Markdown are checked-in report artifacts.
+- **Verification**:
+  - `pnpm -F @ludoforge/engine build` passed before the focused test and decisive witness.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.js` passed (`3` tests).
+  - `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-05-17-spec-178-phase-3-residual-drive-option-split --profile-buckets` passed and wrote the generated CSV/Markdown artifacts.
+  - `pnpm run check:ticket-deps` passed (`3` active tickets and `2392` archived tickets checked).
+- **Source-size ledger**: `packages/engine/src/agents/policy-preview-inner.ts | before 570 | after 583 | crossed cap? no | active growth +13 | extraction/defer rationale: surgical timing brackets inside existing measured seam; no helper extraction justified | successor: none for size`.
+- **Late-edit proof validity**: final report/spec/ticket/successor edits are transcription and ownership graph updates from the just-run measurement; they do not change engine behavior, command semantics, witness artifact contents, or the measured buckets. Post-transcription `pnpm run check:ticket-deps`, tracked `git diff --check`, and targeted untracked whitespace checks passed.
+- **Archive status**: archived at `archive/tickets/178CONTDEEPINNER-004.md` by `$post-ticket-review`.

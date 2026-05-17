@@ -561,6 +561,9 @@ function classifyContinuedDeepeningBucket(key) {
   if (text.startsWith('policyInnerPreviewSubroutine:')) {
     return 'inner-preview-subroutine-nested';
   }
+  if (text.startsWith('policyInnerPreviewDriveOption:')) {
+    return 'drive-option-subroutine-nested';
+  }
   if (text.startsWith('policyInnerPreview:')) {
     return 'continued-deepening-orchestration-inclusive';
   }

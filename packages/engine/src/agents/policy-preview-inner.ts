@@ -337,6 +337,7 @@ const driveOption = (
     completionPolicyFallbackCount,
   });
   const refCache = createResolveRefCache();
+  const initialDecisionStartedAt = perfHotPathStart();
   let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
     input.def,
     input.state,
@@ -346,22 +347,27 @@ const driveOption = (
     input.runtime,
     refCache,
   ).state;
+  perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
   let draftTokenStateIndex: ReturnType<typeof createDraftTokenStateIndex> | undefined;
   let depth = 1;
   let stateIsCanonical = false;
 
   const syncDraftTokenStateIndex = (prevState: GameState, nextState: GameState): void => {
+    const syncStartedAt = perfHotPathStart();
     if (draftTokenStateIndex === undefined) {
       draftTokenStateIndex = createDraftTokenStateIndex(prevState, input.runtime?.tokenStateIndexCache);
       draftTokenStateIndex.attachPreviewState(prevState);
     }
     draftTokenStateIndex.applyZoneDelta(prevState.zones, nextState.zones);
     draftTokenStateIndex.attachPreviewState(nextState);
+    perfHotPathEnd('policyInnerPreviewDriveOption:syncDraftTokenStateIndex', syncStartedAt);
   };
 
   const canonicalizeForExit = (): GameState => {
+    const canonicalizeStartedAt = perfHotPathStart();
     if (stateIsCanonical) {
       draftTokenStateIndex?.attachAsCanonical(state);
+      perfHotPathEnd('policyInnerPreviewDriveOption:canonicalizeForExit', canonicalizeStartedAt);
       return state;
     }
     const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
@@ -369,6 +375,7 @@ const driveOption = (
     draftTokenStateIndex?.attachAsCanonical(canonical);
     state = canonical;
     stateIsCanonical = true;
+    perfHotPathEnd('policyInnerPreviewDriveOption:canonicalizeForExit', canonicalizeStartedAt);
     return canonical;
   };
 
@@ -398,7 +405,10 @@ const driveOption = (
     if (draftTokenStateIndex === undefined) {
       syncDraftTokenStateIndex(input.state, state);
     }
+    const publishStartedAt = perfHotPathStart();
     const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+    perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
+    const pickStartedAt = perfHotPathStart();
     const nextDecisionResult = pickInnerDecision(
       state,
       input.def,
@@ -422,6 +432,7 @@ const driveOption = (
         },
       },
     );
+    perfHotPathEnd('policyInnerPreviewDriveOption:pickInnerDecision', pickStartedAt);
     const nextDecision = nextDecisionResult.decision;
     if (nextDecisionResult.usedFallback) {
       completionPolicyFallbackCount += 1;
@@ -446,6 +457,7 @@ const driveOption = (
       });
     }
     const prevState = state;
+    const continuationApplyStartedAt = perfHotPathStart();
     state = applyPublishedDecisionFromPreviewStateNoFinalHash(
       input.def,
       prevState,
@@ -455,6 +467,7 @@ const driveOption = (
       input.runtime,
       refCache,
     ).state;
+    perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
     syncDraftTokenStateIndex(prevState, state);
     stateIsCanonical = false;
     depth += 1;

@@ -1,10 +1,10 @@
 # 179ACTSELPRE-006: (Optional) WASM-route alignment for `outcomeGrantContinuation`
 
-**Status**: BLOCKED by ordinary-operation successor `tickets/179ACTSELPRE-009.md`
+**Status**: BLOCKED by Spec 180 ordinary-operation successor `tickets/180STDVECOBSROL-001.md`
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-preview-drive.ts` (or equivalent WASM-route file).
-**Deps**: `archive/tickets/179ACTSELPRE-003.md`, `tickets/179ACTSELPRE-009.md`
+**Deps**: `archive/tickets/179ACTSELPRE-003.md`, `tickets/180STDVECOBSROL-001.md`
 
 ## Problem
 
@@ -16,9 +16,9 @@ This ticket is **optional** per spec §10 — descope path documented in Out of 
 
 1. The WASM preview-drive route lives at `packages/engine/src/agents/policy-wasm-preview-drive.ts` (file path inferred from Spec 178's ticket archaeology; verify during `/implement-ticket` reassessment).
 2. Spec 176/178 established the TS-fallback contract — WASM fails closed on complex previews. This ticket either extends the WASM path's behavior to include the new opt-in, or formalizes the existing TS fallback for opt-in cases.
-3. Ticket 005's Phase 2 witness did not classify WASM active-route percentage; its TS-only probes showed the red activation gap is not WASM-only. Ticket 007 classified the activation gap as a witness contract mismatch. Ticket 008 then found no usable production FITL event/free-operation `outcomeGrantResolve` replacement witness, so this optional WASM alignment decision should wait for `tickets/179ACTSELPRE-009.md` to specify the ordinary-operation preview surface before using Phase 2 data.
+3. Ticket 005's Phase 2 witness did not classify WASM active-route percentage; its TS-only probes showed the red activation gap is not WASM-only. Ticket 007 classified the activation gap as a witness contract mismatch. Ticket 008 then found no usable production FITL event/free-operation `outcomeGrantResolve` replacement witness. Ticket 009 selected Spec 180's standing-projection successor, so this optional WASM alignment decision should wait for `tickets/180STDVECOBSROL-001.md` and later Spec 180 implementation tickets to define whether WASM participates in the replacement surface.
 
-**Gate condition**: blocked until `tickets/179ACTSELPRE-009.md` defines the successor surface and witness route. If a future replacement witness still uses `outcomeGrantContinuation`, close this ticket via path (b) — documented TS fallback — if replacement Phase 2 witness data shows the WASM path was active on <10% of opt-in-profile decisions. The cost of path (a) — actively mirroring the opt-in in WASM — exceeds the value when WASM is rarely the runtime.
+**Gate condition**: blocked until the Spec 180 successor defines whether the replacement ordinary-operation standing-projection route has a WASM path. If the future replacement witness still uses `outcomeGrantContinuation`, close this ticket via path (b) — documented TS fallback — if replacement Phase 2 witness data shows the WASM path was active on <10% of opt-in-profile decisions. If Spec 180's standing projection owns the runtime route instead, create or update the WASM alignment ticket under the Spec 180 namespace rather than forcing this optional Spec 179 ticket to implement a stale route.
 
 ## Architecture Check
 

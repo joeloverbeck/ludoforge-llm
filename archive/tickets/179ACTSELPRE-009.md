@@ -1,6 +1,6 @@
 # 179ACTSELPRE-009: Phase 2d - Specify ordinary-operation preview visibility successor
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Unknown - design first; no engine changes until the successor surface is specified and a focused failing witness exists.
@@ -79,3 +79,63 @@ Specify the smallest bounded FITL ARVN ordinary-operation witness and the generi
 ### Commands
 
 1. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-17)
+
+Completed design/graph closeout; no engine implementation under this ticket.
+
+Selected successor:
+
+- Chosen option: amend Spec 180 so it owns both ordinary-operation standing signal production and observability.
+- Rejected option: separate `previewEffect.*` namespace. Reason: it risks a parallel effect-projection surface and raw-effect shortcut before a generic standing projection is proven insufficient.
+- Rejected option: keep Spec 179 as the production ordinary-operation owner. Reason: tickets 007/008 proved current production FITL ordinary operations and event/free-operation grants do not provide the `outcomeGrantResolve` frame that Spec 179 extends.
+
+What changed:
+
+- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` is now active as the standing-vector / ordinary-operation preview signal successor.
+- New active tickets `tickets/180STDVECOBSROL-001.md` through `tickets/180STDVECOBSROL-006.md` define the implementation chain:
+  - 001: focused ordinary-operation standing-projection RED witness plus silent-zero pin before production implementation.
+  - 002: bounded standing-projection route.
+  - 003: status-aware outer-preview `seatAgg`.
+  - 004: `previewUsage.seatMatrix`.
+  - 005: standing role primitives.
+  - 006: FITL ARVN standing witness and cookbook addendum.
+- `specs/179-action-selection-preview-outcome-grant-opt-in.md`, `reports/179-phase-2-post-opt-in-witness.md`, and same-family tickets 005/006/007 now point at the Spec 180 successor instead of leaving 009 as the ongoing owner.
+
+Bounded proof plan:
+
+- First generic witness: `packages/engine/test/architecture/preview-standing/spec-180-ordinary-operation-standing-projection-witness.test.ts`.
+- Generic invariant: two action-selection candidates in a four-seat fixture; one candidate changes an opponent terminal margin through the normal published-decision/apply path and one does not. Current code should fail to report a status-bearing differentiated opponent standing cell; the fixed surface must report a ready differentiated cell or explicit unavailable/capped status.
+- FITL witness: later Spec 180 Phase 5 reruns the ARVN ordinary-operation witness using role-based considerations and `previewUsage.seatMatrix`, not `previewUsage.outcomeGrantContinuation.exitCounts`.
+
+Ticket-named deliverables ledger:
+
+| Deliverable | Status |
+| --- | --- |
+| Reassess `previewEffect.*`, Spec 180 amendment, and narrower projection route | done; Spec 180 integrated standing projection selected |
+| Patch active spec/ticket graph | done; Spec 179 and same-family blockers now point to Spec 180 ticket chain |
+| Define smallest bounded FITL ARVN witness | done; Spec 180 Phase 5 / `tickets/180STDVECOBSROL-006.md` |
+| Define generic cross-game/synthetic invariant before code changes | done; `tickets/180STDVECOBSROL-001.md` |
+| Engine/source implementation | not applicable for 009; explicitly deferred to Spec 180 tickets |
+
+Generated/schema fallout: none. This ticket changed markdown specs, tickets, and report prose only.
+
+Command ledger:
+
+| ticket section | literal command/shorthand | ran directly/subsumed/split/replaced/not run | final citation |
+| --- | --- | --- | --- |
+| Acceptance/Test Plan | `pnpm run check:ticket-deps` | run directly before terminal status | passed: 10 active tickets and 2400 archived tickets |
+
+AGENTS canonical lane reconciliation:
+
+| AGENTS canonical lane | required by ticket? | ran/subsumed/not applicable | rationale |
+| --- | --- | --- | --- |
+| `pnpm turbo build` | no | not applicable | no source, schema, package, generated runtime, or build artifact changes |
+| `pnpm turbo test` | no | not applicable | ticket-owned acceptance is markdown graph integrity |
+| `pnpm turbo lint` | no | not applicable | no linted source changes |
+| `pnpm turbo typecheck` | no | not applicable | no TypeScript changes |
+| `pnpm turbo schema:artifacts` | no | not applicable | no schema source/artifact changes |
+
+Late-edit proof validity: `pnpm run check:ticket-deps` passed before terminal status and again after terminal status (`10 active tickets and 2400 archived tickets`). No-invalidation: terminal status/proof transcription only; no scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, or dependency target changed after the graph checks.
+
+Post-review status: archive-ready. The post-ticket-review pass confirmed the successor graph and archived this ticket after the final dependency proof.

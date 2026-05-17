@@ -1,11 +1,11 @@
-# Spec 180 — Standing-Vector Observability and Outer-Preview Signal Integrity
+# Spec 180 — Standing-Vector Observability and Ordinary-Operation Preview Signal Integrity
 
-**Status**: PENDING
-**Priority**: Medium — durable observability + ergonomics upgrades surfaced by `reports/spec-179-remediation.md`; not blocking, but each pillar pays compound interest the moment a second game grows opponent-aware authoring needs.
-**Complexity**: M — three independently-mergeable pillars, each comparable in size to Spec 162 §5.
+**Status**: ACTIVE — successor for ordinary-operation opponent-visibility work deferred by Spec 179.
+**Priority**: High — `archive/tickets/179ACTSELPRE-009.md` selected this spec as the bounded generic successor after production FITL event/free-operation routing failed to provide a closing `outcomeGrantResolve` witness.
+**Complexity**: M–L — one signal-production pillar plus observability/ergonomics pillars; each phase remains independently mergeable after the Phase 0 witness locks the contract.
 **Date**: 2026-05-17
 **Dependencies**:
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (witness signal — outer-preview opponent refs are uniform until 179's drive-boundary lift lands; Phases 2-4 of this spec depend on 179 being live)
+- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (synthetic `outcomeGrantResolve` substrate only; production ordinary-operation visibility is deferred here by `archive/tickets/179ACTSELPRE-009.md`)
 - `archive/specs/162-preview-signal-integrity.md` (Foundation #20 introduced for inner-preview; this spec extends it to the outer-preview `seatAgg` aggregate path)
 - `archive/specs/122-cross-seat-victory-aggregation.md` (`seatAgg`, `$seat`, `over: opponents` IR — substrate this spec extends, not replaces)
 - `archive/specs/113-preview-state-policy-surface.md` (per-seat preview surface — substrate)
@@ -13,26 +13,28 @@
 
 **Trigger reports**:
 - `reports/spec-179-remediation.md` (external-LLM deep-research proposal reassessed by this spec — see §12)
-- `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (origin gap report; resolved at the mechanical level by Spec 179, residual observability/ergonomics gap captured here)
+- `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (origin gap report; original `outcomeGrantResolve` hypothesis narrowed by tickets 007/008; ordinary-operation visibility now owned here)
 
-**Ticket namespace**: `180STDVECOBSROL` (proposal — finalized by `/spec-to-tickets`)
+**Ticket namespace**: `180STDVECOBSROL` (finalized by `archive/tickets/179ACTSELPRE-009.md`)
 
 ---
 
 ## 1. Goal
 
-Three small architectural upgrades to the outer-preview surface that, taken together, make opponent-aware policy authoring honest, debuggable, and ergonomic across games — without adding new compiled IR or duplicating Spec 122's `seatAgg`:
+Four small architectural upgrades to the outer-preview surface that, taken together, make opponent-aware policy authoring honest, debuggable, and ergonomic across games — without adding new compiled IR or duplicating Spec 122's `seatAgg`:
 
-1. **Outer-preview signal integrity.** Foundation #20's "unavailable preview refs MUST NOT silently coerce into numeric contributions" was wired through the inner-preview chooseN path by Spec 162. The outer-preview seat-aggregate path (`seatAgg(over: opponents, expr: preview.victory.currentMargin.$seat, aggOp: sum)`) still silently returns `0` when every per-seat cell is unavailable. Close that gap.
-2. **Per-candidate × per-seat trace matrix.** Today `previewUsage.readyRefStats` reports aggregate ready/cand ratios per ref name. After Spec 179 lifts the drive boundary, operators investigating which opponent's projected state shifted per candidate have no per-seat breakdown — the trigger report had to add a custom aggregation script. Bake the matrix into `previewUsage` so future opponent-preview investigations are first-class.
-3. **Named role primitives.** Add `currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind` as terminal-ranking-derived seat selectors usable inside `seatAgg.over` (or as standalone refs). Eliminates ad-hoc `aggOp: max` + `over: opponents` boilerplate when the author actually wants a single named role.
+1. **Bounded ordinary-operation standing projection.** Spec 179 can continue through synthetic `outcomeGrantResolve` frames, but current production FITL ordinary operations and event/free-operation grants do not publish the frame needed to close the ARVN opponent-margin witness. Add a generic standing-projection route that observes candidate effects through the one-rules protocol with explicit bounded status, rather than a FITL branch or raw-effect shortcut.
+2. **Outer-preview signal integrity.** Foundation #20's "unavailable preview refs MUST NOT silently coerce into numeric contributions" was wired through the inner-preview chooseN path by Spec 162. The outer-preview seat-aggregate path (`seatAgg(over: opponents, expr: preview.victory.currentMargin.$seat, aggOp: sum)`) still silently returns `0` when every per-seat cell is unavailable. Close that gap.
+3. **Per-candidate × per-seat trace matrix.** Today `previewUsage.readyRefStats` reports aggregate ready/cand ratios per ref name. Operators investigating which opponent's projected state shifted per candidate have no per-seat breakdown — the trigger report had to add a custom aggregation script. Bake the matrix into `previewUsage` so future opponent-preview investigations are first-class.
+4. **Named role primitives.** Add `currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind` as terminal-ranking-derived seat selectors usable inside `seatAgg.over` (or as standalone refs). Eliminates ad-hoc `aggOp: max` + `over: opponents` boilerplate when the author actually wants a single named role.
 
-Foundation #20 is the load-bearing principle. The other two pillars are observability and authoring ergonomics, both bounded.
+Foundation #20 is the load-bearing principle. The other pillars are signal production, observability, and authoring ergonomics, all bounded.
 
 ## 2. Non-Goals
 
 - **No replacement for `seatAgg`.** `standingRef` and `standingAgg` as separate compiled IR nodes (ChatGPT-Pro proposal §6.3) are explicitly out of scope. `seatAgg` is extended with an `availability` field and a `role` binding; no new union variants are added to `AgentPolicyExpr`. See §12 for rationale.
-- **No drive-boundary change.** This spec assumes Spec 179 has lifted the `outcomeGrantResolve` exit; it does not modify `driveSyntheticCompletion`. Phases 2-4 of this spec depend on 179 being live.
+- **No raw-effect preview shortcut.** Ordinary-operation signal production must use the generic published-decision / apply path. It must not evaluate `removeToken`, `moveToken`, or other effect handlers out of sequence, and it must not introduce FITL-specific engine branches.
+- **No silent replacement of Spec 179.** The `outcomeGrantContinuation` substrate remains valid for synthetic or future production paths that actually publish `outcomeGrantResolve`; this spec owns the different ordinary-operation standing surface.
 - **No inner-preview opponent option refs.** `preview.option.delta.victory.currentMargin.<seat>` (and friends) is a real gap (`policy-preview-inner.ts:98-148` is self-only) but is a distinct, larger spec. Deferred (see §8).
 - **No evolution-library migration.** ChatGPT-Pro's proposed `hurtCurrentLeader`/`reduceNearestThreat`/`avoidHelpingCurrentLeader`/etc. cookbook entries are useful but live in a separate cookbook+profile-migration spec; this spec ships exactly two FITL ARVN witness considerations to prove the surface works.
 - **No game-specific engine logic.** Role primitives are derived from `def.terminal.ranking` + `def.terminal.margins`; FITL, Texas Hold'em, and any future game all use the same resolution code.
@@ -60,15 +62,25 @@ switch (node.aggOp) {
 
 Per-seat evaluation that returns `undefined` (preview ref unavailable: `depthCap`, `hidden`, `stochastic`, `unresolved`, `failed`, `gated`) is silently dropped from `values`. For `sum`/`count`, the aggregate then returns numeric `0` — indistinguishable from "every opponent's projected margin really is zero". This is exactly the Foundation #20 violation Spec 162 closed for the inner-preview chooseN path, except it lives one architectural layer up.
 
-The hazard becomes load-bearing after Spec 179 lands: profile authors writing `seatAgg(over: opponents, expr: preview.victory.currentMargin.$seat, aggOp: sum)` will get genuine numeric signal for most decisions (the drive can now see opponent effects) but a numeric `0` masquerading as "neutral opponent state" when the post-grant continuation itself hits `extraDepthCap`. Without integrity, `arvn-evolved`'s denial considerations can flip-flop between "real opponent harm" and "depth-capped pretending to be neutral" with no trace differentiation.
+The hazard is load-bearing even before a richer standing-projection route lands: profile authors writing `seatAgg(over: opponents, expr: preview.victory.currentMargin.$seat, aggOp: sum)` can receive numeric `0` masquerading as "neutral opponent state" when every per-seat preview cell is unavailable or capped. Without integrity, `arvn-evolved`'s denial considerations can flip-flop between "real opponent harm" and "unavailable/capped pretending to be neutral" with no trace differentiation.
 
-### 3.2 Per-seat trace observability gap
+### 3.2 The ordinary-operation signal-production gap
+
+Spec 179 originally targeted the `outcomeGrantResolve` exit in `driveSyntheticCompletion`. Tickets 007 and 008 proved that this is not the production FITL ordinary-operation surface:
+
+- ordinary ARVN operations (`patrol`, `sweep`, `assault`) are main-phase operation actions, not event/free-operation grant resolvers;
+- event declarations can issue pending free-operation grants, but current production routing exposes those grants as free-operation `actionSelection` moves rather than `outcomeGrantResolve` frames;
+- the only concrete constructed `outcomeGrantResolve` frame found in the repo is the synthetic architecture fixture at `packages/engine/test/architecture/preview-post-grant/post-grant-fixture.ts`.
+
+The successor must therefore produce ordinary-operation standing signal by observing the generic decision/application path, not by pretending event/free-operation evidence proves ordinary operation effects. The selected route is an integrated standing projection under this spec, not a parallel `previewEffect.*` namespace.
+
+### 3.3 Per-seat trace observability gap
 
 `packages/engine/src/agents/policy-eval.ts` tracks per-decision `previewUsage` with `readyRefStats` (per ref name, aggregate ready/cand counts) and per-candidate `previewDrive.kind`. It does NOT track per-candidate × per-seat status. The trigger report (`reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md`) had to write a custom aggregation script over `trace-*.json` to produce the per-seat readyRefStats table that diagnosed the bug; the next operator investigating an opponent-preview anomaly will have to do the same work from scratch.
 
 This is the same "infrastructure exists at one scope but not the other" pattern Spec 162 closed: per-ref availability tracking infrastructure (`PolicyEvaluationCandidate.unknownPreviewRefs`, `PreviewOptionRefStatus`) is already in place; the outer-preview path just doesn't materialize the per-candidate × per-seat view.
 
-### 3.3 Authoring ergonomics gap
+### 3.4 Authoring ergonomics gap
 
 `data/games/fire-in-the-lake/92-agents.md` defines `selfMargin`, `selfRank`, `projectedSelfMargin`, `projectedSelfRank` — all `self`-scoped. To author "reduce nearest threat" today requires:
 
@@ -86,7 +98,7 @@ nearestThreatMarginDelta:
 
 The author has to know that `aggOp: max` over `opponents` happens to mean "leader" only under `ranking.order: desc` semantics, and inverts under `asc`. Encoding the role explicitly (`role: nearestThreat`) lets the engine apply `terminal.ranking.order` correctly across games.
 
-### 3.4 Code anchors
+### 3.5 Code anchors
 
 | File:line | Role |
 |---|---|
@@ -103,7 +115,29 @@ The author has to know that `aggOp: max` over `opponents` happens to mean "leade
 
 ## 4. Architecture
 
-Three independently-testable pillars.
+Four independently-testable pillars.
+
+### 4.0 Bounded ordinary-operation standing projection
+
+Add a standing-projection route for action-selection preview candidates. The route must:
+
+1. start from a kernel-published action-selection candidate;
+2. apply the candidate through the same one-rules protocol used by clients and agents (`applyPublishedDecision` / `applyTrustedMove` and subsequent published microturns);
+3. drive only up to an explicit named projection cap and record that cap in trace metadata;
+4. compute current/projected standing cells through the existing terminal margin/ranking machinery (`buildPolicyVictorySurface` and `def.terminal.ranking`), not through game-specific effect annotations;
+5. return status-bearing cells (`ready`, `hidden`, `stochastic`, `unresolved`, `failed`, `depthCap`, `gated`) instead of silently producing scalar `0` when the projection cannot observe the relevant effect.
+
+The public authoring contract remains centered on standing/victory refs and `seatAgg`:
+
+- existing `preview.victory.currentMargin.<seat>` / `preview.victory.currentRank.<seat>` stay valid scalar aliases over ready standing cells;
+- `preview.standing.margin.<seat>` / `preview.standing.rank.<seat>` may be introduced as clearer synonyms if Phase 1 needs a distinct namespace, but the first implementation should prefer preserving existing ref families unless the focused witness proves the old names cannot carry status safely;
+- no separate `previewEffect.*` namespace lands unless Phase 0 proves the integrated standing projection cannot observe ordinary-operation effects without duplicating kernel effect semantics.
+
+First proving witness before implementation:
+
+- **Focused failing witness**: `packages/engine/test/architecture/preview-standing/spec-180-ordinary-operation-standing-projection-witness.test.ts`.
+- **Generic invariant**: a four-seat synthetic fixture publishes two action-selection candidates; one candidate reaches an ordinary operation body that changes an opponent's terminal margin through the normal published-decision/apply path, while the other does not. Current code must show that the existing action-selection preview keeps the opponent standing scalar uniform or lacks per-seat status; the fixed surface must report a ready differentiated opponent standing cell for the value-bearing candidate and an explicit unavailable/capped status when the projection cap prevents observation.
+- **FITL ARVN integration witness**: a bounded rerun over the existing ARVN action-selection witness (`arvn-evolved`, seeds 1000-1014 or the smallest validated subset in the implementing ticket) must classify `patrol` / `sweep` / `assault` ordinary-operation candidates by per-candidate standing cells and role-based considerations, without relying on `previewUsage.outcomeGrantContinuation.exitCounts`.
 
 ### 4.1 Status-aware `seatAgg` for preview refs (Foundation #20 — outer-preview)
 
@@ -194,17 +228,18 @@ Resolution is deterministic via the existing `def.terminal.ranking` tie-break ch
 
 | Phase | Scope | Acceptance | Effort |
 |---|---|---|---|
-| **0 — Audit current `seatAgg` silent-0 behavior** | Add an architectural-invariant test that pins current behavior: a `seatAgg(sum, over: opponents, expr: preview.X.$seat)` with all per-seat values unavailable returns numeric `0` and contributes to the score. Records the bug as a witness so Phase 1 can prove the fix. | Test added at `packages/engine/test/architecture/preview-integrity/spec-180-outer-preview-silent-zero-witness.test.ts` (`@test-class: convergence-witness`, `@witness: spec-180-outer-preview-silent-zero`). Passes today; Phase 1 flips it to verify the new contract. | XS |
-| **1 — Status-aware `seatAgg`** | Extend `seatAgg` IR with `availability` field; extend evaluator to surface per-seat status; extend compiler diagnostic; emit advisory for legacy `skipUnavailable` default on preview-derived aggregates. | (a) New `availability` field accepted by compiler+validator; legacy profiles compile under `skipUnavailable` default + advisory. (b) `requireAllReady` causes preview-derived aggregate to return unavailable and register the consideration via `previewFallback` per Spec 162. (c) Architectural-invariant test at `spec-180-outer-preview-availability.test.ts` proves the four modes. (d) Schema artifacts regenerated. | M |
-| **2 — Per-candidate × per-seat trace matrix** | Materialize `previewUsage.seatMatrix.byCandidate.<key>.perSeatRefs.<refName>.<seatId>` when the active consideration set requests preview seat-aggregates. Cap by `candidatePreviewCap × seats × requestedRefs`. | (a) Architectural-invariant test confirms matrix shape and presence. (b) Trace-shape regression test pins the JSON schema. (c) Off-by-default for profiles without preview seat-aggregates (no `seatMatrix` block emitted in that case). (d) Replay-determinism test (same seed → byte-identical matrix). | S–M |
-| **3 — Named role primitives** | Add `currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind` resolvers from `def.terminal.ranking`. Both ref form (`role:currentLeader`) and `seatAgg.over: { role: ... }` form supported. | (a) Generic 4-seat test fixture confirms each role resolves correctly under both `ranking.order: asc` and `desc`. (b) `unresolved` role propagates through the chosen `availability` mode. (c) Compiler validates `role:` tokens against the four-role enum. | S–M |
-| **4 — FITL ARVN witness + cookbook addendum** | Re-run the Spec 179 Phase 2 witness with two added `arvn-evolved` considerations using the new surface: `hurtCurrentLeader` and `reduceNearestThreat` (both using `role:` + `availability: selfAndTargetReady` + explicit `previewFallback: noContribution`). Update `docs/agent-dsl-cookbook.md` with the new `availability`/`role`/`seatMatrix` surfaces. | (a) Witness: `hurtCurrentLeader` and `reduceNearestThreat` differentiate ARVN candidates on ≥ 30% of main-phase decisions where opponent margins shift post-grant (lower bound than 179's 50% because role-selection narrows the contributing seats; the looser bound proves the surface works without claiming it eclipses 179's mechanical fix). (b) Cookbook addendum lands. (c) FOUNDATIONS Appendix line for Spec 180 added. | S–M |
+| **0 — Ordinary-operation witness + silent-0 pin** | Add the focused failing ordinary-operation standing-projection witness and preserve the current `seatAgg` silent-0 behavior as a bug witness. No production implementation yet. | (a) `spec-180-ordinary-operation-standing-projection-witness.test.ts` fails on current code for the generic ordinary-operation standing invariant. (b) `spec-180-outer-preview-silent-zero-witness.test.ts` records the current silent-0 bug. (c) Ticket/spec graph no longer routes ordinary-operation visibility through Spec 179. | XS–S |
+| **1 — Bounded standing projection route** | Implement the generic standing-projection route described in §4.0, including named projection cap metadata and status-bearing cells. | (a) Phase 0 generic witness turns green. (b) Existing `preview.victory.*` scalar refs remain unchanged for ready cells. (c) Unavailable/capped projected standing never contributes as numeric `0` without explicit fallback. | M |
+| **2 — Status-aware `seatAgg`** | Extend `seatAgg` IR with `availability` field; extend evaluator to surface per-seat status; extend compiler diagnostic; emit advisory for legacy `skipUnavailable` default on preview-derived aggregates. | (a) New `availability` field accepted by compiler+validator; legacy profiles compile under `skipUnavailable` default + advisory. (b) `requireAllReady` causes preview-derived aggregate to return unavailable and register the consideration via `previewFallback` per Spec 162. (c) Architectural-invariant test at `spec-180-outer-preview-availability.test.ts` proves the four modes. (d) Schema artifacts regenerated. | M |
+| **3 — Per-candidate × per-seat trace matrix** | Materialize `previewUsage.seatMatrix.byCandidate.<key>.perSeatRefs.<refName>.<seatId>` when the active consideration set requests preview seat-aggregates or standing projection. Cap by `candidatePreviewCap × seats × requestedRefs`. | (a) Architectural-invariant test confirms matrix shape and presence. (b) Trace-shape regression test pins the JSON schema. (c) Off-by-default for profiles without preview seat-aggregates/standing projection (no `seatMatrix` block emitted). (d) Replay-determinism test (same seed → byte-identical matrix). | S–M |
+| **4 — Named role primitives** | Add `currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind` resolvers from `def.terminal.ranking`. Both ref form (`role:currentLeader`) and `seatAgg.over: { role: ... }` form supported. | (a) Generic 4-seat test fixture confirms each role resolves correctly under both `ranking.order: asc` and `desc`. (b) `unresolved` role propagates through the chosen `availability` mode. (c) Compiler validates `role:` tokens against the four-role enum. | S–M |
+| **5 — FITL ARVN witness + cookbook addendum** | Re-run the ordinary-operation ARVN witness with two added `arvn-evolved` considerations using the new surface: `hurtCurrentLeader` and `reduceNearestThreat` (both using `role:` + `availability: selfAndTargetReady` + explicit `previewFallback: noContribution`). Update `docs/agent-dsl-cookbook.md` with the new projection/availability/role/seatMatrix surfaces. | (a) Witness: `hurtCurrentLeader` and `reduceNearestThreat` differentiate ARVN ordinary-operation candidates on ≥ 30% of main-phase decisions where opponent margins shift through the standing projection. (b) Cookbook addendum lands. (c) FOUNDATIONS Appendix line for Spec 180 added. | S–M |
 
-Phase 1 is independently mergeable (no trace shape change, no role primitives). Phase 2 depends on Phase 1 (per-seat status entries are the matrix's source data). Phase 3 depends on Phase 1 (`availability: selfAndTargetReady` requires per-seat status). Phase 4 depends on Spec 179 being live (the witness has no opponent signal otherwise). Phases 1-3 can land before Spec 179 if needed; Phase 4 is the integration gate.
+Phase 0 is the implementation precondition. Phase 1 produces ordinary-operation signal. Phase 2 prevents unavailable/capped signal from becoming silent numeric score. Phase 3 makes the per-seat evidence inspectable. Phase 4 adds role ergonomics. Phase 5 is the FITL integration gate and does not depend on production `outcomeGrantResolve` activation.
 
 ## 6. Acceptance Gate Summary
 
-A profile that authors `seatAgg(over: opponents, expr: preview.X.$seat, availability: requireAllReady, ...)` without `previewFallback` MUST fail to compile with `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`. A profile that authors the same with explicit `previewFallback: noContribution` MUST evaluate the aggregate as unavailable (no contribution) when any per-seat cell is unavailable, and the trace MUST record per-seat statuses. The FITL ARVN witness MUST produce role-resolution traces naming the leader/threat seat per decision and differentiating the chosen denial considerations on the lower-bounded fraction of decisions defined in Phase 4. No FITL-specific engine code is introduced; no new compiled IR variant; no kernel signature change.
+A profile that authors `seatAgg(over: opponents, expr: preview.X.$seat, availability: requireAllReady, ...)` without `previewFallback` MUST fail to compile with `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`. A profile that authors the same with explicit `previewFallback: noContribution` MUST evaluate the aggregate as unavailable (no contribution) when any per-seat cell is unavailable, and the trace MUST record per-seat statuses. The FITL ARVN witness MUST produce role-resolution traces naming the leader/threat seat per decision and differentiating the chosen denial considerations on the lower-bounded fraction of decisions defined in Phase 5. No FITL-specific engine code is introduced; no new compiled IR variant; no kernel signature change.
 
 ## 7. Foundation Alignment
 
@@ -215,10 +250,10 @@ A profile that authors `seatAgg(over: opponents, expr: preview.X.$seat, availabi
 | #5 (One Rules Protocol, Many Clients) | Unaffected |
 | #8 (Determinism) | Reinforced — matrix and role resolution are deterministic; replay test pins it |
 | #9 (Replay, Telemetry, Auditability) | Reinforced — per-seat statuses surface in trace |
-| #10 (Bounded Computation) | Unchanged — matrix bounded by candidates × seats × requested refs; no cap raise |
+| #10 (Bounded Computation) | Reinforced — standing projection has a named cap; matrix bounded by candidates × seats × requested refs; no cap raise |
 | #12 (Compiler-Kernel Validation Boundary) | Reinforced — extended diagnostic catches the outer-preview silent-fallback bug at compile time |
 | #14 (No Backwards Compatibility) | Honored within the spec — `skipUnavailable` legacy default exists only as a migration advisory; if Phase 4 surfaces no live profile relying on it, Phase 4 ticket may flip the default outright |
-| #15 (Architectural Completeness) | Direct goal — closes the outer-preview half of the silent-zero gap |
+| #15 (Architectural Completeness) | Direct goal — moves ordinary-operation visibility into a generic standing projection and closes the outer-preview half of the silent-zero gap |
 | #16 (Testing as Proof) | Direct goal — witness + four architectural invariants |
 | #19 (Decision-Granularity Uniformity) | Reinforced — outer-preview seat-aggregates now obey the same integrity contract as inner-preview option refs |
 | **#20 (Preview Signal Integrity)** | **Extended by this spec** to the outer-preview seat-aggregate path; Appendix amended |
@@ -236,18 +271,18 @@ A profile that authors `seatAgg(over: opponents, expr: preview.X.$seat, availabi
 ## 9. Open Questions
 
 1. **Extend `seatAgg` vs. parallel `standingAgg` operator.** This spec recommends extension to avoid duplicating IR. If during Phase 1 the field count on `seatAgg` proves unwieldy (`over`, `expr`, `aggOp`, `availability`, `role`, `tieBreak`), a parallel `standingAgg` is the fallback. Decision deferred to Phase 1 implementer's judgment; the externally-observable behavior is the same either way.
-2. **Default `availability` for new authoring.** This spec proposes `requireAllReady`. Phase 4 may downgrade to `selfAndTargetReady` if the witness shows `requireAllReady` is too strict in the presence of one habitually-depthCapped seat. Either is acceptable; the constraint is that *no implicit* `skipUnavailable` reaches production profiles after Phase 4.
+2. **Default `availability` for new authoring.** This spec proposes `requireAllReady`. Phase 5 may downgrade the witness profile to `selfAndTargetReady` if the witness shows `requireAllReady` is too strict in the presence of one habitually depth-capped seat. Either is acceptable; the constraint is that *no implicit* `skipUnavailable` reaches production profiles after Phase 5.
 3. **`seatMatrix` field name.** `seatMatrix` vs `perSeatPreview` vs `previewBySeat` — pick whichever matches the conventions in the schema artifact lane.
 4. **Role-resolution caching.** Should `currentLeader` (resolved from current state) be cached at decision scope to avoid re-resolution per `seatAgg.over: { role: currentLeader }`? Likely yes; mark for Phase 3 implementer.
-5. **Cross-game witness.** Texas Hold'em currently has no opponent-aware authoring (the conformance test runs a neutral shared-seat profile). The Phase 4 cookbook addendum should include a Texas Hold'em-shaped example (e.g., "fold when an opponent's projected pot equity exceeds threshold") so the surface is not perceived as FITL-only — but a live witness gate on Texas Hold'em is out of scope; FITL ARVN is the load-bearing witness.
+5. **Cross-game witness.** Texas Hold'em currently has no opponent-aware authoring (the conformance test runs a neutral shared-seat profile). The Phase 5 cookbook addendum should include a Texas Hold'em-shaped example (e.g., "fold when an opponent's projected pot equity exceeds threshold") so the surface is not perceived as FITL-only — but a live witness gate on Texas Hold'em is out of scope; FITL ARVN is the load-bearing witness.
 
 ## 10. Witness Substrate
 
-For Phase 4 (depends on Spec 179 having landed):
+For Phase 5:
 
 ```bash
 cd <repo-root>
-# Phase 4 witness — re-add two role-based considerations to arvn-evolved on top of 179's outcomeGrantContinuation opt-in
+# Phase 5 witness — add two role-based considerations to arvn-evolved using the standing-projection surface
 node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs \
   --seeds 15 --trace-default all --concurrency 8
 node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs
@@ -255,17 +290,18 @@ node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs
 
 Plus a custom aggregation node script over `campaigns/fitl-arvn-agent-evolution/traces/trace-*.json` that produces the per-candidate × per-seat matrix from `previewUsage.seatMatrix`, so before/after comparisons against the 179 baseline use identical methodology. The script is a candidate for promotion into `packages/engine/test/fixtures/` so future opponent-preview investigations reuse it (per the brainstorm Step 1.5 disposition rule).
 
-## 11. Notes for `/spec-to-tickets`
+## 11. Active Tickets
 
-Suggested ticket decomposition:
+Ticket decomposition created by `archive/tickets/179ACTSELPRE-009.md`:
 
-- `180STDVECOBSROL-001` — Phase 0 witness (silent-zero pin) + Foundation #20 Appendix line draft.
-- `180STDVECOBSROL-002` — Phase 1 status-aware `seatAgg` (IR + evaluator + compiler diagnostic + four-mode test).
-- `180STDVECOBSROL-003` — Phase 2 `previewUsage.seatMatrix` (materialization + trace-shape regression + replay determinism).
-- `180STDVECOBSROL-004` — Phase 3 named role primitives (resolvers + ref form + `seatAgg.over: { role: ... }` form + asc/desc fixture).
-- `180STDVECOBSROL-005` — Phase 4 FITL ARVN witness + cookbook addendum + FOUNDATIONS Appendix amendment.
+- [`tickets/180STDVECOBSROL-001.md`](../tickets/180STDVECOBSROL-001.md) — Phase 0 witness (ordinary-operation standing-projection failing witness + silent-zero pin).
+- [`tickets/180STDVECOBSROL-002.md`](../tickets/180STDVECOBSROL-002.md) — Phase 1 bounded standing-projection route.
+- [`tickets/180STDVECOBSROL-003.md`](../tickets/180STDVECOBSROL-003.md) — Phase 2 status-aware `seatAgg` (IR + evaluator + compiler diagnostic + four-mode test).
+- [`tickets/180STDVECOBSROL-004.md`](../tickets/180STDVECOBSROL-004.md) — Phase 3 `previewUsage.seatMatrix` (materialization + trace-shape regression + replay determinism).
+- [`tickets/180STDVECOBSROL-005.md`](../tickets/180STDVECOBSROL-005.md) — Phase 4 named role primitives (resolvers + ref form + `seatAgg.over: { role: ... }` form + asc/desc fixture).
+- [`tickets/180STDVECOBSROL-006.md`](../tickets/180STDVECOBSROL-006.md) — Phase 5 FITL ARVN witness + cookbook addendum + FOUNDATIONS Appendix amendment.
 
-Tickets 1-4 are mergeable in any order after 1; ticket 5 depends on Spec 179 having landed in addition to tickets 1-4 of this spec.
+Tickets 2-4 depend on ticket 1; ticket 5 depends on ticket 3; ticket 6 depends on tickets 2-5. No phase depends on production `outcomeGrantResolve` activation.
 
 ## 12. Reassessment of Source Proposal (`reports/spec-179-remediation.md`)
 
@@ -273,7 +309,7 @@ ChatGPT-Pro's deep-research proposal is reassessed against the codebase per the 
 
 | Recommendation | Disposition | Rationale |
 |---|---|---|
-| Replace Spec 179 wholesale with "Spec 179R" standing-vector model | **Rejected** | Spec 179's mechanical fix (lift `outcomeGrantResolve` drive exit) IS the correct fix for the witness gap. The trigger report's trace data shows opponent refs are *requested AND ready at 75.3%* with uniform values — the cause is the drive boundary, not status fidelity. ChatGPT-Pro could not access Spec 179 or the trigger report through its Git connector; its replacement verdict was against an imagined "candidate solution class," not the real spec. |
+| Replace Spec 179 wholesale with "Spec 179R" standing-vector model | **Partially adopted after tickets 007-009** | Spec 179's mechanical fix remains valid for synthetic/future paths that actually publish `outcomeGrantResolve`, but it is not the production ordinary-operation witness. Spec 180 now owns the standing-vector successor while preserving Spec 179's narrower substrate. |
 | Standing-vector observability (per-seat status preserved through aggregates) | **Adopted with adjustment (Pillar 4.1)** | Concept is right and matches Foundation #20's principle. Implemented as `seatAgg.availability` extension rather than a parallel `standingAgg` operator — avoids IR duplication. Spec 162 already established this contract for inner-preview; this spec extends it. |
 | Candidate × seat preview matrix in trace | **Adopted (Pillar 4.2)** | Genuine observability gap. Materialized on demand, bounded by candidate × seat × requested-ref counts. Hot-path concerns flagged by ChatGPT-Pro's risk section are respected via the on-demand materialization rule. |
 | Named role primitives (`currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind`) | **Adopted (Pillar 4.3)** | Ergonomic upgrade for opponent-aware authoring; eliminates the `aggOp: max` + `over: opponents` boilerplate that silently inverts under `ranking.order: asc`. Resolved from `def.terminal.ranking`, no game-specific code. |
@@ -287,4 +323,4 @@ ChatGPT-Pro's deep-research proposal is reassessed against the codebase per the 
 | Availability modes `requireAllReady`, `requireAnyReady`, `selfAndTargetReady`, `skipUnavailable` | **Adopted** | All four modes ship in Pillar 4.1. `skipUnavailable` is the back-compat default; the other three are the new explicit-availability options. |
 | `tieBreak: terminalRanking | stableSeatId` field on aggregates | **Adopted implicitly via role primitive resolution** | Roles resolve via `def.terminal.ranking` tie-break chain. Explicit `tieBreak` on every `seatAgg` is overspecified — most aggregates don't need it. Surface in Open Question §9.1's "field count" decision; can be added if Phase 3 finds a witness case requiring it. |
 | External research citations (MaxN, GGP, OpenSpiel, AlphaStar, COIN) | **Acknowledged as context** | Useful framing for why a standing-vector evaluation model is well-precedented. None directly drive an IR decision in this spec — Spec 180's design choices are codebase-grounded — but the citations strengthen the case for the surface being game-agnostic. |
-| `Risk: opponent-margin signals may still be genuinely unavailable at root action-selection scope` (ChatGPT-Pro §12) | **Resolved by Spec 179, not Spec 180** | Spec 179's drive-boundary lift is what produces opponent-effect signal. Spec 180 makes the signal observable and ergonomically authorable; it does not produce the signal. This dependency is the load-bearing reason Spec 180's Phase 4 cannot run until Spec 179 lands. |
+| `Risk: opponent-margin signals may still be genuinely unavailable at root action-selection scope` (ChatGPT-Pro §12) | **Adopted as Spec 180 Phase 0/1 owner** | Tickets 007/008 proved the risk against the production FITL witness. Spec 180 now owns the focused ordinary-operation standing-projection witness and the bounded generic signal-production route before observability and role ergonomics land. |

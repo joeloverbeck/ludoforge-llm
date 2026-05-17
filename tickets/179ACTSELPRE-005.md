@@ -1,6 +1,6 @@
 # 179ACTSELPRE-005: Phase 2 — FITL ARVN witness + cookbook addendum
 
-**Status**: BLOCKED by ordinary-operation successor `tickets/179ACTSELPRE-009.md`
+**Status**: BLOCKED by Spec 180 ordinary-operation successor `tickets/180STDVECOBSROL-001.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only (campaign profile YAML edit + docs).
@@ -114,10 +114,10 @@ Spec §7 notes that opponent-tied features (`preview.feature.vcGuerrillaCount`, 
 ## Out of Scope
 
 - WASM-route alignment (ticket 006 — optional, parallel).
-- Spec 180 standing-vector observability (separate spec, dependent on this one).
+- Spec 180 standing-vector / ordinary-operation projection (separate spec, successor to this blocked witness).
 - Tuning `extraDepthCap` beyond `postGrant16: 4` — Phase 2 kept this default fixed; ticket 007 classified the activation gap as a witness contract mismatch, so any future tuning requires a user-approved witness contract reset first.
 - Migrating other profiles (`vc-evolved`, etc.) to opt in — `arvn-evolved` is the witness; other profiles opt in via separate tickets when they have an opponent-aware authoring use case.
-- Spec 179 §7 Direction B fallback (separate `previewEffect.*` surface) — that escalation path opens a NEW spec (Spec 180 or 181) if the Phase 2 perf gate fails; not in scope for this ticket.
+- Spec 179 §7 Direction B fallback — `archive/tickets/179ACTSELPRE-009.md` selected Spec 180's integrated standing-projection route rather than a separate `previewEffect.*` namespace; not in scope for this ticket.
 
 ## Acceptance Criteria
 
@@ -165,7 +165,8 @@ What landed in this ticket:
 - `reports/179-phase-2-post-opt-in-witness.md` records the decisive red 15-seed witness.
 - `tickets/179ACTSELPRE-007.md` classified the activation gap as a witness contract mismatch.
 - `archive/tickets/179ACTSELPRE-008.md` completed the user-approved Phase 2 witness contract reset and found no usable production FITL event/free-operation `outcomeGrantResolve` replacement witness.
-- `tickets/179ACTSELPRE-009.md` owns the next ordinary-operation preview visibility surface.
+- `archive/tickets/179ACTSELPRE-009.md` selected Spec 180 as the next ordinary-operation preview visibility surface.
+- `tickets/180STDVECOBSROL-001.md` owns the first focused failing witness before implementation.
 
 Measured result:
 
@@ -183,7 +184,7 @@ Acceptance classification:
 - Phase 2 signal gate: red.
 - Phase 2 trace activation gate: red.
 - Archive status: blocked and not archive-ready.
-- Residual owner: `tickets/179ACTSELPRE-009.md`.
+- Residual owner: `tickets/180STDVECOBSROL-001.md` and the Spec 180 ticket chain.
 
 Generated/schema fallout: none. This ticket changed profile YAML, docs, report, tickets, and spec prose only; no engine source/schema artifacts were modified.
 
@@ -199,4 +200,4 @@ Command ledger:
 | Test Plan | `pnpm turbo test` | not run after red gate; blocked before terminal closeout | not final evidence |
 | Test Plan | `pnpm turbo lint && pnpm turbo typecheck` | not run after red gate; blocked before terminal closeout | not final evidence |
 
-008 reset update: the bounded production event/free-operation probe verified that current FITL event declarations can issue pending free-operation grants, but those grants are exposed as free-operation `actionSelection` moves rather than an `outcomeGrantResolve` frame. No replacement Phase 2 witness exists on the current production path. The red measured witness remains final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; `tickets/179ACTSELPRE-009.md` owns the next ordinary-operation preview visibility surface before any rerun can become closing proof.
+008/009 reset update: the bounded production event/free-operation probe verified that current FITL event declarations can issue pending free-operation grants, but those grants are exposed as free-operation `actionSelection` moves rather than an `outcomeGrantResolve` frame. No replacement Phase 2 witness exists on the current production path. The red measured witness remains final evidence for the blocked handoff, not terminal completion. `archive/tickets/179ACTSELPRE-009.md` selected Spec 180's bounded standing-projection successor; `tickets/180STDVECOBSROL-001.md` owns the first focused failing witness before any rerun can become closing proof.

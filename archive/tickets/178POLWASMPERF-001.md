@@ -1,6 +1,6 @@
 # 178POLWASMPERF-001: Discover next material policy-agent bottleneck after rejected WASM batching
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected — report/script-only unless live evidence proves a tiny profiler gap
@@ -128,3 +128,59 @@ No automated tests are expected if this remains report-only. If a profiler/repor
 2. `git diff --check`
 3. If a profiler/report helper changes: `pnpm -F @ludoforge/engine build`
 4. If a profiler/report helper changes: run the focused script/test that proves the new aggregation
+
+## Outcome (2026-05-17)
+
+Outcome amended: 2026-05-17
+
+**Completion date:** 2026-05-17.
+
+**Durable state:** `COMPLETED` as a report-only discovery ticket. The recommendation is a bounded investigation ticket, not an implementation spec.
+
+### What Landed
+
+- Added the post-177 bottleneck inventory report at `reports/178-policy-agent-bottleneck-discovery.md`.
+- The report reuses existing Spec 176/177 markdown and CSV artifacts; no profiler helper, runtime code, schema, generated artifact, GameSpecDoc, GameDef, or visual-config change is needed.
+- The report rules out replaying Spec 177 transfer reduction as the next owner and recommends a bounded investigation ticket for the material TS-fallback/no-WASM-signal plus outside-WASM policy-agent residual.
+
+### Recommendation
+
+`create-investigation-ticket: Attribute TS-fallback/no-WASM-signal and outside-WASM policy-agent wall time by unsupported owner, no-counter axis, and TS-only hot-bucket family`
+
+No new spec or ticket was created during implementation; the deliverable was the recommendation report only.
+
+Post-review created follow-up `tickets/178POLWASMPERF-002.md` to own the recommended bounded attribution investigation.
+
+### Ticket Corrections Applied
+
+- `packages/engine/scripts/` is verified-no-edit: existing report/CSV artifacts are sufficient for the first inventory and recommendation; a new profiler/report aggregation helper is not needed for this ticket.
+- `reports/176-phase-6-decision-and-rationale.md` is verified-no-edit: no dated interpretation amendment is needed because Spec 176's accelerate decision remains historical context and Spec 177 already records the rejected transfer-reduction follow-up.
+- `reports/177-phase-0-batching-shape-selection.md` is verified-no-edit: no dated interpretation amendment is needed because this report preserves its `no-transfer-reduction-shape-authorized` verdict.
+
+### Schema / Generated Fallout
+
+None. This ticket changes Markdown evidence and ticket artifacts only.
+
+### Verification Ledger
+
+- `pnpm run check:ticket-deps` passed for `1` active ticket and `2385` archived tickets.
+- `git diff --check` passed.
+- `git diff --no-index --check /dev/null reports/178-policy-agent-bottleneck-discovery.md` produced no whitespace diagnostics. The command exits nonzero for ordinary no-index content differences, so the empty output is the hygiene proof.
+- `rg -n '[ \t]+$' reports/178-policy-agent-bottleneck-discovery.md tickets/178POLWASMPERF-001.md` produced no matches.
+
+### Late-Edit Proof Validity
+
+No-invalidation: the final status/proof edit only records the already-run proof results and sets the already-proven terminal state; it does not change scope, acceptance criteria, command semantics, touched-file ownership, dependency ownership, or the report recommendation.
+
+### Runtime Surface Breadth
+
+No runtime surface change; report-only planning/evidence surface.
+
+### Post-Review / Archive Review
+
+- Created follow-up `tickets/178POLWASMPERF-002.md` for the recommended bounded attribution investigation.
+- Archived this ticket to `archive/tickets/178POLWASMPERF-001.md`.
+- Updated `reports/178-policy-agent-bottleneck-discovery.md` to cite the archived ticket path.
+- Post-archive `pnpm run check:ticket-deps` passed for `1` active ticket and `2386` archived tickets.
+- Post-archive `git diff --check` passed.
+- Post-archive stale active-path sweep found no actionable active `tickets/178POLWASMPERF-001.md` references; the remaining old-path mention is a historical pre-archive verification command in this archived outcome.

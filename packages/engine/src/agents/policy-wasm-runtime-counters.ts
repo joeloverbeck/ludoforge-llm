@@ -18,12 +18,16 @@ export interface PolicyWasmPreviewDriveUnsupportedDetail {
   readonly unsupportedDriveClass?: string;
   readonly unsupportedOwner?: string;
   readonly reason?: string;
+  readonly projectedStateBoundaryKind?: string;
+  readonly projectedStateClassification?: string;
 }
 
 export interface PolicyWasmPreviewDriveUnsupportedReasonCount {
   readonly unsupportedDriveClass: string;
   readonly unsupportedOwner?: string;
   readonly reason: string;
+  readonly projectedStateBoundaryKind?: string;
+  readonly projectedStateClassification?: string;
   readonly count: number;
 }
 
@@ -61,7 +65,7 @@ export const recordProductionPolicyWasmPreviewDrive = (
   }
   productionPreviewDriveUnsupportedCount += 1;
   const row = normalizeUnsupportedDetail(detail);
-  const key = `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`;
+  const key = unsupportedReasonKey(row);
   const current = productionPreviewDriveUnsupportedReasonCounts.get(key);
   productionPreviewDriveUnsupportedReasonCounts.set(key, {
     ...row,
@@ -150,8 +154,23 @@ const normalizeUnsupportedDetail = (
   unsupportedDriveClass: detail.unsupportedDriveClass ?? 'unknown',
   ...(detail.unsupportedOwner === undefined ? {} : { unsupportedOwner: detail.unsupportedOwner }),
   reason: detail.reason ?? 'unspecified unsupported preview-drive route',
+  ...(detail.projectedStateBoundaryKind === undefined
+    ? {}
+    : { projectedStateBoundaryKind: detail.projectedStateBoundaryKind }),
+  ...(detail.projectedStateClassification === undefined
+    ? {}
+    : { projectedStateClassification: detail.projectedStateClassification }),
   count: 0,
 });
+
+const unsupportedReasonKey = (row: PolicyWasmPreviewDriveUnsupportedReasonCount): string =>
+  [
+    row.unsupportedDriveClass,
+    row.unsupportedOwner ?? '',
+    row.reason,
+    row.projectedStateBoundaryKind ?? '',
+    row.projectedStateClassification ?? '',
+  ].join('\u0000');
 
 const compareCodepoint = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

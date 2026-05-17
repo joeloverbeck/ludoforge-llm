@@ -42,6 +42,9 @@ export function renderCsv(rows) {
     'zobristKeyCacheMissCount',
     'staticRebuildCount',
     'hotPathBuckets',
+    'hotPathBucketFamilies',
+    'sameRunNoCounterAttribution',
+    'terminalBoundaryProjectionSplit',
     'seatId',
     'profileId',
     'turnCount',
@@ -126,6 +129,7 @@ export function renderMarkdown(rollup, options) {
     ...renderWasmTimingSection(rollup.perDecisionClass),
     ...renderWasmSerializationSection(rollup.perDecisionClass),
     ...renderUnsupportedReasonSection(rollup.perDecisionClass),
+    ...renderTerminalBoundaryProjectionSection(rollup.perDecisionClass),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
     '',
@@ -249,6 +253,15 @@ function timingBucketForRoute(row, routeClass) {
 }
 
 function csvValue(row, header) {
+  if (header === 'hotPathBucketFamilies') {
+    return formatHotPathBucketFamilies(row);
+  }
+  if (header === 'sameRunNoCounterAttribution') {
+    return formatSameRunNoCounterAttribution(row);
+  }
+  if (header === 'terminalBoundaryProjectionSplit') {
+    return formatTerminalBoundaryProjectionSplit(row);
+  }
   for (const routeClass of WASM_TIMING_ROUTE_CLASSES) {
     if (header === `${routeClass}BatchSizeMean`) {
       const bucket = timingBucketForRoute(row, routeClass);
@@ -361,13 +374,54 @@ function renderUnsupportedReasonSection(rows) {
   ];
 }
 
+function renderTerminalBoundaryProjectionSection(rows) {
+  const splitRows = rows
+    .flatMap((row) => terminalBoundaryProjectionRows(row).map((split) => ({
+      microturnClass: row.key,
+      ...split,
+    })))
+    .filter((row) => row.count > 0)
+    .sort((left, right) =>
+      right.count - left.count
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.classification, right.classification)
+      || compareCodepoint(left.boundaryKind, right.boundaryKind),
+    );
+  if (splitRows.length === 0) {
+    return [
+      '',
+      '## Terminal-Boundary Projected-State Split',
+      '',
+      '_No terminal-boundary projected-state split rows recorded._',
+    ];
+  }
+  return [
+    '',
+    '## Terminal-Boundary Projected-State Split',
+    '',
+    '| Microturn class | Classification | Boundary kind | Count |',
+    '|---|---|---|---:|',
+    ...splitRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.classification,
+      row.boundaryKind,
+      `${row.count} |`,
+    ].join(' | ')),
+  ];
+}
+
 function formatReasonCounts(rows) {
   if ((rows ?? []).length === 0) {
     return '';
   }
   return rows.map((row) => {
     const owner = row.unsupportedOwner === undefined ? 'unknown' : row.unsupportedOwner;
-    return `${row.unsupportedDriveClass}/${owner}/${row.reason}:${row.count}`;
+    const projectedStateDetail = [
+      row.projectedStateClassification,
+      row.projectedStateBoundaryKind,
+    ].filter((part) => part !== undefined).join('/');
+    const detail = projectedStateDetail === '' ? '' : `/${projectedStateDetail}`;
+    return `${row.unsupportedDriveClass}/${owner}/${row.reason}${detail}:${row.count}`;
   }).join('; ');
 }
 
@@ -402,6 +456,66 @@ function renderHotPathBucketSection(rows) {
     );
   }
   return lines;
+}
+
+function summarizeHotPathBucketFamilies(row) {
+  const families = new Map();
+  for (const bucket of row.hotPathBuckets ?? []) {
+    const family = String(bucket.key).split(':')[0] ?? 'unknown';
+    const current = families.get(family) ?? { count: 0, totalMs: 0 };
+    families.set(family, {
+      count: current.count + Number(bucket.count ?? 0),
+      totalMs: current.totalMs + Number(bucket.totalMs ?? 0),
+    });
+  }
+  return [...families.entries()]
+    .map(([family, bucket]) => ({ family, ...bucket }))
+    .filter((bucket) => bucket.count > 0 || bucket.totalMs > 0)
+    .sort((left, right) => right.totalMs - left.totalMs || compareCodepoint(left.family, right.family));
+}
+
+function formatHotPathBucketFamilies(row) {
+  return summarizeHotPathBucketFamilies(row)
+    .map((bucket) => `${bucket.family}:${bucket.count}/${formatNumber(bucket.totalMs)}ms`)
+    .join('; ');
+}
+
+function formatSameRunNoCounterAttribution(row) {
+  const routeOrUnsupportedCount =
+    Number(row.wasmScoreRowRouteCount ?? 0)
+    + Number(row.wasmScoreRowUnsupportedCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowRouteCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowUnsupportedCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveRouteCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveUnsupportedCount ?? 0);
+  if (routeOrUnsupportedCount > 0) {
+    return '';
+  }
+  const families = formatHotPathBucketFamilies(row);
+  return families === ''
+    ? 'no-route-or-unsupported-counter; no-same-run-hot-path-buckets'
+    : `no-route-or-unsupported-counter; same-run-hot-path-families=${families}`;
+}
+
+function terminalBoundaryProjectionRows(row) {
+  const buckets = new Map();
+  for (const reason of row.wasmProductionPreviewDriveUnsupportedReasons ?? []) {
+    if (reason.unsupportedOwner !== 'production-deep-choosenstep-continuation.projectedState') {
+      continue;
+    }
+    const classification = reason.projectedStateClassification ?? 'ambiguous';
+    const boundaryKind = reason.projectedStateBoundaryKind ?? 'unknown';
+    const key = `${classification}\u0000${boundaryKind}`;
+    const current = buckets.get(key) ?? { classification, boundaryKind, count: 0 };
+    buckets.set(key, { ...current, count: current.count + Number(reason.count ?? 0) });
+  }
+  return [...buckets.values()];
+}
+
+function formatTerminalBoundaryProjectionSplit(row) {
+  return terminalBoundaryProjectionRows(row)
+    .map((split) => `${split.classification}/${split.boundaryKind}:${split.count}`)
+    .join('; ');
 }
 
 function sumAggregateField(rows, field) {

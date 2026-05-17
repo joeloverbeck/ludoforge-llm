@@ -120,6 +120,8 @@ No automated tests are expected if this remains report-only. If a profiler/repor
 
 **Completion date:** 2026-05-17.
 
+**Outcome amended:** 2026-05-17.
+
 **Durable state:** `COMPLETED` as a report-only investigation ticket. The recommendation is a narrower follow-up investigation, not an implementation spec.
 
 **Landed scope:** `reports/178-phase-2-terminal-boundary-no-counter-split.md` classifies the two Phase 1 residual owners using existing checked-in Phase 0 and Phase 2 CSV artifacts plus source inspection of the current counter emitters. No runtime, WASM ABI, policy profile, GameSpecDoc, runner, profiler helper, or report-rendering helper changed.
@@ -133,7 +135,7 @@ No automated tests are expected if this remains report-only. If a profiler/repor
 
 **Decision:** `create-investigation-ticket: Add same-run terminal-boundary and no-counter attribution counters`. The report found no implementation-ready owner: the `projectedState` unsupported reason remains a material but collapsed terminal-boundary carrier, and the no-counter `coupArvnRedeployPolice:chooseOne | continuedDeepening` axis remains material but lacks same-run attribution. Cross-run TS-only buckets implicate `tokenStateIndex:*` at `1,365.2646 ms`, or `1.86%` of slow-tier wall time, below the `5%` spec-ready materiality bar.
 
-**Post-review follow-up:** Created `tickets/178POLWASMPERF-004.md` to own the recommended same-run terminal-boundary and no-counter attribution counters before archiving this report-only ticket. The follow-up is non-overlapping: this ticket produced the Phase 2 split report; `178POLWASMPERF-004` must add the missing same-run attribution substrate and produce the next decision report.
+**Post-review follow-up:** Created `archive/tickets/178POLWASMPERF-004.md` to own the recommended same-run terminal-boundary and no-counter attribution counters before archiving this report-only ticket. The follow-up was non-overlapping: this ticket produced the Phase 2 split report; `178POLWASMPERF-004` added the missing same-run attribution substrate and produced the next decision report.
 
 **Generated/schema fallout:** none. This is markdown/report-only; no source, schema, generated JSON, GameSpecDoc, or visual config changed.
 

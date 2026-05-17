@@ -669,6 +669,7 @@ function deltaReasonCounts(afterRows, beforeRows) {
       unsupportedDriveClass: row.unsupportedDriveClass,
       ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
       reason: row.reason,
+      ...projectedStateReasonFields(row),
       count: row.count - (beforeByKey.get(reasonKey(row)) ?? 0),
     }))
     .filter((row) => row.count > 0)
@@ -683,6 +684,7 @@ function addReasonCounts(target, rows) {
       unsupportedDriveClass: row.unsupportedDriveClass,
       ...(row.unsupportedOwner === undefined ? {} : { unsupportedOwner: row.unsupportedOwner }),
       reason: row.reason,
+      ...projectedStateReasonFields(row),
       count: (current?.count ?? 0) + row.count,
     });
   }
@@ -693,18 +695,32 @@ function reasonRows(rowsByKey) {
 }
 
 function reasonKey(row) {
-  return `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`;
+  return `${row.unsupportedDriveClass}\u0000${row.unsupportedOwner ?? ''}\u0000${row.reason}`
+    + `\u0000${row.projectedStateBoundaryKind ?? ''}\u0000${row.projectedStateClassification ?? ''}`;
 }
 
 function compareReasonRows(left, right) {
   return right.count - left.count
     || compareCodepoint(left.unsupportedDriveClass, right.unsupportedDriveClass)
     || compareCodepoint(left.unsupportedOwner ?? '', right.unsupportedOwner ?? '')
-    || compareCodepoint(left.reason, right.reason);
+    || compareCodepoint(left.reason, right.reason)
+    || compareCodepoint(left.projectedStateBoundaryKind ?? '', right.projectedStateBoundaryKind ?? '')
+    || compareCodepoint(left.projectedStateClassification ?? '', right.projectedStateClassification ?? '');
 }
 
 function compareCodepoint(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function projectedStateReasonFields(row) {
+  const fields = {};
+  if (row.projectedStateBoundaryKind !== undefined) {
+    fields.projectedStateBoundaryKind = row.projectedStateBoundaryKind;
+  }
+  if (row.projectedStateClassification !== undefined) {
+    fields.projectedStateClassification = row.projectedStateClassification;
+  }
+  return fields;
 }
 
 function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {

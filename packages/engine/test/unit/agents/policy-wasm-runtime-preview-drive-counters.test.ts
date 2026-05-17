@@ -24,6 +24,8 @@ describe('policy WASM production preview-drive counters', () => {
       unsupportedDriveClass: 'unsupported-effect',
       unsupportedOwner: 'production-preview-drive.previewStateSlots',
       reason: 'unsupported preview-state slot',
+      projectedStateBoundaryKind: 'depthCap',
+      projectedStateClassification: 'expected-terminal-boundary',
     });
 
     assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 2);
@@ -32,6 +34,8 @@ describe('policy WASM production preview-drive counters', () => {
       unsupportedDriveClass: 'unsupported-effect',
       unsupportedOwner: 'production-preview-drive.previewStateSlots',
       reason: 'unsupported preview-state slot',
+      projectedStateBoundaryKind: 'depthCap',
+      projectedStateClassification: 'expected-terminal-boundary',
       count: 1,
     }]);
   });

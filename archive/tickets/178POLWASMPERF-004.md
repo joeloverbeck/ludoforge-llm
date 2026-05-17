@@ -1,6 +1,6 @@
 # 178POLWASMPERF-004: Add same-run terminal-boundary and no-counter attribution counters
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected - profiler/report helper instrumentation only unless live evidence proves a tiny policy-agent attribution hook is needed
@@ -75,7 +75,13 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 - `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` (modify if needed for same-run row/counter capture)
 - `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` (modify if needed for report/CSV rendering)
 - `packages/engine/src/agents/policy-preview-inner-deepening.ts` (modify only if the terminal-boundary detail must be emitted at the source)
+- `packages/engine/src/agents/policy-wasm-runtime-counters.ts` (modify if the unsupported-reason detail shape needs structured attribution fields)
+- `packages/engine/test/unit/agents/policy-wasm-runtime-preview-drive-counters.test.ts` (modify if counter detail shape changes)
+- `packages/engine/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.ts` (new, if report/CSV rendering shape changes)
 - `reports/178-phase-3-same-run-attribution-counters.md` (new)
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv` (new decisive same-run raw artifact)
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md` (new decisive same-run rendered artifact)
+- `tickets/178POLWASMPERF-005.md` (new only if the report recommends another investigation ticket)
 
 ## Out of Scope
 
@@ -113,3 +119,57 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 2. Run the focused script/test that proves the new attribution output.
 3. `pnpm run check:ticket-deps`
 4. `git diff --check`
+
+## Outcome (2026-05-17)
+
+**Completion date:** 2026-05-17.
+
+**Durable state:** `COMPLETED`. The recommendation is a narrower follow-up investigation, not an implementation spec.
+
+**Landed scope:**
+
+- Added structured projected-state unsupported detail fields: `projectedStateBoundaryKind` and `projectedStateClassification`.
+- Extended the FITL ARVN decomposition CSV with `hotPathBucketFamilies`, `sameRunNoCounterAttribution`, and `terminalBoundaryProjectionSplit`.
+- Added a rendered `Terminal-Boundary Projected-State Split` report section.
+- Produced the decisive same-run slow-tier artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md`
+- Produced `reports/178-phase-3-same-run-attribution-counters.md`.
+- Created `tickets/178POLWASMPERF-005.md` as the non-overlapping follow-up for the remaining material unbucketed/orchestration residual.
+
+**Post-review correction:** Replaced the new hot-path bucket family tie-breaker in `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` with codepoint ordering instead of ambient `localeCompare`, and added a focused regression assertion in `packages/engine/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.ts`.
+
+**Decision:** `create-investigation-ticket: Split continued-deepening orchestration residual from unbucketed policy search work`. The terminal-boundary projected-state residual is no longer an implementation candidate in this witness: all `241` same-run unsupported reasons were classified as expected `seat-or-turn-boundary` exits. The no-counter `coupArvnRedeployPolice:chooseOne | continuedDeepening` axis remains material at `7,743.6802 ms`, or `9.79%` of same-run slow-tier wall time, but same-run `tokenStateIndex:*`, `evalQuery:*`, and `zobrist:*` buckets explain only `1,655.1061 ms`, or `2.09%`; the remaining `6,088.5741 ms`, or `7.70%`, needs a narrower residual split before an implementation spec is honest.
+
+**Deliverable ledger:**
+
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — done; preserves projected-state reason detail fields across per-decision deltas and aggregate rollups.
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — done; adds CSV attribution fields and terminal-boundary split rendering.
+- `packages/engine/src/agents/policy-preview-inner-deepening.ts` — done; emits expected terminal-boundary projected-state classification at the source.
+- `packages/engine/src/agents/policy-wasm-runtime-counters.ts` — done; structured unsupported detail fields are part of the counter row shape.
+- `packages/engine/test/unit/agents/policy-wasm-runtime-preview-drive-counters.test.ts` — done; proves counter detail preservation.
+- `packages/engine/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.ts` — done; proves the CSV/report output shape.
+- `reports/178-phase-3-same-run-attribution-counters.md` — done; checked-in decision report.
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv` — done; checked-in decisive raw artifact.
+- `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md` — done; checked-in decisive rendered artifact.
+- `tickets/178POLWASMPERF-005.md` — done; follow-up investigation owner for the remaining residual.
+
+**Command ledger:**
+
+| Ticket command | Final citation |
+|---|---|
+| `pnpm -F @ludoforge/engine build` | passed after post-review cleanup |
+| focused script/test proving attribution output | `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime-preview-drive-counters.test.js dist/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.js` passed with 4 tests after post-review cleanup |
+| decisive profiler command | `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-05-17-phase-3-same-run-attribution-counters --profile-buckets` passed after sandbox escalation; wrote the checked-in CSV and Markdown artifacts |
+| `pnpm run check:ticket-deps` | passed before terminal status; checked 2 active tickets and 2388 archived tickets |
+| `pnpm run check:ticket-deps` after terminal status | passed; checked 2 active tickets and 2388 archived tickets |
+| `git diff --check` | passed |
+| untracked artifact whitespace | passed via `git diff --no-index --check /dev/null <path>` for the new test, decision report, raw CSV/Markdown artifacts, and follow-up ticket; each emitted no diagnostics |
+
+**Generated/schema fallout:** no schema, generated JSON, GameSpecDoc, visual config, or WASM ABI artifact changed. The new generated evidence artifacts are checked-in report/CSV files under `reports/`.
+
+**Source-size ledger:** `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs | before 780 | after 796 | crossed cap? no | active growth 16 lines | extraction/defer rationale: compact in-place preservation of existing aggregate helpers kept the near-cap script under the 800-line cap; no successor needed`.
+
+**Runtime surface breadth:** policy/agent measurement-only. No runtime optimization or game-specific behavior changed.
+
+**Late-edit proof validity:** terminal status/proof transcription only after the source, test, report, raw artifacts, and follow-up ticket were already truthful and the final build, focused tests, decisive profiler command, and pre-status dependency integrity had passed. Post-review cleanup changed only deterministic report-family ordering for equal-time hot-path family ties plus its focused test; it does not change schema, generated runtime artifacts, acceptance boundary, dependency edges, or the measured Phase 3 materiality decision. The engine package rebuild and focused Node test command passed after the cleanup.

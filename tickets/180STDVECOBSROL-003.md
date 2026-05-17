@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - policy expression/evaluator/compiler/schema.
-**Deps**: `tickets/180STDVECOBSROL-001.md`
+**Deps**: `archive/tickets/180STDVECOBSROL-001.md`
 
 ## Problem
 

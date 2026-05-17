@@ -290,11 +290,11 @@ node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs
 
 Plus a custom aggregation node script over `campaigns/fitl-arvn-agent-evolution/traces/trace-*.json` that produces the per-candidate × per-seat matrix from `previewUsage.seatMatrix`, so before/after comparisons against the 179 baseline use identical methodology. The script is a candidate for promotion into `packages/engine/test/fixtures/` so future opponent-preview investigations reuse it (per the brainstorm Step 1.5 disposition rule).
 
-## 11. Active Tickets
+## 11. Ticket Chain
 
 Ticket decomposition created by `archive/tickets/179ACTSELPRE-009.md`:
 
-- [`tickets/180STDVECOBSROL-001.md`](../tickets/180STDVECOBSROL-001.md) — Phase 0 witness (ordinary-operation standing-projection failing witness + silent-zero pin).
+- [`archive/tickets/180STDVECOBSROL-001.md`](../archive/tickets/180STDVECOBSROL-001.md) — Phase 0 witness (ordinary-operation standing-projection failing witness + silent-zero pin).
 - [`tickets/180STDVECOBSROL-002.md`](../tickets/180STDVECOBSROL-002.md) — Phase 1 bounded standing-projection route.
 - [`tickets/180STDVECOBSROL-003.md`](../tickets/180STDVECOBSROL-003.md) — Phase 2 status-aware `seatAgg` (IR + evaluator + compiler diagnostic + four-mode test).
 - [`tickets/180STDVECOBSROL-004.md`](../tickets/180STDVECOBSROL-004.md) — Phase 3 `previewUsage.seatMatrix` (materialization + trace-shape regression + replay determinism).

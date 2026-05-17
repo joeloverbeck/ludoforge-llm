@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes - trace metadata and schema.
-**Deps**: `tickets/180STDVECOBSROL-001.md`
+**Deps**: `archive/tickets/180STDVECOBSROL-001.md`
 
 ## Problem
 

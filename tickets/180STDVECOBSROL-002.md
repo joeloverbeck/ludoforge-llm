@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - policy preview/evaluation standing projection.
-**Deps**: `tickets/180STDVECOBSROL-001.md`
+**Deps**: `archive/tickets/180STDVECOBSROL-001.md`
 
 ## Problem
 
@@ -14,7 +14,7 @@ Spec 180 needs a generic way for action-selection preview to observe ordinary-op
 
 1. The selected architecture preserves existing `preview.victory.*` scalar refs for ready cells and introduces status-bearing standing cells behind them.
 2. The route must use the existing one-rules protocol, not raw effect inspection or FITL-specific action handling.
-3. `tickets/180STDVECOBSROL-001.md` owns the focused RED witness this ticket must satisfy.
+3. `archive/tickets/180STDVECOBSROL-001.md` owns the focused RED witness this ticket must satisfy.
 
 ## Architecture Check
 

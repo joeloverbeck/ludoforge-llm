@@ -1,7 +1,7 @@
 # Spec 179 — Action-Selection Preview: `outcomeGrantResolve` Opt-In
 
-**Status**: BLOCKED by `tickets/180STDVECOBSROL-001.md`
-**Priority**: Medium — the profile opt-in substrate exists for synthetic `outcomeGrantResolve` frames, but current production FITL event/free-operation paths do not provide a closing witness; ordinary-operation preview visibility is deferred to Spec 180's standing-projection successor starting at `tickets/180STDVECOBSROL-001.md`.
+**Status**: BLOCKED by `archive/tickets/180STDVECOBSROL-001.md` and the remaining active Spec 180 implementation chain.
+**Priority**: Medium — the profile opt-in substrate exists for synthetic `outcomeGrantResolve` frames, but current production FITL event/free-operation paths do not provide a closing witness; ordinary-operation preview visibility is deferred to Spec 180's standing-projection successor, whose Phase 0 witness is archived at `archive/tickets/180STDVECOBSROL-001.md` and whose next active owner is `tickets/180STDVECOBSROL-002.md`.
 **Complexity**: S–M — single bounded driver change with profile-side opt-in; phased measure-then-implement-then-document.
 **Date**: 2026-05-17
 **Dependencies**:
@@ -124,7 +124,7 @@ A profile that opts in must produce trace-visible continuation through `outcomeG
 
 ## 7. Out-of-Scope (Cross-Reference)
 
-- **Direction B** of the trigger report (separate `previewEffect.*` or equivalent ordinary-operation preview surface): resolved by `archive/tickets/179ACTSELPRE-009.md` into Spec 180's bounded standing-projection route. A separate `previewEffect.*` namespace remains rejected unless `tickets/180STDVECOBSROL-001.md` proves the integrated standing route cannot observe ordinary-operation effects without duplicating kernel effect semantics.
+- **Direction B** of the trigger report (separate `previewEffect.*` or equivalent ordinary-operation preview surface): resolved by `archive/tickets/179ACTSELPRE-009.md` into Spec 180's bounded standing-projection route. A separate `previewEffect.*` namespace remains rejected unless the active Spec 180 implementation chain proves the integrated standing route cannot observe ordinary-operation effects without duplicating kernel effect semantics.
 - **Direction C** of the trigger report (declarative action effect annotations): rejected by the trigger report itself ("not the right answer for this gap").
 - **Adjacent concern #2** of the report (which 4.5% of VC decisions currently differentiate): a small follow-up investigation, not in this spec.
 - **`preview.feature.X` for opponent-tied features** (report adjacent concern #1): the Phase 1 driver change *should* lift this as a free side-effect (the post-grant state would expose the opponent-tied feature recomputations), but Phase 2 acceptance only pins `currentMargin.<opp>`; a separate witness run can confirm features lift, and Phase 2 should record the observed behavior.
@@ -160,7 +160,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`tickets/179ACTSELPRE-005.md`](../tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (red witness / blocked handoff)
 - [`tickets/179ACTSELPRE-007.md`](../tickets/179ACTSELPRE-007.md) — Phase 2b — Classify FITL ARVN post-grant witness activation (blocked: original witness targets ordinary operations, not `outcomeGrantResolve`)
 - [`archive/tickets/179ACTSELPRE-008.md`](../archive/tickets/179ACTSELPRE-008.md) — Phase 2c — Reset Spec 179 witness contract (completed: no usable production event/free-operation `outcomeGrantResolve` replacement witness found)
-- [`archive/tickets/179ACTSELPRE-009.md`](../archive/tickets/179ACTSELPRE-009.md) — Phase 2d — Specify ordinary-operation preview visibility successor (selected Spec 180; implementation starts at [`tickets/180STDVECOBSROL-001.md`](../tickets/180STDVECOBSROL-001.md))
+- [`archive/tickets/179ACTSELPRE-009.md`](../archive/tickets/179ACTSELPRE-009.md) — Phase 2d — Specify ordinary-operation preview visibility successor (selected Spec 180; Phase 0 witness archived at [`archive/tickets/180STDVECOBSROL-001.md`](../archive/tickets/180STDVECOBSROL-001.md); implementation continues at [`tickets/180STDVECOBSROL-002.md`](../tickets/180STDVECOBSROL-002.md))
 - [`tickets/179ACTSELPRE-006.md`](../tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (covers Open Question §8.4)
 
 Namespace `179ACTSELPRE` finalized from user invocation (brainstorm proposal `179POSTGRANTPREV` superseded). Ticket 001 added to cover §5 Phase 0 which was omitted from the brainstorm-time decomposition.

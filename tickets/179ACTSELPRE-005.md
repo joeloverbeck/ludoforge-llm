@@ -1,6 +1,6 @@
 # 179ACTSELPRE-005: Phase 2 — FITL ARVN witness + cookbook addendum
 
-**Status**: BLOCKED by reset owner `tickets/179ACTSELPRE-008.md`
+**Status**: BLOCKED by ordinary-operation successor `tickets/179ACTSELPRE-009.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only (campaign profile YAML edit + docs).
@@ -164,7 +164,8 @@ What landed in this ticket:
 - `docs/agent-dsl-cookbook.md` documents per-seat opponent preview refs, the `outcomeGrantContinuation` opt-in, cost/trace expectations, and partial-coverage behavior without claiming the FITL ARVN witness passed.
 - `reports/179-phase-2-post-opt-in-witness.md` records the decisive red 15-seed witness.
 - `tickets/179ACTSELPRE-007.md` classified the activation gap as a witness contract mismatch.
-- `tickets/179ACTSELPRE-008.md` owns the user-approved Phase 2 witness contract reset.
+- `archive/tickets/179ACTSELPRE-008.md` completed the user-approved Phase 2 witness contract reset and found no usable production FITL event/free-operation `outcomeGrantResolve` replacement witness.
+- `tickets/179ACTSELPRE-009.md` owns the next ordinary-operation preview visibility surface.
 
 Measured result:
 
@@ -182,7 +183,7 @@ Acceptance classification:
 - Phase 2 signal gate: red.
 - Phase 2 trace activation gate: red.
 - Archive status: blocked and not archive-ready.
-- Residual owner: `tickets/179ACTSELPRE-008.md`.
+- Residual owner: `tickets/179ACTSELPRE-009.md`.
 
 Generated/schema fallout: none. This ticket changed profile YAML, docs, report, tickets, and spec prose only; no engine source/schema artifacts were modified.
 
@@ -194,8 +195,8 @@ Command ledger:
 | Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs` | run against preserved 15-seed trace dir | red witness report |
 | Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-ready-ref-stats.mjs` | run against preserved 15-seed trace dir | red witness report |
 | Test Plan | wall-time comparison | run by report transcription against Phase 0 baseline | red witness report |
-| Acceptance | `pnpm -F @ludoforge/engine test` | pending; required before any future terminal closeout after a witness contract reset | blocked Phase 2 |
+| Acceptance | `pnpm -F @ludoforge/engine test` | pending; required before any future terminal closeout after the ordinary-operation successor lands a replacement witness | blocked Phase 2 |
 | Test Plan | `pnpm turbo test` | not run after red gate; blocked before terminal closeout | not final evidence |
 | Test Plan | `pnpm turbo lint && pnpm turbo typecheck` | not run after red gate; blocked before terminal closeout | not final evidence |
 
-Proof validity: the red measured witness is final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; `tickets/179ACTSELPRE-008.md` owns the Phase 2 witness contract reset before any rerun can become closing proof.
+008 reset update: the bounded production event/free-operation probe verified that current FITL event declarations can issue pending free-operation grants, but those grants are exposed as free-operation `actionSelection` moves rather than an `outcomeGrantResolve` frame. No replacement Phase 2 witness exists on the current production path. The red measured witness remains final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; `tickets/179ACTSELPRE-009.md` owns the next ordinary-operation preview visibility surface before any rerun can become closing proof.

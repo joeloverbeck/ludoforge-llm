@@ -1,6 +1,6 @@
 # 179ACTSELPRE-008: Phase 2c — Reset Spec 179 witness contract
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Unknown — discovery first; no engine changes unless a generic `outcomeGrantResolve` defect is proven with TDD.
@@ -97,3 +97,40 @@ For a valid replacement witness, run a bounded Phase 2 replacement gate and reco
 2. Bounded FITL event/free-operation grant probe command(s) discovered during implementation.
 3. Replacement witness/report aggregation command(s), if a valid witness exists.
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-17)
+
+Outcome amended: 2026-05-17
+
+Completed reset verdict; Spec 179 remains blocked/deferred. No usable production FITL event/free-operation replacement witness was found.
+
+Discovery result:
+
+- Source inventory found many FITL `freeOperationGrants` / `grantFreeOperation` declarations, including production card-46 shaded (`559th Transport Grp`) issuing a required free-operation grant.
+- `pnpm -F @ludoforge/engine build` passed before the bounded probes.
+- `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --trace-default all --concurrency 1 --no-wasm` produced 20 evolved-player `actionSelection` decisions, 12 `chooseNStep` decisions, 25 `chooseOne` decisions, zero `outcomeGrantResolve` decisions, and zero `previewUsage.outcomeGrantContinuation.exitCounts`.
+- A production card-46 shaded event/free-operation probe published an event candidate and verified that applying it issued a pending free-operation grant (`seat=nva`, `actionIds=["infiltrate"]`, `phase=ready`, `remainingUses=1`), but the event candidate's preview drive still completed at depth 1 with `previewUsage.outcomeGrantContinuation.exitCounts={completed:0,postGrantCap:0,stochastic:0}`.
+- A source sweep found no production builder for `OutcomeGrantResolveContext`; the only concrete constructed `outcomeGrantResolve` frame in the repo is the synthetic architecture fixture at `packages/engine/test/architecture/preview-post-grant/post-grant-fixture.ts`.
+
+Classification:
+
+- Discovery class: `no usable FITL event/free-operation grant witness found`.
+- Engine source/test edits: none. The evidence proves a contract mismatch between Spec 179's frame target and current production FITL grant routing, not a generic `outcomeGrantResolve` behavior defect requiring TDD.
+- Spec 179 status: still blocked/deferred, now by `tickets/179ACTSELPRE-009.md`.
+- Same-family ticket updates: 005 and 007 remain blocked/not archive-ready; 006 is blocked until the successor surface defines whether `outcomeGrantContinuation` or another preview route still needs WASM alignment.
+- Successor: `tickets/179ACTSELPRE-009.md` owns specifying the ordinary-operation preview visibility surface without weakening the old Spec 179 gate.
+
+Command ledger:
+
+| ticket section | literal command/shorthand | ran directly/subsumed/split/replaced/not run | final citation |
+| --- | --- | --- | --- |
+| Test Plan | `pnpm -F @ludoforge/engine build` | run directly | passed before probes |
+| Test Plan | bounded FITL event/free-operation grant probe command(s) | split into one-seed TS tournament probe plus production card-46 shaded in-memory probe | report 008 reset verdict |
+| Test Plan | replacement witness/report aggregation command(s), if valid witness exists | not run; no valid replacement witness exists | report 008 reset verdict |
+| Acceptance | `pnpm run check:ticket-deps` | run directly after graph edits | passed: 5 active tickets and 2399 archived tickets |
+
+Generated/schema fallout: none. This ticket changed spec/report/ticket graph artifacts only; no engine source, schema artifacts, generated GameDef, profile YAML, or campaign diagnostics were modified.
+
+Proof validity: final proof is graph/report integrity plus bounded probe transcription. The source-level engine build preceded the probes and no source files changed afterward. No-invalidation: terminal status/proof transcription and post-check dependency result transcription only; no source, schema, command semantics, acceptance threshold, or successor ownership changed after `pnpm run check:ticket-deps`.
+
+Archive status: archived by post-ticket review on 2026-05-17; series continuation is `$implement-ticket tickets/179ACTSELPRE-009.md`.

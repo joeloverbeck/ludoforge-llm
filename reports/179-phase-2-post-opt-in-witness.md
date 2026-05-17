@@ -141,8 +141,64 @@ Kernel and FITL contract anchors:
 - `packages/engine/src/kernel/effects-turn-flow.ts` appends pending grants from `grantFreeOperation` / event free-operation grant flow.
 - `data/games/fire-in-the-lake/30-rules-actions.md` declares ordinary `train`, `patrol`, `sweep`, `assault`, `rally`, `march`, `attack`, and `terror` actions as main-phase operations; `freeOperationActionIds` makes those actions grantable by event/free-operation flow, but does not make ordinary operation candidates publish grant-resolution frames.
 
-The ticket therefore stops as blocked rather than changing engine/profile code. The user approved a bounded reset/discovery path; `tickets/179ACTSELPRE-008.md` owns choosing the next architecture: retarget Phase 2 to an event/free-operation-grant witness, replace the acceptance surface with a different preview-effect contract, or close Spec 179 as limited to event/free-operation grant continuation.
+The ticket therefore stopped as blocked rather than changing engine/profile code. The user approved a bounded reset/discovery path; `archive/tickets/179ACTSELPRE-008.md` later completed that reset and selected the deferral path because no usable production event/free-operation-grant witness exists.
+
+## 008 Reset Verdict
+
+Ticket 008 reran the bounded production probes and did not find a usable FITL event/free-operation replacement witness for Spec 179's `outcomeGrantResolve` opt-in.
+
+Fresh bounded probes on 2026-05-17:
+
+```bash
+pnpm -F @ludoforge/engine build
+node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --trace-default all --concurrency 1 --no-wasm
+node --input-type=module -e "<production card-46 shaded event/free-operation probe>"
+```
+
+The one-seed TS FITL trace still contained zero evolved-player `outcomeGrantResolve` moves and zero post-grant continuation exits:
+
+```json
+{
+  "actionSelection": 20,
+  "chooseNStep": 12,
+  "chooseOne": 25,
+  "outcomeGrantResolve": 0,
+  "outcomeGrantContinuationExitCounts": {
+    "completed": 0,
+    "postGrantCap": 0,
+    "stochastic": 0
+  }
+}
+```
+
+The production card-46 shaded probe used the existing FITL free-operation event path. It published a root `actionSelection` event candidate, applied that event, and verified that the event issued a pending free-operation grant:
+
+```json
+{
+  "eventCandidate": "card-46 shaded",
+  "pendingFreeOperationGrant": {
+    "seat": "nva",
+    "actionIds": ["infiltrate"],
+    "phase": "ready",
+    "remainingUses": 1
+  },
+  "previewUsage.outcomeGrantContinuation.exitCounts": {
+    "completed": 0,
+    "postGrantCap": 0,
+    "stochastic": 0
+  },
+  "eventCandidatePreviewDrive": {
+    "kind": "completed",
+    "depth": 1,
+    "syntheticDecisions": []
+  }
+}
+```
+
+That classifies the live FITL event/free-operation path as `no usable replacement witness found`, not `usable witness found`. Event declarations and `grantFreeOperation` do create pending free-operation grants, but the production path exposes those grants as free-operation `actionSelection` moves rather than an `outcomeGrantResolve` frame that the Spec 179 opt-in can continue through. A source sweep found no production builder for `OutcomeGrantResolveContext`; the only concrete constructed `outcomeGrantResolve` frame in the repo is the synthetic architecture fixture at `packages/engine/test/architecture/preview-post-grant/post-grant-fixture.ts`.
+
+No generic engine defect was fixed under ticket 008 because the bounded production probe proved a contract mismatch, not a failing generic `outcomeGrantResolve` behavior. The generic synthetic architecture test still proves the opt-in substrate when such a frame exists; current production FITL does not provide a closing witness for that frame type.
 
 ## Follow-Up Owner
 
-`tickets/179ACTSELPRE-008.md` owns the Phase 2 witness contract reset. Tickets 005 and 007 remain blocked and not archive-ready.
+`archive/tickets/179ACTSELPRE-008.md` completed the Phase 2 witness contract reset. No valid replacement witness exists in the current FITL event/free-operation path, so Spec 179 remains blocked/deferred and `tickets/179ACTSELPRE-009.md` owns specifying the next ordinary-operation preview visibility surface. Tickets 005, 006, and 007 remain blocked and not archive-ready.

@@ -1,7 +1,7 @@
 # Spec 179 — Action-Selection Preview: `outcomeGrantResolve` Opt-In
 
-**Status**: BLOCKED by `tickets/179ACTSELPRE-008.md`
-**Priority**: Medium — unblocks profiles that need to continue through event/free-operation `outcomeGrantResolve` frames; the original FITL ARVN Patrol/Sweep/Assault operation witness has been invalidated as the closing proof because ordinary operation actions do not publish grant-resolution frames.
+**Status**: BLOCKED by `tickets/179ACTSELPRE-009.md`
+**Priority**: Medium — the profile opt-in substrate exists for synthetic `outcomeGrantResolve` frames, but current production FITL event/free-operation paths do not provide a closing witness; ordinary operation preview visibility is deferred to the successor surface in `tickets/179ACTSELPRE-009.md`.
 **Complexity**: S–M — single bounded driver change with profile-side opt-in; phased measure-then-implement-then-document.
 **Date**: 2026-05-17
 **Dependencies**:
@@ -31,7 +31,7 @@ Allow profile authors to opt into an action-selection preview drive that continu
 
 `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` documented: across 427 ARVN actionSelection decisions × 15 seeds, `preview.victory.currentMargin.nva` is 100% uniform across candidates and `preview.victory.currentMargin.vc` is 95.5% uniform, while the self-margin control is 67.7% differentiating with average range 1.26. The engine accepts opponent seat tokens (`packages/engine/src/agents/policy-surface.ts:207-222`), and the preview engine does request and resolve the refs (84% of decisions, 75% ready/cand ratio), so this is not a depth-cap or rejection issue. The initial hypothesis was that the uniformity was structural because the drive exited on `outcomeGrantResolve` (`packages/engine/src/agents/policy-preview.ts:986-993`) before opponent-piece-removing/activating effects of operations such as FITL Assault landed in state.
 
-The Phase 2 / 007 follow-up invalidated that hypothesis for the original ARVN operation witness. Ordinary FITL operation actions are not event/free-operation grants and do not publish `outcomeGrantResolve`; that frame resolves pending free-operation grants. Spec 179's implemented opt-in remains meaningful for grant-resolution previews, but the original Patrol/Sweep/Assault witness can no longer be used as proof without a user-approved witness contract reset.
+The Phase 2 / 007 follow-up invalidated that hypothesis for the original ARVN operation witness. Ordinary FITL operation actions are not event/free-operation grants and do not publish `outcomeGrantResolve`; that frame resolves pending free-operation grants. Ticket 008 then ran a production FITL event/free-operation probe and found that event declarations do issue pending free-operation grants, but the live production path exposes those grants as free-operation `actionSelection` moves rather than an `outcomeGrantResolve` frame. The implemented opt-in remains covered by a synthetic architecture fixture, but current production FITL cannot close Spec 179 with a replacement event/free-operation witness.
 
 ### 3.2 Why a profile opt-in (not always-on)
 
@@ -114,17 +114,17 @@ The other current exits (`actionSelection`, `turnRetirement`, seat change, turn 
 |---|---|---|---|
 | **0 — Pre-implementation bench** | Run the witness command against current `arvn-evolved` (Spec 178 post-fix substrate). Record slow-tier wall-time numbers. Re-add exp-002's `penalizeOpponentMargin` to confirm uniformity holds at current state. | Bench numbers archived in `reports/179-phase-0-pre-opt-in-baseline.md`. Confirms uniformity is reproducible on a clean check-out. | S |
 | **1 — Implement opt-in** | Extend `AgentPreviewConfig` schema; thread through compiler/validator/schema artifacts; implement the post-grant continuation in `driveSyntheticCompletion`; add `previewUsage.outcomeGrantContinuation` trace fields; add a unit test pinning a small generic game's preview behavior with the opt-in on/off. | (a) New profile field accepted by compiler+validator; old profiles unchanged. (b) Engine test suite green. (c) Generic test demonstrates a candidate whose opponent-tied state differs only post-grant produces `distinct > 1` on the relevant ref with opt-in on, and `distinct = 1` with opt-in off. | M |
-| **2 — Witness on FITL ARVN + cookbook update** | Re-run the witness with `arvn-evolved.preview.outcomeGrantContinuation.enabled = true, extraDepthCap = 4`, plus a re-added `penalizeOpponentMargin`. Compare trace readyRefStats vs Phase 0 baseline. Update `docs/agent-dsl-cookbook.md` to document the new opt-in and the per-seat opponent ref availability (currently only `.self` is shown). | BLOCKED. Ticket 005 produced a red witness with the opt-in block present but zero post-grant continuation exits; ticket 007 classified the activation gap as a witness contract mismatch. The original ARVN operation witness does not exercise `outcomeGrantResolve`; ticket 008 owns the Phase 2 witness contract reset. | S–M |
+| **2 — Witness on FITL ARVN + cookbook update** | Re-run the witness with `arvn-evolved.preview.outcomeGrantContinuation.enabled = true, extraDepthCap = 4`, plus a re-added `penalizeOpponentMargin`. Compare trace readyRefStats vs Phase 0 baseline. Update `docs/agent-dsl-cookbook.md` to document the new opt-in and the per-seat opponent ref availability (currently only `.self` is shown). | BLOCKED. Ticket 005 produced a red witness with the opt-in block present but zero post-grant continuation exits; ticket 007 classified the original operation witness as the wrong contract; ticket 008 found no usable production FITL event/free-operation replacement witness. Ticket 009 owns the next ordinary-operation preview visibility surface. | S–M |
 
 Phase 0 is measurement-only; Phase 1 is the implementation; Phase 2 is the FITL witness + docs landing. The campaign (`fitl-arvn-agent-evolution`) resumes after Phase 2 lands.
 
 ## 6. Acceptance Gate Summary
 
-A profile that opts in must produce trace-visible continuation through `outcomeGrantResolve` when the candidate path actually reaches an event/free-operation grant-resolution frame. The original FITL ARVN tier-15 operation witness is no longer a valid acceptance target for that contract. A replacement gate needs a user-approved reset before the spec can close.
+A profile that opts in must produce trace-visible continuation through `outcomeGrantResolve` when the candidate path actually reaches that frame type. The original FITL ARVN tier-15 operation witness is not a valid acceptance target for that contract, and ticket 008 found no current production FITL event/free-operation replacement witness. Spec 179 therefore remains blocked/deferred rather than lowering the old opponent-margin thresholds or pretending event/free-operation evidence proves ordinary-operation visibility.
 
 ## 7. Out-of-Scope (Cross-Reference)
 
-- **Direction B** of the trigger report (separate `previewEffect.*` surface): considered, deferred. If Phase 2's perf gate fails on `arvn-evolved`, fold this spec and open Spec 180 for Direction B.
+- **Direction B** of the trigger report (separate `previewEffect.*` or equivalent ordinary-operation preview surface): deferred to `tickets/179ACTSELPRE-009.md` after ticket 008 found no valid production `outcomeGrantResolve` replacement witness.
 - **Direction C** of the trigger report (declarative action effect annotations): rejected by the trigger report itself ("not the right answer for this gap").
 - **Adjacent concern #2** of the report (which 4.5% of VC decisions currently differentiate): a small follow-up investigation, not in this spec.
 - **`preview.feature.X` for opponent-tied features** (report adjacent concern #1): the Phase 1 driver change *should* lift this as a free side-effect (the post-grant state would expose the opponent-tied feature recomputations), but Phase 2 acceptance only pins `currentMargin.<opp>`; a separate witness run can confirm features lift, and Phase 2 should record the observed behavior.
@@ -159,7 +159,8 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`archive/tickets/179ACTSELPRE-004.md`](../archive/tickets/179ACTSELPRE-004.md) — Phase 1c — `previewUsage.outcomeGrantContinuation` trace surface (covers §5 Phase 1 trace, §4.3)
 - [`tickets/179ACTSELPRE-005.md`](../tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (red witness / blocked handoff)
 - [`tickets/179ACTSELPRE-007.md`](../tickets/179ACTSELPRE-007.md) — Phase 2b — Classify FITL ARVN post-grant witness activation (blocked: original witness targets ordinary operations, not `outcomeGrantResolve`)
-- [`tickets/179ACTSELPRE-008.md`](../tickets/179ACTSELPRE-008.md) — Phase 2c — Reset Spec 179 witness contract (discover event/free-operation replacement witness or defer to a new ordinary-operation preview surface)
+- [`archive/tickets/179ACTSELPRE-008.md`](../archive/tickets/179ACTSELPRE-008.md) — Phase 2c — Reset Spec 179 witness contract (completed: no usable production event/free-operation `outcomeGrantResolve` replacement witness found)
+- [`tickets/179ACTSELPRE-009.md`](../tickets/179ACTSELPRE-009.md) — Phase 2d — Specify ordinary-operation preview visibility successor
 - [`tickets/179ACTSELPRE-006.md`](../tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (covers Open Question §8.4)
 
 Namespace `179ACTSELPRE` finalized from user invocation (brainstorm proposal `179POSTGRANTPREV` superseded). Ticket 001 added to cover §5 Phase 0 which was omitted from the brainstorm-time decomposition.

@@ -1,6 +1,6 @@
 # 179ACTSELPRE-007: Phase 2b — Classify FITL ARVN post-grant witness activation
 
-**Status**: BLOCKED by reset owner `tickets/179ACTSELPRE-008.md`
+**Status**: BLOCKED by ordinary-operation successor `tickets/179ACTSELPRE-009.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None in this ticket; generic contract investigation found the witness targets the wrong live surface.
@@ -25,7 +25,7 @@ This successor originally owned making the FITL ARVN witness actually exercise p
 3. Kernel inspection shows `outcomeGrantResolve` is published from an `OutcomeGrantResolveContext` and applies only when `turnOrderState.runtime.pendingFreeOperationGrants` contains the matching grant. Pending free-operation grants are built by `grantFreeOperation` / event free-operation grant flow, not by ordinary main-phase operation action resolution.
 4. FITL `30-rules-actions.md` declares `freeOperationActionIds` so event grants can offer operation actions as free operations, but the ordinary `train`, `patrol`, `sweep`, `assault`, `rally`, `march`, `attack`, and `terror` actions themselves are main-phase operations. Driving normal ARVN operation candidates deeper cannot create an `outcomeGrantResolve` frame unless they are being exercised as a granted free operation.
 5. Under `docs/FOUNDATIONS.md`, especially Foundations #1, #5, #10, #15, #16, and #20, the correct outcome is to preserve the red evidence and stop for a user decision. Retargeting the witness to event/free-operation grants or replacing this with a different preview-effect surface is a boundary change beyond this ticket's approved repair.
-6. The user approved the reset/discovery path on 2026-05-17; `tickets/179ACTSELPRE-008.md` owns that next step.
+6. The user approved the reset/discovery path on 2026-05-17; `archive/tickets/179ACTSELPRE-008.md` completed that reset and found no usable production FITL event/free-operation replacement witness. `tickets/179ACTSELPRE-009.md` owns the next ordinary-operation preview visibility surface.
 
 ## Architecture Check
 
@@ -73,7 +73,7 @@ Do not rerun the same 15-seed gate as a closing proof. The current gate cannot s
 
 1. `reports/179-phase-2-post-opt-in-witness.md` preserves the 005 red gate and records the 007 contract reassessment.
 2. The ticket stops before changing the witness target, adding FITL-specific engine logic, or lowering the Phase 2 gate.
-3. `tickets/179ACTSELPRE-008.md` must choose whether to retarget the witness to event/free-operation grants, replace the witness with a different preview-effect surface, or close Spec 179 as limited to event/free-operation grant continuation.
+3. `archive/tickets/179ACTSELPRE-008.md` chose the reset verdict: no usable production event/free-operation `outcomeGrantResolve` replacement witness exists. `tickets/179ACTSELPRE-009.md` owns the different ordinary-operation preview surface.
 
 ### Invariants
 

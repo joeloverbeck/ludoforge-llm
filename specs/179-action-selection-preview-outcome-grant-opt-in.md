@@ -147,12 +147,15 @@ node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs
 
 Plus a custom aggregation node script over `campaigns/fitl-arvn-agent-evolution/traces/trace-*.json` that produces the readyRefStats table from `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (the trigger report) so before/after comparisons use identical methodology.
 
-## 10. Notes for `/spec-to-tickets`
+## 10. Tickets
 
-Suggested ticket decomposition:
+Decomposed via `/spec-to-tickets` on 2026-05-17:
 
-- `179POSTGRANTPREV-001` — Schema + compiler + validator wiring for `outcomeGrantContinuation`; tests pin old-profile compatibility.
-- `179POSTGRANTPREV-002` — Driver change in `driveSyntheticCompletion`; unit test on a small generic game.
-- `179POSTGRANTPREV-003` — `previewUsage` trace fields + a trace-shape regression test.
-- `179POSTGRANTPREV-004` — Cookbook addendum + FITL ARVN Phase 2 witness run.
-- (Optional) `179POSTGRANTPREV-005` — WASM-route alignment per Open Question §8.4.
+- [`archive/tickets/179ACTSELPRE-001.md`](../archive/tickets/179ACTSELPRE-001.md) — Phase 0 — Pre-implementation bench (baseline witness report) (covers §5 Phase 0)
+- [`tickets/179ACTSELPRE-002.md`](../tickets/179ACTSELPRE-002.md) — Phase 1a — Schema/compiler/validator wiring for `outcomeGrantContinuation` (covers §5 Phase 1 schema)
+- [`tickets/179ACTSELPRE-003.md`](../tickets/179ACTSELPRE-003.md) — Phase 1b — Driver change in `driveSyntheticCompletion` (post-grant continuation) (covers §5 Phase 1 driver, §4.2)
+- [`tickets/179ACTSELPRE-004.md`](../tickets/179ACTSELPRE-004.md) — Phase 1c — `previewUsage.outcomeGrantContinuation` trace surface (covers §5 Phase 1 trace, §4.3)
+- [`tickets/179ACTSELPRE-005.md`](../tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (covers §5 Phase 2, §6 acceptance gate)
+- [`tickets/179ACTSELPRE-006.md`](../tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (covers Open Question §8.4)
+
+Namespace `179ACTSELPRE` finalized from user invocation (brainstorm proposal `179POSTGRANTPREV` superseded). Ticket 001 added to cover §5 Phase 0 which was omitted from the brainstorm-time decomposition.

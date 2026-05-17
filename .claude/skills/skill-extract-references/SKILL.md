@@ -17,6 +17,7 @@ Complements skill-consolidate: consolidate first to deduplicate and tighten, the
 
 - Read `<skill-dir>/SKILL.md` in full.
 - List `<skill-dir>/references/` if it exists. Read every existing reference doc to understand what is already extracted.
+- **Oversized SKILL.md**: if the file exceeds the Read tool's token limit, read it in sequential chunks covering the *whole file* — partial coverage will cause the rewrite step to drop content from unread regions. Record section-heading landmarks (heading text + line numbers) while reading to support targeted re-reads during the rewrite. This is the common case for extract-references since the skill's purpose is operating on bloated SKILLs.
 
 ### 2. Early Exit Check
 
@@ -49,6 +50,8 @@ For each block, determine one of three categories:
 
 **When ambiguous**: default to always-loaded. It is safer to load too much than to miss instructions that should have applied.
 
+**Conditional-ref size threshold**: more lenient than always-loaded — the conditional load pattern itself is the value, not the size. Extract any conditional block that is internally coherent and gated by a clear trigger, even when under 20 lines (e.g., a 10-line plan-mode block triggered by "when plan mode is active" is worth extracting). The alternative — inline-with-conditional-loader prose like "if plan mode is active, ignore the next paragraph" — is harder to read than a clean conditional file load.
+
 ### 5. Group and Name
 
 - Merge blocks that share a logical theme into a single reference doc. Do not create one reference per H3 — group by coherent topic. Aim for 3-8 reference docs. Fewer than 3 suggests the extraction isn't worthwhile. More than 8 suggests over-fragmentation — merge thematically related docs.
@@ -73,18 +76,21 @@ For each block, determine one of three categories:
     - Unconditional: "Load `references/verification-and-closeout.md`."
     - Conditional: "If the change touches AI pipelines, load `references/ai-pipeline-checks.md`."
   - Place conditional load instructions at the earliest workflow step where the reference content is first needed, not at the top of the file.
-- **Rewrite internal anchor links** (`#heading-slug`) that pointed to now-extracted content. Replace with prose references to the reference doc containing the target heading (e.g., "see `references/verification.md`").
+- **Rewrite cross-section references**:
+  - **Explicit anchor links** (`#heading-slug`) that pointed to now-extracted content: replace with prose references to the reference doc containing the target heading (e.g., "see `references/verification.md`").
+  - **Prose semantic references** ("Step N", "§N", "X section below"): leave intra-doc references as-is when self-explanatory, but where the referenced section now lives in a different file, append the file path (e.g., "see Pre-Set Directives §4 in `references/interview-protocol.md`"). Skill files predominantly use the prose form, so the semantic-reference case is the common one.
 - **Preserve** universal hard rules as a short section at the bottom.
 - The thin SKILL.md should read as a clear, scannable orchestration sequence — not a wall of checklists.
-- **Target**: the thin SKILL.md should be roughly 25-40% of the original line count. If it exceeds 50%, consider extracting more blocks.
+- **Target**: the thin SKILL.md should be roughly 25-40% of the original line count. If it exceeds 50%, consider extracting more blocks. Under 25% is acceptable when the thin SKILL still reads as a clear orchestration sequence — under-extraction is not a defect. The 50%+ trigger to extract more is the only hard threshold; the 25% lower bound is just the typical resting state, not a floor.
 
 ### 7b. Verify
 
 Re-read the thin SKILL.md and each reference doc. Check:
 - Frontmatter unchanged.
-- No content lost between original and combined output (compare total line counts as a sanity check).
+- No content lost between original and combined output (compare total line counts as a sanity check — expect 0-15% expansion due to per-ref-doc H1 headers, conditional load instructions in the thin SKILL, and inline cross-doc nav notes; expansion above 15% suggests prose duplication that should be deduplicated; contraction below the original suggests content was dropped during the rewrite (regression — fix before proceeding)).
 - No broken internal anchor links pointing to extracted headings.
 - No duplicate content across reference docs.
+- **Defensive sentinel grep**: run `grep -nE '\[.*\]\(#[a-z-]+\)' <thin-SKILL.md>` to confirm no markdown anchor links survived the rewrite (the rewrite should have replaced them per Step 7). If terms were intentionally removed from the SKILL in a prior session edit (e.g., a deprecated chain neighbor, a renamed concept), also run a fixed-string grep for those terms to confirm the rewrite didn't re-introduce them from the original file's prose.
 
 If any issue is found, fix it before proceeding.
 
@@ -99,6 +105,8 @@ References:
 - references/bar.md (conditional: when X)
 - references/baz.md (always)
 ```
+
+**Recommended next step**: invoke `/skill-audit <skill-dir>` to verify the extraction. The audit will check cross-doc reference integrity, validate that conditional load instructions are placed at the right workflow steps, and surface any newly-introduced ambiguity from the rewrite. Post-extraction audits commonly catch nav-rewrite gaps that Step 7b's sanity checks don't cover.
 
 ## Hard Rules
 

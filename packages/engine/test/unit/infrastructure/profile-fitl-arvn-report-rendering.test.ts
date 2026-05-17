@@ -46,6 +46,7 @@ describe('FITL ARVN decomposition report rendering', () => {
     const csv = renderCsv([row]);
     assert.match(csv, /hotPathBucketFamilies/u);
     assert.match(csv, /tokenStateIndex:2\/3\.5ms; evalQuery:4\/1\.25ms/u);
+    assert.match(csv, /continuedDeepeningResidualSplit/u);
     assert.match(csv, /terminalBoundaryProjectionSplit/u);
     assert.match(csv, /expected-terminal-boundary\/depthCap:1/u);
 
@@ -73,6 +74,71 @@ describe('FITL ARVN decomposition report rendering', () => {
     assert.match(markdown, /Terminal-Boundary Projected-State Split/u);
     assert.match(markdown, /expected-terminal-boundary/u);
     assert.match(markdown, /depthCap/u);
+  });
+
+  it('renders a continued-deepening no-counter residual split', async () => {
+    const { renderCsv, renderMarkdown } = await import(pathToFileURL(renderingModulePath).href) as {
+      readonly renderCsv: (rows: readonly Record<string, unknown>[]) => string;
+      readonly renderMarkdown: (rollup: Record<string, unknown>, options: Record<string, unknown>) => string;
+    };
+    const row = {
+      seed: 1005,
+      decisionIndex: 1,
+      microturnClass: 'coupArvnRedeployPolice:chooseOne',
+      elapsedMs: 20,
+      previewBranch: 'continuedDeepening',
+      wasmScoreRowRouteCount: 0,
+      wasmScoreRowUnsupportedCount: 0,
+      wasmPreviewCandidateFeatureRowRouteCount: 0,
+      wasmPreviewCandidateFeatureRowUnsupportedCount: 0,
+      wasmProductionPreviewDriveRouteCount: 0,
+      wasmProductionPreviewDriveUnsupportedCount: 0,
+      hotPathBuckets: [
+        { key: 'policyInnerPreview:chooseOneRun', count: 2, totalMs: 5 },
+        { key: 'policyMicroturnSearch:chooseOneScoreOptions', count: 4, totalMs: 7 },
+        { key: 'tokenStateIndex:build', count: 1, totalMs: 3 },
+      ],
+    };
+
+    const csv = renderCsv([row]);
+    assert.match(csv, /continued-deepening-orchestration-inclusive:2\/5ms/u);
+    assert.match(csv, /policy-search-candidate-scoring-nested:4\/7ms/u);
+    assert.match(csv, /existing-hot-path-bucket-nested:1\/3ms/u);
+    assert.match(csv, /unattributed-after-top-level-orchestration:\/15ms/u);
+
+    const markdown = renderMarkdown({
+      date: 'test',
+      command: 'node script',
+      perSeed: [],
+      seedCount: 0,
+      acceptance: { reportRowCount: 1, hotAxisOver3x: false },
+      timeoutMs: 1,
+      noWasm: false,
+      wasmTimingProfile: false,
+      perDecisionClass: [],
+      topNHotAxes: [{
+        ...row,
+        key: 'coupArvnRedeployPolice:chooseOne|continuedDeepening',
+        microturnClass: 'coupArvnRedeployPolice:chooseOne',
+        previewBranch: 'continuedDeepening',
+        totalMs: 20,
+        count: 1,
+        meanMs: 20,
+        p95Ms: 20,
+        maxMs: 20,
+        cacheHits: 0,
+        cacheMisses: 0,
+        cacheCompileTimeMs: 0,
+      }],
+      fastSlowDeltas: [],
+    }, {
+      csvPath: '/tmp/report.csv',
+      profileBuckets: true,
+      relativeToRepo: (path: string) => path,
+    });
+    assert.match(markdown, /Continued-Deepening No-Counter Residual Split/u);
+    assert.match(markdown, /continued-deepening-orchestration-inclusive/u);
+    assert.match(markdown, /policy-search-candidate-scoring-nested/u);
   });
 
   it('orders hot-path bucket families without ambient locale comparison', async () => {

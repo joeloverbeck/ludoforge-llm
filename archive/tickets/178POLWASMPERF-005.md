@@ -1,6 +1,6 @@
 # 178POLWASMPERF-005: Split continued-deepening orchestration residual from unbucketed policy search work
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected - profiler/report helper instrumentation only unless live evidence proves a tiny policy-agent attribution hook is needed
@@ -102,3 +102,57 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 2. Run the focused script/test that proves the new attribution output.
 3. `pnpm run check:ticket-deps`
 4. `git diff --check`
+
+## Outcome (2026-05-17)
+
+**Completion date:** 2026-05-17.
+
+**Intended durable state:** `COMPLETED`. The report recommendation is a concrete implementation-spec owner, not another investigation ticket.
+
+**Landed scope:**
+
+- Added generic hot-path buckets for inner-preview orchestration in `packages/engine/src/agents/policy-agent-inner-preview.ts`.
+- Added nested microturn policy-search scoring/count buckets in `packages/engine/src/agents/microturn-option-evaluator.ts`.
+- Extended `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` with `continuedDeepeningResidualSplit` CSV output and a rendered `Continued-Deepening No-Counter Residual Split` section.
+- Updated `packages/engine/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.ts` to prove the new split output shape.
+- Produced the checked-in decisive evidence artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-4-continued-deepening-orchestration-residual.csv`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-4-continued-deepening-orchestration-residual.md`
+- Produced `reports/178-phase-4-continued-deepening-orchestration-residual.md`.
+
+**Post-review correction:** `$post-ticket-review` found that the generated Phase 4 witness Markdown still used the stale status label `Spec 173 measurement witness`. The renderer and checked-in Phase 4 witness artifact now use the generic `FITL ARVN measurement witness` label; no measured values, report rows, CSV fields, or recommendation changed.
+
+**Decision:** `create-spec: Optimize continued-deepening inner-preview orchestration`. The target no-counter axis `coupArvnRedeployPolice:chooseOne | continuedDeepening` measured `7,635.87 ms`, or `9.888%` of the current same-run slow-tier wall time. The new top-level `continued-deepening-orchestration-inclusive` bucket accounts for `7,581.42 ms`, or `9.8174%`, clearing the `5%` materiality bar of `3,861.2059 ms`. Nested existing hot-path buckets (`1,619.58 ms`, `2.0972%`) and nested policy-search candidate scoring (`1,537.43 ms`, `1.991%`) remain below the bar as separate owners, and the unattributed residual is only `54.45 ms`, or `0.0705%`.
+
+**Deliverable ledger:**
+
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — verified-no-edit; the existing script already carries the new renderer field through generated CSV/Markdown artifacts, and an attempted aggregate-only edit was removed to keep the near-cap script under the 800-line source cap.
+- `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — done; adds the CSV field, no-counter split section, nested-bucket wording, and residual math.
+- policy-agent source under `packages/engine/src/agents/` — done; measurement-only generic hot-path buckets in `policy-agent-inner-preview.ts` and `microturn-option-evaluator.ts`.
+- `reports/178-phase-4-continued-deepening-orchestration-residual.md` — done; checked-in decision report.
+
+**Command ledger:**
+
+| Ticket command | Final citation |
+|---|---|
+| `pnpm -F @ludoforge/engine build` | passed after source/test edits |
+| focused script/test proving attribution output | `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.js` passed with 3 tests |
+| post-review focused cleanup proof | `pnpm -F @ludoforge/engine build` passed; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.js` passed with 3 tests |
+| focused profiler smoke | `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005 --timeout-ms 600000 --date 2026-05-17-phase-4-continued-deepening-orchestration-residual-smoke --profile-buckets --output-dir /tmp/ludoforge-178-phase4-smoke` passed; validated real-data output shape without touching checked-in reports |
+| decisive profiler command | `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-05-17-phase-4-continued-deepening-orchestration-residual --profile-buckets` passed; completed 5/5 seeds and wrote the checked-in CSV/Markdown artifacts |
+| `pnpm run check:ticket-deps` before terminal status | passed; checked 1 active ticket and 2389 archived tickets |
+| `git diff --check` | passed |
+| untracked artifact whitespace | passed via `rg -n '[ \t]+$'` over the new Phase 4 report, generated Markdown artifact, and generated CSV artifact; no matches |
+
+**Generated/schema fallout:** no schema, generated JSON, GameSpecDoc, visual config, or WASM ABI artifact changed. The generated evidence artifacts are checked-in report/CSV/Markdown files under `reports/`.
+
+**Source-size ledger:**
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+|---|---:|---:|---|---:|---|---|
+| `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` | 796 | 796 | no | none | no retained diff after near-cap check | none |
+| `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` | 543 | 669 | no | 126 lines | kept the new report-only split helper local to the existing renderer; under the 800-line cap, extraction would create a new script-only module before a second consumer exists | none |
+
+**Runtime surface breadth:** policy/agent measurement-only plus report rendering. No runtime optimization or game-specific behavior changed.
+
+**Late-edit proof validity:** terminal status/proof transcription only after the source, test, report, raw artifacts, decisive profiler command, dependency integrity, and hygiene proof were already settled. No scope, acceptance, command semantics, touched-file ownership, dependency ownership, source, test, generated runtime artifact, schema, or report metric changed in this terminal patch.

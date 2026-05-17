@@ -6,6 +6,7 @@ import type {
   MoveParamScalar,
 } from '../kernel/types.js';
 import type { ChooseNStepContext, ChooseOneContext } from '../kernel/microturn/types.js';
+import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import {
   previewOptionRefKey,
   runChooseOneInnerPreview,
@@ -424,6 +425,7 @@ export function createPolicyAgentChooseOneInnerPreview(
   const refs = previewDerived.previewOptionRefs;
   const refIds = refs.map((ref) => previewOptionRefKey(ref));
   const capClass = resolvedProfile.profile.preview.inner?.capClass ?? 'standard256';
+  const runStartedAt = perfHotPathStart();
   const run = runChooseOneInnerPreview({
     def: input.def,
     state: input.state,
@@ -438,13 +440,17 @@ export function createPolicyAgentChooseOneInnerPreview(
     refs,
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
+  perfHotPathEnd('policyInnerPreview:chooseOneRun', runStartedAt);
+  const summarizeStartedAt = perfHotPathStart();
+  const usage = summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds, {
+    strategy: resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass',
+    capClass,
+  });
+  perfHotPathEnd('policyInnerPreview:summarizeUsage', summarizeStartedAt);
   return {
     run,
     refIds,
-    usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds, {
-      strategy: resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass',
-      capClass,
-    }),
+    usage,
     byOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
     projectedStateByOptionKey: projectedStatesByOptionKey(run, capClass),
@@ -465,6 +471,7 @@ export function createPolicyAgentChooseNStepInnerPreview(
   const previewDerived = collectMicroturnPreviewDerivedRefs(resolvedProfile);
   const refs = previewDerived.previewOptionRefs;
   const refIds = previewDerived.refIds;
+  const runStartedAt = perfHotPathStart();
   const run = runChooseNStepInnerPreview({
     def: input.def,
     state: input.state,
@@ -479,9 +486,13 @@ export function createPolicyAgentChooseNStepInnerPreview(
     refs,
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
+  perfHotPathEnd('policyInnerPreview:chooseNStepBroadRun', runStartedAt);
   const strategy = resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass';
   const capClass = resolvedProfile.profile.preview.inner?.capClass ?? 'standard256';
+  const broadSignalsStartedAt = perfHotPathStart();
   const broadSignals = triggerSignalsForRun(input, resolvedProfile, run, refIds, previewDerived.triggerTerms, capClass);
+  perfHotPathEnd('policyInnerPreview:chooseNStepBroadSignals', broadSignalsStartedAt);
+  const deepStartedAt = perfHotPathStart();
   const deepening = strategy === 'continuedDeepening'
     ? runDeepPass({
         def: input.def,
@@ -498,8 +509,11 @@ export function createPolicyAgentChooseNStepInnerPreview(
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       }, run, broadSignals)
     : { run };
+  perfHotPathEnd('policyInnerPreview:chooseNStepDeepPass', deepStartedAt);
   const finalRun = deepening.run;
+  const finalSignalsStartedAt = perfHotPathStart();
   const finalSignals = triggerSignalsForRun(input, resolvedProfile, finalRun, refIds, previewDerived.triggerTerms, capClass);
+  perfHotPathEnd('policyInnerPreview:chooseNStepFinalSignals', finalSignalsStartedAt);
   const phaseCoverage = {
     strategy,
     capClass,
@@ -508,10 +522,13 @@ export function createPolicyAgentChooseNStepInnerPreview(
       ? {}
       : { deep: summarizePhaseCoverage(finalRun, refIds, deepening.triggerFired, finalSignals) }),
   };
+  const summarizeStartedAt = perfHotPathStart();
+  const usage = summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds, phaseCoverage, finalSignals);
+  perfHotPathEnd('policyInnerPreview:summarizeUsage', summarizeStartedAt);
   return {
     run: finalRun,
     refIds,
-    usage: summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds, phaseCoverage, finalSignals),
+    usage,
     byOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
     projectedStateByOptionKey: projectedStatesByOptionKey(finalRun, capClass),

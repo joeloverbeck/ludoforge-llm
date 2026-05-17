@@ -81,7 +81,7 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 - `reports/178-phase-3-same-run-attribution-counters.md` (new)
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv` (new decisive same-run raw artifact)
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md` (new decisive same-run rendered artifact)
-- `tickets/178POLWASMPERF-005.md` (new only if the report recommends another investigation ticket)
+- `archive/tickets/178POLWASMPERF-005.md` (created by this ticket and later archived after completion)
 
 ## Out of Scope
 
@@ -123,6 +123,7 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 ## Outcome (2026-05-17)
 
 **Completion date:** 2026-05-17.
+**Outcome amended:** 2026-05-17.
 
 **Durable state:** `COMPLETED`. The recommendation is a narrower follow-up investigation, not an implementation spec.
 
@@ -135,7 +136,7 @@ If `create-spec` is recommended, include the problem statement, materiality thre
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md`
 - Produced `reports/178-phase-3-same-run-attribution-counters.md`.
-- Created `tickets/178POLWASMPERF-005.md` as the non-overlapping follow-up for the remaining material unbucketed/orchestration residual.
+- Created `archive/tickets/178POLWASMPERF-005.md` as the non-overlapping follow-up for the remaining material unbucketed/orchestration residual; it was later completed and archived.
 
 **Post-review correction:** Replaced the new hot-path bucket family tie-breaker in `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` with codepoint ordering instead of ambient `localeCompare`, and added a focused regression assertion in `packages/engine/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.ts`.
 
@@ -152,7 +153,7 @@ If `create-spec` is recommended, include the problem statement, materiality thre
 - `reports/178-phase-3-same-run-attribution-counters.md` — done; checked-in decision report.
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.csv` — done; checked-in decisive raw artifact.
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-3-same-run-attribution-counters.md` — done; checked-in decisive rendered artifact.
-- `tickets/178POLWASMPERF-005.md` — done; follow-up investigation owner for the remaining residual.
+- `archive/tickets/178POLWASMPERF-005.md` — done; follow-up investigation owner for the remaining residual, later completed and archived.
 
 **Command ledger:**
 

@@ -44,6 +44,7 @@ export function renderCsv(rows) {
     'hotPathBuckets',
     'hotPathBucketFamilies',
     'sameRunNoCounterAttribution',
+    'continuedDeepeningResidualSplit',
     'terminalBoundaryProjectionSplit',
     'seatId',
     'profileId',
@@ -66,7 +67,7 @@ export function renderMarkdown(rollup, options) {
     '# FITL ARVN 15-Seed Per-Microturn-Class Decomposition',
     '',
     `**Date**: ${rollup.date}`,
-    '**Status**: Spec 173 measurement witness.',
+    '**Status**: FITL ARVN measurement witness.',
     `**Command**: \`${rollup.command}\``,
     `**CSV**: \`${relativeToRepo(csvPath)}\``,
     '',
@@ -126,6 +127,7 @@ export function renderMarkdown(rollup, options) {
       `${formatNumber(row.cacheCompileTimeMs)} |`,
     ].join(' | ')),
     ...(profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
+    ...(profileBuckets ? renderContinuedDeepeningResidualSplitSection(rollup.topNHotAxes) : []),
     ...renderWasmTimingSection(rollup.perDecisionClass),
     ...renderWasmSerializationSection(rollup.perDecisionClass),
     ...renderUnsupportedReasonSection(rollup.perDecisionClass),
@@ -258,6 +260,9 @@ function csvValue(row, header) {
   }
   if (header === 'sameRunNoCounterAttribution') {
     return formatSameRunNoCounterAttribution(row);
+  }
+  if (header === 'continuedDeepeningResidualSplit') {
+    return formatContinuedDeepeningResidualSplit(row);
   }
   if (header === 'terminalBoundaryProjectionSplit') {
     return formatTerminalBoundaryProjectionSplit(row);
@@ -495,6 +500,127 @@ function formatSameRunNoCounterAttribution(row) {
   return families === ''
     ? 'no-route-or-unsupported-counter; no-same-run-hot-path-buckets'
     : `no-route-or-unsupported-counter; same-run-hot-path-families=${families}`;
+}
+
+function continuedDeepeningResidualSplitRows(row) {
+  if (row.previewBranch !== 'continuedDeepening') {
+    return [];
+  }
+  const routeOrUnsupportedCount =
+    Number(row.wasmScoreRowRouteCount ?? 0)
+    + Number(row.wasmScoreRowUnsupportedCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowRouteCount ?? 0)
+    + Number(row.wasmPreviewCandidateFeatureRowUnsupportedCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveRouteCount ?? 0)
+    + Number(row.wasmProductionPreviewDriveUnsupportedCount ?? 0);
+  if (routeOrUnsupportedCount > 0) {
+    return [];
+  }
+  const rows = [];
+  const bucketsByClass = new Map();
+  let bucketTotalMs = 0;
+  let topLevelBucketTotalMs = 0;
+  for (const bucket of row.hotPathBuckets ?? []) {
+    const classification = classifyContinuedDeepeningBucket(bucket.key);
+    const current = bucketsByClass.get(classification) ?? { count: 0, totalMs: 0 };
+    const count = Number(bucket.count ?? 0);
+    const totalMs = Number(bucket.totalMs ?? 0);
+    bucketTotalMs += totalMs;
+    if (classification === 'continued-deepening-orchestration-inclusive') {
+      topLevelBucketTotalMs += totalMs;
+    }
+    bucketsByClass.set(classification, {
+      count: current.count + count,
+      totalMs: current.totalMs + totalMs,
+    });
+  }
+  for (const [classification, bucket] of bucketsByClass) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ classification, count: bucket.count, totalMs: round4(bucket.totalMs) });
+    }
+  }
+  const residualBasisMs = topLevelBucketTotalMs > 0 ? topLevelBucketTotalMs : bucketTotalMs;
+  const residualMs = Math.max(0, Number(row.totalMs ?? row.elapsedMs ?? 0) - residualBasisMs);
+  if (residualMs > 0) {
+    rows.push({
+      classification: topLevelBucketTotalMs > 0
+        ? 'unattributed-after-top-level-orchestration'
+        : 'unbucketed-orchestration-or-policy-search-residual',
+      count: '',
+      totalMs: round4(residualMs),
+    });
+  }
+  return rows.sort((left, right) =>
+    right.totalMs - left.totalMs
+    || compareCodepoint(left.classification, right.classification),
+  );
+}
+
+function classifyContinuedDeepeningBucket(key) {
+  const text = String(key);
+  if (text.startsWith('policyInnerPreview:')) {
+    return 'continued-deepening-orchestration-inclusive';
+  }
+  if (text.startsWith('policyMicroturnSearch:')) {
+    return 'policy-search-candidate-scoring-nested';
+  }
+  if (
+    text.startsWith('tokenStateIndex:')
+    || text.startsWith('evalQuery:')
+    || text.startsWith('zobrist:')
+    || text.startsWith('policyWasmRuntime:')
+    || text.startsWith('policyWasmStatePatch:')
+  ) {
+    return 'existing-hot-path-bucket-nested';
+  }
+  return 'other-instrumented-bucket-nested';
+}
+
+function formatContinuedDeepeningResidualSplit(row) {
+  return continuedDeepeningResidualSplitRows(row)
+    .map((split) => `${split.classification}:${split.count}/${formatNumber(split.totalMs)}ms`)
+    .join('; ');
+}
+
+function renderContinuedDeepeningResidualSplitSection(rows) {
+  const splitRows = rows
+    .flatMap((row) => continuedDeepeningResidualSplitRows(row).map((split) => ({
+      microturnClass: row.microturnClass ?? row.key,
+      previewBranch: row.previewBranch ?? '',
+      axisTotalMs: row.totalMs ?? row.elapsedMs ?? 0,
+      ...split,
+    })))
+    .filter((row) => row.totalMs > 0)
+    .sort((left, right) =>
+      right.totalMs - left.totalMs
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.classification, right.classification),
+    );
+  if (splitRows.length === 0) {
+    return [
+      '',
+      '## Continued-Deepening No-Counter Residual Split',
+      '',
+      '_No no-counter continued-deepening rows recorded._',
+    ];
+  }
+  return [
+    '',
+    '## Continued-Deepening No-Counter Residual Split',
+    '',
+    'Rows include only `continuedDeepening` axes with zero route/unsupported counters. `continued-deepening-orchestration-inclusive` is a top-level same-run bucket; `*-nested` rows are child hot-path evidence inside that orchestration bucket and are not additive with it. The residual row is the measured axis wall time not explained by the top-level orchestration bucket.',
+    '',
+    '| Microturn class | Preview branch | Classification | Count | Total ms | Share of axis wall |',
+    '|---|---|---|---:|---:|---:|',
+    ...splitRows.map((row) => [
+      `| ${row.microturnClass}`,
+      row.previewBranch,
+      row.classification,
+      row.count,
+      formatNumber(row.totalMs),
+      `${formatNumber(row.axisTotalMs > 0 ? (row.totalMs / row.axisTotalMs) * 100 : 0)}% |`,
+    ].join(' | ')),
+  ];
 }
 
 function terminalBoundaryProjectionRows(row) {

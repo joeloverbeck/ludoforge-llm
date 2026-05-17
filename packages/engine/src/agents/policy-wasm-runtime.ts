@@ -1142,7 +1142,7 @@ export const createPolicyWasmRuntime = (
           view.getInt32(outTagsPtr + (index * I32_BYTES), true),
           view.getInt32(outValuesPtr + (index * I32_BYTES), true),
         ));
-        timing?.record();
+        timing?.record(candidates.length);
         return values;
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
@@ -1242,7 +1242,7 @@ export const createPolicyWasmRuntime = (
             ...(unsupportedOwner === undefined ? {} : { unsupportedOwner }),
             reason: `unsupported preview-drive class ${unsupportedDriveClass}`,
           } satisfies PolicyWasmPreviewDriveResult;
-          timing?.record();
+          timing?.record(previewInput.candidates.length);
           return result;
         }
         if (status !== 0) {
@@ -1274,7 +1274,7 @@ export const createPolicyWasmRuntime = (
             statePatchMaxOpCount,
           ),
         } satisfies PolicyWasmPreviewDriveResult;
-        timing?.record();
+        timing?.record(previewInput.candidates.length);
         return result;
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);

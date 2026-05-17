@@ -144,6 +144,10 @@ describe('policy WASM timing profile flag', () => {
       executionNs: 0,
       deserializationNs: 0,
       callCount: 0,
+      batchSizeSum: 0,
+      batchSizeMin: 0,
+      batchSizeMax: 0,
+      batchSizeHistogram: {},
     });
     assert.equal(enabled.callCount, 1);
     assert.ok(enabled.marshalingNs > 0);

@@ -8,6 +8,10 @@ export interface PolicyWasmTimingBucket {
   readonly executionNs: number;
   readonly deserializationNs: number;
   readonly callCount: number;
+  readonly batchSizeSum: number;
+  readonly batchSizeMin: number;
+  readonly batchSizeMax: number;
+  readonly batchSizeHistogram: Readonly<Record<string, number>>;
 }
 
 export type PolicyWasmTimingBucketSnapshot = Readonly<Record<PolicyWasmTimingRouteClass, PolicyWasmTimingBucket>>;
@@ -17,7 +21,7 @@ export interface PolicyWasmTimingRecorder {
   startExecution(): void;
   finishExecution(): void;
   startDeserialization(): void;
-  record(): void;
+  record(batchSize?: number): void;
 }
 
 const ROUTE_CLASSES: readonly PolicyWasmTimingRouteClass[] = [
@@ -33,6 +37,10 @@ const createEmptyBucket = (): PolicyWasmTimingBucket => ({
   executionNs: 0,
   deserializationNs: 0,
   callCount: 0,
+  batchSizeSum: 0,
+  batchSizeMin: 0,
+  batchSizeMax: 0,
+  batchSizeHistogram: {},
 });
 
 const timingBuckets: Record<PolicyWasmTimingRouteClass, PolicyWasmTimingBucket> = {
@@ -70,11 +78,35 @@ export const beginPolicyWasmTiming = (
     startDeserialization(): void {
       startedAt = performance.now();
     },
-    record(): void {
+    record(batchSize?: number): void {
       deserializationNs = elapsedNs(startedAt);
-      recordPolicyWasmTimingBucket(routeClass, { marshalingNs, executionNs, deserializationNs });
+      recordPolicyWasmTimingBucket(routeClass, {
+        marshalingNs,
+        executionNs,
+        deserializationNs,
+        ...(batchSize === undefined ? {} : { batchSize }),
+      });
     },
   };
+};
+
+const batchSizeHistogramLabel = (batchSize: number): string => {
+  if (batchSize <= 1) {
+    return '1';
+  }
+  if (batchSize <= 4) {
+    return '2-4';
+  }
+  if (batchSize <= 8) {
+    return '5-8';
+  }
+  if (batchSize <= 16) {
+    return '9-16';
+  }
+  if (batchSize <= 32) {
+    return '17-32';
+  }
+  return '33+';
 };
 
 export const resetPolicyWasmTimingBuckets = (): void => {
@@ -85,22 +117,48 @@ export const resetPolicyWasmTimingBuckets = (): void => {
 
 export const recordPolicyWasmTimingBucket = (
   routeClass: PolicyWasmTimingRouteClass,
-  elapsed: Omit<PolicyWasmTimingBucket, 'callCount'>,
+  elapsed: Pick<PolicyWasmTimingBucket, 'marshalingNs' | 'executionNs' | 'deserializationNs'> & {
+    readonly batchSize?: number;
+  },
 ): void => {
   if (!POLICY_WASM_TIMING_PROFILE_ENABLED) {
     return;
   }
   const current = timingBuckets[routeClass];
+  const batchSize = elapsed.batchSize;
+  const hasBatchSize = Number.isFinite(batchSize);
+  const normalizedBatchSize = hasBatchSize ? batchSize as number : 0;
+  const histogramLabel = hasBatchSize ? batchSizeHistogramLabel(normalizedBatchSize) : undefined;
   timingBuckets[routeClass] = {
     marshalingNs: current.marshalingNs + elapsed.marshalingNs,
     executionNs: current.executionNs + elapsed.executionNs,
     deserializationNs: current.deserializationNs + elapsed.deserializationNs,
     callCount: current.callCount + 1,
+    batchSizeSum: current.batchSizeSum + normalizedBatchSize,
+    batchSizeMin: hasBatchSize
+      ? (current.batchSizeMin === 0 ? normalizedBatchSize : Math.min(current.batchSizeMin, normalizedBatchSize))
+      : current.batchSizeMin,
+    batchSizeMax: hasBatchSize ? Math.max(current.batchSizeMax, normalizedBatchSize) : current.batchSizeMax,
+    batchSizeHistogram: histogramLabel === undefined
+      ? current.batchSizeHistogram
+      : {
+        ...current.batchSizeHistogram,
+        [histogramLabel]: (current.batchSizeHistogram[histogramLabel] ?? 0) + 1,
+      },
   };
 };
 
 export const snapshotPolicyWasmTimingBuckets = (): PolicyWasmTimingBucketSnapshot => ({
-  scoreRows: { ...timingBuckets.scoreRows },
-  previewCandidateFeatureRows: { ...timingBuckets.previewCandidateFeatureRows },
-  productionPreviewDrive: { ...timingBuckets.productionPreviewDrive },
+  scoreRows: {
+    ...timingBuckets.scoreRows,
+    batchSizeHistogram: { ...timingBuckets.scoreRows.batchSizeHistogram },
+  },
+  previewCandidateFeatureRows: {
+    ...timingBuckets.previewCandidateFeatureRows,
+    batchSizeHistogram: { ...timingBuckets.previewCandidateFeatureRows.batchSizeHistogram },
+  },
+  productionPreviewDrive: {
+    ...timingBuckets.productionPreviewDrive,
+    batchSizeHistogram: { ...timingBuckets.productionPreviewDrive.batchSizeHistogram },
+  },
 });

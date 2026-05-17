@@ -1,4 +1,5 @@
 export function renderCsv(rows) {
+  const batchSizeHeaders = batchSizeCsvHeaders();
   const headers = [
     'seed',
     'decisionIndex',
@@ -48,10 +49,11 @@ export function renderCsv(rows) {
     'decisionKind',
     'previewCapClass',
     'selectedStableMoveKey',
+    ...batchSizeHeaders,
   ];
   return [
     headers.join(','),
-    ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(',')),
+    ...rows.map((row) => headers.map((header) => csvCell(csvValue(row, header))).join(',')),
   ].join('\n') + '\n';
 }
 
@@ -210,17 +212,69 @@ function renderWasmTimingSection(rows) {
     '',
     '## WASM Timing Buckets',
     '',
-    '| Microturn class | Route class | Calls | Marshaling ms | Execution ms | Deserialization ms |',
-    '|---|---|---:|---:|---:|---:|',
+    '| Microturn class | Route class | Calls | Marshaling ms | Execution ms | Deserialization ms | Batch size mean | Batch size min | Batch size max | Batch size histogram |',
+    '|---|---|---:|---:|---:|---:|---:|---:|---:|---|',
     ...timingRows.map((row) => [
       `| ${row.microturnClass}`,
       row.routeClass,
       row.callCount,
       formatNumber(row.marshalingMs),
       formatNumber(row.executionMs),
-      `${formatNumber(row.deserializationMs)} |`,
+      formatNumber(row.deserializationMs),
+      formatNumber(row.batchSizeMean),
+      row.batchSizeMin,
+      row.batchSizeMax,
+      `${formatCompactJson(row.batchSizeHistogram)} |`,
     ].join(' | ')),
   ];
+}
+
+const WASM_TIMING_ROUTE_CLASSES = [
+  'scoreRows',
+  'previewCandidateFeatureRows',
+  'productionPreviewDrive',
+];
+
+function batchSizeCsvHeaders() {
+  return WASM_TIMING_ROUTE_CLASSES.flatMap((routeClass) => [
+    `${routeClass}BatchSizeMean`,
+    `${routeClass}BatchSizeMin`,
+    `${routeClass}BatchSizeMax`,
+    `${routeClass}BatchSizeHistogram`,
+  ]);
+}
+
+function timingBucketForRoute(row, routeClass) {
+  return (row.wasmTimingBuckets ?? []).find((bucket) => bucket.routeClass === routeClass);
+}
+
+function csvValue(row, header) {
+  for (const routeClass of WASM_TIMING_ROUTE_CLASSES) {
+    if (header === `${routeClass}BatchSizeMean`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      if (bucket === undefined) {
+        return '';
+      }
+      return bucket.batchSizeMean ?? (bucket.callCount > 0 ? round4(bucket.batchSizeSum / bucket.callCount) : 0);
+    }
+    if (header === `${routeClass}BatchSizeMin`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket?.batchSizeMin ?? '';
+    }
+    if (header === `${routeClass}BatchSizeMax`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket?.batchSizeMax ?? '';
+    }
+    if (header === `${routeClass}BatchSizeHistogram`) {
+      const bucket = timingBucketForRoute(row, routeClass);
+      return bucket === undefined ? '' : bucket.batchSizeHistogram;
+    }
+  }
+  return row[header];
+}
+
+function formatCompactJson(value) {
+  return JSON.stringify(value ?? {});
 }
 
 function renderWasmSerializationSection(rows) {

@@ -175,6 +175,10 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`archive/tickets/176POLWASMPERF-004.md`](../archive/tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
 - [`archive/tickets/176POLWASMPERF-005.md`](../archive/tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
 - [`archive/tickets/176POLWASMPERF-006.md`](../archive/tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
-- [`tickets/176POLWASMPERF-007.md`](../tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
+- [`archive/tickets/176POLWASMPERF-007.md`](../archive/tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
 
 Note: namespace `176POLWASMPERF` was chosen at decomposition time, superseding the spec's proposed `176WASMPERFYLD`.
+
+## 13. Outcome
+
+Phase 6 selected **Accelerate WASM**. The decision report is `reports/176-phase-6-decision-and-rationale.md`, and the named follow-up artifact is [`specs/177-policy-wasm-batched-call-overhead-reduction.md`](177-policy-wasm-batched-call-overhead-reduction.md). The follow-up is scoped to reducing policy-WASM per-call marshaling / serialization overhead through batched host/guest work or an equivalent transfer-reduction design; it does not claim that Spec 176 itself implemented an optimization or changed the production default.

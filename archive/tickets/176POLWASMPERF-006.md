@@ -193,4 +193,4 @@ Shared agents-layer WASM runtime/profiler instrumentation only. The flag-off pat
 
 ### Deferred Scope
 
-Phase 6 synthesis and any ABI/encoding or batching optimization decision remain with `tickets/176POLWASMPERF-007.md`. This ticket supplies the H5 evidence and expanded verdict label; it does not choose Keep / Accelerate / Retire.
+Phase 6 synthesis and any ABI/encoding or batching optimization decision remain with `archive/tickets/176POLWASMPERF-007.md`. This ticket supplies the H5 evidence and expanded verdict label; it does not choose Keep / Accelerate / Retire.

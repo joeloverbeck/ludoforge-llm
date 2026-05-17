@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — feature-flagged instrumentation in `packages/engine/src/agents/policy-wasm-runtime.ts`, `policy-wasm-score-routing.ts`, and the 15-seed decomposition profiler script.
-**Deps**: `specs/176-policy-wasm-perf-yield-investigation.md`
+**Deps**: `archive/specs/176-policy-wasm-perf-yield-investigation.md`
 
 ## Problem
 

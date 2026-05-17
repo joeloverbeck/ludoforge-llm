@@ -1,6 +1,6 @@
 # Spec 176 — Policy WASM Perf-Yield Investigation
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High-strategic — answers a foundational question about whether the policy WASM architecture is worth continued investment.
 **Complexity**: L — investigation-style spec; deliverables are measurement experiments and a decision report, not engine code changes.
 **Date**: 2026-05-17
@@ -169,16 +169,18 @@ Reference reports (informing the strategic context):
 
 Decomposed via `/spec-to-tickets` on 2026-05-17:
 
-- [`archive/tickets/176POLWASMPERF-001.md`](../archive/tickets/176POLWASMPERF-001.md) — Phase 0 — Baseline reproduction + feature-flagged WASM timing instrumentation (covers §5 Phase 0)
-- [`archive/tickets/176POLWASMPERF-002.md`](../archive/tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
-- [`archive/tickets/176POLWASMPERF-003.md`](../archive/tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
-- [`archive/tickets/176POLWASMPERF-004.md`](../archive/tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
-- [`archive/tickets/176POLWASMPERF-005.md`](../archive/tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
-- [`archive/tickets/176POLWASMPERF-006.md`](../archive/tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
-- [`archive/tickets/176POLWASMPERF-007.md`](../archive/tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
+- [`archive/tickets/176POLWASMPERF-001.md`](../tickets/176POLWASMPERF-001.md) — Phase 0 — Baseline reproduction + feature-flagged WASM timing instrumentation (covers §5 Phase 0)
+- [`archive/tickets/176POLWASMPERF-002.md`](../tickets/176POLWASMPERF-002.md) — Phase 1 — H1 FFI marshaling decomposition report (covers §5 Phase 1)
+- [`archive/tickets/176POLWASMPERF-003.md`](../tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
+- [`archive/tickets/176POLWASMPERF-004.md`](../tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
+- [`archive/tickets/176POLWASMPERF-005.md`](../tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
+- [`archive/tickets/176POLWASMPERF-006.md`](../tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
+- [`archive/tickets/176POLWASMPERF-007.md`](../tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
 
 Note: namespace `176POLWASMPERF` was chosen at decomposition time, superseding the spec's proposed `176WASMPERFYLD`.
 
 ## 13. Outcome
 
-Phase 6 selected **Accelerate WASM**. The decision report is `reports/176-phase-6-decision-and-rationale.md`, and the named follow-up artifact is [`specs/177-policy-wasm-batched-call-overhead-reduction.md`](177-policy-wasm-batched-call-overhead-reduction.md). The follow-up is scoped to reducing policy-WASM per-call marshaling / serialization overhead through batched host/guest work or an equivalent transfer-reduction design; it does not claim that Spec 176 itself implemented an optimization or changed the production default.
+Completed: 2026-05-17.
+
+Phase 6 selected **Accelerate WASM**. The decision report is `reports/176-phase-6-decision-and-rationale.md`, and the named follow-up artifact is [`specs/177-policy-wasm-batched-call-overhead-reduction.md`](../../specs/177-policy-wasm-batched-call-overhead-reduction.md). The follow-up is scoped to reducing policy-WASM per-call marshaling / serialization overhead through batched host/guest work or an equivalent transfer-reduction design; it does not claim that Spec 176 itself implemented an optimization or changed the production default.

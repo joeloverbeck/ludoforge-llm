@@ -1,10 +1,10 @@
 # 177POLWASMBATCH-002: Implement selected transfer-reduction shape with parity tests and route-activation counters
 
-**Status**: BLOCKED by `177POLWASMBATCH-001`
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — host-side dispatch (`policy-wasm-score-routing.ts`, `policy-wasm-production-preview-drive.ts`), runtime types and the guest-side ABI (`policy-wasm-preview-drive.ts`, `policy-wasm-runtime.ts`, `policy-wasm-runtime-types.ts`, and possibly the Rust crate under `packages/engine/wasm-policy/`), timing-profile route class (`policy-wasm-timing-profile.ts`), runtime counters (`policy-wasm-runtime-counters.ts`), and parity/contract tests
-**Deps**: `tickets/177POLWASMBATCH-001.md`
+**Deps**: `archive/tickets/177POLWASMBATCH-001.md`
 
 ## Problem
 
@@ -12,11 +12,23 @@ Spec 177 requires a batched policy-WASM call shape (or equivalent host/guest tra
 
 ## Blocked State (2026-05-17)
 
-`tickets/177POLWASMBATCH-001.md` produced `reports/177-phase-0-batching-shape-selection.md` with verdict `no-transfer-reduction-shape-authorized`. The measured slow-tier transfer-overhead ceiling is about `608.7484 ms` against a `>=5%` bar of about `3,901.51 ms`, so no current transfer-reduction shape is authorized for implementation.
+`archive/tickets/177POLWASMBATCH-001.md` produced `reports/177-phase-0-batching-shape-selection.md` with verdict `no-transfer-reduction-shape-authorized`. The measured slow-tier transfer-overhead ceiling is about `608.7484 ms` against a `>=5%` bar of about `3,901.51 ms`, so no current transfer-reduction shape is authorized for implementation.
 
-Do not implement this ticket until `specs/177-policy-wasm-batched-call-overhead-reduction.md` is re-scoped or a new evidence report names a shape whose predicted ROI clears the threshold.
+This ticket is closed as `NOT IMPLEMENTED`. Do not revive it by re-scoping `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`; any future transfer-reduction implementation must start from a new or re-scoped evidence report whose predicted ROI clears the threshold.
 
 The implementation must land as a Foundation 14 atomic cut: the prior per-group or per-feature call shape is replaced, not duplicated behind a flag. The "atomic cut" includes the host-side dispatch, the timing-route taxonomy, the runtime counters, and any guest-side ABI that the new shape requires; all consumer tests are migrated in the same change.
+
+## Outcome (2026-05-17)
+
+**Final status:** `NOT IMPLEMENTED`.
+
+Ticket `177POLWASMBATCH-001` completed the Phase 0 batch-size and timing evidence pass and produced `reports/177-phase-0-batching-shape-selection.md` with verdict `no-transfer-reduction-shape-authorized`.
+
+The measured slow-tier transfer-overhead ceiling was about `608.7484 ms` against a `>=5%` slow-tier wall-time bar of about `3,901.51 ms`. Because no current transfer-reduction shape could plausibly clear the bar, this implementation ticket is intentionally not implemented and should not remain active.
+
+No source, ABI, counter, or parity-test changes from this ticket landed. Any future acceleration work should be decomposed from a new measured spec or investigation ticket and cite the Phase 0 report as negative evidence.
+
+**Verification:** `pnpm run check:ticket-deps` passed after the terminal status update and archive-path rewrite.
 
 ## Assumption Reassessment (2026-05-17)
 

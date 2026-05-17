@@ -1,10 +1,10 @@
 # 177POLWASMBATCH-001: Phase 0 — Batch-size profiling and transfer-reduction shape selection
 
-**Status**: BLOCKED by measured gate
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-wasm-timing-profile.ts` (add per-call batch-size accumulation), `policy-wasm-runtime.ts` (emit batch size at the live timing recorder call sites), `scripts/profile-fitl-arvn-15-seed-timing.mjs` and `scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` (surface batch-size columns)
-**Deps**: `specs/177-policy-wasm-batched-call-overhead-reduction.md`
+**Deps**: `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`
 
 ## Problem
 
@@ -73,7 +73,7 @@ Write `reports/177-phase-0-batching-shape-selection.md` containing:
 - Per-route batch-size distribution (all-seeds + slow-tier subtables, with histograms).
 - Per-route per-call payload-size repetition: cite Phase 5 axis bytes/call from `reports/176-phase-5-state-serialization.md` and identify which axes are dominated by fixed setup vs by per-byte cost.
 - A named recommended transfer-reduction shape — e.g., `crossActionBatching(productionPreviewDrive)`, `crossFeatureBatching(previewCandidateFeatureRows)`, `payloadShrink(productionPreviewDrive)`, or a combination. Exactly one shape is named as the primary work for ticket `002`. If the evidence supports a secondary shape, name it explicitly in an "Optional follow-on" subsection, but still recommend exactly one for `002`.
-- A predicted slow-tier wall-time ROI for the chosen shape, derived from `(call-count reduction × fixed-per-call marshaling)` or `(payload-size reduction × bytes/ms slope)`. The prediction must clear the ≥5% slow-tier wall-time bar in `specs/177-policy-wasm-batched-call-overhead-reduction.md` line `9` before ticket `002` proceeds.
+- A predicted slow-tier wall-time ROI for the chosen shape, derived from `(call-count reduction × fixed-per-call marshaling)` or `(payload-size reduction × bytes/ms slope)`. The prediction must clear the ≥5% slow-tier wall-time bar in `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md` line `9` before ticket `002` proceeds.
 - A Foundation #20 carrier-preservation strategy: how the recommended shape preserves `tiebreakAfterPreviewNoSignal`, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory shape, and the preview-status taxonomy across the batched/merged call boundary.
 - A Foundation #14 transition plan: explicit confirmation that ticket `002` will land the new path as an atomic cut with no shim.
 
@@ -81,7 +81,9 @@ If the chosen shape's predicted ROI is `<5%`, the report MUST flag this and pres
 
 ## Outcome (2026-05-17)
 
-**Durable state:** `BLOCKED by measured gate`.
+**Completion date:** 2026-05-17.
+
+**Durable state:** `COMPLETED` as Phase 0 evidence and measurement. The broader Spec 177 batching campaign is rejected by the measured gate.
 
 **Landed scope:**
 
@@ -109,7 +111,7 @@ If the chosen shape's predicted ROI is `<5%`, the report MUST flag this and pres
   - `previewCandidateFeatureRows`: `48.8694 ms`.
   - `productionPreviewDrive`: `250.8765 ms`.
   - Combined: `608.7484 ms`, about `0.78%` of slow-tier wall time under an impossible 100% transfer-overhead elimination.
-- Verdict: no transfer-reduction shape is authorized for `tickets/177POLWASMBATCH-002.md`.
+- Verdict: no transfer-reduction shape is authorized for `archive/tickets/177POLWASMBATCH-002.md`.
 
 **User-approved 1-3-1 option:** Option 1 from the 2026-05-17 reassessment: mark `177POLWASMBATCH-001` blocked with the evidence report and do not proceed to `002`.
 
@@ -124,11 +126,11 @@ If the chosen shape's predicted ROI is `<5%`, the report MUST flag this and pres
 - `snapshotPolicyWasmTimingBuckets()` now copies nested `batchSizeHistogram` objects instead of aliasing mutable module state through the public snapshot.
 - `packages/engine/test/integration/policy-wasm-timing-profile-batch-size.test.ts` now mutates a returned snapshot histogram and re-snapshots to prove the internal bucket remains unchanged.
 
-**Deferred/residual owner:**
+**Campaign disposition:**
 
-- `tickets/177POLWASMBATCH-002.md` is blocked/not actionable until the spec is re-scoped or new evidence names a shape whose predicted ROI clears the threshold.
-- `tickets/177POLWASMBATCH-003.md` is blocked because there is no post-implementation wall-time target.
-- `specs/177-policy-wasm-batched-call-overhead-reduction.md` remains blocked/proposed pending user re-scope.
+- `archive/tickets/177POLWASMBATCH-002.md` is closed as `NOT IMPLEMENTED`; no transfer-reduction shape was authorized for implementation.
+- `archive/tickets/177POLWASMBATCH-003.md` is closed as `NOT IMPLEMENTED`; there was no post-implementation wall-time target to measure.
+- `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md` is closed as `REJECTED` by the Phase 0 measured gate.
 
 **Schema/generated fallout:** none. The change adds profile/report fields only; no kernel schema or generated schema artifact was changed.
 
@@ -148,7 +150,7 @@ If the chosen shape's predicted ROI is `<5%`, the report MUST flag this and pres
 - `git diff --check` passed for tracked changes. Explicit `git diff --no-index --check /dev/null <path>` checks produced no whitespace warnings for the untracked new test, ticket, and report artifacts.
 - Post-review focused verification: `pnpm -F @ludoforge/engine build` passed, then `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-timing-flag.test.js dist/test/integration/policy-wasm-timing-profile-batch-size.test.js` passed: 4 tests / 2 suites / 0 failed.
 
-**Archive status:** blocked and not archive-ready. Next workflow: continue only after the user chooses a new spec scope or successor investigation.
+**Archive status:** archive-ready as the completed Phase 0 negative-result evidence ticket. Any future acceleration work should start from a new spec or investigation ticket that cites `reports/177-phase-0-batching-shape-selection.md`; it should not reuse these implementation tickets as active work.
 
 ## Files to Touch
 

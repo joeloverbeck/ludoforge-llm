@@ -1,10 +1,10 @@
 # 177POLWASMBATCH-003: Slow-tier wall-time witness + 5% improvement gate
 
-**Status**: BLOCKED by `177POLWASMBATCH-002`
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement and reporting only
-**Deps**: `tickets/177POLWASMBATCH-002.md`
+**Deps**: `archive/tickets/177POLWASMBATCH-002.md`
 
 ## Problem
 
@@ -12,9 +12,19 @@ Spec 177's notional success threshold (line `9`) is "a measured slow-tier FITL A
 
 ## Blocked State (2026-05-17)
 
-`tickets/177POLWASMBATCH-001.md` produced `reports/177-phase-0-batching-shape-selection.md` with verdict `no-transfer-reduction-shape-authorized`, and `tickets/177POLWASMBATCH-002.md` is blocked. There is no selected implementation shape and no new route-activation counter for this witness to measure.
+`archive/tickets/177POLWASMBATCH-001.md` produced `reports/177-phase-0-batching-shape-selection.md` with verdict `no-transfer-reduction-shape-authorized`, and `archive/tickets/177POLWASMBATCH-002.md` is closed as `NOT IMPLEMENTED`. There is no selected implementation shape and no new route-activation counter for this witness to measure.
 
-Do not run this ticket until `002` is unblocked by a re-scoped spec or a new evidence report.
+This ticket is closed as `NOT IMPLEMENTED`. Do not revive it by unblocking `002`; any future wall-time witness should belong to a new spec or investigation chain with a newly measured implementation hypothesis.
+
+## Outcome (2026-05-17)
+
+**Final status:** `NOT IMPLEMENTED`.
+
+Ticket `177POLWASMBATCH-002` was not implemented because `177POLWASMBATCH-001` found no authorized transfer-reduction shape. There is therefore no batched route, no route-activation counter, and no post-implementation wall-time witness for this ticket to measure.
+
+No report artifacts from this ticket landed. Any future wall-time witness should belong to a new spec or investigation chain with a newly measured implementation hypothesis.
+
+**Verification:** `pnpm run check:ticket-deps` passed after the terminal status update and archive-path rewrite.
 
 ## Assumption Reassessment (2026-05-17)
 
@@ -86,7 +96,7 @@ From the post-`002` CSV, confirm:
 
 ### 5. Gate condition handling
 
-- If measured slow-tier improvement is `≥5%` AND the new route-activation counter is `>0` on every slow-tier seed AND no Foundation #20 carrier regression: mark the spec ready to archive; downstream maintainers can run `node scripts/archive-spec.mjs specs/177-policy-wasm-batched-call-overhead-reduction.md archive/specs/` per `docs/archival-workflow.md`. This ticket does not perform the archival.
+- If measured slow-tier improvement is `≥5%` AND the new route-activation counter is `>0` on every slow-tier seed AND no Foundation #20 carrier regression: mark the active successor spec ready to archive. This archived ticket does not perform that future archival.
 - If the gate is not met: do **not** silently archive. Present the 1-3-1 in the report and in the ticket Outcome; downstream tickets/decisions are owned by the user.
 
 ## Files to Touch

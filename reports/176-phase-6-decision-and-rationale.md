@@ -8,7 +8,7 @@
 
 **Accelerate WASM.**
 
-The follow-up artifact is `specs/177-policy-wasm-batched-call-overhead-reduction.md`.
+The follow-up artifact was `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`; it is now archived as rejected by its Phase 0 measured gate.
 
 This decision is not a default flip, a retirement decision, or a claim that WASM is already faster on the FITL ARVN workload. It is a targeted acceleration decision: the Phase 1 and Phase 5 evidence shows that WASM execution is not the dominant cost inside the current WASM route; per-call marshaling, deserialization, and mixed serialization overhead are. The follow-up should therefore attack call granularity and host/guest transfer overhead before any renewed default-routing claim.
 
@@ -41,9 +41,9 @@ The decision deliberately rejects these branches for this evidence set:
 
 ## Named Follow-Up Artifact
 
-`specs/177-policy-wasm-batched-call-overhead-reduction.md`
+`archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`
 
-The stub names a batched-call / host-guest transfer reduction investigation as the next owner. Its notional success threshold is a measured slow-tier policy-agent wall-time improvement on the same FITL ARVN 15-seed witness after proving route activation and preserving TS fallback parity.
+The stub named a batched-call / host-guest transfer reduction investigation as the next owner. Its notional success threshold was a measured slow-tier policy-agent wall-time improvement on the same FITL ARVN 15-seed witness after proving route activation and preserving TS fallback parity. Spec 177's Phase 0 evidence later rejected that path under the stated threshold.
 
 ## Foundation Alignment
 

@@ -5,14 +5,14 @@
 **Command**: `POLICY_WASM_TIMING_PROFILE=1 node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 600000 --date 2026-05-17-phase-0-batch-size-distribution`
 **Witness Markdown**: `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-0-batch-size-distribution.md`
 **Witness CSV**: `reports/fitl-arvn-15-seed-decomposition-2026-05-17-phase-0-batch-size-distribution.csv`
-**Spec**: `specs/177-policy-wasm-batched-call-overhead-reduction.md`
-**Ticket**: `tickets/177POLWASMBATCH-001.md`
+**Spec**: `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`
+**Ticket**: `archive/tickets/177POLWASMBATCH-001.md`
 
 ## Verdict
 
 `no-transfer-reduction-shape-authorized`
 
-The measured Phase 0 batch-size and timing evidence does not support handing a transfer-reduction implementation to `tickets/177POLWASMBATCH-002.md`. The slow-tier wall time in the current witness is `78,030.23 ms`; the spec's notional `>=5%` bar therefore requires about `3,901.51 ms` of slow-tier improvement.
+The measured Phase 0 batch-size and timing evidence does not support handing a transfer-reduction implementation to `archive/tickets/177POLWASMBATCH-002.md`. The slow-tier wall time in the current witness is `78,030.23 ms`; the spec's notional `>=5%` bar therefore requires about `3,901.51 ms` of slow-tier improvement.
 
 The slow-tier measured overhead available in the current WASM timing buckets is much smaller:
 
@@ -80,11 +80,11 @@ If a later re-scoped spec authorizes a new transfer-reduction implementation, th
 
 ## Foundation #14 Transition Plan
 
-No transition plan is authorized because no implementation shape is selected. `tickets/177POLWASMBATCH-002.md` must remain blocked/not actionable until the spec is re-scoped or a new evidence report names a shape whose predicted ROI clears the threshold.
+No transition plan is authorized because no implementation shape is selected. `archive/tickets/177POLWASMBATCH-002.md` is closed as `NOT IMPLEMENTED`; any future transfer-reduction implementation must start from a new or re-scoped evidence report whose predicted ROI clears the threshold.
 
 ## Downstream Action
 
-- `tickets/177POLWASMBATCH-001.md`: records the instrumentation and evidence, then stops as `BLOCKED by measured gate`.
-- `tickets/177POLWASMBATCH-002.md`: blocked by `001`; no transfer-reduction implementation should start from the current evidence.
-- `tickets/177POLWASMBATCH-003.md`: blocked because there is no post-implementation wall-time witness target.
-- `specs/177-policy-wasm-batched-call-overhead-reduction.md`: remains blocked/proposed until the user chooses a new scope.
+- `archive/tickets/177POLWASMBATCH-001.md`: records the instrumentation and evidence, then closes as completed Phase 0 evidence.
+- `archive/tickets/177POLWASMBATCH-002.md`: closed as `NOT IMPLEMENTED`; no transfer-reduction implementation should start from the current evidence.
+- `archive/tickets/177POLWASMBATCH-003.md`: closed as `NOT IMPLEMENTED` because there is no post-implementation wall-time witness target.
+- `archive/specs/177-policy-wasm-batched-call-overhead-reduction.md`: closed as `REJECTED` by the Phase 0 measured gate.

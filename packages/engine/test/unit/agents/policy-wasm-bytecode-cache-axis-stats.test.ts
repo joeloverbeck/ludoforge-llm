@@ -1,7 +1,9 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -10,10 +12,15 @@ const REPO_ROOT = resolve(TEST_DIR, '../../../../../../');
 
 const childScript = String.raw`
 import * as assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const runtimeModule = await import(pathToFileURL(join(process.cwd(), 'packages/engine/dist/src/agents/policy-wasm-runtime.js')).href);
+const repoRoot = process.env.LUDOFORGE_REPO_ROOT;
+assert.equal(typeof repoRoot, 'string');
+const outputPath = process.env.POLICY_WASM_PROBE_OUTPUT;
+assert.equal(typeof outputPath, 'string');
+const runtimeModule = await import(pathToFileURL(join(repoRoot, 'packages/engine/dist/src/agents/policy-wasm-runtime.js')).href);
 process.env.POLICY_WASM_TIMING_PROFILE = process.argv[1];
 
 const def = {
@@ -132,7 +139,7 @@ const axisStats = runtimeModule.__internal_for_tests.snapshotPolicyWasmBytecodeC
 const compileCount = runtimeModule.__internal_for_tests.getProductionScoreRowBytecodeCompileCount();
 const hitCount = runtimeModule.__internal_for_tests.getProductionScoreRowBytecodeCacheHitCount();
 const missCount = runtimeModule.__internal_for_tests.getProductionScoreRowBytecodeCacheMissCount();
-process.stdout.write(JSON.stringify({ axisStats, compileCount, hitCount, missCount }));
+writeFileSync(outputPath, JSON.stringify({ axisStats, compileCount, hitCount, missCount }));
 `;
 
 const runProbe = (initialFlag: 'enabled' | 'disabled', mutation: '1' | '' | 'ordering') => {
@@ -142,13 +149,18 @@ const runProbe = (initialFlag: 'enabled' | 'disabled', mutation: '1' | '' | 'ord
   } else {
     delete env.POLICY_WASM_TIMING_PROFILE;
   }
+  env.LUDOFORGE_REPO_ROOT = REPO_ROOT;
+  const outputPath = join(tmpdir(), `policy-wasm-axis-${process.pid}-${initialFlag}-${mutation || 'default'}.json`);
+  env.POLICY_WASM_PROBE_OUTPUT = outputPath;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', childScript, mutation], {
     cwd: REPO_ROOT,
     env,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  const output = readFileSync(outputPath, 'utf8');
+  unlinkSync(outputPath);
+  return JSON.parse(output);
 };
 
 describe('policy WASM bytecode cache axis stats', () => {

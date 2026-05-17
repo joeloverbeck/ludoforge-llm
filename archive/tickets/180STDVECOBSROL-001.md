@@ -131,4 +131,4 @@ AGENTS canonical lane reconciliation:
 
 Late-edit proof validity: terminal status/proof transcription plus exact post-status dependency-check transcription only; no source, test, schema, generated artifact, scope, acceptance command, touched-file ownership, dependency, or follow-up boundary changed after the final build/silent-zero/expected-RED proof set. The post-status ticket-dependency integrity lane passed, and this transcription does not change graph facts.
 
-Archive status: archived at `archive/tickets/180STDVECOBSROL-001.md`. Next implementation workflow: `$implement-ticket tickets/180STDVECOBSROL-002.md`.
+Archive status: archived at `archive/tickets/180STDVECOBSROL-001.md`. Follow-up implementation completed and archived at `archive/tickets/180STDVECOBSROL-002.md`.

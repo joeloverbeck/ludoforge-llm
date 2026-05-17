@@ -367,6 +367,7 @@ export class PolicyEvaluationContext {
   private activeState: GameState;
   private currentSeatContext: string | undefined;
   private candidateParamUnavailableDuringValue = false;
+  private previewUnavailableEventCount = 0;
   private scheduleUnavailableDuringValue = false;
   private schedulePartialsDuringValue: { readonly refId: string; readonly lowerBound: number }[] = [];
 
@@ -607,13 +608,13 @@ export class PolicyEvaluationContext {
 
     const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
     const unknownCandidateParamRefsBefore = this.unknownCandidateParamRefCount(candidate);
-    const unknownPreviewRefsBefore = this.unknownPreviewRefCount(candidate);
+    const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
     const unknownLookupRefsBefore = this.unknownLookupRefCount(candidate);
     this.candidateParamUnavailableDuringValue = false;
     const value = this.evaluateCompiledExpr(consideration.value, candidate);
     const candidateParamUnavailable = this.candidateParamUnavailableDuringValue
       || this.unknownCandidateParamRefCount(candidate) > unknownCandidateParamRefsBefore;
-    const previewUnavailable = this.unknownPreviewRefCount(candidate) > unknownPreviewRefsBefore;
+    const previewUnavailable = this.previewUnavailableEventCount > previewUnavailableEventsBefore;
     const lookupUnavailable = this.unknownLookupRefCount(candidate) > unknownLookupRefsBefore;
     this.candidateParamUnavailableDuringValue = false;
     const scheduleUnavailable = this.scheduleUnavailableDuringValue;
@@ -805,10 +806,14 @@ export class PolicyEvaluationContext {
       ?? 0;
   }
 
-  private unknownPreviewRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
-    return candidate?.unknownPreviewRefs.size
-      ?? this.input.previewOption?.unknownPreviewRefs?.size
-      ?? 0;
+  private recordUnknownPreviewRef(
+    candidate: PolicyEvaluationCandidate | undefined,
+    refId: string,
+    reason: PolicyPreviewUnavailabilityReason,
+  ): void {
+    candidate?.unknownPreviewRefs.set(refId, reason);
+    this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+    this.previewUnavailableEventCount += 1;
   }
 
   private unknownLookupRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
@@ -1456,6 +1461,7 @@ export class PolicyEvaluationContext {
       return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
     }
 
+    const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
     const values: number[] = [];
     for (const seatId of seatIds) {
       const previousSeatContext = this.currentSeatContext;
@@ -1469,14 +1475,12 @@ export class PolicyEvaluationContext {
         this.currentSeatContext = previousSeatContext;
       }
     }
-
     if (aggOp === 'count') {
       return values.length;
     }
     if (values.length === 0) {
-      return aggOp === 'sum' ? 0 : undefined;
+      return aggOp === 'sum' && this.previewUnavailableEventCount === previewUnavailableEventsBefore ? 0 : undefined;
     }
-
     switch (aggOp) {
       case 'sum':
         return values.reduce((acc, value) => acc + value, 0);
@@ -1712,13 +1716,11 @@ export class PolicyEvaluationContext {
     const key = previewOptionRefKey(ref);
     const status = resolvedRefs.get(key);
     if (status === undefined) {
-      candidate?.unknownPreviewRefs.set(key, 'noPreviewDecision');
-      this.input.previewOption?.unknownPreviewRefs?.set(key, 'noPreviewDecision');
+      this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
       return undefined;
     }
     if (status.kind === 'unavailable') {
-      candidate?.unknownPreviewRefs.set(key, status.reason);
-      this.input.previewOption?.unknownPreviewRefs?.set(key, status.reason);
+      this.recordUnknownPreviewRef(candidate, key, status.reason);
       return undefined;
     }
     return status.value;
@@ -1750,19 +1752,16 @@ export class PolicyEvaluationContext {
   ): PolicyValue {
     const projected = this.input.previewOption?.projectedState;
     if (projected === undefined) {
-      candidate?.unknownPreviewRefs.set(refId, 'gated');
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'gated');
+      this.recordUnknownPreviewRef(candidate, refId, 'gated');
       return undefined;
     }
     if (projected.outcome !== 'ready') {
       const reason = previewOutcomeToUnavailabilityReason(projected.outcome);
-      candidate?.unknownPreviewRefs.set(refId, reason);
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+      this.recordUnknownPreviewRef(candidate, refId, reason);
       return undefined;
     }
     if (projected.state === undefined) {
-      candidate?.unknownPreviewRefs.set(refId, 'failed');
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'failed');
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
       return undefined;
     }
     const resolution = this.runtimeProviders.lookupSurface.resolveLookupAgainstState({
@@ -2049,7 +2048,7 @@ export class PolicyEvaluationContext {
         // the preview surface itself is 'ready'. syncPreviewMetadata (called by
         // resolvePreviewStateFeatureRef or finalizePreviewOutcome) determines the
         // canonical outcome from the preview surface.
-        candidate.unknownPreviewRefs.set(refId, resolution.reason);
+        this.recordUnknownPreviewRef(candidate, refId, resolution.reason);
         return undefined;
       }
       if (candidate.previewOutcome === undefined) {
@@ -2107,13 +2106,13 @@ export class PolicyEvaluationContext {
     const previewOutcome = candidate.previewOutcome;
     if (previewOutcome !== 'ready' && previewOutcome !== 'stochastic') {
       if (previewOutcome !== undefined) {
-        candidate.unknownPreviewRefs.set(refId, previewOutcome);
+        this.recordUnknownPreviewRef(candidate, refId, previewOutcome);
       }
       return undefined;
     }
     const previewState = this.runtimeProviders.previewSurface.getPreviewState(candidate);
     if (previewState === undefined) {
-      candidate.unknownPreviewRefs.set(refId, 'failed');
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
       if (candidate.previewOutcome === undefined) {
         candidate.previewOutcome = 'failed';
       }

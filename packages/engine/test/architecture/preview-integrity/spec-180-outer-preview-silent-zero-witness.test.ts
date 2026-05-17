@@ -8,17 +8,21 @@ import {
 } from '../preview-standing/standing-preview-fixture.js';
 
 describe('Spec 180 outer-preview silent-zero witness', () => {
-  it('pins current seatAgg(sum) behavior where unavailable opponent preview cells contribute numeric zero', () => {
-    const trace = runStandingPreviewTrace({ previewVisibility: 'hidden' });
+  it('keeps all-unavailable seatAgg(sum) status-bearing instead of contributing numeric zero', () => {
+    const trace = runStandingPreviewTrace({ previewVisibility: 'hidden', primeUnknownPreviewRef: true });
 
     assert.equal(trace.previewUsage.refIds.includes('victoryCurrentMargin.currentMargin.$seat'), true);
     for (const candidate of trace.candidates ?? []) {
-      assert.deepEqual(
-        candidate.scoreContributions.find((entry) => entry.termId === STANDING_PREVIEW_TERM_ID),
-        { termId: STANDING_PREVIEW_TERM_ID, contribution: 0 },
+      assert.equal(
+        candidate.scoreContributions.some((entry) => entry.termId === STANDING_PREVIEW_TERM_ID),
+        false,
       );
       assert.equal(candidate.score, 0);
-      assert.equal(candidate.previewFallbackFired, undefined);
+      assert.deepEqual(candidate.previewFallbackFired, {
+        termId: STANDING_PREVIEW_TERM_ID,
+        kind: 'noContribution',
+      });
+      assert.equal(candidate.unknownPreviewRefs.length > 0, true);
     }
 
     assert.equal(trace.previewUsage.readyRefStats['victoryCurrentMargin.currentMargin.$seat']?.readyCount, 0);

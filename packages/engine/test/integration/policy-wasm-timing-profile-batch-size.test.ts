@@ -1,7 +1,9 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -10,10 +12,15 @@ const REPO_ROOT = resolve(TEST_DIR, '../../../../../');
 
 const childScript = String.raw`
 import * as assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const timingModule = await import(pathToFileURL(join(process.cwd(), 'packages/engine/dist/src/agents/policy-wasm-timing-profile.js')).href);
+const repoRoot = process.env.LUDOFORGE_REPO_ROOT;
+const outputPath = process.env.POLICY_WASM_PROBE_OUTPUT;
+assert.equal(typeof repoRoot, 'string');
+assert.equal(typeof outputPath, 'string');
+const timingModule = await import(pathToFileURL(join(repoRoot, 'packages/engine/dist/src/agents/policy-wasm-timing-profile.js')).href);
 
 timingModule.resetPolicyWasmTimingBuckets();
 timingModule.recordPolicyWasmTimingBucket('productionPreviewDrive', {
@@ -34,9 +41,9 @@ if (process.env.POLICY_WASM_TIMING_PROFILE === '1') {
   snapshot.productionPreviewDrive.batchSizeHistogram['1'] = 99;
   const resnapshot = timingModule.snapshotPolicyWasmTimingBuckets();
   assert.equal(resnapshot.productionPreviewDrive.batchSizeHistogram['1'], 1);
-  process.stdout.write(JSON.stringify(resnapshot.productionPreviewDrive));
+  writeFileSync(outputPath, JSON.stringify(resnapshot.productionPreviewDrive));
 } else {
-  process.stdout.write(JSON.stringify(snapshot.productionPreviewDrive));
+  writeFileSync(outputPath, JSON.stringify(snapshot.productionPreviewDrive));
 }
 `;
 
@@ -47,13 +54,18 @@ const runBatchSizeProbe = (enabled: boolean) => {
   } else {
     delete env.POLICY_WASM_TIMING_PROFILE;
   }
+  env.LUDOFORGE_REPO_ROOT = REPO_ROOT;
+  const outputPath = join(tmpdir(), `policy-wasm-batch-size-${process.pid}-${enabled ? 'enabled' : 'disabled'}.json`);
+  env.POLICY_WASM_PROBE_OUTPUT = outputPath;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', childScript], {
     cwd: REPO_ROOT,
     env,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  const output = readFileSync(outputPath, 'utf8');
+  unlinkSync(outputPath);
+  return JSON.parse(output);
 };
 
 describe('policy WASM timing profile batch size telemetry', () => {

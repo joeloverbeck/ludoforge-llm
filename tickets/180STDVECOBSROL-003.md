@@ -8,13 +8,14 @@
 
 ## Problem
 
-Outer-preview `seatAgg` can currently skip unavailable per-seat preview cells and return numeric `0` for `sum`/`count`, which violates Foundation 20 when authors use opponent preview refs. This ticket adds explicit availability modes so preview-derived aggregates cannot silently masquerade as ready numeric signal.
+Ticket 002 owns the base Foundation 20 repair required by the Phase 1 standing witness: an all-unavailable preview-derived `seatAgg(sum)` must remain unavailable instead of contributing numeric `0`. This ticket adds the explicit authored availability modes, compiler/validator/schema wiring, and migration diagnostics so authors can choose how partial per-seat preview availability is handled.
 
 ## Assumption Reassessment (2026-05-17)
 
 1. `PolicyPreviewTraceOutcome` already has the status vocabulary needed for unavailable cells.
 2. The compiler diagnostic `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` already protects inner-preview refs and should extend to status-aware outer-preview aggregates.
 3. Existing profiles need a migration path, but new authoring should be explicit about availability.
+4. Boundary reset approved in-session on 2026-05-17: base all-unavailable silent-zero prevention moved to `archive/tickets/180STDVECOBSROL-002.md`; this ticket remains the owner of the availability-mode API and partial-availability semantics.
 
 ## Architecture Check
 
@@ -30,7 +31,7 @@ Support `requireAllReady`, `requireAnyReady`, `selfAndTargetReady`, and `skipUna
 
 ### 2. Propagate unavailable status
 
-When an aggregate is unavailable under its mode, register the preview ref as unavailable and require `previewFallback` before contribution.
+When an aggregate is unavailable under its selected mode, register the preview ref as unavailable and require `previewFallback` before contribution. Preserve the base ticket-002 behavior that all-unavailable preview aggregates do not silently contribute numeric `0`.
 
 ### 3. Update compiler/validator/schema artifacts
 
@@ -49,6 +50,7 @@ Thread the new field through the authored profile schema, compiled IR, runtime e
 ## Out of Scope
 
 - Standing-projection route implementation.
+- Base all-unavailable silent-zero prevention for the Phase 1 standing witness.
 - Full `previewUsage.seatMatrix`.
 - Named role primitives.
 - Production profile migration beyond minimal fixture/test data.

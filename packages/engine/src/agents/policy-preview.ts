@@ -714,7 +714,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         Number(input.playerId),
         targetPlayerIndex,
       )) {
-        return { kind: 'unavailable' };
+        return { kind: 'unknown', reason: 'hidden' };
       }
       if (preview.hiddenSamplingZones.length > 0 && !visibility.preview.allowWhenHiddenSampling) {
         return { kind: 'unknown', reason: 'hidden' };

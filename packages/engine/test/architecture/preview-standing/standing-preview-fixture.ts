@@ -48,6 +48,7 @@ export const STANDING_PREVIEW_TERM_ID = considerationId;
 export function createStandingPreviewDef(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
+  readonly primeUnknownPreviewRef?: boolean;
 }): GameDef {
   return assertValidatedGameDef({
     metadata: { id: `spec-180-standing-preview-${options.previewVisibility}`, players: { min: 4, max: 4 } },
@@ -163,6 +164,7 @@ export function createStandingPreviewDef(options: {
 export function runStandingPreviewTrace(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
+  readonly primeUnknownPreviewRef?: boolean;
 }): PolicyAgentDecisionTrace {
   const def = createStandingPreviewDef(options);
   const runtime = createGameDefRuntime(def);
@@ -194,7 +196,11 @@ export function candidateByActionId(trace: PolicyAgentDecisionTrace, actionId: s
 function createStandingCatalog(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
+  readonly primeUnknownPreviewRef?: boolean;
 }): AgentPolicyCatalog {
+  const considerations = options.primeUnknownPreviewRef
+    ? ['primeOpponentProjectedStandingSum', considerationId]
+    : [considerationId];
   const profile: CompiledAgentProfile = {
     fingerprint: `spec-180-standing-preview-${options.previewVisibility}-${options.completionDepthCap ?? 'default'}`,
     params: {},
@@ -206,14 +212,14 @@ function createStandingCatalog(options: {
     selection: { mode: 'argmax' },
     use: {
       pruningRules: [],
-      considerations: [considerationId],
+      considerations,
       tieBreakers: [],
     },
     plan: {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
-      considerations: [considerationId],
+      considerations,
     },
   };
 
@@ -250,11 +256,20 @@ function createStandingCatalog(options: {
       candidateAggregates: {},
       pruningRules: {},
       considerations: {
+        primeOpponentProjectedStandingSum: {
+          scopes: ['move'],
+          costClass: 'preview',
+          weight: literal(1),
+          value: previewStandingSum(),
+          previewFallback: { onUnavailable: 'noContribution' },
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+        },
         [considerationId]: {
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
           value: previewStandingSum(),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },

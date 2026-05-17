@@ -132,6 +132,7 @@ Likely surface — exact paths refined against Phase 0 named owner. If Phase 0 n
 ## Outcome
 
 Completed on 2026-05-17.
+Outcome amended: 2026-05-17 - post-review archive path cleanup for Phase 2 ticket.
 
 - Phase 0 owner confirmed from `reports/178-phase-0-inner-preview-subroutine-split.md`: `policyInnerPreviewSubroutine:driveOption` is the named Phase 1 owner, with `6,804.08 ms` (`7.2562%` of same-run slow-tier wall) on `coupArvnRedeployPolice:chooseOne | continuedDeepening`.
 - Optimization landed in `packages/engine/src/agents/policy-preview-inner.ts`: `driveOption` now constructs and maintains the per-option draft token-state index lazily only when the preview drive must continue past the first selected option. Immediate ready/stochastic/depth-cap/no-preview exits return the same canonical projected state and trace payload without paying the draft-index setup cost.
@@ -146,7 +147,7 @@ Completed on 2026-05-17.
 - Witness-scope correction: the live trace does not carry the profiling script's `coupArvn*` classifier name in `decisionKey`. The test pins the stronger public trace surface: every `arvn-evolved` `chooseOne` decision whose `previewUsage.coverage.strategy` is `continuedDeepening` in the bounded seed run. Each row records `decisionKey`, selected `MoveParamValue`, selected stable key, `previewUsage`, advisories, per-option score contributions, preview outcomes, and preview-drive carriers.
 - Foundation #20 carrier preservation is proved by byte-for-byte fixture parity over `previewUsage`, advisories, per-option unknown preview refs, preview outcomes, and preview-drive records. No new advisory carrier or unsupported-reason class was introduced.
 - Generated/schema fallout: none expected; no GameSpecDoc, visual config, profile YAML, kernel schema, generated schema, or WASM ABI surface changed.
-- Deferred scope: Phase 2 remains responsible for the post-optimization wall-time witness and report (`tickets/178CONTDEEPINNER-003.md`).
+- Deferred scope: Phase 2 remained responsible for the post-optimization wall-time witness and report (`archive/tickets/178CONTDEEPINNER-003.md`).
 - Post-review correction: the lazy draft-index synchronization now applies the initial state-to-preview state zone delta only when the draft index is first created. Later synthetic-depth iterations rely on the already-synchronized draft index and only apply their own `prevState -> state` delta after the selected synthetic decision.
 - Source-size ledger: `packages/engine/src/agents/policy-preview-inner.ts | before 562 | after 570 | crossed cap? no | active growth +8 | extraction/defer rationale: under cap and localized lazy-initialization change plus post-review guard | successor none`; `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts | before 0 | after 113 | crossed cap? no | active growth +113 | extraction/defer rationale: new focused architecture test under cap | successor none`.
 - Final verification:

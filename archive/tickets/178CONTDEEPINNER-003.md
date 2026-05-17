@@ -1,6 +1,6 @@
 # 178CONTDEEPINNER-003: Phase 2 — End-to-end witness validation + wall-time delta report
 
-**Status**: BLOCKED by failed measured gate
+**Status**: COMPLETED - red-gate evidence resolved by successors
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement and report only
@@ -59,7 +59,7 @@ Create `reports/178-phase-2-post-optimization-wall-time.md` recording:
 
 ### 3. Append Outcome to Spec 178
 
-After the report is checked in and the acceptance verdict is recorded, edit `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` §13 Outcome with:
+After the report is checked in and the acceptance verdict is recorded, edit `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` §13 Outcome with:
 
 - Completion date.
 - Phase 2 report path.
@@ -73,7 +73,7 @@ This appends to the existing `## 13. Outcome` placeholder, replacing the `(Recor
 - `reports/178-phase-2-post-optimization-wall-time.md` (new — Phase 2 validation report)
 - `reports/fitl-arvn-15-seed-decomposition-2026-MM-DD-spec-178-phase-2-post-optimization-wall-time.csv` (new — generated witness CSV)
 - `reports/fitl-arvn-15-seed-decomposition-2026-MM-DD-spec-178-phase-2-post-optimization-wall-time.md` (new — generated witness Markdown)
-- `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify — append §13 Outcome)
+- `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify — append §13 Outcome)
 
 ## Out of Scope
 
@@ -119,21 +119,22 @@ None (this is a measurement-and-report ticket).
 ## Outcome
 
 **Result date**: 2026-05-17
+**Outcome amended**: 2026-05-17 - Phase 4 resolved the residual owner and made this red-gate evidence archive-ready
 
 - **Landed scope**: measurement/report/spec closeout only. No engine source, schema, GameSpecDoc, visual config, or policy-profile data changed in this ticket.
 - **Generated witness artifacts**:
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-2-post-optimization-wall-time.csv`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-2-post-optimization-wall-time.md`
 - **Validation report**: `reports/178-phase-2-post-optimization-wall-time.md`.
-- **Spec update**: `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` §13 records the Phase 2 red gate and adds `archive/tickets/178CONTDEEPINNER-004.md` as the residual owner.
+- **Spec update**: `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` §13 records the Phase 2 red gate and adds `archive/tickets/178CONTDEEPINNER-004.md` as the residual owner.
 - **Measured verdict**:
   - Witness command completed 5/5 seeds and wrote both generated artifacts.
   - Primary `policyInnerPreviewSubroutine:driveOption` dropped `6.19%` (`6,804.08 ms -> 6,382.68 ms`), failing the required `>= 40%` reduction.
   - Primary `continued-deepening-orchestration-inclusive` dropped `6.13%` (`7,578.43 ms -> 7,114.21 ms`), passing the directional-drop sub-criterion.
   - Sister-axis `policyInnerPreviewSubroutine:driveOption` dropped `9.34%` (`1,453.32 ms -> 1,317.64 ms`), failing the required `>= 25%` reduction.
   - Route and unsupported counters remained unchanged (`1,299` routes, `751` unsupported counts); unsupported reason rows were unchanged. Advisory parity remains covered by the Phase 1 outcome-parity test because this profiler artifact does not emit a separate advisory-total column.
-- **Residual owner**: `archive/tickets/178CONTDEEPINNER-004.md` investigates the still-material `driveOption` residual before any further optimization.
-- **Archive status**: blocked and not archive-ready until the residual owner resolves or the measured gate is explicitly re-scoped.
+- **Residual owner**: `archive/tickets/178CONTDEEPINNER-004.md` investigated the still-material `driveOption` residual, and `archive/tickets/178CONTDEEPINNER-005.md` resolved the resulting Phase 4 implementation owner.
+- **Archive status**: archive-ready as completed red-gate evidence. The Phase 2 reduction thresholds remained red in this ticket's own witness, but the successor chain completed the same Spec 178 chooseOne orchestration target and made this active blocker stale.
 - **Verification**:
   - `pnpm -F @ludoforge/engine build` passed before the decisive witness.
   - `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-05-17-spec-178-phase-2-post-optimization-wall-time --profile-buckets` passed and wrote the generated CSV/Markdown artifacts.

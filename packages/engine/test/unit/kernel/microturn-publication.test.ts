@@ -15,6 +15,7 @@ import {
   createGameDefRuntime,
   publishMicroturn,
   publishMicroturnFromPreviewStateNoHash,
+  publishMicroturnPreferredChooseOne,
   resolveActiveDeciderSeatIdForPlayer,
   toStochasticDecisionStackContext,
   type ActionDef,
@@ -192,6 +193,39 @@ describe('microturn publication', () => {
     assert.equal(canonical.projectedState.observation !== undefined, true);
     assert.equal(preview.projectedState.observation, undefined);
     assert.equal(preview.projectedState.state, afterActionSelection.state);
+  });
+
+  it('publishes only a preferred constructible chooseOne continuation for preview drives', () => {
+    const action: ActionDef = {
+      id: asActionId('choose-and-gain'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        chooseOneEffect('$target', ['A', 'B']),
+        eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } }),
+      ],
+      limits: [],
+    };
+    const def = makeBaseDef([action]);
+    const runtime = createGameDefRuntime(def);
+    const state = makeBaseState(def);
+
+    const actionSelection = publishMicroturn(def, state, runtime);
+    const afterActionSelection = applyDecision(def, state, actionSelection.legalActions[0]!, undefined, runtime);
+    const preferred = publishMicroturnPreferredChooseOne(def, afterActionSelection.state, ['B'], runtime);
+
+    assert.ok(preferred);
+    assert.equal(preferred.microturn.kind, 'chooseOne');
+    assert.equal(preferred.microturn.legalActions.length, 1);
+    assert.deepEqual(preferred.microturn.legalActions, [preferred.decision]);
+    assert.equal(preferred.decision.value, 'B');
+
+    const afterPreferred = applyDecision(def, afterActionSelection.state, preferred.decision, undefined, runtime);
+    assert.equal(afterPreferred.state.globalVars.resources, 1);
   });
 
   it('auto-completes exact-cardinality chooseN selections when the final set is uniquely determined', () => {

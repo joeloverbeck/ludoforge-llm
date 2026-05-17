@@ -1,6 +1,6 @@
 # Spec 178 — Optimize Continued-Deepening Inner-Preview Orchestration
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — survives the post-Spec-177 elimination chain as the only material owner that clears the 5% slow-tier wall-time bar on the FITL ARVN witness workload.
 **Complexity**: M — phased measure-then-optimize spec. Phase 0 is measurement-only; Phases 1–2 land a targeted optimization plus its wall-time witness.
 **Date**: 2026-05-17
@@ -191,9 +191,9 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 
 - [`archive/tickets/178CONTDEEPINNER-001.md`](../archive/tickets/178CONTDEEPINNER-001.md) — Phase 0 — Inner-preview subroutine split instrumentation + witness report (covers §5 Phase 0)
 - [`archive/tickets/178CONTDEEPINNER-002.md`](../archive/tickets/178CONTDEEPINNER-002.md) — Phase 1 — Targeted optimization of named subroutine owner + outcome-parity test (covers §5 Phase 1)
-- [`tickets/178CONTDEEPINNER-003.md`](../tickets/178CONTDEEPINNER-003.md) — Phase 2 — End-to-end witness validation + wall-time delta report (covers §5 Phase 2; measured gate red)
+- [`archive/tickets/178CONTDEEPINNER-003.md`](../archive/tickets/178CONTDEEPINNER-003.md) — Phase 2 — End-to-end witness validation + wall-time delta report (covers §5 Phase 2; measured gate red)
 - [`archive/tickets/178CONTDEEPINNER-004.md`](../archive/tickets/178CONTDEEPINNER-004.md) — Phase 3 — Investigate residual driveOption wall time after failed Phase 2 gate
-- [`tickets/178CONTDEEPINNER-005.md`](../tickets/178CONTDEEPINNER-005.md) — Phase 4 — Optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`
+- [`archive/tickets/178CONTDEEPINNER-005.md`](../archive/tickets/178CONTDEEPINNER-005.md) — Phase 4 — Optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`
 
 ## 13. Outcome
 
@@ -210,7 +210,7 @@ Phase 2 outcome recorded on 2026-05-17:
   - Route and unsupported counters were unchanged (`1,299` routes, `751` unsupported counts), so no carrier collapse was observed.
 - Final recommendation: create-investigation-ticket: 178CONTDEEPINNER-004 residual `policyInnerPreviewSubroutine:driveOption` wall time after Phase 1 under-delivery.
 
-Spec 178 remains open because the Phase 2 measured gate is red.
+At Phase 2 closeout, Spec 178 remained open because the measured gate was red.
 
 Phase 3 outcome recorded on 2026-05-17:
 
@@ -230,6 +230,25 @@ Phase 3 outcome recorded on 2026-05-17:
   - Primary-axis `policyInnerPreviewDriveOption:publishMicroturn` was the largest child row at `3,056.07 ms`, or `47.0558%` of the `driveOption` wrapper.
   - Sister-axis `policyInnerPreviewDriveOption:publishMicroturn` was also the largest child row at `357.82 ms`, or `26.4895%` of that axis' `driveOption` wrapper.
   - Route and unsupported counters remained unchanged from Phase 2 (`1,299` routes, `751` unsupported counts), so no Foundation #20 carrier collapse was observed.
-- Final recommendation: create-implementation-ticket: `tickets/178CONTDEEPINNER-005.md` optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`.
+- Final recommendation: create-implementation-ticket: `archive/tickets/178CONTDEEPINNER-005.md` optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`.
 
-Spec 178 remains open because the Phase 4 implementation owner is active.
+At Phase 3 closeout, Spec 178 remained open because the Phase 4 implementation owner was active.
+
+Phase 4 outcome recorded on 2026-05-17:
+
+- Report: `reports/178-phase-4-publish-microturn-optimization.md`.
+- Generated witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-4-publish-microturn-optimization.csv`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-4-publish-microturn-optimization.md`
+- Implementation:
+  - `driveOption` now uses a generic preferred chooseOne publication path for policy-guided continuations.
+  - The fast path still asks the kernel to verify the preferred continuation before applying it, then falls back to the existing full publication path if the preferred continuation is not constructible.
+- Measured result:
+  - Primary-axis `policyInnerPreviewDriveOption:publishMicroturn` dropped `46.05%` (`3,056.07 ms -> 1,648.83 ms`).
+  - Primary-axis `policyInnerPreviewSubroutine:driveOption` dropped `47.10%` (`6,494.10 ms -> 3,435.14 ms`), clearing the original `>= 40%` owner-reduction target.
+  - Primary-axis total dropped `42.08%` (`7,286.87 ms -> 4,220.50 ms`) and is now below the Phase 4 same-run 5% materiality bar (`4,415.13 ms`).
+  - Sister-axis `policyInnerPreviewDriveOption:publishMicroturn` dropped `17.36%` (`357.82 ms -> 295.70 ms`), directionally improved but below the earlier Phase 2 sister-axis 25% guidepost.
+  - Route and unsupported counters remained unchanged (`1,299` routes, `751` unsupported counts), so no Foundation #20 carrier collapse was observed.
+- Final recommendation: stop. The chooseOne continued-deepening orchestration target that motivated Spec 178 no longer clears the 5% materiality bar. Remaining top slow axes are chooseNStep continued-deepening families, which this spec marks out of scope.
+
+Spec 178 is complete for the chooseOne orchestration target.

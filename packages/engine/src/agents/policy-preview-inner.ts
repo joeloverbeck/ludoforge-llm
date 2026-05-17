@@ -9,20 +9,24 @@ import {
 } from '../kernel/microturn/drive.js';
 import {
   publishMicroturnFromPreviewStateNoHash,
+  publishMicroturnPreferredChooseOne,
 } from '../kernel/microturn/publish.js';
 import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import { createResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
+import { selectBestMicroturnChooseOneValue } from './microturn-option-evaluator.js';
 import type {
   AgentPreviewAuthoredCompletionPolicy,
   AgentPreviewFallbackCompletionPolicy,
   AgentPolicyCatalog,
+  ChoicePendingChooseOneRequest,
   CompiledAgentPolicyRef,
   CompiledAgentProfile,
   CompiledSurfaceRefBase,
   GameDef,
   GameState,
+  MoveParamScalar,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicyPreviewDriveTrace,
   SyntheticDecisionTraceEntry,
@@ -236,6 +240,37 @@ const selectedOptionStableKey = (decision: Decision): string => {
   }
 };
 
+const createChooseOneRequest = (
+  microturn: ChooseOneMicroturn,
+): ChoicePendingChooseOneRequest => ({
+  kind: 'pending',
+  complete: false,
+  decisionKey: microturn.decisionContext.decisionKey,
+  name: String(microturn.decisionContext.decisionKey),
+  options: microturn.decisionContext.options,
+  targetKinds: [],
+  type: 'chooseOne',
+});
+
+const preferredPolicyGuidedChooseOneValue = (
+  input: RunChooseOneInnerPreviewInput,
+  state: GameState,
+  microturn: ChooseOneMicroturn,
+): MoveParamScalar | undefined => {
+  const selected = selectBestMicroturnChooseOneValue({
+    state,
+    def: input.def,
+    catalog: input.catalog,
+    playerId: input.playerId,
+    seatId: input.seatId,
+    profile: input.profile,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+  }, createChooseOneRequest(microturn), { requirePositiveScore: false })?.value;
+  return typeof selected === 'string' || typeof selected === 'number' || typeof selected === 'boolean'
+    ? selected
+    : undefined;
+};
+
 const targetVisibilityContext = (
   def: GameDef,
   state: GameState,
@@ -406,32 +441,53 @@ const driveOption = (
       syncDraftTokenStateIndex(input.state, state);
     }
     const publishStartedAt = perfHotPathStart();
-    const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+    const topChooseOne = ctxKind === 'chooseOne'
+      ? {
+          kind: 'chooseOne' as const,
+          seatId: topSeatId,
+          decisionContext: top.context,
+          legalActions: [],
+          projectedState: { state },
+          turnId: top.turnId,
+          frameId: top.frameId,
+          compoundTurnTrace: [],
+        } satisfies ChooseOneMicroturn
+      : undefined;
+    const preferredValue = completionPolicy === 'policyGuided' && topChooseOne !== undefined
+      ? preferredPolicyGuidedChooseOneValue(input, state, topChooseOne)
+      : undefined;
+    const preferredPublication = preferredValue === undefined
+      ? null
+      : publishMicroturnPreferredChooseOne(input.def, state, [preferredValue], input.runtime);
+    const microturn = preferredPublication?.microturn
+      ?? publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
     perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
     const pickStartedAt = perfHotPathStart();
-    const nextDecisionResult = pickInnerDecision(
-      state,
-      input.def,
-      microturn,
-      completionPolicy,
-      fallbackCompletionPolicy,
-      {
-        def: input.def,
-        state: input.state,
-        playerId: input.playerId,
-        seatId: input.seatId,
-        trustedMoveIndex: new Map(),
-        previewMode: input.profile.preview.mode,
-        completionPolicy,
-        fallbackCompletionPolicy,
-        completionDepthCap: depthCap,
-        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-        policyGuidedDeps: {
-          catalog: input.catalog,
-          profile: input.profile,
-        },
-      },
-    );
+    const nextDecisionResult = preferredPublication === null
+      ? pickInnerDecision(
+          state,
+          input.def,
+          microturn,
+          completionPolicy,
+          fallbackCompletionPolicy,
+          {
+            def: input.def,
+            state: input.state,
+            playerId: input.playerId,
+            seatId: input.seatId,
+            trustedMoveIndex: new Map(),
+            previewMode: input.profile.preview.mode,
+            completionPolicy,
+            fallbackCompletionPolicy,
+            completionDepthCap: depthCap,
+            ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+            policyGuidedDeps: {
+              catalog: input.catalog,
+              profile: input.profile,
+            },
+          },
+        )
+      : { decision: preferredPublication.decision, usedFallback: false };
     perfHotPathEnd('policyInnerPreviewDriveOption:pickInnerDecision', pickStartedAt);
     const nextDecision = nextDecisionResult.decision;
     if (nextDecisionResult.usedFallback) {

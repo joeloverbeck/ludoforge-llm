@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None expected at investigation start - measure and localize first
-**Deps**: `tickets/178CONTDEEPINNER-003.md`
+**Deps**: `archive/tickets/178CONTDEEPINNER-003.md`
 
 ## Problem
 
@@ -16,7 +16,7 @@ The same owner remains material after Phase 2: `policyInnerPreviewSubroutine:dri
 
 1. Phase 0 identified `policyInnerPreviewSubroutine:driveOption` as the named owner, with `6,804.08 ms` on the primary axis and `1,453.32 ms` on the sister axis.
 2. Phase 1 landed the lazy draft-index optimization and outcome-parity test in `archive/tickets/178CONTDEEPINNER-002.md`.
-3. Phase 2 (`tickets/178CONTDEEPINNER-003.md`) produced the decisive post-optimization witness and report at `reports/178-phase-2-post-optimization-wall-time.md`; the measured gate is red.
+3. Phase 2 (`archive/tickets/178CONTDEEPINNER-003.md`) produced the decisive post-optimization witness and report at `reports/178-phase-2-post-optimization-wall-time.md`; the measured gate is red.
 4. Route and unsupported counters remained stable (`1,299` routes, `751` unsupported counts), so the residual is not a Foundation #20 carrier-collapse symptom.
 
 ## Architecture Check
@@ -42,14 +42,14 @@ Create a checked-in report under `reports/` that records:
 
 ### 3. Update Spec 178
 
-Update `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` with the investigation outcome and the resulting next owner or stop decision.
+Update `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` with the investigation outcome and the resulting next owner or stop decision.
 
 ## Files to Touch
 
 - `reports/<new-spec-178-phase-3-report>.md` (new - exact name chosen by the investigation)
 - `reports/fitl-arvn-15-seed-decomposition-<date>-spec-178-phase-3-*.csv` (new if a generated witness is required)
 - `reports/fitl-arvn-15-seed-decomposition-<date>-spec-178-phase-3-*.md` (new if a generated witness is required)
-- `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify)
+- `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify)
 - Any profiler/reporting source files required to expose the residual sub-owner, if live reassessment proves the existing report surface is insufficient.
 
 ## Out of Scope
@@ -108,7 +108,7 @@ To be selected after live reassessment. If the investigation adds profiler/repor
   - Largest measured child row was `policyInnerPreviewDriveOption:publishMicroturn` at `3,056.07 ms`, or `47.0558%` of the primary-axis `driveOption` wrapper.
   - Sister-axis `publishMicroturn` was also the largest child row at `357.82 ms`, or `26.4895%` of that axis' `driveOption` wrapper.
   - Route and unsupported counters remained unchanged from Phase 2 (`1,299` routes, `751` unsupported counts); unsupported reason rows were unchanged. Advisory parity remains covered by the Phase 1 outcome-parity test because this profiler artifact does not emit a separate advisory-total column.
-- **Final recommendation**: create-implementation-ticket: `tickets/178CONTDEEPINNER-005.md` optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`.
+- **Final recommendation**: create-implementation-ticket: `archive/tickets/178CONTDEEPINNER-005.md` optimize `policyInnerPreviewDriveOption:publishMicroturn` inside `driveOption`.
 - **Schema/generated fallout**: no schema artifacts, GameDef artifacts, visual config, or generated JSON schema changes. Generated witness CSV/Markdown are checked-in report artifacts.
 - **Verification**:
   - `pnpm -F @ludoforge/engine build` passed before the focused test and decisive witness.

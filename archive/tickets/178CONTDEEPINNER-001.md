@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview-inner.ts` (instrumentation only); `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` (classifier + section extension)
-**Deps**: `specs/178-optimize-continued-deepening-inner-preview-orchestration.md`
+**Deps**: `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md`
 
 ## Problem
 
@@ -139,6 +139,7 @@ Then author `reports/178-phase-0-inner-preview-subroutine-split.md` recording:
 ## Outcome
 
 Outcome amended: 2026-05-17
+Outcome amended: 2026-05-17 - post-review archive path cleanup for Spec 178.
 
 Completed on 2026-05-17. Phase 0 instrumentation and witness generation landed:
 

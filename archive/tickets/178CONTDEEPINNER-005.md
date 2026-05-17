@@ -1,6 +1,6 @@
 # 178CONTDEEPINNER-005: Phase 4 - Optimize publishMicroturn inside driveOption
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - generic policy inner-preview publication path
@@ -51,7 +51,7 @@ Run the same five-seed decomposition command after the implementation and record
 - `reports/<new-spec-178-phase-4-report>.md` (new - exact name chosen by implementation)
 - `reports/fitl-arvn-15-seed-decomposition-<date>-spec-178-phase-4-*.csv` (new if generated witness is required)
 - `reports/fitl-arvn-15-seed-decomposition-<date>-spec-178-phase-4-*.md` (new if generated witness is required)
-- `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify - append Phase 4 outcome)
+- `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` (modify - append Phase 4 outcome)
 
 ## Out of Scope
 
@@ -88,3 +88,33 @@ To be selected after live reassessment. Prefer extending existing policy inner-p
 2. Focused behavior/parity test selected during reassessment
 3. `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-MM-DD-spec-178-phase-4-publish-microturn-optimization --profile-buckets`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-17)
+
+- **Implementation landed**: `driveOption` now uses a generic preferred chooseOne publication path for policy-guided continuations. The fast path scores the current chooseOne context first, asks the kernel to publish and verify only the preferred continuation, and falls back to the existing full `publishMicroturnFromPreviewStateNoHash` path when the preferred continuation is not constructible.
+- **One-rules protocol preserved**: the selected continuation is still verified by the kernel's `isSupportedFrameContinuationMove` publication support check before it is applied. No client-side search, GameSpecDoc change, profile tuning, FITL-specific branch, WASM route extension, or publication contract rewrite was added.
+- **Touched-file scope**:
+  - `packages/engine/src/agents/policy-preview-inner.ts` - optimized the policy-guided chooseOne continuation path inside `driveOption`.
+  - `packages/engine/src/kernel/microturn/publish.ts` - generalized the existing chooseOne publication fast helper without net growth in the preexisting oversized publication hub.
+  - `packages/engine/test/unit/kernel/microturn-publication.test.ts` - added preferred-publication proof.
+  - `reports/178-phase-4-publish-microturn-optimization.md` - Phase 4 summary report.
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-4-publish-microturn-optimization.md` and `.csv` - five-seed witness artifacts.
+  - `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` - Phase 4 outcome.
+- **Generated/schema fallout**: no schema, generated schema, GameDef golden, or visual artifact changed.
+- **Measurement result**:
+  - Primary-axis `policyInnerPreviewDriveOption:publishMicroturn`: `3,056.07 ms -> 1,648.83 ms` (`-46.05%`), a material reduction.
+  - Primary-axis `policyInnerPreviewSubroutine:driveOption`: `6,494.10 ms -> 3,435.14 ms` (`-47.10%`), clearing the original `>= 40%` owner-reduction target.
+  - Primary-axis total: `7,286.87 ms -> 4,220.50 ms` (`-42.08%`), now below the Phase 4 same-run 5% materiality bar (`4,415.13 ms`).
+  - Sister-axis `policyInnerPreviewDriveOption:publishMicroturn`: `357.82 ms -> 295.70 ms` (`-17.36%`), directionally improved but below the earlier Phase 2 sister-axis 25% guidepost.
+  - Route and unsupported counters remained unchanged at `1,299` routes and `751` unsupported counts.
+- **Source-size ledger**: `packages/engine/src/agents/policy-preview-inner.ts | 583 -> 639 | crossed cap? no | active growth +56 | under 800-line cap; helper remains local to the inner-preview seam | successor none`; `packages/engine/src/kernel/microturn/publish.ts | 961 -> 960 | crossed cap? no, preexisting oversize decreased | active growth -1 | generalized existing helper without net growth | successor none`.
+- **Verification**:
+  - `pnpm -F @ludoforge/engine build` - passed; rerun after the final test assertion cleanup also passed.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-publication.test.js dist/test/architecture/policy-preview-inner-outcome-parity.test.js` - passed, 17 tests; rerun after the final test assertion cleanup also passed, 17 tests.
+  - `pnpm -F @ludoforge/engine exec node scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1005,1011,1008,1013,1009 --timeout-ms 600000 --date 2026-05-17-spec-178-phase-4-publish-microturn-optimization --profile-buckets` - passed, 5/5 seeds; artifacts written under `reports/`.
+  - `pnpm -F @ludoforge/engine lint` - passed; rerun after the final test assertion cleanup also passed.
+  - `pnpm run check:ticket-deps` - passed before terminal status and again after terminal status.
+  - `git diff --check` - passed.
+  - `git diff --no-index --check /dev/null <new report/artifact>` - emitted no whitespace diagnostics for the new Phase 4 report, generated Markdown, and generated CSV artifacts.
+- **Late-edit proof validity**: terminal status/proof transcription and spec status/outcome transcription were followed by a test-assertion-only cleanup in `packages/engine/test/unit/kernel/microturn-publication.test.ts`; the affected producer/consumer proof was rerun with `pnpm -F @ludoforge/engine build` and the focused 17-test compiled lane, then `pnpm -F @ludoforge/engine lint` reran cleanly. No source, command, acceptance, measured-artifact, or touched-file boundary changed after the profiler witness.
+- **Archive status**: archived at `archive/tickets/178CONTDEEPINNER-005.md` by `$post-ticket-review`.

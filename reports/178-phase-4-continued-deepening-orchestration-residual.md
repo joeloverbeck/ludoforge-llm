@@ -76,4 +76,4 @@ Nearby same-owner evidence also appears for `coupArvnRedeployOptionalTroops:choo
 
 create-spec: Optimize continued-deepening inner-preview orchestration
 
-**Follow-up**: `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` operationalizes this recommendation as a phased measure-then-optimize spec.
+**Follow-up**: `archive/specs/178-optimize-continued-deepening-inner-preview-orchestration.md` operationalized this recommendation as a phased measure-then-optimize spec.

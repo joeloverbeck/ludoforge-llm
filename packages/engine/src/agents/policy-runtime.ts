@@ -155,6 +155,7 @@ export interface PolicyPreviewSurfaceProvider {
   getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
   getCompletionPolicyFallbackCount(candidate: PolicyRuntimeCandidate): number;
   getPreviewDrive(candidate: PolicyRuntimeCandidate): PolicyPreviewDriveTrace | undefined;
+  getOutcomeGrantContinuationDepth(candidate: PolicyRuntimeCandidate): number;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
@@ -682,6 +683,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getPreviewDrive(candidate) {
         return previewRuntime.getPreviewDrive(candidate);
+      },
+      getOutcomeGrantContinuationDepth(candidate) {
+        return previewRuntime.getOutcomeGrantContinuationDepth(candidate);
       },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);

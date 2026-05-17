@@ -6,6 +6,7 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
   CompiledAgentPreviewBudgetConfig,
+  CompiledAgentPreviewOutcomeGrantContinuationConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
   DeepTrigger,
@@ -207,10 +208,23 @@ export interface PolicyEvaluationPreviewUsage {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
+  readonly outcomeGrantContinuation?: PolicyEvaluationOutcomeGrantContinuationUsage;
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverage;
+}
+
+export interface PolicyEvaluationOutcomeGrantContinuationUsage {
+  readonly enabled: true;
+  readonly extraDepthCap: number;
+  readonly capClass: CompiledAgentPreviewOutcomeGrantContinuationConfig['capClass'];
+  readonly extraDepthReached: number;
+  readonly exitCounts: {
+    readonly completed: number;
+    readonly postGrantCap: number;
+    readonly stochastic: number;
+  };
 }
 
 export interface PolicyPreviewCoverage {
@@ -339,6 +353,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  outcomeGrantContinuationDepth?: number;
   completionPolicyFallbackCount?: number;
   scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
   candidateParamFallbackFired?: Map<string, number>;
@@ -870,7 +885,13 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         candidates.length,
         ` selectedCandidates=${selectionCandidates.length} finalScore=${selected.score}`,
       );
-      const previewUsageForMemory = summarizePreviewUsage(candidates, profile.preview.mode, evaluation);
+      const previewUsageForMemory = summarizePreviewUsage(
+        candidates,
+        profile.preview.mode,
+        evaluation,
+        false,
+        profile.preview.outcomeGrantContinuation,
+      );
       updatePreviewWideningMemory(
         input.previewWideningState,
         allocatorOutput.decisionClassKey,
@@ -1171,6 +1192,9 @@ function scoreCandidateForGateFlipProbe(
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
+    ...(candidate.outcomeGrantContinuationDepth === undefined
+      ? {}
+      : { outcomeGrantContinuationDepth: candidate.outcomeGrantContinuationDepth }),
     ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
   };
   return considerationIds.reduce((total, considerationId) => (
@@ -1225,6 +1249,7 @@ function summarizePreviewUsage(
   mode: AgentPreviewMode,
   evaluation: PolicyEvaluationContext,
   widenedBecauseUniform = false,
+  outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig,
 ): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
@@ -1247,6 +1272,9 @@ function summarizePreviewUsage(
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
+    ...(outcomeGrantContinuation?.enabled === true
+      ? { outcomeGrantContinuation: summarizeOutcomeGrantContinuation(evaluatedCandidates, outcomeGrantContinuation) }
+      : {}),
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform,
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
@@ -1261,6 +1289,50 @@ function summarizePreviewUsage(
       selectedByTieBreakerBecausePreviewUnavailable: false,
       strategy: 'singlePass',
       capClass: 'standard256',
+    },
+  };
+}
+
+function summarizeOutcomeGrantContinuation(
+  evaluatedCandidates: readonly CandidateEntry[],
+  config: CompiledAgentPreviewOutcomeGrantContinuationConfig,
+): PolicyEvaluationOutcomeGrantContinuationUsage {
+  let completed = 0;
+  let postGrantCap = 0;
+  let stochastic = 0;
+  let extraDepthReached = 0;
+
+  for (const candidate of evaluatedCandidates) {
+    const postGrantDepth = candidate.outcomeGrantContinuationDepth ?? 0;
+    if (postGrantDepth <= 0) {
+      continue;
+    }
+    extraDepthReached = Math.max(extraDepthReached, postGrantDepth);
+    switch (candidate.previewDrive?.kind) {
+      case 'completed':
+        completed += 1;
+        break;
+      case 'postGrantCap':
+        postGrantCap += 1;
+        break;
+      case 'stochastic':
+        stochastic += 1;
+        break;
+      case 'depthCap':
+      case undefined:
+        break;
+    }
+  }
+
+  return {
+    enabled: true,
+    extraDepthCap: config.extraDepthCap,
+    capClass: config.capClass,
+    extraDepthReached,
+    exitCounts: {
+      completed,
+      postGrantCap,
+      stochastic,
     },
   };
 }

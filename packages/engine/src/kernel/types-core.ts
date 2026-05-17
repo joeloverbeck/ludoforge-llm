@@ -2015,10 +2015,23 @@ export interface PolicyPreviewUsageTrace {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
+  readonly outcomeGrantContinuation?: PolicyPreviewOutcomeGrantContinuationTrace;
   readonly utility: PolicyPreviewUtilityTrace;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverageTrace;
+}
+
+export interface PolicyPreviewOutcomeGrantContinuationTrace {
+  readonly enabled: true;
+  readonly extraDepthCap: number;
+  readonly capClass: AgentPreviewPostGrantCapClass;
+  readonly extraDepthReached: number;
+  readonly exitCounts: {
+    readonly completed: number;
+    readonly postGrantCap: number;
+    readonly stochastic: number;
+  };
 }
 
 export interface PolicyPreviewCoverageTrace {

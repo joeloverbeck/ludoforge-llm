@@ -157,6 +157,7 @@ export interface PolicyPreviewRuntime {
   getCompletionMetadata(candidate: PolicyPreviewCandidate): PolicyPreviewCompletionMetadata | undefined;
   getCompletionPolicyFallbackCount(candidate: PolicyPreviewCandidate): number;
   getPreviewDrive(candidate: PolicyPreviewCandidate): PolicyPreviewDriveTrace | undefined;
+  getOutcomeGrantContinuationDepth(candidate: PolicyPreviewCandidate): number;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyPreviewCandidate): boolean;
@@ -229,6 +230,7 @@ type PreviewOutcome =
       readonly trustedMove: TrustedExecutableMove;
       readonly driveKind: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -244,6 +246,7 @@ type PreviewOutcome =
       readonly trustedMove: TrustedExecutableMove;
       readonly driveKind: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -259,6 +262,7 @@ type PreviewOutcome =
       readonly failureReason?: string;
       readonly driveKind?: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth?: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy?: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions?: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount?: number;
@@ -279,6 +283,7 @@ type DriveResult =
       readonly kind: 'completed';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -286,6 +291,7 @@ type DriveResult =
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -293,6 +299,7 @@ type DriveResult =
       readonly kind: 'depthCap';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -300,6 +307,7 @@ type DriveResult =
       readonly kind: 'postGrantCap';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -307,6 +315,7 @@ type DriveResult =
       readonly kind: 'failed';
       readonly reason: PolicyPreviewUnavailabilityReason;
       readonly depth?: number;
+      readonly postGrantDepth?: number;
       readonly failureReason?: string;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -795,6 +804,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
             syntheticDecisions: outcome.syntheticDecisions ?? [],
           };
     },
+    getOutcomeGrantContinuationDepth(candidate) {
+      if (disposed) {
+        return 0;
+      }
+      return getPreviewOutcome(candidate).outcomeGrantContinuationDepth ?? 0;
+    },
     getGrantedOperation(candidate) {
       if (disposed) {
         return undefined;
@@ -886,6 +901,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     let postGrantDepth = 0;
     const finish = (result: DriveResultWithoutSynthetic): DriveResult => emitExit({
       ...result,
+      ...(postGrantDepth > 0 ? { postGrantDepth } : {}),
       syntheticDecisions: [...syntheticDecisions],
       completionPolicyFallbackCount,
     } as DriveResult);
@@ -1118,6 +1134,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         kind: 'unknown',
         reason: result.reason,
         ...(result.depth === undefined ? {} : { driveDepth: result.depth, completionPolicy }),
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1130,6 +1147,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         failureReason: 'depthCap',
         driveKind: 'depthCap',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1142,6 +1160,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         failureReason: 'postGrantCap',
         driveKind: 'postGrantCap',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1154,6 +1173,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: 'random',
         driveKind: 'stochastic',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1167,6 +1187,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: 'random',
         driveKind: 'completed',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1185,6 +1206,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       trustedMove,
       driveKind: result.kind,
       driveDepth: result.depth,
+      ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
       completionPolicy,
       syntheticDecisions: result.syntheticDecisions,
       completionPolicyFallbackCount: result.completionPolicyFallbackCount,

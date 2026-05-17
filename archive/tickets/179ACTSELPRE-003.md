@@ -179,7 +179,7 @@ Implemented the Foundation-aligned Phase 1b driver seam:
 - Existing opt-out profiles preserve the previous trace shape: advisory `unavailabilityBreakdown.postGrantCap` is absent unless the new reason is observed.
 - Generic post-grant tests prove opt-out boundary behavior, opt-in continuation, deterministic same-input preview output, and the `postGrantCap` exit path.
 
-Boundary note: the previously drafted opponent-margin distinctness witness was intentionally not implemented here. User approved the narrower Option 1 boundary on 2026-05-17; FITL/ARVN opponent-margin differentiation remains owned by `tickets/179ACTSELPRE-005.md`, and decision-level `previewUsage.outcomeGrantContinuation` aggregation remains owned by `tickets/179ACTSELPRE-004.md`.
+Boundary note: the previously drafted opponent-margin distinctness witness was intentionally not implemented here. User approved the narrower Option 1 boundary on 2026-05-17; FITL/ARVN opponent-margin differentiation remains owned by `tickets/179ACTSELPRE-005.md`, and decision-level `previewUsage.outcomeGrantContinuation` aggregation was completed by `archive/tickets/179ACTSELPRE-004.md`.
 
 ### Verification
 

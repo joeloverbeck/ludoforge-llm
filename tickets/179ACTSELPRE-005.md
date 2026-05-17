@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only (campaign profile YAML edit + docs).
-**Deps**: `tickets/179ACTSELPRE-004.md`
+**Deps**: `archive/tickets/179ACTSELPRE-004.md`
 
 ## Problem
 

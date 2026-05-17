@@ -2397,6 +2397,23 @@ const PolicyPreviewCoverageTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
+  // Spec 179: decision-level aggregate for the opt-in post-grant preview drive.
+  .object({
+    enabled: z.literal(true),
+    extraDepthCap: IntegerSchema.positive(),
+    capClass: z.literal('postGrant16'),
+    extraDepthReached: IntegerSchema.nonnegative(),
+    exitCounts: z
+      .object({
+        completed: IntegerSchema.nonnegative(),
+        postGrantCap: IntegerSchema.nonnegative(),
+        stochastic: IntegerSchema.nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+
 const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
@@ -2405,6 +2422,7 @@ const PolicyPreviewUsageTraceSchema = z
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
+    outcomeGrantContinuation: PolicyPreviewOutcomeGrantContinuationTraceSchema.optional(),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),

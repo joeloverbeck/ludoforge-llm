@@ -2079,6 +2079,78 @@
                       "additionalProperties": false
                     }
                   },
+                  "outcomeGrantContinuation": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "const": true
+                      },
+                      "extraDepthCap": {
+                        "exclusiveMinimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "capClass": {
+                        "type": "string",
+                        "const": "postGrant16"
+                      },
+                      "extraDepthReached": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "exitCounts": {
+                        "type": "object",
+                        "properties": {
+                          "completed": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
+                          "postGrantCap": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
+                          "stochastic": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "completed",
+                          "postGrantCap",
+                          "stochastic"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "enabled",
+                      "extraDepthCap",
+                      "capClass",
+                      "extraDepthReached",
+                      "exitCounts"
+                    ],
+                    "additionalProperties": false
+                  },
                   "utility": {
                     "type": "string",
                     "enum": [

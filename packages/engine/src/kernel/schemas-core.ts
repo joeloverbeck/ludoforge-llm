@@ -2225,6 +2225,7 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
       z.literal('depthCap'),
+      z.literal('postGrantCap'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]),
@@ -2271,6 +2272,7 @@ const SyntheticDecisionTraceEntrySchema = z
 
 const PolicyPreviewDriveTraceSchema = z
   .object({
+    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'stochastic']).optional(),
     depth: IntegerSchema.nonnegative(),
     completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
@@ -2426,6 +2428,7 @@ const PolicyPreviewSignalUnavailableAdvisoryTraceSchema = z
       unresolved: IntegerSchema.nonnegative(),
       failed: IntegerSchema.nonnegative(),
       depthCap: IntegerSchema.nonnegative(),
+      postGrantCap: IntegerSchema.nonnegative().optional(),
       noPreviewDecision: IntegerSchema.nonnegative(),
       gated: IntegerSchema.nonnegative(),
       afterDeepPass: IntegerSchema.nonnegative().optional(),

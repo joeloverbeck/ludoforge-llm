@@ -180,6 +180,7 @@ export const incrementOutcome = (
       (breakdown as { unknownUnresolved: number }).unknownUnresolved += 1;
       return;
     case 'depthCap':
+    case 'postGrantCap':
       (breakdown as { unknownDepthCap: number }).unknownDepthCap += 1;
       return;
     case 'noPreviewDecision':

@@ -153,7 +153,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 
 - [`archive/tickets/179ACTSELPRE-001.md`](../archive/tickets/179ACTSELPRE-001.md) — Phase 0 — Pre-implementation bench (baseline witness report) (covers §5 Phase 0)
 - [`archive/tickets/179ACTSELPRE-002.md`](../archive/tickets/179ACTSELPRE-002.md) — Phase 1a — Schema/compiler/validator wiring for `outcomeGrantContinuation` (covers §5 Phase 1 schema)
-- [`tickets/179ACTSELPRE-003.md`](../tickets/179ACTSELPRE-003.md) — Phase 1b — Driver change in `driveSyntheticCompletion` (post-grant continuation) (covers §5 Phase 1 driver, §4.2)
+- [`archive/tickets/179ACTSELPRE-003.md`](../archive/tickets/179ACTSELPRE-003.md) — Phase 1b — Driver change in `driveSyntheticCompletion` (post-grant continuation) (covers §5 Phase 1 driver, §4.2)
 - [`tickets/179ACTSELPRE-004.md`](../tickets/179ACTSELPRE-004.md) — Phase 1c — `previewUsage.outcomeGrantContinuation` trace surface (covers §5 Phase 1 trace, §4.3)
 - [`tickets/179ACTSELPRE-005.md`](../tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (covers §5 Phase 2, §6 acceptance gate)
 - [`tickets/179ACTSELPRE-006.md`](../tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (covers Open Question §8.4)

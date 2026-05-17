@@ -2007,7 +2007,7 @@
                   "unknownRefs": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_a6408f6b"
+                      "$ref": "#/definitions/anon_27d91bdf"
                     }
                   },
                   "readyRefStats": {
@@ -2321,6 +2321,14 @@
                             }
                           ]
                         },
+                        "postGrantCap": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
                         "noPreviewDecision": {
                           "minimum": 0,
                           "allOf": [
@@ -2499,7 +2507,7 @@
                     "unknownPreviewRefs": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_a6408f6b"
+                        "$ref": "#/definitions/anon_27d91bdf"
                       }
                     },
                     "unknownLookupRefs": {
@@ -2889,6 +2897,15 @@
                     "previewDrive": {
                       "type": "object",
                       "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "completed",
+                            "depthCap",
+                            "postGrantCap",
+                            "stochastic"
+                          ]
+                        },
                         "depth": {
                           "minimum": 0,
                           "allOf": [
@@ -3913,6 +3930,55 @@
       "items": {
         "$ref": "#/definitions/anon_3a403105"
       }
+    },
+    "anon_27d91bdf": {
+      "type": "object",
+      "properties": {
+        "refId": {
+          "$ref": "#/definitions/anon_4682db72"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "random"
+            },
+            {
+              "type": "string",
+              "const": "hidden"
+            },
+            {
+              "type": "string",
+              "const": "unresolved"
+            },
+            {
+              "type": "string",
+              "const": "failed"
+            },
+            {
+              "type": "string",
+              "const": "depthCap"
+            },
+            {
+              "type": "string",
+              "const": "postGrantCap"
+            },
+            {
+              "type": "string",
+              "const": "noPreviewDecision"
+            },
+            {
+              "type": "string",
+              "const": "gated"
+            }
+          ]
+        }
+      },
+      "required": [
+        "refId",
+        "reason"
+      ],
+      "additionalProperties": false
     },
     "anon_3456318e": {
       "minItems": 1,
@@ -6898,51 +6964,6 @@
         "decisionKey",
         "decision",
         "frameId"
-      ],
-      "additionalProperties": false
-    },
-    "anon_a6408f6b": {
-      "type": "object",
-      "properties": {
-        "refId": {
-          "$ref": "#/definitions/anon_4682db72"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "random"
-            },
-            {
-              "type": "string",
-              "const": "hidden"
-            },
-            {
-              "type": "string",
-              "const": "unresolved"
-            },
-            {
-              "type": "string",
-              "const": "failed"
-            },
-            {
-              "type": "string",
-              "const": "depthCap"
-            },
-            {
-              "type": "string",
-              "const": "noPreviewDecision"
-            },
-            {
-              "type": "string",
-              "const": "gated"
-            }
-          ]
-        }
-      },
-      "required": [
-        "refId",
-        "reason"
       ],
       "additionalProperties": false
     },

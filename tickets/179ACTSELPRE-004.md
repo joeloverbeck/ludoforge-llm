@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts` (trace surface), schema artifacts.
-**Deps**: `tickets/179ACTSELPRE-003.md`
+**Deps**: `archive/tickets/179ACTSELPRE-003.md`
 
 ## Problem
 

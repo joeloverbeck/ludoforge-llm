@@ -30,7 +30,7 @@ Resume checkpoint quick rule: after context compaction, interruption, or a long 
 
 Terminal status stop: do not set a ticket's terminal status until no further source, test, schema, generated-artifact, ticket-scope, touched-file, dependency, or proof-story edits remain expected and the final proof set has run or been explicitly classified. If the active ticket needs an early closeout draft, write the intended terminal state in prose while leaving the status nonterminal, then apply the terminal status only as the final narrow edit after proof.
 
-Implemented-but-not-archived stop: `implement-ticket` may set the active ticket to the repo-local terminal implementation status only when the ticket-owned scope is proven and no proof-affecting edit remains. That does not archive the ticket. Unless the user explicitly requested review/archive in the same turn or the archive workflow already ran, leave the ticket active, record `implemented but not archived`, and hand off to `$post-ticket-review <ticket>`.
+Implemented-but-not-archived stop: `implement-ticket` may set the active ticket to the repo-local terminal implementation status only when the ticket-owned scope is proven and no proof-affecting edit remains. That does not archive the ticket. Unless the user explicitly requested review/archive in the same turn or the archive workflow already ran, leave the ticket active, record `implemented but not archived`, and hand off to `$post-ticket-review <ticket>`. The final response must include the exact handoff sentence from the Follow-Up section: `Post-review: not run; the ticket is implemented but not archived. Next workflow: $post-ticket-review <ticket>.`
 
 Durable nonterminal status stop: treat `BLOCKED`, `PARTIAL`, retained-substrate red-gate states, and similar explicit nonterminal closeout states as durable status changes, not as casual progress notes. If proof rows, dependency/status graph checks, successor/spec edits, decisive metric transcription, or proof-validity classification remain pending, draft the intended nonterminal state in prose and keep the ticket's `**Status**` unchanged until those rows are settled or explicitly classified. Apply the actual `**Status**: BLOCKED...` / `PARTIAL...` edit only after the measured result, residual owner, dependency integrity, and late-edit validity story are durable, unless the user explicitly asked for an immediate status marker and the ticket records the remaining proof rows as still pending.
 
@@ -48,6 +48,15 @@ Must-stop terminal blockers:
 | Post-proof edit changes scope, command coverage, touched-file ownership, dependency/sibling ownership, acceptance wording, or proof claims | Rerun the narrowest affected proof or integrity lane before terminal status. |
 | Dependency, status, active/archive classification, or successor/follow-up graph changes are unchecked | Run the narrow repo ticket-dependency or markdown-integrity lane, or record why no checker exists. |
 | New or ignored proof artifact/log/report is unclassified | Decide checked-in artifact, ignored ephemeral plus transcription, ignore-rule change, or stop for `1-3-1` if it contradicts the ticket. |
+
+Terminal closeout must-pass: before final response, fill these six rows in working notes, the active ticket outcome, or an equivalent compact closeout worksheet. Do not rely on scattered proof notes for these rows.
+
+- `post-review handoff`: exact sentence included, or review/archive already ran
+- `ticket graph/status integrity`: checker command/result, or why no checker applies
+- `source-size decision`: extraction done, user-approved deferral, 1-3-1 decision, or not triggered
+- `untracked/touched-file hygiene`: `git status --short` plus whitespace/format coverage for retained untracked files
+- `proof lane classification`: final green lanes, red/non-final lanes, cached/replayed lanes, and advisory emissions classified
+- `terminal status allowed`: every named deliverable/proof row is green, classified, explicitly substituted, or user-approved
 
 Checkpoint tiers: always emit the compact core, then add only the triggered ledgers that apply to the ticket. The full list below is a routing checklist, not a requirement to paste every row into every ordinary ticket. For resumed closeout after compaction or interruption, the compact `resumed-closeout checkpoint` is sufficient until it exposes a boundary, deliverable, proof-lane, or graph/status change; then rebuild the fuller ticket-named deliverables ledger before editing.
 
@@ -212,6 +221,7 @@ These are the reminders whose canonical guidance lives nowhere else in this skil
   - If the user asks to reassess proposed options before choosing, answer the option question directly before any file edit: map each option to `docs/FOUNDATIONS.md` and `AGENTS.md` constraints, reject or demote options that conflict with those rules, restate the recommendation, and wait for explicit confirmation. After confirmation, record the approved option in the authorization ledger and continue under the reset checklist below.
   - After confirmation, use this compact reset checklist before coding or resuming: re-inventory the whole mismatch class; sweep the same paragraph, acceptance criteria, and nearby spec prose for sibling stale nouns from the same imagined contract; update the active ticket's status/scope/acceptance language; create or update the follow-up owner if work is split; if a deliverable is deferred to existing later work, open the nearest named sibling ticket(s) long enough to confirm ownership or record why the active spec is sufficient; update specs and sibling ticket lists that changed; reconcile stale commands and artifact expectations; decide whether each deferred public/authored syntax is absent, rejected fail-closed, or still implemented now; emit a refreshed working-notes checkpoint; run `pnpm run check:ticket-deps` if the ticket graph changed unless the active ticket records why it does not apply; and rerun the final-proof gate before citing acceptance.
   - For approved narrowing where the active ticket still remains closeable, use `references/boundary-reset-recovery.md`'s confirmed narrowed/deferred recipe directly: record authorization, patch active artifacts, create or update the successor owner, scan direct dependents, classify deferred syntax, re-emit the checkpoint, re-extract proof lanes, then code. Do not continue on the pre-reset ticket story just because the remaining slice is small.
+  - If code, tests, schemas, or fixtures were already changed before the approved reset was reflected in the active ticket/spec/sibling artifacts, treat that as late reset recovery, not normal progress. Pause source edits, patch the active artifacts first, emit a late reset checkpoint, classify which prior proof is invalidated by the proof-story change, rerun the narrowest affected proof, and only then continue toward terminal status.
   - For Foundation 14 identity removals, include the consumer-fallout classification in the refreshed checkpoint and corrected ticket text: `identity/type-only fallout absorbed here`, `behavioral sibling scope deferred`, and the exact sibling/spec owner for deferred routing or semantic adoption. This prevents a no-alias compile fix from silently absorbing the sibling's behavior ticket, or a sibling deferral from preserving a compatibility alias.
   - For exact numeric-domain corrections, do not round, truncate, or hide non-integer rule-authoritative values inside a new compiler/runtime path. If the user approves integer normalization, record the scale factor or transformation rule, prove it preserves the intended ordering/ratio semantics, sweep authored and generated mirrors, and add the proof surface to the ticket before final verification.
   - If parity work proves the supposed TypeScript/reference path violates `FOUNDATIONS.md` numeric or determinism rules, fix the reference path through the focused failing witness instead of weakening the new path. Record the semantic correction in the active ticket outcome and keep the ABI/runtime target aligned to `FOUNDATIONS.md`.
@@ -586,6 +596,17 @@ Use this compact final handoff shape when implementation stops before archival:
 - `green lanes with advisory emissions`: passing lanes that emitted advisory diagnostics, with owner classification
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `next workflow`: `$post-ticket-review <ticket>` for completed/archive-ready tickets; `$implement-ticket <successor-or-active-ticket>` for blocked/nonterminal tickets; omit only when archival already ran or the user explicitly asked to pause
+
+Compact closeout worksheet option:
+
+- `status`: active ticket path and intended final status
+- `archive state`: review/archive already ran, implemented-not-archived, or blocked/not archive-ready
+- `graph/status check`: command/result or not-applicable reason
+- `source-size`: ledger status and extraction/deferral decision
+- `untracked files`: retained paths and hygiene coverage
+- `generated artifacts`: regenerated/checked/unchanged classification
+- `proof lanes`: final green, red/non-final, cached/replayed, and advisory-emitting lanes
+- `next workflow`: exact post-review or continuation sentence
 
 ## Codex Adaptation Notes
 

@@ -448,6 +448,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
     fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
+    ...(activeProfile?.preview.outcomeGrantContinuation === undefined
+      ? {}
+      : { outcomeGrantContinuation: activeProfile.preview.outcomeGrantContinuation }),
     captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasMicroturnConsiderations
       ? { policyGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }

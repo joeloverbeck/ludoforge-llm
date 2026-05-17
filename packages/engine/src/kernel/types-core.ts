@@ -1897,7 +1897,7 @@ export type PolicyScheduleInputRefTrace =
 
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
-  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
 }
 
 export interface PolicyLookupUnknownRefTrace {
@@ -1950,6 +1950,7 @@ export interface SyntheticDecisionTraceEntry {
 }
 
 export interface PolicyPreviewDriveTrace {
+  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'stochastic';
   readonly depth: number;
   readonly completionPolicy: AgentPreviewCompletionPolicy;
   readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
@@ -1984,7 +1985,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
-  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
@@ -2049,7 +2050,8 @@ export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnknownRefTrace['reason'], number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnknownRefTrace['reason'], 'postGrantCap'>, number> & {
+    readonly postGrantCap?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;

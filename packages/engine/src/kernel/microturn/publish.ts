@@ -41,6 +41,8 @@ import {
   type DecisionStackFrame,
   type EffectExecutionFrameSnapshot,
   type MicroturnState,
+  type OutcomeGrantResolveContext,
+  type OutcomeGrantResolveDecision,
   type StochasticDistribution,
   type SuspendedEffectFrameSnapshot,
   type StochasticResolveContext,
@@ -360,6 +362,13 @@ const toTurnRetirementDecision = (
 ): readonly TurnRetirementDecision[] => [{
   kind: 'turnRetirement',
   retiringTurnId: context.retiringTurnId,
+}];
+
+const toOutcomeGrantResolveDecision = (
+  context: OutcomeGrantResolveContext,
+): readonly OutcomeGrantResolveDecision[] => [{
+  kind: 'outcomeGrantResolve',
+  grantId: context.grant.grantId,
 }];
 
 const toChooseNStepContext = (
@@ -768,6 +777,19 @@ const publishStackTop = (
       compoundTurnTrace,
     };
   }
+  if (top.context.kind === 'outcomeGrantResolve') {
+    const context = top.context;
+    return {
+      kind: 'outcomeGrantResolve',
+      seatId,
+      decisionContext: context,
+      legalActions: toOutcomeGrantResolveDecision(context),
+      projectedState: includeProjectedObservation ? buildProjectedState(def, state, seatId) : { state },
+      turnId: top.turnId,
+      frameId: top.frameId,
+      compoundTurnTrace,
+    };
+  }
   if (top.context.kind === 'turnRetirement') {
     const context = top.context;
     return {
@@ -781,7 +803,7 @@ const publishStackTop = (
       compoundTurnTrace,
     };
   }
-  throw microturnContextKindUnsupported(top.context.kind);
+  throw microturnContextKindUnsupported(String((top.context as { readonly kind?: string }).kind));
 };
 
 export const publishMicroturn = (

@@ -1,6 +1,6 @@
 # 179ACTSELPRE-003: Phase 1b — Driver change in `driveSyntheticCompletion` (post-grant continuation)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts` (the bounded driver and its exit conditions).
@@ -28,6 +28,7 @@ Spec 179's mechanical fix is at `packages/engine/src/agents/policy-preview.ts:98
    Only the `outcomeGrantResolve` branch becomes opt-in-extensible; the other exits remain hard.
 3. `PolicyPreviewTraceOutcome` is at `policy-preview.ts:163-171` — adding `postGrantCap` extends the union; trace consumers must handle the new variant. Spec 162's Foundation #20 preview-status taxonomy already includes `depthCap` for the pre-grant cap — `postGrantCap` is a sibling.
 4. Ticket 002 has landed `outcomeGrantContinuation` on `AgentPreviewConfig` — this ticket consumes it.
+5. Boundary reset approved by user on 2026-05-17: this ticket owns the generic driver continuation/cap/taxonomy proof. The older synthetic opponent-margin differentiation witness belongs with the FITL/ARVN profile proof in `tickets/179ACTSELPRE-005.md`.
 
 ## Architecture Check
 
@@ -95,10 +96,10 @@ Add `packages/engine/test/architecture/preview-post-grant/post-grant-continuatio
 // @test-class: architectural-invariant
 ```
 
-Construct a small generic 2-seat game whose action-selection candidates differ ONLY in their post-grant opponent-state effect (one candidate's grant removes an opponent token; the other's doesn't). Assert:
-- With `outcomeGrantContinuation` absent: `preview.victory.currentMargin.<opp>` is uniform across candidates (`distinct = 1`).
-- With `outcomeGrantContinuation: { enabled: true, extraDepthCap: 4, capClass: postGrant16 }`: `distinct > 1` on the opponent-margin ref.
-- Trace's per-candidate `previewDrive.kind` reports `completed` (post-grant) or `postGrantCap` as appropriate.
+Construct a small generic 2-seat game whose trusted operation pushes `outcomeGrantResolve` frames. Assert:
+- With `outcomeGrantContinuation` absent: the preview stops at the grant boundary (`ready` phase) and reports `previewDrive.kind = completed`.
+- With `outcomeGrantContinuation: { enabled: true, extraDepthCap: 4, capClass: postGrant16 }`: the driver resolves the post-grant frame (`offered` phase) and reports `previewDrive.kind = completed`.
+- The same state/profile pair produces byte-identical generic preview output across two runs.
 
 Add a witness test at `packages/engine/test/architecture/preview-post-grant/post-grant-cap-exit-witness.test.ts`:
 
@@ -116,7 +117,15 @@ Grep for `case 'depthCap'` / `outcome === 'depthCap'` and any exhaustive `switch
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-preview.ts` (modify — outcome union + driver exit logic + postGrantDepth tracking)
+- `packages/engine/src/agents/policy-runtime.ts` (modify — thread profile outcome-grant continuation into preview runtime)
+- `packages/engine/src/agents/policy-agent.ts` (modify — unavailability breakdown coverage)
 - `packages/engine/src/agents/policy-eval.ts` (modify — outcome switch coverage)
+- `packages/engine/src/agents/policy-preview-inner.ts` (modify — preview outcome summary coverage)
+- `packages/engine/src/kernel/microturn/publish.ts` (modify — publish generic `outcomeGrantResolve` microturns for the driver)
+- `packages/engine/src/kernel/types-core.ts` (modify — trace taxonomy mirror)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — trace taxonomy mirror)
+- `packages/engine/schemas/Trace.schema.json` (modify — regenerated trace artifact)
+- `packages/engine/test/architecture/preview-post-grant/post-grant-fixture.ts` (new — generic post-grant fixture)
 - `packages/engine/test/architecture/preview-post-grant/post-grant-continuation-differentiates.test.ts` (new — architectural-invariant)
 - `packages/engine/test/architecture/preview-post-grant/post-grant-cap-exit-witness.test.ts` (new — convergence-witness)
 
@@ -134,11 +143,11 @@ Grep for `case 'depthCap'` / `outcome === 'depthCap'` and any exhaustive `switch
 
 ### Tests That Must Pass
 
-1. `post-grant-continuation-differentiates.test.ts` — opt-in flips `distinct = 1` to `distinct > 1` on the synthetic game.
+1. `post-grant-continuation-differentiates.test.ts` — opt-out stops at the generic grant boundary, opt-in resolves the generic `outcomeGrantResolve` frame, and repeated same-profile runs match exactly.
 2. `post-grant-cap-exit-witness.test.ts` — `postGrantCap` outcome surfaces when depth budget exceeded.
 3. Spec 162's `arvn-seed-1000` witness still passes — `depthCap` continues to fire when the pre-grant cap is hit (no semantic collision with the new `postGrantCap`).
 4. Engine test suite green: `pnpm -F @ludoforge/engine test`.
-5. Replay determinism (Foundation 8): the synthetic game's trace is byte-identical across two runs with same seed/profile.
+5. Replay determinism (Foundation 8): the generic post-grant preview output is byte-identical across two runs with the same state/profile.
 
 ### Invariants
 
@@ -160,3 +169,43 @@ Grep for `case 'depthCap'` / `outcome === 'depthCap'` and any exhaustive `switch
 3. Full engine: `pnpm -F @ludoforge/engine test`
 4. Full turbo: `pnpm turbo test`
 5. Lint + typecheck: `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-17)
+
+Implemented the Foundation-aligned Phase 1b driver seam:
+
+- `driveSyntheticCompletion` now consumes `preview.outcomeGrantContinuation` when enabled, auto-publishes and applies generic `outcomeGrantResolve` decisions, tracks post-grant continuation with a separate bounded counter, and exits with `postGrantCap` when the extra budget is exhausted.
+- Per-candidate preview trace taxonomy now carries `previewDrive.kind = completed | depthCap | postGrantCap | stochastic`; `postGrantCap` is allowed in trace types/schemas and emitted only where the new cap actually occurs.
+- Existing opt-out profiles preserve the previous trace shape: advisory `unavailabilityBreakdown.postGrantCap` is absent unless the new reason is observed.
+- Generic post-grant tests prove opt-out boundary behavior, opt-in continuation, deterministic same-input preview output, and the `postGrantCap` exit path.
+
+Boundary note: the previously drafted opponent-margin distinctness witness was intentionally not implemented here. User approved the narrower Option 1 boundary on 2026-05-17; FITL/ARVN opponent-margin differentiation remains owned by `tickets/179ACTSELPRE-005.md`, and decision-level `previewUsage.outcomeGrantContinuation` aggregation remains owned by `tickets/179ACTSELPRE-004.md`.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build` — PASS
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-post-grant/*.test.js` — PASS (2 tests / 2 suites)
+- `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js` — PASS
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — PASS
+- `pnpm -F @ludoforge/engine test` — PASS (92/92 files)
+- `pnpm turbo lint` — PASS
+- `pnpm turbo typecheck` — PASS
+- `pnpm turbo test` — PASS (5/5 tasks; engine 92/92 files, runner 205 files / 2019 tests)
+
+### Source-Size Ledger
+
+Touched files over the repository's 800-line guideline were pre-existing large contract/runtime hubs. The active changes were surgical additions to the existing taxonomy/threading sites; extraction would have widened the ticket beyond the approved Phase 1b seam.
+
+- `packages/engine/src/agents/policy-preview.ts`: 1341 lines, +59/-4
+- `packages/engine/src/agents/policy-runtime.ts`: 808 lines, +3/-0
+- `packages/engine/src/agents/policy-agent.ts`: 932 lines, +10/-3
+- `packages/engine/src/agents/policy-eval.ts`: 1510 lines, +3/-2
+- `packages/engine/src/kernel/microturn/publish.ts`: 982 lines, +23/-1
+- `packages/engine/src/kernel/types-core.ts`: 2334 lines, +5/-3
+- `packages/engine/src/kernel/schemas-core.ts`: 2762 lines, +3/-0
+
+New test helper/test files are under the guideline:
+
+- `packages/engine/test/architecture/preview-post-grant/post-grant-fixture.ts`: 196 lines
+- `packages/engine/test/architecture/preview-post-grant/post-grant-continuation-differentiates.test.ts`: 55 lines
+- `packages/engine/test/architecture/preview-post-grant/post-grant-cap-exit-witness.test.ts`: 31 lines

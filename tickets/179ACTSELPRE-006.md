@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-preview-drive.ts` (or equivalent WASM-route file).
-**Deps**: `tickets/179ACTSELPRE-003.md`
+**Deps**: `archive/tickets/179ACTSELPRE-003.md`
 
 ## Problem
 

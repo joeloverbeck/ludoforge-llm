@@ -242,7 +242,8 @@ export interface PolicyPreviewSignalUnavailableAdvisory {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnavailabilityReason, number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap'>, number> & {
+    readonly postGrantCap?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;
@@ -1437,7 +1438,7 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
-    if (outcome === 'depthCap') {
+    if (outcome === 'depthCap' || outcome === 'postGrantCap') {
       depthCap += 1;
       continue;
     }

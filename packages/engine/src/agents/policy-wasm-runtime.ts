@@ -903,7 +903,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       : literalBatchValues(consideration.when, input.candidates.length)
         ?? supportedBatchValues(
           runtime,
-          getCachedScoreRowBytecode(consideration.when, input.parameterValues, input.def, input.context.layout),
+          getCachedScoreRowBytecode(consideration.when, input.parameterValues, input.def, input.context.layout, input.context.bytecodeCacheAxisLabel),
           input.encoded,
           input.context,
           input.candidates,
@@ -916,7 +916,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     const weightValues = literalBatchValues(consideration.weight, input.candidates.length)
       ?? supportedBatchValues(
         runtime,
-        getCachedScoreRowBytecode(consideration.weight, input.parameterValues, input.def, input.context.layout),
+        getCachedScoreRowBytecode(consideration.weight, input.parameterValues, input.def, input.context.layout, input.context.bytecodeCacheAxisLabel),
         input.encoded,
         input.context,
         input.candidates,
@@ -929,7 +929,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     const valueValues = literalBatchValues(consideration.value, input.candidates.length)
       ?? supportedBatchValues(
         runtime,
-        getCachedScoreRowBytecode(consideration.value, input.parameterValues, input.def, input.context.layout),
+        getCachedScoreRowBytecode(consideration.value, input.parameterValues, input.def, input.context.layout, input.context.bytecodeCacheAxisLabel),
         input.encoded,
         input.context,
         input.candidates,
@@ -1023,7 +1023,7 @@ export const evaluateWasmCandidateFeatureRow = (
   literalBatchValues(input.expr, input.candidates.length)
     ?? supportedBatchValues(
       runtime,
-      getCachedScoreRowBytecode(input.expr, input.parameterValues, input.def, input.context.layout),
+      getCachedScoreRowBytecode(input.expr, input.parameterValues, input.def, input.context.layout, input.context.bytecodeCacheAxisLabel),
       input.encoded,
       input.context,
       input.candidates,

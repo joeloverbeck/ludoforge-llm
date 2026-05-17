@@ -3,8 +3,13 @@ import {
   resetPolicyWasmBytecodeInputCacheCounters,
 } from './policy-wasm-bytecode-input-cache.js';
 import {
+  getScoreRowBytecodeCacheHitCount,
+  getScoreRowBytecodeCacheMissCount,
+  getScoreRowBytecodeCompileTimeMs,
   getScoreRowBytecodeCompileCount,
   resetScoreRowBytecodeCompileCount,
+  snapshotPolicyWasmBytecodeCacheAxisStats,
+  type PolicyWasmBytecodeCacheAxisStats,
 } from './policy-wasm-score-bytecode-cache.js';
 
 export interface PolicyWasmPreviewDriveUnsupportedDetail {
@@ -86,6 +91,18 @@ export const productionPolicyWasmCounterInternals = {
   },
   getProductionScoreRowBytecodeCompileCount(): number {
     return getScoreRowBytecodeCompileCount();
+  },
+  getProductionScoreRowBytecodeCacheHitCount(): number {
+    return getScoreRowBytecodeCacheHitCount();
+  },
+  getProductionScoreRowBytecodeCacheMissCount(): number {
+    return getScoreRowBytecodeCacheMissCount();
+  },
+  getProductionScoreRowBytecodeCompileTimeMs(): number {
+    return getScoreRowBytecodeCompileTimeMs();
+  },
+  snapshotPolicyWasmBytecodeCacheAxisStats(): Record<string, PolicyWasmBytecodeCacheAxisStats> {
+    return snapshotPolicyWasmBytecodeCacheAxisStats();
   },
   getPolicyWasmBytecodeInputCacheCounters(): {
     readonly hitCount: number;

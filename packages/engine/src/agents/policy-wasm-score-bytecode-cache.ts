@@ -2,6 +2,7 @@ import {
   compilePolicyBytecode,
   type PolicyBytecode,
 } from '../cnl/policy-bytecode/index.js';
+import { isPolicyWasmTimingProfileEnabled } from './policy-wasm-timing-profile.js';
 import type {
   AgentPolicyCatalog,
   AgentParameterValue,
@@ -12,12 +13,40 @@ import type {
 
 const NO_PARAMETER_VALUES: Readonly<Record<string, AgentParameterValue>> = {};
 
+export interface PolicyWasmBytecodeCacheAxisStats {
+  readonly hits: number;
+  readonly misses: number;
+  readonly compileTimeMs: number;
+}
+
 const scoreRowBytecodeCache = new WeakMap<
   CompiledPolicyExpr,
   WeakMap<Readonly<Record<string, AgentParameterValue>>, WeakMap<EncodedStateLayout, PolicyBytecode>>
 >();
 
 let scoreRowBytecodeCompileCount = 0;
+let scoreRowBytecodeCacheHitCount = 0;
+let scoreRowBytecodeCacheMissCount = 0;
+let scoreRowBytecodeCompileTimeMs = 0;
+const scoreRowBytecodeAxisStats = new Map<string, PolicyWasmBytecodeCacheAxisStats>();
+
+const compareOrdinalStrings = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
+const addAxisStats = (
+  axisLabel: string | undefined,
+  delta: PolicyWasmBytecodeCacheAxisStats,
+): void => {
+  if (axisLabel === undefined || !isPolicyWasmTimingProfileEnabled()) {
+    return;
+  }
+  const current = scoreRowBytecodeAxisStats.get(axisLabel) ?? { hits: 0, misses: 0, compileTimeMs: 0 };
+  scoreRowBytecodeAxisStats.set(axisLabel, {
+    hits: current.hits + delta.hits,
+    misses: current.misses + delta.misses,
+    compileTimeMs: current.compileTimeMs + delta.compileTimeMs,
+  });
+};
 
 const materializePolicyParams = (
   expr: CompiledPolicyExpr,
@@ -55,6 +84,7 @@ export const getCachedScoreRowBytecode = (
   parameterValues: Readonly<Record<string, AgentParameterValue>> | undefined,
   def: GameDef,
   layout: EncodedStateLayout,
+  axisLabel?: string,
 ): PolicyBytecode => {
   const parameterKey = parameterValues ?? NO_PARAMETER_VALUES;
   let byParameterValues = scoreRowBytecodeCache.get(expr);
@@ -69,10 +99,17 @@ export const getCachedScoreRowBytecode = (
   }
   const cached = byLayout.get(layout);
   if (cached !== undefined) {
+    scoreRowBytecodeCacheHitCount += 1;
+    addAxisStats(axisLabel, { hits: 1, misses: 0, compileTimeMs: 0 });
     return cached;
   }
+  const startedAt = performance.now();
   const bytecode = compilePolicyBytecode(materializePolicyParams(expr, parameterValues), def, layout);
+  const compileTimeMs = performance.now() - startedAt;
   scoreRowBytecodeCompileCount += 1;
+  scoreRowBytecodeCacheMissCount += 1;
+  scoreRowBytecodeCompileTimeMs += compileTimeMs;
+  addAxisStats(axisLabel, { hits: 0, misses: 1, compileTimeMs });
   byLayout.set(layout, bytecode);
   return bytecode;
 };
@@ -116,7 +153,17 @@ export const precompilePolicyWasmScoreRows = (
 };
 
 export const getScoreRowBytecodeCompileCount = (): number => scoreRowBytecodeCompileCount;
+export const getScoreRowBytecodeCacheHitCount = (): number => scoreRowBytecodeCacheHitCount;
+export const getScoreRowBytecodeCacheMissCount = (): number => scoreRowBytecodeCacheMissCount;
+export const getScoreRowBytecodeCompileTimeMs = (): number => scoreRowBytecodeCompileTimeMs;
+
+export const snapshotPolicyWasmBytecodeCacheAxisStats = (): Record<string, PolicyWasmBytecodeCacheAxisStats> =>
+  Object.fromEntries([...scoreRowBytecodeAxisStats.entries()].sort(([left], [right]) => compareOrdinalStrings(left, right)));
 
 export const resetScoreRowBytecodeCompileCount = (): void => {
   scoreRowBytecodeCompileCount = 0;
+  scoreRowBytecodeCacheHitCount = 0;
+  scoreRowBytecodeCacheMissCount = 0;
+  scoreRowBytecodeCompileTimeMs = 0;
+  scoreRowBytecodeAxisStats.clear();
 };

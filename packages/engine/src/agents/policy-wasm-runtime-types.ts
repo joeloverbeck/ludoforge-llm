@@ -22,6 +22,7 @@ export interface PolicyWasmBytecodeContext {
   readonly bytecodeStateWordsCache?: PolicyWasmBytecodeStateWordsCache;
   readonly gameDefRuntime?: GameDefRuntime;
   readonly timingRouteClass?: PolicyWasmTimingRouteClass;
+  readonly bytecodeCacheAxisLabel?: string;
 }
 
 export interface PolicyWasmBatchCandidate {

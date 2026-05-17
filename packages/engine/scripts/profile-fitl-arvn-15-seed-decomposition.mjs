@@ -25,6 +25,14 @@ import {
   timingDeltaMs,
   timingRows,
 } from './profile-fitl-arvn-15-seed-timing.mjs';
+import {
+  flagBoolean,
+  flagPositiveInt,
+  flagValue,
+  formatSeedRange,
+  parsePositiveInt,
+  parseSeedRange,
+} from './profile-fitl-arvn-15-seed-cli.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = dirname(SCRIPT_PATH);
@@ -37,17 +45,17 @@ const FAST_TIER_SEEDS = new Set([1000, 1006, 1007, 1010, 1014]);
 
 const args = process.argv.slice(2);
 const config = {
-  seeds: parseSeedRange(flagValue('seeds', '1000..1014')),
-  timeoutMs: flagPositiveInt('timeout-ms', 400000),
-  maxTurns: flagPositiveInt('max-turns', 200),
-  date: flagValue('date', new Date().toISOString().slice(0, 10)),
-  outputDir: resolve(REPO_ROOT, flagValue('output-dir', 'reports')),
-  topN: flagPositiveInt('top-n', 10),
-  childSeed: flagValue('child-seed', undefined),
-  childOutput: flagValue('child-output', undefined),
-  child: flagBoolean('child'),
-  profileBuckets: flagBoolean('profile-buckets'),
-  noWasm: flagBoolean('no-wasm'),
+  seeds: parseSeedRange(flagValue(args, 'seeds', '1000..1014')),
+  timeoutMs: flagPositiveInt(args, 'timeout-ms', 400000),
+  maxTurns: flagPositiveInt(args, 'max-turns', 200),
+  date: flagValue(args, 'date', new Date().toISOString().slice(0, 10)),
+  outputDir: resolve(REPO_ROOT, flagValue(args, 'output-dir', 'reports')),
+  topN: flagPositiveInt(args, 'top-n', 10),
+  childSeed: flagValue(args, 'child-seed', undefined),
+  childOutput: flagValue(args, 'child-output', undefined),
+  child: flagBoolean(args, 'child'),
+  profileBuckets: flagBoolean(args, 'profile-buckets'),
+  noWasm: flagBoolean(args, 'no-wasm'),
   wasmTimingProfile: process.env.POLICY_WASM_TIMING_PROFILE === '1',
 };
 
@@ -360,6 +368,11 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
           encodedStateCacheHashHitCount: delta(after, before, 'policyEncodedStateHashHitCount'),
           encodedStateCacheMissCount: delta(after, before, 'policyEncodedStateMissCount'),
           bytecodeCacheCompileCount: delta(after, before, 'wasmScoreRowBytecodeCompileCount'),
+          cacheHits: config.wasmTimingProfile ? delta(after, before, 'wasmScoreRowBytecodeCacheHitCount') : '',
+          cacheMisses: config.wasmTimingProfile ? delta(after, before, 'wasmScoreRowBytecodeCacheMissCount') : '',
+          cacheCompileTimeMs: config.wasmTimingProfile
+            ? round4(delta(after, before, 'wasmScoreRowBytecodeCompileTimeMs'))
+            : '',
           wasmScoreRowRouteCount: delta(after, before, 'wasmScoreRowRouteCount'),
           wasmScoreRowUnsupportedCount: delta(after, before, 'wasmScoreRowUnsupportedCount'),
           wasmPreviewCandidateFeatureRowRouteCount: delta(after, before, 'wasmPreviewCandidateFeatureRowRouteCount'),
@@ -418,6 +431,12 @@ function readCounters(internals) {
     wasmScoreRowUnsupportedCount: internals.policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     wasmScoreRowBytecodeCompileCount:
       internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmScoreRowBytecodeCacheHitCount:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCacheHitCount(),
+    wasmScoreRowBytecodeCacheMissCount:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCacheMissCount(),
+    wasmScoreRowBytecodeCompileTimeMs:
+      internals.policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileTimeMs(),
     wasmPreviewCandidateFeatureRowRouteCount:
       internals.policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount:
@@ -519,6 +538,9 @@ function aggregateRows(rows, keyFn) {
       encodedStateCacheHashHitCount: 0,
       encodedStateCacheMissCount: 0,
       bytecodeCacheCompileCount: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      cacheCompileTimeMs: 0,
       wasmProductionPreviewDriveRouteCount: 0,
       wasmProductionPreviewDriveUnsupportedCount: 0,
       wasmProductionPreviewDriveUnsupportedReasons: new Map(),
@@ -541,6 +563,9 @@ function aggregateRows(rows, keyFn) {
     bucket.encodedStateCacheHashHitCount += row.encodedStateCacheHashHitCount;
     bucket.encodedStateCacheMissCount += row.encodedStateCacheMissCount;
     bucket.bytecodeCacheCompileCount += row.bytecodeCacheCompileCount;
+    bucket.cacheHits += Number(row.cacheHits || 0);
+    bucket.cacheMisses += Number(row.cacheMisses || 0);
+    bucket.cacheCompileTimeMs += Number(row.cacheCompileTimeMs || 0);
     bucket.wasmProductionPreviewDriveRouteCount += row.wasmProductionPreviewDriveRouteCount;
     bucket.wasmProductionPreviewDriveUnsupportedCount += row.wasmProductionPreviewDriveUnsupportedCount;
     addReasonCounts(bucket.wasmProductionPreviewDriveUnsupportedReasons, row.wasmProductionPreviewDriveUnsupportedReasons);
@@ -576,6 +601,9 @@ function aggregateRows(rows, keyFn) {
       encodedStateCacheHashHitCount: bucket.encodedStateCacheHashHitCount,
       encodedStateCacheMissCount: bucket.encodedStateCacheMissCount,
       bytecodeCacheCompileCount: bucket.bytecodeCacheCompileCount,
+      cacheHits: bucket.cacheHits,
+      cacheMisses: bucket.cacheMisses,
+      cacheCompileTimeMs: round4(bucket.cacheCompileTimeMs),
       wasmProductionPreviewDriveRouteCount: bucket.wasmProductionPreviewDriveRouteCount,
       wasmProductionPreviewDriveUnsupportedCount: bucket.wasmProductionPreviewDriveUnsupportedCount,
       wasmProductionPreviewDriveUnsupportedReasons: reasonRows(bucket.wasmProductionPreviewDriveUnsupportedReasons),
@@ -697,49 +725,6 @@ function formatSeedProgress(summary) {
 
 function childOutputPath(seed) {
   return join('/tmp', `ludoforge-173-decomposition-${process.pid}-${seed}.json`);
-}
-
-function parseSeedRange(raw) {
-  if (raw.includes('..')) {
-    const [left, right] = raw.split('..').map((part) => parsePositiveInt(part, 'seeds'));
-    if (right < left) {
-      fail(`--seeds range must be ascending; got ${raw}`);
-    }
-    return Array.from({ length: right - left + 1 }, (_unused, index) => left + index);
-  }
-  return raw.split(',').filter(Boolean).map((part) => parsePositiveInt(part.trim(), 'seeds'));
-}
-
-function formatSeedRange(seeds) {
-  if (seeds.length > 1 && seeds.every((seed, index) => index === 0 || seed === seeds[index - 1] + 1)) {
-    return `${seeds[0]}..${seeds.at(-1)}`;
-  }
-  return seeds.join(',');
-}
-
-function flagBoolean(name) {
-  return args.includes(`--${name}`);
-}
-
-function flagValue(name, fallback) {
-  const index = args.indexOf(`--${name}`);
-  if (index === -1) {
-    return fallback;
-  }
-  return args[index + 1];
-}
-
-function flagPositiveInt(name, fallback) {
-  const raw = flagValue(name, undefined);
-  return raw === undefined ? fallback : parsePositiveInt(raw, name);
-}
-
-function parsePositiveInt(raw, name) {
-  const value = Number.parseInt(String(raw), 10);
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    fail(`--${name} must be a positive integer; got "${raw}"`);
-  }
-  return value;
 }
 
 function findRepoRoot(start) {

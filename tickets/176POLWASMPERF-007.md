@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — synthesis and decision report. Follow-up artifact creation (a new spec file or a new ticket file under a different namespace, per the decision branch) is allowed but is the only "code-adjacent" output.
-**Deps**: `archive/tickets/176POLWASMPERF-002.md`, `archive/tickets/176POLWASMPERF-003.md`, `archive/tickets/176POLWASMPERF-004.md`, `tickets/176POLWASMPERF-005.md`, `tickets/176POLWASMPERF-006.md`
+**Deps**: `archive/tickets/176POLWASMPERF-002.md`, `archive/tickets/176POLWASMPERF-003.md`, `archive/tickets/176POLWASMPERF-004.md`, `archive/tickets/176POLWASMPERF-005.md`, `tickets/176POLWASMPERF-006.md`
 
 ## Problem
 

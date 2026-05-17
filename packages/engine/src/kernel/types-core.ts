@@ -63,6 +63,7 @@ import type {
   AgentPolicyMicroturnIntrinsic,
   AgentPolicyMicroturnOptionIntrinsic,
   AgentPolicyPreviewOptionRefKind,
+  AgentPolicySeatAggAvailability,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -614,9 +615,8 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[];
-      readonly expr: AgentPolicyExpr;
-      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly over: 'opponents' | 'all' | readonly string[]; readonly expr: AgentPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {
       readonly kind: 'zoneProp';
@@ -674,9 +674,8 @@ export type CompiledPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[];
-      readonly expr: CompiledPolicyExpr;
-      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly over: 'opponents' | 'all' | readonly string[]; readonly expr: CompiledPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {
       readonly kind: 'zoneProp';

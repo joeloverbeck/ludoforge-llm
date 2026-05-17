@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes - policy surface/expression/compiler.
-**Deps**: `tickets/180STDVECOBSROL-003.md`
+**Deps**: `archive/tickets/180STDVECOBSROL-003.md`
 
 ## Problem
 

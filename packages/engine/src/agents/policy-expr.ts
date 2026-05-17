@@ -11,14 +11,12 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
-import type {
-  AgentPolicyZoneAggSource,
-  AgentPolicyZoneScope,
-  AgentPolicyZoneTokenAggOp,
-} from '../contracts/index.js';
+import type { AgentPolicyZoneAggSource, AgentPolicyZoneScope, AgentPolicyZoneTokenAggOp } from '../contracts/index.js';
 import {
+  AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_TOKEN_AGG_OPS,
+  isAgentPolicySeatAggAvailability,
   isAgentPolicyZoneAggSource,
   isAgentPolicyZoneFilterOp,
   isAgentPolicyZoneScope,
@@ -1331,11 +1329,14 @@ function analyzeSeatAggOperator(
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
-  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp'], diagnostics, `${path}.seatAgg`)) {
-    return null;
-  }
+  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp', 'availability'], diagnostics, `${path}.seatAgg`)) return null;
   const over = analyzeSeatAggOver(obj['over'], context.referenceSeatIds, diagnostics, `${path}.seatAgg.over`);
   const aggOp = obj['aggOp'];
+  const availability = obj['availability'];
+  if (availability !== undefined && !isAgentPolicySeatAggAvailability(availability)) {
+    diagnostics.push({ code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID, path: `${path}.seatAgg.availability`, severity: 'error', message: `seatAgg.availability must be one of: ${AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES.join(', ')}.`, suggestion: 'Use "requireAllReady", "requireAnyReady", "selfAndTargetReady", or "skipUnavailable".' });
+    return null;
+  }
   const innerExpr = analyzePolicyExpr(
     obj['expr'] as GameSpecPolicyExpr,
     { ...context, withinSeatAggExpr: true },
@@ -1354,9 +1355,7 @@ function analyzeSeatAggOperator(
     return null;
   }
 
-  if (over === null || innerExpr === null) {
-    return null;
-  }
+  if (over === null || innerExpr === null) return null;
 
   if (!matchesType(innerExpr.valueType, 'number')) {
     diagnostics.push({
@@ -1375,6 +1374,7 @@ function analyzeSeatAggOperator(
       over,
       expr: innerExpr.expr,
       aggOp,
+      ...(availability === undefined ? {} : { availability }),
     },
     valueType: 'number',
     costClass: innerExpr.costClass,

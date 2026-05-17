@@ -70,6 +70,7 @@ import type {
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
+import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
   buildPhaseBoundaryValidationContext,
@@ -2280,19 +2281,18 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    const previewOptionRefIds = collectPreviewOptionRefIds(value.expr);
-    const previewDerivedRefIds = uniqueSorted([...previewOptionRefIds, ...projectedStateLookupRefIds]);
-    if (previewOptionRefIds.length > 0 && previewFallback === undefined) {
+    const previewOptionRefIds = collectPreviewOptionRefIds(value.expr), previewSeatAggRefs = collectPreviewSeatAggRefIds(value.expr);
+    const previewDerivedRefIds = uniqueSorted([...previewOptionRefIds, ...previewSeatAggRefs.fallbackRequired, ...projectedStateLookupRefIds]);
+    if ((previewOptionRefIds.length > 0 || previewSeatAggRefs.fallbackRequired.length > 0) && previewFallback === undefined) {
       this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK,
-        path: `${path}.previewFallback`,
-        severity: 'error',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK, path: `${path}.previewFallback`, severity: 'error',
         message: `Consideration "${considerationId}" references ${previewDerivedRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
         suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
       });
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    warnImplicitPreviewSeatAggAvailability(this.diagnostics, considerationId, path, previewSeatAggRefs.implicitSkipUnavailable);
     if (projectedStateLookupRefIds.length > 0 && previewFallback === undefined) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK,

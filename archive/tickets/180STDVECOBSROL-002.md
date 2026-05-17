@@ -15,7 +15,7 @@ Spec 180 needs a generic way for action-selection preview to observe ordinary-op
 1. The selected architecture preserves existing `preview.victory.*` scalar refs for ready cells and introduces status-bearing standing cells behind them.
 2. The route must use the existing one-rules protocol, not raw effect inspection or FITL-specific action handling.
 3. `archive/tickets/180STDVECOBSROL-001.md` owns the focused RED witness this ticket must satisfy.
-4. Boundary reset approved in-session on 2026-05-17: the base Foundation 20 fix that prevents an all-unavailable preview-derived `seatAgg(sum)` from contributing numeric `0` is owned here because it is required for the Phase 1 witness to turn green. `tickets/180STDVECOBSROL-003.md` remains the owner of authored `seatAgg.availability` modes, compiler/validator/schema wiring, and migration diagnostics.
+4. Boundary reset approved in-session on 2026-05-17: the base Foundation 20 fix that prevents an all-unavailable preview-derived `seatAgg(sum)` from contributing numeric `0` is owned here because it is required for the Phase 1 witness to turn green. `archive/tickets/180STDVECOBSROL-003.md` remains the owner of authored `seatAgg.availability` modes, compiler/validator/schema wiring, and migration diagnostics.
 
 ## Architecture Check
 
@@ -93,7 +93,7 @@ Completed on 2026-05-17.
 Boundary reset:
 
 - User approved Option 2 on 2026-05-17 after Foundations reassessment. The base Foundation 20 repair for all-unavailable preview-derived `seatAgg(sum)` moved into this ticket because the Phase 1 witness cannot turn green while unavailable standing cells still contribute numeric `0`.
-- `tickets/180STDVECOBSROL-003.md` remains the owner of authored `seatAgg.availability` modes, compiler/validator/schema wiring, migration diagnostics, and partial-availability semantics.
+- `archive/tickets/180STDVECOBSROL-003.md` remains the owner of authored `seatAgg.availability` modes, compiler/validator/schema wiring, migration diagnostics, and partial-availability semantics.
 
 What landed:
 
@@ -104,7 +104,7 @@ What landed:
 - `packages/engine/test/architecture/preview-integrity/spec-180-outer-preview-silent-zero-witness.test.ts` is rewritten from the Phase 0 bug pin into the Phase 1 regression: all-unavailable standing aggregates fire fallback and record unknown preview refs without score contribution.
 - `packages/engine/test/architecture/preview-config-back-compat/old-profiles-compile.test.ts` was updated as same-package verification fallout after the ticket-named engine test lane exposed stale Spec 179 expectations. It now preserves the default opt-out assertion while recognizing the ticketed `arvn-evolved` opt-in substrate recorded by `tickets/179ACTSELPRE-005.md`.
 - Four WASM timing/stat probe tests were updated as same-package verification fallout after the ticket-named engine test lane exposed package-cwd subprocess-output assumptions. Their subprocess probes now receive the repo root and write JSON to an explicit temp file, preserving the existing child-process boundary while making the package script lane deterministic.
-- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` and `tickets/180STDVECOBSROL-003.md` now record the Phase 1/Phase 2 ownership split.
+- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` and `archive/tickets/180STDVECOBSROL-003.md` now record the Phase 1/Phase 2 ownership split.
 
 Post-review correction:
 

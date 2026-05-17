@@ -1012,6 +1012,7 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledSeatAggregate(
           expr.over,
           expr.aggOp,
+          expr.availability ?? 'skipUnavailable',
           (seatCandidate) => this.evaluateCompiledExprDirect(expr.expr, seatCandidate),
           candidate,
         );
@@ -1452,29 +1453,28 @@ export class PolicyEvaluationContext {
 
   evaluateCompiledSeatAggregate(
     over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
-    aggOp: AgentPolicyZoneTokenAggOp,
+    aggOp: AgentPolicyZoneTokenAggOp, availability: NonNullable<Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['availability']>,
     inner: (candidate: PolicyEvaluationCandidate | undefined) => PolicyValue,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     const seatIds = this.resolveSeatAggregateSeatIds(over);
-    if (seatIds === undefined || seatIds.length === 0) {
-      return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
-    }
+    if (seatIds === undefined || seatIds.length === 0) return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
 
     const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
-    const values: number[] = [];
-    for (const seatId of seatIds) {
-      const previousSeatContext = this.currentSeatContext;
+    const values: number[] = []; let anySeatUnavailable = false;
+    const evaluateForSeat = (seatId: string, collectValue: boolean): void => {
+      const previousSeatContext = this.currentSeatContext, seatPreviewUnavailableEventsBefore = this.previewUnavailableEventCount;
       this.currentSeatContext = seatId;
       try {
         const value = inner(candidate);
-        if (typeof value === 'number') {
-          values.push(value);
-        }
-      } finally {
-        this.currentSeatContext = previousSeatContext;
-      }
-    }
+        anySeatUnavailable ||= this.previewUnavailableEventCount > seatPreviewUnavailableEventsBefore;
+        if (collectValue && typeof value === 'number') values.push(value);
+      } finally { this.currentSeatContext = previousSeatContext; }
+    };
+
+    if (availability === 'selfAndTargetReady' && !seatIds.includes(this.input.seatId)) evaluateForSeat(this.input.seatId, false);
+    for (const seatId of seatIds) evaluateForSeat(seatId, true);
+    if ((availability === 'requireAllReady' || availability === 'selfAndTargetReady') && anySeatUnavailable) return undefined;
     if (aggOp === 'count') {
       return values.length;
     }

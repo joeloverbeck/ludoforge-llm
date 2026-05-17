@@ -24,21 +24,37 @@ import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures
 
 const phaseId = asPhaseId('main');
 const considerationId = 'opponentProjectedStandingSum';
+type SeatAggAvailability = 'requireAllReady' | 'requireAnyReady' | 'selfAndTargetReady' | 'skipUnavailable';
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
-const previewStandingSum = (): AgentPolicyExpr => ({
-  kind: 'seatAgg',
-  over: 'opponents',
-  expr: {
-    kind: 'ref',
-    ref: {
-      kind: 'previewSurface',
-      family: 'victoryCurrentMargin',
-      id: 'currentMargin',
-      selector: { kind: 'role', seatToken: '$seat' },
-    },
+const currentStandingRef = (): AgentPolicyExpr => ({
+  kind: 'ref',
+  ref: {
+    kind: 'currentSurface',
+    family: 'victoryCurrentMargin',
+    id: 'currentMargin',
+    selector: { kind: 'role', seatToken: '$seat' },
   },
+});
+const previewStandingRef = (): AgentPolicyExpr => ({
+  kind: 'ref',
+  ref: {
+    kind: 'previewSurface',
+    family: 'victoryCurrentMargin',
+    id: 'currentMargin',
+    selector: { kind: 'role', seatToken: '$seat' },
+  },
+});
+const previewStandingSum = (options: {
+  readonly availability?: SeatAggAvailability;
+  readonly expr?: AgentPolicyExpr;
+  readonly over?: 'opponents' | 'all' | readonly string[];
+} = {}): AgentPolicyExpr => ({
+  kind: 'seatAgg',
+  over: options.over ?? 'opponents',
+  expr: options.expr ?? previewStandingRef(),
   aggOp: 'sum',
+  ...(options.availability === undefined ? {} : { availability: options.availability }),
 });
 
 type PreviewVisibility = 'public' | 'hidden';
@@ -49,16 +65,21 @@ export function createStandingPreviewDef(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
   readonly primeUnknownPreviewRef?: boolean;
+  readonly seatAggAvailability?: SeatAggAvailability;
+  readonly seatAggExpr?: AgentPolicyExpr;
+  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
 }): GameDef {
+  const initialStandings = options.initialStandings ?? {};
   return assertValidatedGameDef({
     metadata: { id: `spec-180-standing-preview-${options.previewVisibility}`, players: { min: 4, max: 4 } },
     seats: [{ id: 'north' }, { id: 'east' }, { id: 'south' }, { id: 'west' }],
     constants: {},
     globalVars: [
-      { name: 'northStanding', type: 'int', init: 0, min: -20, max: 20 },
-      { name: 'eastStanding', type: 'int', init: 0, min: -20, max: 20 },
-      { name: 'southStanding', type: 'int', init: 0, min: -20, max: 20 },
-      { name: 'westStanding', type: 'int', init: 0, min: -20, max: 20 },
+      { name: 'northStanding', type: 'int', init: initialStandings.north ?? 0, min: -20, max: 20 },
+      { name: 'eastStanding', type: 'int', init: initialStandings.east ?? 0, min: -20, max: 20 },
+      { name: 'southStanding', type: 'int', init: initialStandings.south ?? 0, min: -20, max: 20 },
+      { name: 'westStanding', type: 'int', init: initialStandings.west ?? 0, min: -20, max: 20 },
     ],
     perPlayerVars: [],
     zones: [],
@@ -165,6 +186,10 @@ export function runStandingPreviewTrace(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
   readonly primeUnknownPreviewRef?: boolean;
+  readonly seatAggAvailability?: SeatAggAvailability;
+  readonly seatAggExpr?: AgentPolicyExpr;
+  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
 }): PolicyAgentDecisionTrace {
   const def = createStandingPreviewDef(options);
   const runtime = createGameDefRuntime(def);
@@ -197,6 +222,9 @@ function createStandingCatalog(options: {
   readonly previewVisibility: PreviewVisibility;
   readonly completionDepthCap?: number;
   readonly primeUnknownPreviewRef?: boolean;
+  readonly seatAggAvailability?: SeatAggAvailability;
+  readonly seatAggExpr?: AgentPolicyExpr;
+  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
 }): AgentPolicyCatalog {
   const considerations = options.primeUnknownPreviewRef
     ? ['primeOpponentProjectedStandingSum', considerationId]
@@ -260,7 +288,11 @@ function createStandingCatalog(options: {
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
-          value: previewStandingSum(),
+          value: previewStandingSum({
+            ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
+            ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
+            ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
+          }),
           previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
@@ -268,7 +300,11 @@ function createStandingCatalog(options: {
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
-          value: previewStandingSum(),
+          value: previewStandingSum({
+            ...(options.seatAggAvailability === undefined ? {} : { availability: options.seatAggAvailability }),
+            ...(options.seatAggExpr === undefined ? {} : { expr: options.seatAggExpr }),
+            ...(options.seatAggOver === undefined ? {} : { over: options.seatAggOver }),
+          }),
           previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
@@ -284,4 +320,20 @@ function createStandingCatalog(options: {
       west: 'baseline',
     },
   });
+}
+
+export function partiallyUnavailableStandingExpr(): AgentPolicyExpr {
+  return {
+    kind: 'op',
+    op: 'if',
+    args: [
+      {
+        kind: 'op',
+        op: 'eq',
+        args: [currentStandingRef(), literal(0)],
+      },
+      previewStandingRef(),
+      literal(5),
+    ],
+  };
 }

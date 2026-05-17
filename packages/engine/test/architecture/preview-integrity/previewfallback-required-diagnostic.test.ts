@@ -131,6 +131,59 @@ describe('previewFallback required diagnostic', () => {
     assert.equal(result.gameDef?.agents?.compiled.considerations.staticTerm?.previewFallback, undefined);
   });
 
+  it('rejects explicit status-aware preview seatAgg without previewFallback', () => {
+    const result = compileGameSpecToGameDef(baseDoc({
+      opponentProjectedMargin: {
+        scopes: ['move'],
+        weight: 1,
+        value: {
+          seatAgg: {
+            over: 'opponents',
+            expr: refExpr('preview.victory.currentMargin.$seat'),
+            aggOp: 'sum',
+            availability: 'requireAllReady',
+          },
+        },
+      },
+    }));
+
+    const diagnostic = result.diagnostics.find((entry) => entry.code === REQUIRED_CODE);
+    assert.equal(result.gameDef, null);
+    assert.equal(diagnostic?.severity, 'error');
+    assert.equal(diagnostic?.path, 'doc.agents.library.considerations.opponentProjectedMargin.previewFallback');
+    assert.match(diagnostic?.message ?? '', /preview\.victory\.currentMargin\.\$seat/u);
+  });
+
+  it('compiles explicit status-aware preview seatAgg with previewFallback', () => {
+    const result = compileGameSpecToGameDef(baseDoc({
+      opponentProjectedMargin: {
+        scopes: ['move'],
+        weight: 1,
+        value: {
+          seatAgg: {
+            over: 'opponents',
+            expr: refExpr('preview.victory.currentMargin.$seat'),
+            aggOp: 'sum',
+            availability: 'requireAnyReady',
+          },
+        },
+        previewFallback: { onUnavailable: 'noContribution' },
+      },
+    }));
+
+    assert.equal(result.diagnostics.some((entry) => entry.severity === 'error'), false);
+    assert.equal(
+      result.gameDef?.agents?.compiled.considerations.opponentProjectedMargin?.value.kind,
+      'seatAgg',
+    );
+    assert.equal(
+      result.gameDef?.agents?.compiled.considerations.opponentProjectedMargin?.value.kind === 'seatAgg'
+        ? result.gameDef.agents.compiled.considerations.opponentProjectedMargin.value.availability
+        : undefined,
+      'requireAnyReady',
+    );
+  });
+
   it('rejects non-integer constant fallback values', () => {
     const result = compileGameSpecToGameDef(baseDoc({
       preferProjectedMargin: {

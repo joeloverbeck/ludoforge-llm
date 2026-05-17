@@ -75,3 +75,5 @@ Nearby same-owner evidence also appears for `coupArvnRedeployOptionalTroops:choo
 - Foundation #1: FITL ARVN is only the workload; implementation must be generic to policy-agent inner-preview orchestration.
 
 create-spec: Optimize continued-deepening inner-preview orchestration
+
+**Follow-up**: `specs/178-optimize-continued-deepening-inner-preview-orchestration.md` operationalizes this recommendation as a phased measure-then-optimize spec.

@@ -95,6 +95,7 @@ describe('FITL ARVN decomposition report rendering', () => {
       wasmProductionPreviewDriveUnsupportedCount: 0,
       hotPathBuckets: [
         { key: 'policyInnerPreview:chooseOneRun', count: 2, totalMs: 5 },
+        { key: 'policyInnerPreviewSubroutine:resolveRefs', count: 2, totalMs: 4 },
         { key: 'policyMicroturnSearch:chooseOneScoreOptions', count: 4, totalMs: 7 },
         { key: 'tokenStateIndex:build', count: 1, totalMs: 3 },
       ],
@@ -102,6 +103,7 @@ describe('FITL ARVN decomposition report rendering', () => {
 
     const csv = renderCsv([row]);
     assert.match(csv, /continued-deepening-orchestration-inclusive:2\/5ms/u);
+    assert.match(csv, /inner-preview-subroutine-nested:2\/4ms/u);
     assert.match(csv, /policy-search-candidate-scoring-nested:4\/7ms/u);
     assert.match(csv, /existing-hot-path-bucket-nested:1\/3ms/u);
     assert.match(csv, /unattributed-after-top-level-orchestration:\/15ms/u);
@@ -138,6 +140,7 @@ describe('FITL ARVN decomposition report rendering', () => {
     });
     assert.match(markdown, /Continued-Deepening No-Counter Residual Split/u);
     assert.match(markdown, /continued-deepening-orchestration-inclusive/u);
+    assert.match(markdown, /inner-preview-subroutine-nested/u);
     assert.match(markdown, /policy-search-candidate-scoring-nested/u);
   });
 

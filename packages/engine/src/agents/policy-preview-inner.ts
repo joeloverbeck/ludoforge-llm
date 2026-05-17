@@ -10,6 +10,7 @@ import {
 import {
   publishMicroturnFromPreviewStateNoHash,
 } from '../kernel/microturn/publish.js';
+import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import { createResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
@@ -509,6 +510,7 @@ export const resolveRefs = (
 };
 
 export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): ChooseOneInnerPreviewRun {
+  const surfaceSetupStartedAt = perfHotPathStart();
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
   const surfaceContext: SurfaceResolutionContext = {
     def: input.def,
@@ -520,11 +522,16 @@ export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): 
       return buildPolicyVictorySurface(input.def, state, input.runtime);
     },
   };
+  perfHotPathEnd('policyInnerPreviewSubroutine:surfaceSetup', surfaceSetupStartedAt);
   const options = input.microturn.legalActions
     .filter((decision: Decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> => decision.kind === 'chooseOne')
     .map((decision): ChooseOneInnerPreviewResult => {
+      const driveOptionStartedAt = perfHotPathStart();
       const drive = driveOption(input, decision);
+      perfHotPathEnd('policyInnerPreviewSubroutine:driveOption', driveOptionStartedAt);
+      const resolveRefsStartedAt = perfHotPathStart();
       const resolved = resolveRefs(input, drive, surfaceContext, seatResolutionIndex);
+      perfHotPathEnd('policyInnerPreviewSubroutine:resolveRefs', resolveRefsStartedAt);
       const outcome = resolved.hidden ? 'hidden' : drive.outcome;
       const withOutcome = new Map(resolved.refs);
       for (const ref of input.refs) {

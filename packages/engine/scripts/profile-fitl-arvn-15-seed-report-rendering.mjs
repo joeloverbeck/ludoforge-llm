@@ -558,6 +558,9 @@ function continuedDeepeningResidualSplitRows(row) {
 
 function classifyContinuedDeepeningBucket(key) {
   const text = String(key);
+  if (text.startsWith('policyInnerPreviewSubroutine:')) {
+    return 'inner-preview-subroutine-nested';
+  }
   if (text.startsWith('policyInnerPreview:')) {
     return 'continued-deepening-orchestration-inclusive';
   }

@@ -336,8 +336,6 @@ const driveOption = (
     syntheticDecisions: [...syntheticDecisions],
     completionPolicyFallbackCount,
   });
-  const draftTokenStateIndex = createDraftTokenStateIndex(input.state, input.runtime?.tokenStateIndexCache);
-  draftTokenStateIndex.attachPreviewState(input.state);
   const refCache = createResolveRefCache();
   let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
     input.def,
@@ -348,19 +346,27 @@ const driveOption = (
     input.runtime,
     refCache,
   ).state;
-  draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
-  draftTokenStateIndex.attachPreviewState(state);
+  let draftTokenStateIndex: ReturnType<typeof createDraftTokenStateIndex> | undefined;
   let depth = 1;
   let stateIsCanonical = false;
 
+  const syncDraftTokenStateIndex = (prevState: GameState, nextState: GameState): void => {
+    if (draftTokenStateIndex === undefined) {
+      draftTokenStateIndex = createDraftTokenStateIndex(prevState, input.runtime?.tokenStateIndexCache);
+      draftTokenStateIndex.attachPreviewState(prevState);
+    }
+    draftTokenStateIndex.applyZoneDelta(prevState.zones, nextState.zones);
+    draftTokenStateIndex.attachPreviewState(nextState);
+  };
+
   const canonicalizeForExit = (): GameState => {
     if (stateIsCanonical) {
-      draftTokenStateIndex.attachAsCanonical(state);
+      draftTokenStateIndex?.attachAsCanonical(state);
       return state;
     }
     const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
-    draftTokenStateIndex.applyZoneDelta(state.zones, canonical.zones);
-    draftTokenStateIndex.attachAsCanonical(canonical);
+    draftTokenStateIndex?.applyZoneDelta(state.zones, canonical.zones);
+    draftTokenStateIndex?.attachAsCanonical(canonical);
     state = canonical;
     stateIsCanonical = true;
     return canonical;
@@ -388,6 +394,9 @@ const driveOption = (
     }
     if (depth >= depthCap) {
       return finish(canonicalizeForExit(), depth, 'depthCap');
+    }
+    if (draftTokenStateIndex === undefined) {
+      syncDraftTokenStateIndex(input.state, state);
     }
     const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
     const nextDecisionResult = pickInnerDecision(
@@ -446,8 +455,7 @@ const driveOption = (
       input.runtime,
       refCache,
     ).state;
-    draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
-    draftTokenStateIndex.attachPreviewState(state);
+    syncDraftTokenStateIndex(prevState, state);
     stateIsCanonical = false;
     depth += 1;
   }

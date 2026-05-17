@@ -190,7 +190,7 @@ Per-recommendation dispositions for `reports/178-phase-4-continued-deepening-orc
 Decomposed via `/spec-to-tickets` on 2026-05-17:
 
 - [`archive/tickets/178CONTDEEPINNER-001.md`](../archive/tickets/178CONTDEEPINNER-001.md) — Phase 0 — Inner-preview subroutine split instrumentation + witness report (covers §5 Phase 0)
-- [`tickets/178CONTDEEPINNER-002.md`](../tickets/178CONTDEEPINNER-002.md) — Phase 1 — Targeted optimization of named subroutine owner + outcome-parity test (covers §5 Phase 1)
+- [`archive/tickets/178CONTDEEPINNER-002.md`](../archive/tickets/178CONTDEEPINNER-002.md) — Phase 1 — Targeted optimization of named subroutine owner + outcome-parity test (covers §5 Phase 1)
 - [`tickets/178CONTDEEPINNER-003.md`](../tickets/178CONTDEEPINNER-003.md) — Phase 2 — End-to-end witness validation + wall-time delta report (covers §5 Phase 2)
 
 ## 13. Outcome

@@ -70,4 +70,4 @@ The same `driveOption` sub-key dominates both chooseOne continued-deepening axes
 
 create-implementation-ticket: Optimize `policyInnerPreviewSubroutine:driveOption`
 
-Phase 1 owner: `tickets/178CONTDEEPINNER-002.md`.
+Phase 1 owner: `archive/tickets/178CONTDEEPINNER-002.md`.

@@ -138,6 +138,8 @@ Then author `reports/178-phase-0-inner-preview-subroutine-split.md` recording:
 
 ## Outcome
 
+Outcome amended: 2026-05-17
+
 Completed on 2026-05-17. Phase 0 instrumentation and witness generation landed:
 
 - `packages/engine/src/agents/policy-preview-inner.ts` now emits passive `perfHotPath` buckets for `policyInnerPreviewSubroutine:surfaceSetup`, `policyInnerPreviewSubroutine:driveOption`, and `policyInnerPreviewSubroutine:resolveRefs` inside `runChooseOneInnerPreview`.
@@ -148,7 +150,7 @@ Completed on 2026-05-17. Phase 0 instrumentation and witness generation landed:
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-17-spec-178-phase-0-inner-preview-subroutine-split.md`
 - The authored Phase 0 report is `reports/178-phase-0-inner-preview-subroutine-split.md`.
 - The decisive witness completed all five seeds. Same-run slow-tier wall was `93,769.23 ms`; the `5%` bar was `4,688.46 ms`.
-- Named owner: `policyInnerPreviewSubroutine:driveOption` on `coupArvnRedeployPolice:chooseOne | continuedDeepening`, with `6,804.08 ms` (`7.2562%` of same-run slow-tier wall). Phase 1 owner: `tickets/178CONTDEEPINNER-002.md`.
+- Named owner: `policyInnerPreviewSubroutine:driveOption` on `coupArvnRedeployPolice:chooseOne | continuedDeepening`, with `6,804.08 ms` (`7.2562%` of same-run slow-tier wall). Phase 1 owner: `archive/tickets/178CONTDEEPINNER-002.md`.
 - Generated fallout: checked-in report/CSV artifacts only; no schema, GameSpecDoc, visual config, WASM, or profile artifact changes expected.
 - Verification:
   - `pnpm -F @ludoforge/engine build` passed.

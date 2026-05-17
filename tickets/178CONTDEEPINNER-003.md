@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement and report only
-**Deps**: `tickets/178CONTDEEPINNER-002.md`
+**Deps**: `archive/tickets/178CONTDEEPINNER-002.md`
 
 ## Problem
 

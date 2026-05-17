@@ -1,6 +1,6 @@
 # 178CONTDEEPINNER-002: Phase 1 — Targeted optimization of named subroutine owner + outcome-parity test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview-inner.ts` (optimization of the Phase 0 named subroutine owner); possibly `packages/engine/src/agents/policy-agent-inner-preview.ts` if dictated by Phase 0 evidence
@@ -128,3 +128,37 @@ Likely surface — exact paths refined against Phase 0 named owner. If Phase 0 n
 5. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
 6. `pnpm run check:ticket-deps`
 7. `git diff --check`
+
+## Outcome
+
+Completed on 2026-05-17.
+
+- Phase 0 owner confirmed from `reports/178-phase-0-inner-preview-subroutine-split.md`: `policyInnerPreviewSubroutine:driveOption` is the named Phase 1 owner, with `6,804.08 ms` (`7.2562%` of same-run slow-tier wall) on `coupArvnRedeployPolice:chooseOne | continuedDeepening`.
+- Optimization landed in `packages/engine/src/agents/policy-preview-inner.ts`: `driveOption` now constructs and maintains the per-option draft token-state index lazily only when the preview drive must continue past the first selected option. Immediate ready/stochastic/depth-cap/no-preview exits return the same canonical projected state and trace payload without paying the draft-index setup cost.
+- `packages/engine/src/agents/policy-agent-inner-preview.ts` is `verified-no-edit`: Phase 0 named the private `driveOption` subroutine, and no caller orchestration change was needed.
+- Outcome-parity test added at `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts` with `// @test-class: architectural-invariant`.
+- Pre-change fixtures were captured after a fresh `pnpm -F @ludoforge/engine build` and before source edits:
+  - `packages/engine/test/architecture/fixtures/178-outcome-parity-1005.json` (`63` parity rows)
+  - `packages/engine/test/architecture/fixtures/178-outcome-parity-1011.json` (`31` parity rows)
+  - `packages/engine/test/architecture/fixtures/178-outcome-parity-1008.json` (`60` parity rows)
+  - `packages/engine/test/architecture/fixtures/178-outcome-parity-1013.json` (`34` parity rows)
+  - `packages/engine/test/architecture/fixtures/178-outcome-parity-1009.json` (`46` parity rows)
+- Witness-scope correction: the live trace does not carry the profiling script's `coupArvn*` classifier name in `decisionKey`. The test pins the stronger public trace surface: every `arvn-evolved` `chooseOne` decision whose `previewUsage.coverage.strategy` is `continuedDeepening` in the bounded seed run. Each row records `decisionKey`, selected `MoveParamValue`, selected stable key, `previewUsage`, advisories, per-option score contributions, preview outcomes, and preview-drive carriers.
+- Foundation #20 carrier preservation is proved by byte-for-byte fixture parity over `previewUsage`, advisories, per-option unknown preview refs, preview outcomes, and preview-drive records. No new advisory carrier or unsupported-reason class was introduced.
+- Generated/schema fallout: none expected; no GameSpecDoc, visual config, profile YAML, kernel schema, generated schema, or WASM ABI surface changed.
+- Deferred scope: Phase 2 remains responsible for the post-optimization wall-time witness and report (`tickets/178CONTDEEPINNER-003.md`).
+- Post-review correction: the lazy draft-index synchronization now applies the initial state-to-preview state zone delta only when the draft index is first created. Later synthetic-depth iterations rely on the already-synchronized draft index and only apply their own `prevState -> state` delta after the selected synthetic decision.
+- Source-size ledger: `packages/engine/src/agents/policy-preview-inner.ts | before 562 | after 570 | crossed cap? no | active growth +8 | extraction/defer rationale: under cap and localized lazy-initialization change plus post-review guard | successor none`; `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts | before 0 | after 113 | crossed cap? no | active growth +113 | extraction/defer rationale: new focused architecture test under cap | successor none`.
+- Final verification:
+  - `pnpm -F @ludoforge/engine build` passed after the post-review correction.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-preview-inner-outcome-parity.test.js` passed after the post-review correction (`5` tests).
+  - The drafted literal determinism command `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/` is stale: Node treated the directory as a module path and failed with `ERR_MODULE_NOT_FOUND`. This was classified as command-shape fallout, not a product failure, and replaced by the package-owned lane.
+  - `pnpm -F @ludoforge/engine test:determinism` passed after the post-review correction (`23/23` files).
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/profile-fitl-arvn-report-rendering.test.js` passed after the post-review correction (`3` tests).
+  - `pnpm turbo build` passed after the post-review correction. Engine and runner builds executed; engine-wasm build was a cache-hit supplemental lane. Runner emitted the pre-existing large-chunk warning, but the build completed.
+  - `pnpm turbo lint` passed after the post-review correction. Engine lint executed; runner lint was a cache-hit supplemental lane.
+  - `pnpm turbo typecheck` passed after the post-review correction. Engine and runner typechecks executed; engine build was cache-covered by the preceding fresh root build.
+  - `pnpm turbo test` passed after the post-review correction (`5` tasks successful; `3` cached; engine default lane reported `92/92` files passed). Runner/jsdom emitted the existing `HTMLCanvasElement.getContext()` advisory and intentional canvas-recovery crash logs during tests, but the lane completed green.
+  - `pnpm run check:ticket-deps` passed (`2` active tickets and `2391` archived tickets checked).
+  - `git diff --check` passed for tracked diffs.
+  - `git diff --no-index --check /dev/null <new-file>` produced no whitespace diagnostics for the new architecture test and all five untracked fixture files; exit code `1` is the expected diff-present status for `--no-index`.

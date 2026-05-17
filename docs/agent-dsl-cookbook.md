@@ -120,6 +120,8 @@ Preview remains useful when it stays bounded. Action-selection candidates now us
 | `preview.globalMarker.<id>` | projected marker state |
 | `preview.feature.<id>` | current `stateFeature` re-evaluated on preview state |
 
+**Per-seat preview refs**: `preview.victory.currentMargin.<seat>` and `preview.victory.currentRank.<seat>` accept any seat token, including opponents. By default (no `outcomeGrantContinuation` opt-in), opponent-margin refs may be uniform across candidates when the action's effects on opponent state live behind `outcomeGrantResolve` frames the bounded drive exits on. See the `outcomeGrantContinuation` opt-in below.
+
 Always `coalesce` preview refs because preview can legitimately fail or become unknown:
 
 ```yaml
@@ -133,6 +135,25 @@ candidateFeatures:
 ```
 
 When tuning preview, read `previewUsage.utility` and `previewUsage.readyRefStats` in the agent-decision trace to confirm the refs differentiate ready candidates.
+
+### `outcomeGrantContinuation` opt-in
+
+Profiles that need opponent-effect visibility at action-selection scope can opt into a bounded post-grant drive continuation:
+
+```yaml
+preview:
+  # ... existing fields ...
+  outcomeGrantContinuation:
+    enabled: true
+    extraDepthCap: 4
+    capClass: postGrant16
+```
+
+When enabled, the drive continues past the first `outcomeGrantResolve` frame up to `extraDepthCap` additional resolution steps. `capClass` is a named bounded-computation tier (Foundation 10); `postGrant16` is the current registered class with a depth budget of 4. The trace surfaces per-decision aggregate exit counts via `previewUsage.outcomeGrantContinuation.exitCounts`.
+
+**Cost**: per-candidate preview cost grows with effect-chain complexity. Profile workloads with measurable wall-time regression should validate the budget on their target workload before enabling this broadly. The trace should show non-zero `previewUsage.outcomeGrantContinuation.exitCounts` before authors rely on post-grant opponent signal. Profiles without an opponent-aware authoring use case should not opt in.
+
+**Partial coverage warning**: When `outcomeGrantContinuation` is opted in but a candidate's post-grant resolution exceeds `extraDepthCap`, the trace reports `previewDrive.kind = 'postGrantCap'` and the opponent-state-dependent preview refs may still be uniform or stale for that candidate. Treat `postGrantCap` as a Foundation 20 unavailable-status equivalent to `depthCap`; author considerations with explicit `previewFallback` when unavailable preview signal must not contribute.
 
 ## Action-Selection Candidate Parameter Refs
 

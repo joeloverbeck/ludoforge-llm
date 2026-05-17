@@ -1,6 +1,6 @@
 # 179ACTSELPRE-005: Phase 2 — FITL ARVN witness + cookbook addendum
 
-**Status**: PENDING
+**Status**: BLOCKED by successor `tickets/179ACTSELPRE-007.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — runner-only (campaign profile YAML edit + docs).
@@ -93,7 +93,7 @@ preview:
 
 When enabled, the drive continues past the first `outcomeGrantResolve` frame up to `extraDepthCap` additional resolution steps. `capClass` is a named bounded-computation tier (Foundation 10) — `postGrant16` is the current registered class with a depth budget of 4. The trace surfaces per-decision aggregate exit counts via `previewUsage.outcomeGrantContinuation.exitCounts`.
 
-**Cost**: per-candidate preview cost grows with effect-chain complexity. Profile workloads with measurable wall-time regression — Spec 179's Phase 2 witness validated ≤ 5% on `arvn-evolved` at 15 seeds. Profiles without an opponent-aware authoring use case should not opt in.
+**Cost**: per-candidate preview cost grows with effect-chain complexity. Profile workloads with measurable wall-time regression should validate the budget on their target workload before enabling this broadly. The red 005 witness validated only the wall-time subgate, not the opponent-signal or continuation-activation gates. Profiles without an opponent-aware authoring use case should not opt in.
 ```
 
 (c) Partial-coverage warning:
@@ -115,7 +115,7 @@ Spec §7 notes that opponent-tied features (`preview.feature.vcGuerrillaCount`, 
 
 - WASM-route alignment (ticket 006 — optional, parallel).
 - Spec 180 standing-vector observability (separate spec, dependent on this one).
-- Tuning `extraDepthCap` beyond `postGrant16: 4` — Phase 2 witness validates this default; future specs adjust if needed.
+- Tuning `extraDepthCap` beyond `postGrant16: 4` — Phase 2 kept this default fixed; ticket 007 owns repairing witness activation before any future tuning decision.
 - Migrating other profiles (`vc-evolved`, etc.) to opt in — `arvn-evolved` is the witness; other profiles opt in via separate tickets when they have an opponent-aware authoring use case.
 - Spec 179 §7 Direction B fallback (separate `previewEffect.*` surface) — that escalation path opens a NEW spec (Spec 180 or 181) if the Phase 2 perf gate fails; not in scope for this ticket.
 
@@ -153,3 +153,48 @@ This ticket is witness-driven, not test-suite-driven. The new trace-surface and 
 5. Engine regression: `pnpm -F @ludoforge/engine test`
 6. Full turbo: `pnpm turbo test`
 7. Lint + typecheck: `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-17)
+
+Blocked, not archive-ready. User approved Option 3 after the red Phase 2 witness: preserve the red report, keep the opt-in/profile/cookbook substrate visible, and split a non-overlapping successor for the remaining witness activation repair.
+
+What landed in this ticket:
+
+- `data/games/fire-in-the-lake/92-agents.md` now enables `arvn-evolved.preview.outcomeGrantContinuation` with `extraDepthCap: 4` and `capClass: postGrant16`, and re-adds `penalizeOpponentMargin` plus the supporting opponent-margin features.
+- `docs/agent-dsl-cookbook.md` documents per-seat opponent preview refs, the `outcomeGrantContinuation` opt-in, cost/trace expectations, and partial-coverage behavior without claiming the FITL ARVN witness passed.
+- `reports/179-phase-2-post-opt-in-witness.md` records the decisive red 15-seed witness.
+- `tickets/179ACTSELPRE-007.md` owns repairing the FITL ARVN witness/profile activation gap.
+
+Measured result:
+
+- Witness command: `/usr/bin/time -f WALL_TIME_SECONDS=%e node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --trace-default all --concurrency 8`
+- Wall time: `54.88s` vs Phase 0 `53.16s`, `+3.24%` (PASS against <= 5%).
+- `currentMargin.nva`: `0 / 146` reporting decisions differentiated, avg range `0.00` (FAIL).
+- `currentMargin.vc`: `16 / 146` reporting decisions differentiated, avg range `0.32` (FAIL).
+- `previewUsage.outcomeGrantContinuation`: block present and enabled in `159 / 159` main-phase action-selection decisions, but `exitCounts.completed=0`, `postGrantCap=0`, `stochastic=0` (FAIL).
+- TS-only one-seed probes with `--no-wasm` and with `--profile-completion arvn-evolved=agentGuided` also produced zero continuation counts, so the blocker is not classified as WASM-only.
+
+Acceptance classification:
+
+- Cookbook addendum: landed.
+- Profile opt-in and `penalizeOpponentMargin`: landed as substrate for the successor.
+- Phase 2 signal gate: red.
+- Phase 2 trace activation gate: red.
+- Archive status: blocked and not archive-ready.
+- Residual owner: `tickets/179ACTSELPRE-007.md`.
+
+Generated/schema fallout: none. This ticket changed profile YAML, docs, report, tickets, and spec prose only; no engine source/schema artifacts were modified.
+
+Command ledger:
+
+| ticket section | literal command/shorthand | ran directly/subsumed/split/replaced/not run | final citation |
+| --- | --- | --- | --- |
+| Test Plan | `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --trace-default all --concurrency 8` | run directly with `/usr/bin/time -f WALL_TIME_SECONDS=%e` wrapper | red witness report |
+| Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-action-distribution.mjs` | run against preserved 15-seed trace dir | red witness report |
+| Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-ready-ref-stats.mjs` | run against preserved 15-seed trace dir | red witness report |
+| Test Plan | wall-time comparison | run by report transcription against Phase 0 baseline | red witness report |
+| Acceptance | `pnpm -F @ludoforge/engine test` | pending; required before any future terminal closeout | successor 007 |
+| Test Plan | `pnpm turbo test` | not run after red gate; blocked before terminal closeout | not final evidence |
+| Test Plan | `pnpm turbo lint && pnpm turbo typecheck` | not run after red gate; blocked before terminal closeout | not final evidence |
+
+Proof validity: the red measured witness is final evidence for the blocked handoff, not terminal completion. Later edits are report/ticket/spec transcription and successor ownership only; successor 007 must rerun the affected Phase 2 proof after repairing the activation gap.

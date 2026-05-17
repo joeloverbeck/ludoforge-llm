@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — synthesis and decision report. Follow-up artifact creation (a new spec file or a new ticket file under a different namespace, per the decision branch) is allowed but is the only "code-adjacent" output.
-**Deps**: `archive/tickets/176POLWASMPERF-002.md`, `archive/tickets/176POLWASMPERF-003.md`, `archive/tickets/176POLWASMPERF-004.md`, `archive/tickets/176POLWASMPERF-005.md`, `tickets/176POLWASMPERF-006.md`
+**Deps**: `archive/tickets/176POLWASMPERF-002.md`, `archive/tickets/176POLWASMPERF-003.md`, `archive/tickets/176POLWASMPERF-004.md`, `archive/tickets/176POLWASMPERF-005.md`, `archive/tickets/176POLWASMPERF-006.md`
 
 ## Problem
 
@@ -53,6 +53,7 @@ For each, extract the verdict label and the implication note. Tabulate the five 
 | H3 cheap-paths-dominate alone (H2 ts-only-bound-low) | Spec-174-style coverage extension with measured perf hypothesis |
 | H4 cache-thrashes | Accelerate — small cache-fix follow-up ticket |
 | H5 serialization-fixed-overhead-dominant | Accelerate — ABI/encoding follow-up spec |
+| H5 serialization-mixed-overhead-dominant | Mixed H1/H5 branch — weigh batching/call-overhead reduction against ABI/encoding work before choosing Keep / Accelerate / Retire |
 | No single dominant cause | Keep-as-correctness-only OR Retire (complexity-cost vs correctness-rationalization tradeoff) |
 
 When multiple hypotheses are dominant, the report MUST explicitly reason about which branch best fits and cite the per-hypothesis evidence weights. The report MUST commit to exactly one branch.

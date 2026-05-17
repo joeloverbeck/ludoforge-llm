@@ -27,6 +27,12 @@ export function renderCsv(rows) {
     'deserializationMs',
     'wasmCallCount',
     'wasmTimingBuckets',
+    'bytesSerialized',
+    'serializationCallCount',
+    'wasmSerializationStats',
+    'cacheWriteMs',
+    'cacheWriteBytes',
+    'cacheWriteCount',
     'tokenStateIndexBuildCount',
     'persistentTokenStateIndexCacheHitCount',
     'persistentTokenStateIndexCacheMissCount',
@@ -72,6 +78,8 @@ export function renderMarkdown(rollup, options) {
     `- WASM production preview-drive unsupported count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveUnsupportedCount')}`,
     `- WASM production preview-drive batch count: ${sumAggregateField(rollup.perDecisionClass, 'wasmProductionPreviewDriveBatchCount')}`,
     `- WASM timing call count: ${sumAggregateField(rollup.perDecisionClass, 'wasmCallCount')}`,
+    `- WASM serialized input bytes: ${sumAggregateField(rollup.perDecisionClass, 'bytesSerialized')}`,
+    `- Bytecode input cache write bytes: ${sumAggregateField(rollup.perDecisionClass, 'cacheWriteBytes')}`,
     '',
     '## Per-Seed Wall Time',
     '',
@@ -89,8 +97,8 @@ export function renderMarkdown(rollup, options) {
     '',
     '## Per-Microturn-Class Rollup',
     '',
-    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | Cache hits | Cache misses | Cache compile ms | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | WASM timing calls | Marshaling ms | Execution ms | Deserialization ms | Token index builds | Static rebuilds |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|',
+    '| Microturn class | Decisions | Total ms | Mean ms | p95 ms | Max ms | Mean candidates | Encoded builds | Encoded object hits | Encoded hash hits | Encoded misses | Bytecode compiles | Cache hits | Cache misses | Cache compile ms | WASM preview-drive routes | WASM preview-drive unsupported | WASM preview-drive unsupported reasons | WASM preview-drive batches | WASM timing calls | Marshaling ms | Execution ms | Deserialization ms | Bytes serialized | Cache write ms | Cache write bytes | Cache write count | Token index builds | Static rebuilds |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
     ...rollup.perDecisionClass.map((row) => renderAggregateRow(row.key, row)),
     '',
     '## Top Hot Axes In Slow-Tier Seeds',
@@ -114,6 +122,7 @@ export function renderMarkdown(rollup, options) {
     ].join(' | ')),
     ...(profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
     ...renderWasmTimingSection(rollup.perDecisionClass),
+    ...renderWasmSerializationSection(rollup.perDecisionClass),
     ...renderUnsupportedReasonSection(rollup.perDecisionClass),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
@@ -168,6 +177,10 @@ function renderAggregateRow(label, row) {
     formatNumber(row.marshalingMs),
     formatNumber(row.executionMs),
     formatNumber(row.deserializationMs),
+    row.bytesSerialized,
+    formatNumber(row.cacheWriteMs),
+    row.cacheWriteBytes,
+    row.cacheWriteCount,
     row.tokenStateIndexBuildCount,
     `${row.staticRebuildCount} |`,
   ].join(' | ');
@@ -207,6 +220,48 @@ function renderWasmTimingSection(rows) {
       formatNumber(row.executionMs),
       `${formatNumber(row.deserializationMs)} |`,
     ].join(' | ')),
+  ];
+}
+
+function renderWasmSerializationSection(rows) {
+  const serializationRows = rows
+    .flatMap((row) => (row.wasmSerializationStats ?? []).map((stats) => ({
+      microturnClass: row.key,
+      ...stats,
+    })))
+    .filter((row) => row.callCount > 0 || row.totalBytes > 0)
+    .sort((left, right) =>
+      right.totalBytes - left.totalBytes
+      || compareCodepoint(left.microturnClass, right.microturnClass)
+      || compareCodepoint(left.axisLabel, right.axisLabel),
+    );
+  if (serializationRows.length === 0) {
+    return [
+      '',
+      '## WASM Serialization Stats',
+      '',
+      '_No WASM serialization stats recorded._',
+    ];
+  }
+  return [
+    '',
+    '## WASM Serialization Stats',
+    '',
+    '| Microturn class | Axis label | Calls | Total bytes | Bytes/call | Cache write ms | Cache write bytes | Cache write count |',
+    '|---|---|---:|---:|---:|---:|---:|---:|',
+    ...serializationRows.map((row) => {
+      const aggregate = rows.find((candidate) => candidate.key === row.microturnClass);
+      return [
+        `| ${row.microturnClass}`,
+        row.axisLabel,
+        row.callCount,
+        row.totalBytes,
+        formatNumber(row.callCount > 0 ? row.totalBytes / row.callCount : 0),
+        formatNumber(aggregate?.cacheWriteMs ?? 0),
+        aggregate?.cacheWriteBytes ?? 0,
+        `${aggregate?.cacheWriteCount ?? 0} |`,
+      ].join(' | ');
+    }),
   ];
 }
 

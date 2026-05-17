@@ -19,12 +19,17 @@ import {
   renderMarkdown,
 } from './profile-fitl-arvn-15-seed-report-rendering.mjs';
 import {
+  addSerializationStats,
   addTimingBuckets,
   deltaTimingBuckets,
+  deltaSerializationStats,
+  serializationDelta,
+  serializationRows,
   timingDelta,
   timingDeltaMs,
   timingRows,
 } from './profile-fitl-arvn-15-seed-timing.mjs';
+import { classifyMicroturn } from './profile-fitl-arvn-15-seed-classify.mjs';
 import {
   flagBoolean,
   flagPositiveInt,
@@ -389,6 +394,12 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
           deserializationMs: timingDeltaMs(after.wasmTimingBuckets, before.wasmTimingBuckets, 'deserializationNs'),
           wasmCallCount: timingDelta(after.wasmTimingBuckets, before.wasmTimingBuckets, 'callCount'),
           wasmTimingBuckets: deltaTimingBuckets(after.wasmTimingBuckets, before.wasmTimingBuckets),
+          bytesSerialized: serializationDelta(after.wasmSerializationStats, before.wasmSerializationStats, 'totalBytes'),
+          serializationCallCount: serializationDelta(after.wasmSerializationStats, before.wasmSerializationStats, 'callCount'),
+          wasmSerializationStats: deltaSerializationStats(after.wasmSerializationStats, before.wasmSerializationStats),
+          cacheWriteMs: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'totalWriteMs'),
+          cacheWriteBytes: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'totalWriteBytes'),
+          cacheWriteCount: serializationDelta(after.bytecodeInputCacheWriteStats, before.bytecodeInputCacheWriteStats, 'writeCount'),
           tokenStateIndexBuildCount: delta(after, before, 'tokenStateIndexBuildCount'),
           persistentTokenStateIndexCacheHitCount: delta(after, before, 'persistentTokenStateIndexCacheHitCount'),
           persistentTokenStateIndexCacheMissCount: delta(after, before, 'persistentTokenStateIndexCacheMissCount'),
@@ -412,6 +423,7 @@ function resetCounters(internals) {
   internals.zobristInternals.resetZobristKeyCounters();
   internals.policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   internals.policyWasmRuntimeInternals.resetPolicyWasmTimingBuckets();
+  internals.policyWasmRuntimeInternals.resetPolicyWasmSerializationStats();
   internals.policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   internals.policyEncodedStateCacheInternals.resetCounts();
 }
@@ -451,6 +463,10 @@ function readCounters(internals) {
       internals.policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     wasmTimingBuckets:
       internals.policyWasmRuntimeInternals.snapshotPolicyWasmTimingBuckets(),
+    wasmSerializationStats:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmSerializationStats(),
+    bytecodeInputCacheWriteStats:
+      internals.policyWasmRuntimeInternals.snapshotPolicyWasmBytecodeInputCacheWriteStats(),
     policyEncodedStateObjectHitCount:
       internals.policyEncodedStateCacheInternals.getObjectHitCount(),
     policyEncodedStateHashHitCount:
@@ -550,6 +566,12 @@ function aggregateRows(rows, keyFn) {
       deserializationMs: 0,
       wasmCallCount: 0,
       wasmTimingBuckets: new Map(),
+      bytesSerialized: 0,
+      serializationCallCount: 0,
+      wasmSerializationStats: new Map(),
+      cacheWriteMs: 0,
+      cacheWriteBytes: 0,
+      cacheWriteCount: 0,
       tokenStateIndexBuildCount: 0,
       staticRebuildCount: 0,
       hotPathBuckets: new Map(),
@@ -575,6 +597,12 @@ function aggregateRows(rows, keyFn) {
     bucket.deserializationMs += row.deserializationMs;
     bucket.wasmCallCount += row.wasmCallCount;
     addTimingBuckets(bucket.wasmTimingBuckets, row.wasmTimingBuckets);
+    bucket.bytesSerialized += row.bytesSerialized;
+    bucket.serializationCallCount += row.serializationCallCount;
+    addSerializationStats(bucket.wasmSerializationStats, row.wasmSerializationStats);
+    bucket.cacheWriteMs += row.cacheWriteMs;
+    bucket.cacheWriteBytes += row.cacheWriteBytes;
+    bucket.cacheWriteCount += row.cacheWriteCount;
     bucket.tokenStateIndexBuildCount += row.tokenStateIndexBuildCount;
     bucket.staticRebuildCount += row.staticRebuildCount;
     for (const hotPathBucket of row.hotPathBuckets ?? []) {
@@ -613,6 +641,12 @@ function aggregateRows(rows, keyFn) {
       deserializationMs: round4(bucket.deserializationMs),
       wasmCallCount: bucket.wasmCallCount,
       wasmTimingBuckets: timingRows(bucket.wasmTimingBuckets),
+      bytesSerialized: bucket.bytesSerialized,
+      serializationCallCount: bucket.serializationCallCount,
+      wasmSerializationStats: serializationRows(bucket.wasmSerializationStats),
+      cacheWriteMs: round4(bucket.cacheWriteMs),
+      cacheWriteBytes: bucket.cacheWriteBytes,
+      cacheWriteCount: bucket.cacheWriteCount,
       tokenStateIndexBuildCount: bucket.tokenStateIndexBuildCount,
       staticRebuildCount: bucket.staticRebuildCount,
       hotPathBuckets: [...bucket.hotPathBuckets.entries()]
@@ -682,38 +716,6 @@ function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {
       totalMs: round4(bucket.totalMs),
     }))
     .sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
-}
-
-function classifyMicroturn(decision, def) {
-  if (decision.kind === 'actionSelection') {
-    return String(decision.actionId);
-  }
-  const decisionKey = String(decision.decisionKey ?? '');
-  const pipelineIndex = Number(decisionKey.match(/doc\.actionPipelines\.(\d+)/)?.[1]);
-  const actionIndex = Number(decisionKey.match(/doc\.actions\.(\d+)/)?.[1]);
-  const base = Number.isSafeInteger(pipelineIndex)
-    ? String(def.actionPipelines?.[pipelineIndex]?.actionId ?? decision.kind)
-    : Number.isSafeInteger(actionIndex)
-      ? String(def.actions?.[actionIndex]?.id ?? decision.kind)
-      : decisionKey.includes('doc.eventDecks.')
-        ? 'event-decision'
-        : decision.kind;
-  if (decision.kind === 'chooseNStep') {
-    return `${base}:chooseNStep:${decision.command}`;
-  }
-  if (decision.kind === 'chooseOne') {
-    return `${base}:chooseOne`;
-  }
-  if (decision.kind === 'stochasticResolve') {
-    return `${base}:stochasticResolve`;
-  }
-  if (decision.kind === 'outcomeGrantResolve') {
-    return `outcomeGrantResolve:${decision.grantId}`;
-  }
-  if (decision.kind === 'turnRetirement') {
-    return 'turnRetirement';
-  }
-  return decision.kind;
 }
 
 function formatSeedProgress(summary) {

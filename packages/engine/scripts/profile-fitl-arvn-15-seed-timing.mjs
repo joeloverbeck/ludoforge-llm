@@ -59,6 +59,41 @@ export function timingRows(rowsByClass) {
     .sort((left, right) => compareCodepoint(left.routeClass, right.routeClass));
 }
 
+export function deltaSerializationStats(afterStats, beforeStats) {
+  return Object.entries(afterStats ?? {})
+    .map(([axisLabel, after]) => {
+      const before = beforeStats?.[axisLabel] ?? {};
+      return {
+        axisLabel,
+        totalBytes: Number(after.totalBytes ?? 0) - Number(before.totalBytes ?? 0),
+        callCount: Number(after.callCount ?? 0) - Number(before.callCount ?? 0),
+      };
+    })
+    .filter((row) => row.totalBytes > 0 || row.callCount > 0)
+    .sort((left, right) => compareCodepoint(left.axisLabel, right.axisLabel));
+}
+
+export function serializationDelta(afterStats, beforeStats, key) {
+  return deltaSerializationStats(afterStats, beforeStats)
+    .reduce((sum, row) => sum + Number(row[key] ?? 0), 0);
+}
+
+export function addSerializationStats(target, rows) {
+  for (const row of rows ?? []) {
+    const current = target.get(row.axisLabel) ?? { axisLabel: row.axisLabel, totalBytes: 0, callCount: 0 };
+    target.set(row.axisLabel, {
+      axisLabel: row.axisLabel,
+      totalBytes: current.totalBytes + row.totalBytes,
+      callCount: current.callCount + row.callCount,
+    });
+  }
+}
+
+export function serializationRows(rowsByAxis) {
+  return [...rowsByAxis.values()]
+    .sort((left, right) => compareCodepoint(left.axisLabel, right.axisLabel));
+}
+
 function compareCodepoint(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }

@@ -14,6 +14,7 @@ export const lowerProductionPreviewDriveIr = (
 ): PolicyWasmPreviewDriveBatchInput => {
   const batch: PolicyWasmPreviewDriveBatchInput = {
     profileId: input.profileId,
+    ...(input.serializationAxisLabel === undefined ? {} : { serializationAxisLabel: input.serializationAxisLabel }),
     originSeatId: input.originSeatId,
     originTurnId: input.originTurnId,
     depthCap: input.depthCap,

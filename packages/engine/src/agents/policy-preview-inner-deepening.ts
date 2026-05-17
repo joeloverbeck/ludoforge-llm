@@ -309,6 +309,7 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     }
     const result = runtime.evaluatePreviewDriveBatch({
       profileId: 'production-deep-choosenstep-continuation',
+      serializationAxisLabel: 'production-deep-choosenstep-continuation|continuedDeepening',
       originSeatId: microturn.seatId,
       originTurnId: microturn.turnId,
       depthCap,

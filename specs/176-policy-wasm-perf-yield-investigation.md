@@ -102,6 +102,7 @@ The Phase 6 synthesis must select one of three decision outcomes based on Phases
 | H3 alone, H2 not dominant | Spec 174-style coverage extension (now with measured perf hypothesis upfront) | Closing the unsupported gap might yield real perf if the cheap paths aren't the bottleneck |
 | H4 (cache misses) | Accelerate — small follow-up ticket to fix cache amortization | Localized fix, likely cheap |
 | H5 (serialization cost) | Accelerate — follow-up spec to reduce state-serialization overhead | Requires ABI / encoding work |
+| H5 mixed overhead (material marshaling, positive but non-linear byte correlation) | Weigh with H1 before choosing Keep / Accelerate / Retire | Indicates serialization/marshaling is material but not proven to be solved by byte-size reduction alone |
 | No single dominant cause (all contribute) | Keep-as-correctness-only OR Retire | Strong signal that WASM is structurally perf-neutral on this workload; decision is then a complexity-cost vs correctness-rationalization tradeoff |
 
 Phase 6 MUST commit to one decision branch, MUST name the follow-up artifact, and MUST record the decision rationale in terms a future reader can audit against the Phase 1–5 reports.
@@ -173,7 +174,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`archive/tickets/176POLWASMPERF-003.md`](../archive/tickets/176POLWASMPERF-003.md) — Phase 2 — H2 TS-only hot-path attribution report (covers §5 Phase 2)
 - [`archive/tickets/176POLWASMPERF-004.md`](../archive/tickets/176POLWASMPERF-004.md) — Phase 3 — H3 cheap-vs-expensive coverage attribution report (covers §5 Phase 3)
 - [`archive/tickets/176POLWASMPERF-005.md`](../archive/tickets/176POLWASMPERF-005.md) — Phase 4 — H4 bytecode cache amortization instrumentation + report (covers §5 Phase 4)
-- [`tickets/176POLWASMPERF-006.md`](../tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
+- [`archive/tickets/176POLWASMPERF-006.md`](../archive/tickets/176POLWASMPERF-006.md) — Phase 5 — H5 state serialization cost instrumentation + report (covers §5 Phase 5)
 - [`tickets/176POLWASMPERF-007.md`](../tickets/176POLWASMPERF-007.md) — Phase 6 — Synthesis, decision, and named follow-up artifact (covers §5 Phase 6)
 
 Note: namespace `176POLWASMPERF` was chosen at decomposition time, superseding the spec's proposed `176WASMPERFYLD`.

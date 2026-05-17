@@ -218,7 +218,14 @@ const policyWasmBytecodeCacheAxisLabel = (
   profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
   candidates: readonly PolicyWasmScoreRoutingCandidate[],
 ): string => {
-  const actionIds = [...new Set(candidates.map((candidate) => candidate.actionId))].sort(compareOrdinalStrings);
+  return policyWasmAxisLabelFromActionIds(profile, candidates.map((candidate) => candidate.actionId));
+};
+
+const policyWasmAxisLabelFromActionIds = (
+  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
+  actionIdsRaw: readonly string[],
+): string => {
+  const actionIds = [...new Set(actionIdsRaw)].sort(compareOrdinalStrings);
   const microturnClass = actionIds.length === 1 ? actionIds[0]! : 'actionSelection';
   const previewBranch = profile.preview.inner?.strategy === 'continuedDeepening'
     ? 'continuedDeepening'
@@ -295,6 +302,7 @@ const materializePreviewDynamicRowsWithWasm = (
       previewBranch: input.profile.preview.inner?.strategy === 'continuedDeepening'
         ? 'continuedDeepening'
         : 'greedy',
+      serializationAxisLabel: policyWasmAxisLabelFromActionIds(input.profile, group.map((candidate) => candidate.actionId ?? String(candidate.move.actionId))),
       previewStateSlots,
       candidates: group,
     });

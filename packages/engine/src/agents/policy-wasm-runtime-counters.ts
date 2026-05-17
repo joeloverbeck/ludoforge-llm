@@ -1,6 +1,8 @@
 import {
   getPolicyWasmBytecodeInputCacheCounters,
   resetPolicyWasmBytecodeInputCacheCounters,
+  snapshotPolicyWasmBytecodeInputCacheWriteStats,
+  type PolicyWasmBytecodeInputCacheWriteStats,
 } from './policy-wasm-bytecode-input-cache.js';
 import {
   getScoreRowBytecodeCacheHitCount,
@@ -110,6 +112,9 @@ export const productionPolicyWasmCounterInternals = {
     readonly writeCount: number;
   } {
     return getPolicyWasmBytecodeInputCacheCounters();
+  },
+  snapshotPolicyWasmBytecodeInputCacheWriteStats(): Record<string, PolicyWasmBytecodeInputCacheWriteStats> {
+    return snapshotPolicyWasmBytecodeInputCacheWriteStats();
   },
   getProductionPreviewCandidateFeatureRowRouteCount(): number {
     return productionPreviewCandidateFeatureRowRouteCount;

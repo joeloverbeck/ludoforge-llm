@@ -2,13 +2,8 @@ import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, GameDef } from '../kernel/index.js';
-import {
-  getCachedScoreRowBytecode,
-} from './policy-wasm-score-bytecode-cache.js';
-import {
-  cachedLayoutIdentity,
-  cachedZoneKindCodes,
-} from './policy-wasm-layout-encoding-cache.js';
+import { getCachedScoreRowBytecode } from './policy-wasm-score-bytecode-cache.js';
+import { cachedLayoutIdentity, cachedZoneKindCodes } from './policy-wasm-layout-encoding-cache.js';
 import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import {
   decodePolicyWasmPreviewDriveRows,
@@ -25,15 +20,14 @@ import {
   getCachedPolicyWasmBytecodeInput,
   policyWasmBytecodeInputCacheKey,
 } from './policy-wasm-bytecode-input-cache.js';
-import {
-  productionPolicyWasmCounterInternals,
-} from './policy-wasm-runtime-counters.js';
+import { productionPolicyWasmCounterInternals } from './policy-wasm-runtime-counters.js';
 import {
   beginPolicyWasmTiming,
   isPolicyWasmTimingProfileEnabled,
   resetPolicyWasmTimingBuckets,
   snapshotPolicyWasmTimingBuckets,
 } from './policy-wasm-timing-profile.js';
+import { recordPolicyWasmSerializationBytes, resetPolicyWasmSerializationStats, snapshotPolicyWasmSerializationStats } from './policy-wasm-serialization-profile.js';
 import type { PolicyScheduleFallbackFired, PolicyScheduleFallbackKind } from './policy-evaluation-core.js';
 import {
   encodeWasmPhaseScheduleValue,
@@ -481,6 +475,7 @@ const getEncodedPolicyBytecodeInput = (
     context.bytecodeInputCache,
     key,
     () => encodePolicyBytecodeInput(bytecode, encoded, context),
+    context.bytecodeCacheAxisLabel,
   );
 };
 
@@ -1086,6 +1081,7 @@ export const createPolicyWasmRuntime = (
     evaluatePolicyBytecode: (bytecode, encoded, context): PolicyValue => {
       const timing = beginPolicyWasmTiming(context.timingRouteClass);
       const input = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
+      recordPolicyWasmSerializationBytes(context.bytecodeCacheAxisLabel, input.byteLength);
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagPtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
       const outValuePtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
@@ -1119,6 +1115,7 @@ export const createPolicyWasmRuntime = (
       const timing = beginPolicyWasmTiming(context.timingRouteClass);
       const program = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const input = encodeBatchInput(program, context, candidates, precomputed);
+      recordPolicyWasmSerializationBytes(context.bytecodeCacheAxisLabel, input.byteLength);
       const outputBytes = candidates.length * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
@@ -1160,6 +1157,7 @@ export const createPolicyWasmRuntime = (
         POLICY_WASM_ABI_MAGIC,
         POLICY_WASM_ABI_VERSION,
       );
+      recordPolicyWasmSerializationBytes(previewInput.serializationAxisLabel, input.byteLength);
       const outputBytes = previewInput.candidates.length * I32_BYTES;
       const previewStateSlotCount = previewInput.previewStateSlots?.length ?? 0;
       const previewStateOutputBytes = previewInput.candidates.length * previewStateSlotCount * I32_BYTES;
@@ -1320,6 +1318,8 @@ export const __internal_for_tests = {
   isPolicyWasmTimingProfileEnabled,
   resetPolicyWasmTimingBuckets,
   snapshotPolicyWasmTimingBuckets,
+  resetPolicyWasmSerializationStats,
+  snapshotPolicyWasmSerializationStats,
   encodePolicyBytecodeInputForTest(
     bytecode: PolicyBytecode,
     encoded: EncodedState,

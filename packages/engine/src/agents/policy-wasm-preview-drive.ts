@@ -171,6 +171,7 @@ export interface PolicyWasmPreviewDriveCandidate {
 
 export interface PolicyWasmPreviewDriveBatchInput {
   readonly profileId: string;
+  readonly serializationAxisLabel?: string;
   readonly layoutId?: number;
   readonly expectedLayoutId?: number;
   readonly originSeatId: string;

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/` Turbo / test wiring; no engine src changes
-**Deps**: `archive/tickets/181STRSTRPOL-001.md`, `archive/tickets/181STRSTRPOL-002.md`, `archive/tickets/181STRSTRPOL-003.md`, `tickets/181STRSTRPOL-004.md`
+**Deps**: `archive/tickets/181STRSTRPOL-001.md`, `archive/tickets/181STRSTRPOL-002.md`, `archive/tickets/181STRSTRPOL-003.md`, `archive/tickets/181STRSTRPOL-004.md`
 
 ## Problem
 

@@ -56,6 +56,7 @@ export type ProbeAssertion =
   | { readonly id?: string; readonly kind: 'traceContainsField'; readonly field: string }
   | { readonly id?: string; readonly kind: 'traceHasAdvisory'; readonly code: AdvisoryCode }
   | { readonly id?: string; readonly kind: 'traceLacksAdvisory'; readonly code: AdvisoryCode }
+  | { readonly id?: string; readonly kind: 'publishedFrontierConstructible' }
   | { readonly id?: string; readonly kind: 'guardrailFired'; readonly guardrail: GuardrailId }
   | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId };
 
@@ -121,9 +122,22 @@ export interface ProbeMatch {
   readonly selectedDecision: Decision;
   readonly selectedActionTags: readonly ActionTagId[];
   readonly trace: PolicyAgentDecisionTrace | null;
+  readonly publishedFrontierConstructibility?: ProbePublishedFrontierConstructibility;
   readonly contextKind: DecisionContextKind;
   readonly decisionKey: string | null;
   readonly phase: string;
+}
+
+export interface ProbePublishedFrontierConstructibility {
+  readonly total: number;
+  readonly passed: number;
+  readonly failures: readonly ProbePublishedFrontierConstructibilityFailure[];
+}
+
+export interface ProbePublishedFrontierConstructibilityFailure {
+  readonly index: number;
+  readonly decisionKind: Decision['kind'];
+  readonly reason: string;
 }
 
 export interface ProbeSeedOutcome {

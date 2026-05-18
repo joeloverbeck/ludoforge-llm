@@ -192,6 +192,12 @@ const selectDecisionForProbe = (
           selectedDecision: selected.decision,
           selectedActionTags: actionTagsForDecision(context.def, selected.decision),
           trace,
+          publishedFrontierConstructibility: evaluatePublishedFrontierConstructibility(
+            context.def,
+            state,
+            microturn,
+            context.runtime,
+          ),
           contextKind: microturn.kind,
           decisionKey,
           phase: String(state.currentPhase),
@@ -285,6 +291,32 @@ const actionTagsForDecision = (
     ? def.actionTagIndex?.byAction[String(decision.actionId)] ?? []
     : []
 );
+
+const evaluatePublishedFrontierConstructibility = (
+  def: Parameters<PolicyAgent['chooseDecision']>[0]['def'],
+  state: GameState,
+  microturn: MicroturnState,
+  runtime: NonNullable<Parameters<PolicyAgent['chooseDecision']>[0]['runtime']>,
+) => {
+  const failures = microturn.legalActions.flatMap((decision, index) => {
+    try {
+      applyPublishedDecision(def, state, microturn, decision, undefined, runtime);
+      return [];
+    } catch (error) {
+      return [{
+        index,
+        decisionKind: decision.kind,
+        reason: error instanceof Error ? error.message : String(error),
+      }];
+    }
+  });
+
+  return {
+    total: microturn.legalActions.length,
+    passed: microturn.legalActions.length - failures.length,
+    failures,
+  };
+};
 
 const formatStateHash = (state: GameState): string => `0x${state.stateHash.toString(16)}`;
 

@@ -5,6 +5,7 @@ import { assertNever } from './common.js';
 import { evaluateGuardrailFired } from './guardrail-fired.js';
 import { evaluateGuardrailNotFired } from './guardrail-not-fired.js';
 import { evaluatePreviewRefStatusIn } from './preview-ref-status-in.js';
+import { evaluatePublishedFrontierConstructible } from './published-frontier-constructible.js';
 import { evaluateSelectedCandidateHasTag } from './selected-candidate-has-tag.js';
 import { evaluateSelectedCandidateLacksTag } from './selected-candidate-lacks-tag.js';
 import { evaluateSelectedCandidateRankWithinTopK } from './selected-candidate-rank-within-top-k.js';
@@ -47,6 +48,8 @@ export const dispatchAssertion = (
       return evaluateTraceHasAdvisory({ ...context, assertion });
     case 'traceLacksAdvisory':
       return evaluateTraceLacksAdvisory({ ...context, assertion });
+    case 'publishedFrontierConstructible':
+      return evaluatePublishedFrontierConstructible({ ...context, assertion });
     case 'guardrailFired':
       return evaluateGuardrailFired({ ...context, assertion });
     case 'guardrailNotFired':

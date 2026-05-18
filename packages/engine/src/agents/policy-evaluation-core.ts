@@ -1757,10 +1757,20 @@ export class PolicyEvaluationContext {
       state: this.activeState,
       candidates: this.currentCandidates,
       ...(candidate === undefined ? {} : { candidate }),
+      observerPlayerId: this.input.playerId,
+      ...this.resolveSelectorObserverProfile(),
       evaluateExpr: (expr, itemCandidate) => this.evaluateCompiledExpr(expr, itemCandidate as PolicyEvaluationCandidate | undefined),
     });
     this.selectorCache.set(cacheKey, view);
     return view;
+  }
+
+  private resolveSelectorObserverProfile(): { readonly observerProfile?: NonNullable<GameDef['observers']>['observers'][string] } {
+    const activeProfileId = this.input.catalog.bindingsBySeat[this.input.seatId];
+    const activeProfile = activeProfileId === undefined ? undefined : this.input.catalog.profiles[activeProfileId];
+    const observerName = activeProfile?.observerName ?? this.input.def.observers?.defaultObserverName;
+    const observerProfile = observerName === undefined ? undefined : this.input.def.observers?.observers[observerName];
+    return observerProfile === undefined ? {} : { observerProfile };
   }
 
   private resolveCandidateParamRef(

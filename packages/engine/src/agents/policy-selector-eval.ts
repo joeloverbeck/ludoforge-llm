@@ -1,6 +1,7 @@
 import type {
   AgentPolicyExpr,
   CollectionRef,
+  CompiledObserverProfile,
   CompiledPolicySelector,
   GameDef,
   GameState,
@@ -8,6 +9,8 @@ import type {
   MoveParamValue,
   ResultSpec,
 } from '../kernel/types.js';
+import type { PlayerId } from '../kernel/branded.js';
+import { derivePlayerObservation } from '../kernel/observation.js';
 import type { PolicyValue } from './policy-surface.js';
 
 export const DEFAULT_SELECTOR_EMPTY_DEMOTE_PENALTY = -100;
@@ -40,6 +43,8 @@ export interface SelectorEvalContext {
   readonly candidates: readonly SelectorEvalCandidate[];
   readonly candidate?: SelectorEvalCandidate;
   readonly microturnOptions?: readonly { readonly key: string; readonly value: MoveParamValue }[];
+  readonly observerPlayerId?: PlayerId;
+  readonly observerProfile?: CompiledObserverProfile;
   evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined): PolicyValue;
   onProductTruncated?(selectorId: string): void;
   onSelectorEmpty?(selectorId: string, reason: SelectedSelectorView['emptyReason']): void;
@@ -145,9 +150,37 @@ function materializeCollection(
     case 'players':
       return Array.from({ length: context.state.playerCount }, (_, index) => ({ key: String(index + 1) }));
     case 'cards':
+      return materializeCardCollection(collection, context);
     case 'authoredFinite':
       return [];
   }
+}
+
+function materializeCardCollection(
+  collection: Extract<CollectionRef, { readonly kind: 'cards' }>,
+  context: SelectorEvalContext,
+): readonly SelectorSourceItem[] {
+  const visibleTokenIds = context.observerPlayerId === undefined
+    ? undefined
+    : derivePlayerObservation(context.def, context.state, context.observerPlayerId, context.observerProfile).visibleTokenIdsByZone;
+  return Object.entries(context.state.zones)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .flatMap(([zoneId, tokens]) => {
+      if (collection.deck !== undefined && zoneBaseId(zoneId) !== collection.deck) {
+        return [];
+      }
+      const visibleIds = visibleTokenIds?.[zoneId];
+      const allowed = visibleIds === undefined ? undefined : new Set(visibleIds);
+      return tokens
+        .filter((token) => allowed === undefined || allowed.has(String(token.id)))
+        .map((token) => ({ key: String(token.id) }));
+    })
+    .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+function zoneBaseId(zoneId: string): string {
+  const colonIndex = zoneId.indexOf(':');
+  return colonIndex === -1 ? zoneId : zoneId.slice(0, colonIndex);
 }
 
 function materializeCandidateParam(

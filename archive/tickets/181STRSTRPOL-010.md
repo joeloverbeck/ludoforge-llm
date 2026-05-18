@@ -1,9 +1,9 @@
 # 181STRSTRPOL-010: Phase 1 — Conformance test: Texas Hold'em card-collection selector
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: Yes — `packages/engine/test/agents/conformance/` (test only)
+**Engine Changes**: Yes — `packages/engine/src/agents/policy-selector-eval.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/agents/conformance/`
 **Deps**: `archive/tickets/181STRSTRPOL-006.md`, `archive/tickets/181STRSTRPOL-007.md`, `archive/tickets/181STRSTRPOL-008.md`
 
 ## Problem
@@ -22,11 +22,17 @@ Spec 181 §8 Phase 1 acceptance (b) requires conformance coverage across game fa
 2. No game-specific branch in the selector evaluator — Hold'em's card visibility flows through the same observer-view facade FITL uses.
 3. Property-form assertions only.
 
+## Scope Correction (2026-05-18)
+
+Live reassessment found the ticket's "test only" scope was stale: `collection.kind === 'cards'` was accepted by the compiler but returned an empty runtime source. Per Foundations #4, #15, and #16, this ticket now owns the missing generic runtime materialization for card selectors plus the Texas conformance proof. The runtime change must remain game-agnostic and observer-view-driven.
+
+Current selector IR does not bind the source item payload into quality expressions, so this ticket proves visible card source materialization, bounded deterministic ranking, and hidden-card non-leakage. Per-card hand-strength scoring remains outside this ticket until selector item bindings exist.
+
 ## What to Change
 
 ### 1. Test file
 
-Create `packages/engine/test/agents/conformance/selector-holdem-card-collection.test.ts`:
+Create `packages/engine/test/agents/conformance/selector-holdem-card-collection.test.ts` (implemented under `packages/engine/test/unit/agents/conformance/` so the default engine lane runs it):
 
 ```ts
 // @test-class: architectural-invariant
@@ -80,6 +86,8 @@ describe('selector conformance — Texas Hold\'em card collection', () => {
 
 ## Files to Touch
 
+- `packages/engine/src/agents/policy-selector-eval.ts`
+- `packages/engine/src/agents/policy-evaluation-core.ts`
 - `packages/engine/test/agents/conformance/selector-holdem-card-collection.test.ts` (new)
 - `packages/engine/test/agents/conformance/fixtures/holdem-selector-context.ts` (new — helper; or inline if trivial)
 
@@ -116,3 +124,35 @@ describe('selector conformance — Texas Hold\'em card collection', () => {
 
 1. `pnpm -F @ludoforge/engine test -- selector-holdem`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implemented generic card collection materialization for policy selectors and added the Texas Hold'em conformance proof as `packages/engine/test/unit/agents/conformance/selector-holdem-card-collection.test.ts`. The runtime now:
+
+- materializes `collection.kind === 'cards'` as a deterministic finite token-key collection;
+- filters card selector sources through `derivePlayerObservation` when an observer player/profile is present;
+- threads the active policy observer profile from `PolicyEvaluationContext` into selector evaluation;
+- keeps low-level direct selector calls deterministic when no observer is supplied.
+
+The Texas conformance test uses the production Texas `GameDef`, advances to a real preflop decision state, evaluates the card selector from the active player's `currentPlayer` observer view, and asserts property-form guarantees:
+
+- selected card keys are visible to the active player;
+- hidden opponent/deck card changes do not alter selector output;
+- result length is bounded by `maxItems`;
+- results are `qualityDesc` ordered with `stableKeyAsc` tie-breaking;
+- repeated evaluations are bit-identical.
+
+Current selector IR still does not bind the selected source item into quality expressions, so the test uses a literal quality component. This ticket proves generic visible-card source materialization and hidden-card non-leakage, not per-card rank/hand-strength scoring.
+
+## Verification
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/conformance/selector-holdem-card-collection.test.js packages/engine/dist/test/unit/agents/conformance/selector-fitl-zone-collection.test.js packages/engine/dist/test/unit/agents/policy-selector-eval.test.js` — passed.
+- `pnpm -F @ludoforge/engine test -- selector-holdem-card-collection.test.ts` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `git diff --check` — passed.
+- `pnpm turbo build` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — red only in existing Spec 178 ARVN outcome-parity architecture tests for seeds `1005`, `1011`, `1008`, `1013`, and `1009`; both selector conformance tests passed inside the default unit lane and the runner tests passed.

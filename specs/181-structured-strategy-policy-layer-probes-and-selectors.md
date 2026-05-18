@@ -378,7 +378,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `181STRSTRPOL`; spec 
 - [`archive/tickets/181STRSTRPOL-007.md`](../archive/tickets/181STRSTRPOL-007.md) — Phase 1 — Runtime selector evaluation + caching (covers §5.6, §6, §7)
 - [`archive/tickets/181STRSTRPOL-008.md`](../archive/tickets/181STRSTRPOL-008.md) — Phase 1 — Trace integration (`selectors` field on PolicyAgentDecisionTrace) (covers §5.6 trace surface)
 - [`archive/tickets/181STRSTRPOL-009.md`](../archive/tickets/181STRSTRPOL-009.md) — Phase 1 — Conformance test: FITL zone-collection selector (covers §8 Phase 1 acceptance (b) zone-collection)
-- [`tickets/181STRSTRPOL-010.md`](../tickets/181STRSTRPOL-010.md) — Phase 1 — Conformance test: Texas Hold'em card-collection selector (covers §8 Phase 1 acceptance (b) card-collection)
+- [`archive/tickets/181STRSTRPOL-010.md`](../archive/tickets/181STRSTRPOL-010.md) — Phase 1 — Conformance test: Texas Hold'em card-collection selector (covers §8 Phase 1 acceptance (b) card-collection)
 - [`tickets/181STRSTRPOL-011.md`](../tickets/181STRSTRPOL-011.md) — Phase 1 — Conformance test: fixture-game declared-product selector (covers §8 Phase 1 acceptance (b) declared-product)
 - [`tickets/181STRSTRPOL-012.md`](../tickets/181STRSTRPOL-012.md) — Phase 1 — ARVN consideration migration + Phase 0 probe rerun (covers §8 Phase 1 acceptance (c))
 - [`archive/tickets/181STRSTRPOL-013.md`](../archive/tickets/181STRSTRPOL-013.md) — Phase 0 follow-up — Reduce ARVN probe overhead below soft budget (split from 005 after the budget gate surfaced a measured 797.43 ms/decision soft overrun on the final rerun)

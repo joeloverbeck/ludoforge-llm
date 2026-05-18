@@ -371,7 +371,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `181STRSTRPOL`; spec 
 
 - [`archive/tickets/181STRSTRPOL-001.md`](../archive/tickets/181STRSTRPOL-001.md) — Phase 0 — Probe runner scaffold + replay-prefix integration (covers §4.1, §4.3)
 - [`archive/tickets/181STRSTRPOL-002.md`](../archive/tickets/181STRSTRPOL-002.md) — Phase 0 — Probe assertion library (covers §4.2)
-- [`tickets/181STRSTRPOL-003.md`](../tickets/181STRSTRPOL-003.md) — Phase 0 — ARVN action-distribution probe (75%-Govern witness) (covers §4.1 exemplar + §8 Phase 0 acceptance (b))
+- [`archive/tickets/181STRSTRPOL-003.md`](../archive/tickets/181STRSTRPOL-003.md) — Phase 0 — ARVN action-distribution probe (75%-Govern witness) (covers §4.1 exemplar + §8 Phase 0 acceptance (b))
 - [`tickets/181STRSTRPOL-004.md`](../tickets/181STRSTRPOL-004.md) — Phase 0 — Architectural-invariant constructibility probe (covers §8 Phase 0 acceptance (c))
 - [`tickets/181STRSTRPOL-005.md`](../tickets/181STRSTRPOL-005.md) — Phase 0 — CI integration + per-probe overhead budget (covers §8 Phase 0 acceptance (a), (e))
 - [`tickets/181STRSTRPOL-006.md`](../tickets/181STRSTRPOL-006.md) — Phase 1 — Selector compiled IR, library bucket, compiler diagnostics (covers §5.1–§5.5)

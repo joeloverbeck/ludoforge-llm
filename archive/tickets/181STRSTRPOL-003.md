@@ -1,6 +1,6 @@
 # 181STRSTRPOL-003: Phase 0 — ARVN action-distribution probe (75%-Govern witness)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/` only (no engine src changes)
@@ -108,3 +108,40 @@ After running the probe once against the current `arvn-evolved` profile, documen
 
 1. `pnpm -F @ludoforge/engine test -- fire-in-the-lake.probes`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-18
+
+What changed:
+- Added `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/arvn-action-distribution.probe.ts` with the Spec 181 ARVN 15-seed action-distribution probe.
+- Registered the FITL probe in `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.ts`.
+- Corrected `runProbe` so seed-range distribution assertions evaluate over the aggregate match window instead of failing independently per seed; added a regression test in `probe-runner.test.ts`.
+- Documented both the May-17 report baseline and the current 2026-05-18 calibration in the probe file.
+
+Deviations:
+- The live runner needed a same-seam aggregate-window correction before this probe could satisfy `windowMinDecisions: 100`; without it, the assertion was evaluated per seed and produced `insufficient decisions` errors despite enough aggregate matches.
+- The focused proof used the compiled Node test lane after `pnpm -F @ludoforge/engine build`, because this package's tests execute from `dist/test`.
+- The current profile no longer reproduces the 75% Govern failure in the first 100 aggregate matches. The probe still preserves the regression guard and passes deterministically today.
+
+Current calibration:
+- `runProbe(arvnActionDistributionNotDominated)` over the first 100 aggregate matches returned `aggregateOutcome: { kind: "pass" }`.
+- Distribution: Train 28, Event 24, Govern 15, Ambush VC 10, no-tag/pass-like 8, Terror 7, Rally 3, March 3, Attack 2.
+- `tiebreakAfterPreviewNoSignal`: 0 / 100 decisions.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed after the aggregate-window runner correction.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/probes/probe-runner.test.js` — passed, 5 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js` — passed, 1 test, deterministic profile-quality signal.
+- `pnpm run check:ticket-deps` — passed after terminal status edit.
+- `git diff --check -- packages/engine/test/policy-profile-quality/probes/probe-runner.ts packages/engine/test/policy-profile-quality/probes/probe-runner.test.ts packages/engine/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.ts packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/arvn-action-distribution.probe.ts tickets/181STRSTRPOL-003.md .codex/run-state/implement-spec-tickets.json` — passed.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed, 5 Turborepo tasks.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+
+Closeout ledgers:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed after this terminal status edit.
+- Source-size sweep: touched/new source files are below the 800-line cap; largest touched file is `probe-runner.ts` at 309 lines.
+- Untracked/touched-file hygiene: new `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/` probe file is ticket-owned.
+- Post-review: completed in this session; no must-fix-now code issue or follow-up ticket was needed, and the ticket is archive-ready.

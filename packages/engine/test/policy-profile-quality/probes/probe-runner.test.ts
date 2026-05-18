@@ -81,6 +81,34 @@ describe('policy probe runner scaffold', () => {
     assert.equal(second.traceBytes, first.traceBytes);
   });
 
+  it('evaluates seed-range distribution assertions over the aggregate match window', () => {
+    const aggregateProbe = defineProbe({
+      ...noAssertionProbe,
+      id: 'texas-aggregate-action-distribution',
+      stateBinding: {
+        scenario: TEXAS_SCENARIO,
+        seedRange: { start: 1000, end: 1001 },
+      },
+      decisionBinding: {
+        contextKind: 'actionSelection',
+        occurrence: 'every',
+      },
+      assertions: [
+        {
+          kind: 'actionFamilyDistributionBelow',
+          family: 'any',
+          threshold: 1.01,
+          windowMinDecisions: 2,
+        },
+      ],
+    });
+
+    const result = runProbe(aggregateProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
+    assert.equal(result.aggregateOutcome.kind, 'pass');
+    assert.equal(result.perSeedOutcomes.some((outcome) => outcome.outcome.kind === 'error'), false);
+    assert.equal(result.perSeedOutcomes.reduce((count, outcome) => count + outcome.matches.length, 0), 2);
+  });
+
   it('reports state hash drift instead of hanging or silently passing', () => {
     const driftProbe = defineProbe({
       ...noAssertionProbe,

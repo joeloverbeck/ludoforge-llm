@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (profile YAML); possibly `docs/agent-dsl-cookbook.md` (cookbook entry citing the migration)
-**Deps**: `tickets/181STRSTRPOL-003.md`, `tickets/181STRSTRPOL-009.md`
+**Deps**: `archive/tickets/181STRSTRPOL-003.md`, `tickets/181STRSTRPOL-009.md`
 
 ## Problem
 

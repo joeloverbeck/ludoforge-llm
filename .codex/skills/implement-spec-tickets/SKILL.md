@@ -9,7 +9,9 @@ Use this skill when the user wants the full Ludoforge spec-family loop handled a
 
 This is an orchestration skill. Do not reimplement `.codex/skills/implement-ticket`, `.codex/skills/post-ticket-review`, or `.codex/skills/skill-audit`; load and obey those skills at each phase, and let their narrower guardrails control their owned work.
 
-Prefer a fresh context boundary between unrelated ticket iterations. After each iteration commit, persist state, print a compact handoff, and stop for `/new` or context compaction unless the next target is an immediate follow-up or explicit direct dependent whose same-seam continuation is safe to keep in the current context.
+The default unit of execution is one ticket iteration: implement, review/archive when complete, commit, persist state, and hand off the next target. The full loop is resumable across invocations. Continue into another ticket in the same invocation only when the next target is an immediate follow-up or explicit direct dependent, the continuation is still the same seam, context remains small enough to preserve proof accuracy, and the worktree/state file are clean enough to avoid ambiguity.
+
+Prefer a fresh context boundary between unrelated ticket iterations. After each iteration commit, persist state, print a compact handoff, and stop for `/new` or context compaction unless the continuation test above is satisfied.
 
 ## Child Skill Audit Override
 
@@ -97,7 +99,7 @@ If an in-flight proof command or terminal session may still be running after int
 
 ## Loop
 
-Repeat until there is no active same-family ticket left and no newly created follow-up takes priority.
+Repeat conceptually until there is no active same-family ticket left and no newly created follow-up takes priority. In a single Codex invocation, normally run one ticket iteration and stop after the harness handoff unless the continuation policy above is satisfied.
 
 ### 1. Implement Target Ticket
 
@@ -160,9 +162,12 @@ Post-ticket review:
 - Reference sweep: <paths repaired or "no stale active-path refs found">
 - Follow-ups: <created/updated ticket paths or "none">
 - Verification: <rerun proof command/result or why rerun was not needed>
+- Post-review correction proof: <not_applicable | changed paths + invalidated lanes + rerun/substitute lanes + rationale for any broad lane not rerun>
 ```
 
 When reporting stale-path sweeps, distinguish active-path references such as `tickets/<id>.md` from already-correct archive references such as `archive/tickets/<id>.md`.
+
+If post-ticket review makes or requires must-fix-now implementation, ticket, spec, dependency, archive-reference, or proof-story edits after earlier broad verification passed, explicitly classify proof invalidation before committing. Record which paths changed, which earlier proof lanes those changes invalidate, which focused or broad lanes were rerun as substitutes, and why any previously cited broad lane remains valid if it was not rerun.
 
 When a ticket is archived, independently grep the originating spec for the moved active ticket path before committing, even when `post-ticket-review` or the archive helper reports successful reference repair. Patch actionable stale spec-list or dependency references to the archive path, or report why a remaining reference is historical and harmless.
 

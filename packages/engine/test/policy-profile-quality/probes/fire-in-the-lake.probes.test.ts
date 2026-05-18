@@ -5,11 +5,11 @@ import { describe, it } from 'node:test';
 
 import { createGameDefRuntime } from '../../../src/kernel/index.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
+import { probes } from './fire-in-the-lake/arvn-action-distribution.probe.js';
 import { runProbe } from './probe-runner.js';
-import type { Probe, ProbeLoadedGame, ScenarioId } from './probe-types.js';
+import type { ProbeLoadedGame, ScenarioId } from './probe-types.js';
 
 const FITL_SCENARIO = 'fitl-default' as ScenarioId;
-const probes: readonly Probe[] = [];
 
 const loadFitlGame = (): ProbeLoadedGame => {
   const def = getFitlProductionFixture().gameDef;

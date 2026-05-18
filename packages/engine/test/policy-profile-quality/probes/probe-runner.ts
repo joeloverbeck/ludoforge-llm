@@ -30,8 +30,26 @@ const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
 export const runProbe = (probe: Probe, options: ProbeRunOptions): ProbeResult => {
   const startedAt = performance.now();
-  const perSeedOutcomes = seedsForProbe(probe).map((seed) => runProbeForSeed(probe, seed, options));
-  const aggregateOutcome = aggregateProbeOutcome(perSeedOutcomes);
+  const aggregateWindow = aggregateWindowSize(probe);
+  const perSeedOutcomes: ProbeSeedOutcome[] = [];
+  const aggregateMatches: ProbeMatch[] = [];
+  for (const seed of seedsForProbe(probe)) {
+    const remainingAggregateMatches = aggregateWindow === null
+      ? undefined
+      : Math.max(0, aggregateWindow - aggregateMatches.length);
+    if (remainingAggregateMatches === 0) {
+      break;
+    }
+    const seedOutcome = runProbeForSeed(probe, seed, options, remainingAggregateMatches);
+    perSeedOutcomes.push(seedOutcome);
+    aggregateMatches.push(...seedOutcome.matches);
+    if (seedOutcome.outcome.kind !== 'pass') {
+      break;
+    }
+  }
+  const aggregateOutcome = aggregateWindow === null
+    ? aggregateProbeOutcome(perSeedOutcomes)
+    : aggregateProbeOutcome(perSeedOutcomes, probe, aggregateMatches);
   const traceBytes = deterministicByteLength({
     probeId: probe.id,
     perSeedOutcomes,
@@ -51,6 +69,7 @@ const runProbeForSeed = (
   probe: Probe,
   seed: number,
   options: ProbeRunOptions,
+  maxMatches?: number,
 ): ProbeSeedOutcome => {
   const loaded = options.loadGame({
     game: probe.game,
@@ -94,6 +113,13 @@ const runProbeForSeed = (
 
     if (selection.match !== null) {
       matches.push(selection.match);
+      if (maxMatches !== undefined && matches.length >= maxMatches) {
+        return {
+          seed,
+          outcome: { kind: 'pass' },
+          matches,
+        };
+      }
       if (isOccurrenceSatisfied(probe, matches.length)) {
         return {
           seed,
@@ -109,7 +135,9 @@ const runProbeForSeed = (
   if (probe.decisionBinding.occurrence === 'every' && matches.length > 0) {
     return {
       seed,
-      outcome: evaluateProbeAssertions(probe, matches, { def: loaded.def, state }),
+      outcome: maxMatches === undefined
+        ? evaluateProbeAssertions(probe, matches, { def: loaded.def, state })
+        : { kind: 'pass' },
       matches,
     };
   }
@@ -207,17 +235,37 @@ const seedsForProbe = (probe: Probe): readonly number[] => {
   return Array.from({ length: range.end - range.start + 1 }, (_, index) => range.start + index);
 };
 
-const aggregateProbeOutcome = (outcomes: readonly ProbeSeedOutcome[]): ProbeOutcome => {
+const aggregateWindowSize = (probe: Probe): number | null => {
+  if (probe.decisionBinding.occurrence !== 'every' || probe.stateBinding.seedRange === undefined) {
+    return null;
+  }
+  const windows = probe.assertions.flatMap((assertion) => (
+    assertion.kind === 'actionFamilyDistributionBelow' ? [assertion.windowMinDecisions] : []
+  ));
+  return windows.length === 0 ? null : Math.max(...windows);
+};
+
+const aggregateProbeOutcome = (
+  outcomes: readonly ProbeSeedOutcome[],
+  probe?: Probe,
+  aggregateMatches?: readonly ProbeMatch[],
+): ProbeOutcome => {
   const firstNonPass = outcomes.find((outcome) => outcome.outcome.kind !== 'pass');
-  return firstNonPass?.outcome ?? { kind: 'pass' };
+  if (firstNonPass !== undefined) {
+    return firstNonPass.outcome;
+  }
+  if (probe !== undefined && aggregateMatches !== undefined) {
+    return evaluateProbeAssertions(probe, aggregateMatches, {});
+  }
+  return { kind: 'pass' };
 };
 
 const evaluateProbeAssertions = (
   probe: Probe,
   matches: readonly ProbeMatch[],
   context: {
-    readonly def: Parameters<PolicyAgent['chooseDecision']>[0]['def'];
-    readonly state: GameState;
+    readonly def?: Parameters<PolicyAgent['chooseDecision']>[0]['def'];
+    readonly state?: GameState;
   },
 ): ProbeOutcome => {
   for (const assertion of probe.assertions) {

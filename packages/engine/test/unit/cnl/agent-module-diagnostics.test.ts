@@ -122,7 +122,7 @@ describe('agent strategy module diagnostics', () => {
     );
     assertCode(
       createDoc({ good: validModule({ guardrailIds: ['pruneUnsafe'] }) }),
-      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_GUARDRAIL_REQUIRES_PRUNE_FALLBACK,
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
     );
     assertCode(
       createDoc({ good: validModule({ fallback: { ifInactive: 'noContribution', ifSelectorEmpty: 'demoteAndTrace' } }) }),

@@ -776,12 +776,27 @@ export interface GameSpecStrategyModuleDef {
   };
 }
 
+export interface GameSpecGuardrailDef {
+  readonly traceLabel?: string;
+  readonly scopes?: readonly string[];
+  readonly when?: GameSpecPolicyExpr;
+  readonly severity?: string;
+  readonly penalty?: GameSpecPolicyExpr;
+  readonly safe?: boolean;
+  readonly onAllPruned?: {
+    readonly actionId?: string;
+    readonly traceLabel?: string;
+  };
+  readonly onUnavailable?: string;
+}
+
 export interface GameSpecAgentLibrary {
   readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly selectors?: Readonly<Record<string, GameSpecSelectorDef>>;
   readonly strategyModules?: Readonly<Record<string, GameSpecStrategyModuleDef>>;
+  readonly guardrails?: Readonly<Record<string, GameSpecGuardrailDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
@@ -847,6 +862,9 @@ export interface GameSpecAgentProfileDef {
     readonly maxCostClass?: string;
   };
   readonly strategyModules?: {
+    readonly maxCostClass?: string;
+  };
+  readonly guardrails?: {
     readonly maxCostClass?: string;
   };
 }

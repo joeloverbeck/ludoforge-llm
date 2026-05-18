@@ -369,6 +369,8 @@ function analyzeRefExpr(
         return withResolvedRef(resolved, { ...dependencies, selectors: [resolved.dependency.id] });
       case 'strategyModules':
         return withResolvedRef(resolved, { ...dependencies, strategyModules: [resolved.dependency.id] });
+      case 'guardrails':
+        return withResolvedRef(resolved, { ...dependencies, guardrails: [resolved.dependency.id] });
       case 'strategicConditions':
         return withResolvedRef(resolved, { ...dependencies, strategicConditions: [resolved.dependency.id] });
     }
@@ -850,6 +852,7 @@ function mergeAnalyses(
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
   const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -857,6 +860,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

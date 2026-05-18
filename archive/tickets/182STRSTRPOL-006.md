@@ -1,9 +1,9 @@
 # 182STRSTRPOL-006: Phase 3 — Guardrails library bucket + compiled IR + compiler diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/cnl/compile-agents.ts`, compiler diagnostic codes module
+**Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/src/cnl/compile-agents.ts`, compiler diagnostic codes module
 **Deps**: `archive/tickets/182STRSTRPOL-001.md`
 
 ## Problem
@@ -90,8 +90,15 @@ Create `packages/engine/test/unit/cnl/agent-guardrail-diagnostics.test.ts` (sibl
 
 - `packages/engine/src/contracts/policy-contract.ts` (modify)
 - `packages/engine/src/kernel/types-core.ts` (modify — `GuardrailDef`, `PassFallbackSpec`, severity/cost-class types)
-- `packages/engine/src/cnl/compile-agents.ts` (modify — `compileGuardrails`)
-- `packages/engine/src/cnl/diagnostic-codes.ts` (modify — add 9 codes)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — schema validation for guardrail catalog/profile fields)
+- `packages/engine/src/cnl/game-spec-doc.ts` (modify — authored guardrail/profile config shape)
+- `packages/engine/src/cnl/compile-agents.ts` (modify — wire `compileGuardrails`)
+- `packages/engine/src/cnl/compile-agent-guardrails.ts` (new — guardrail lowering/diagnostics)
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` (modify — add 9 codes)
+- `packages/engine/src/cnl/lower-agent-considerations.ts` (modify — lower compiled guardrails)
+- `packages/engine/src/cnl/compile-agent-strategy-modules.ts` (modify — resolve module guardrail dependencies)
+- `packages/engine/src/agents/policy-expr.ts` (modify — dependency propagation for guardrail refs)
+- `packages/engine/schemas/GameDef.schema.json` (regenerated schema artifact)
 - `packages/engine/test/unit/cnl/agent-guardrail-diagnostics.test.ts` (new)
 
 ## Out of Scope
@@ -127,3 +134,39 @@ Create `packages/engine/test/unit/cnl/agent-guardrail-diagnostics.test.ts` (sibl
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/agent-guardrail-diagnostics.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19.
+
+Implemented the Phase 3 guardrails compile-time surface.
+
+What changed:
+- Added the `guardrails` policy library bucket between `strategyModules` and `pruningRules`.
+- Added authored and compiled guardrail shapes, `GuardrailDef`, `PassFallbackSpec`, guardrail severity/cost-class/profile config fields, dependency propagation, and schema validation.
+- Added `compile-agent-guardrails.ts` for guardrail lowering and kept the existing `pruningRules` bucket operational for the coexistence window.
+- Wired module `guardrailIds` to real guardrail dependency resolution so module/guardrail cycles can be detected.
+- Added the 9 Phase 3 guardrail diagnostics for unknown refs, demote penalty, prune safety/fallback, pass-tagged fallback validation, preview fallback, dependency cycle, cost-class limit, and trace-label duplication.
+- Added `agent-guardrail-diagnostics.test.ts` with positive-trigger coverage for all 9 diagnostics and adjusted the module diagnostic test for the now-real guardrail bucket.
+- Regenerated `packages/engine/schemas/GameDef.schema.json`.
+
+Deviations from the draft:
+- The ticket named `packages/engine/src/cnl/diagnostic-codes.ts`; the live file is `packages/engine/src/cnl/compiler-diagnostic-codes.ts`.
+- Guardrail lowering lives in the new focused `compile-agent-guardrails.ts` helper instead of adding the full implementation directly to the already-large `compile-agents.ts`.
+- `CNL_COMPILER_AGENT_GUARDRAIL_PRUNINGRULES_DEPRECATED` remains out of scope for ticket 010 as drafted.
+
+Source-size ledger:
+- `packages/engine/src/cnl/compile-agents.ts` — before/after active growth: +194 lines; final size 5591 lines; preexisting over cap and still over cap. Narrow extraction performed: guardrail-specific lowering lives in `compile-agent-guardrails.ts`; remaining changes are compiler wiring, profile config, and catalog plumbing.
+- `packages/engine/src/cnl/compile-agent-guardrails.ts` — new 226-line focused helper; under cap.
+- `packages/engine/src/kernel/types-core.ts` — active growth +39 lines; final size 2630 lines; preexisting over cap. Growth is shared contract type surface for the new IR.
+- `packages/engine/src/kernel/schemas-core.ts` — active growth +39 lines; final size 3033 lines; preexisting over cap. Growth mirrors the shared contract schema surface.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/cnl/agent-guardrail-diagnostics.test.js` — passed, 4 tests.
+- `node --test packages/engine/dist/test/unit/cnl/agent-module-diagnostics.test.js` — passed, 3 tests.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after regenerating schema artifacts.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.

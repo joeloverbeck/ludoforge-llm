@@ -30,20 +30,21 @@ export interface StrategyModuleCompileOptions {
   readonly context: AnalyzePolicyExprContext;
   readonly diagnostics: Diagnostic[];
   readonly compileSelector: (selectorId: string) => { readonly costClass: ModuleCostClass } | null;
+  readonly compileGuardrail: (guardrailId: string) => { readonly costClass: ModuleCostClass } | null;
   readonly reportModuleRefUnknown: (refPath: string, path: string) => void;
 }
 
 export function compileStrategyModuleDefinition(
   options: StrategyModuleCompileOptions,
 ): AgentStrategyModuleWithExpr | null {
-  const { moduleId, def, context, diagnostics, compileSelector, reportModuleRefUnknown } = options;
+  const { moduleId, def, context, diagnostics, compileSelector, compileGuardrail, reportModuleRefUnknown } = options;
   const basePath = `doc.agents.library.strategyModules.${moduleId}`;
   const when = analyzePolicyExpr(def.when ?? true, context, diagnostics, `${basePath}.when`);
   const applies = lowerModuleApplies(def.applies, `${basePath}.applies`, diagnostics, reportModuleRefUnknown);
   const priority = lowerModulePriority(def.priority, `${basePath}.priority`, context, diagnostics);
   const selectors = lowerModuleSelectorBindings(def.selectors, `${basePath}.selectors`, compileSelector, diagnostics, reportModuleRefUnknown);
   const scoreGroups = lowerModuleScoreGroups(def.scoreGroups, `${basePath}.scoreGroups`, context, diagnostics, reportModuleRefUnknown);
-  const guardrailIds = lowerModuleGuardrailIds(def.guardrailIds, `${basePath}.guardrailIds`, diagnostics, reportModuleRefUnknown);
+  const guardrailIds = lowerModuleGuardrailIds(def.guardrailIds, `${basePath}.guardrailIds`, compileGuardrail, diagnostics, reportModuleRefUnknown);
   const fallback = lowerModuleFallback(def.fallback, `${basePath}.fallback`, diagnostics, reportModuleRefUnknown);
 
   if (
@@ -73,12 +74,14 @@ export function compileStrategyModuleDefinition(
     ...(priority.valueAnalysis === null ? [] : [priority.valueAnalysis.dependencies]),
     ...scoreGroups.flatMap((group) => group.terms.map((term) => term.analysis.dependencies)),
     ...selectors.map((binding) => ({ ...emptyDependencies(), selectors: [binding.selectorId] })),
+    ...guardrailIds.map((guardrailId) => ({ ...emptyDependencies(), guardrails: [guardrailId] })),
   ]);
   const costClass = deriveModuleCostClass([
     when.costClass,
     ...(priority.valueAnalysis === null ? [] : [priority.valueAnalysis.costClass]),
     ...scoreGroups.flatMap((group) => group.terms.map((term) => term.analysis.costClass)),
     ...selectors.map((binding) => compileSelector(binding.selectorId)?.costClass ?? 'state'),
+    ...guardrailIds.map((guardrailId) => compileGuardrail(guardrailId)?.costClass ?? 'state'),
   ]);
 
   return {
@@ -333,6 +336,7 @@ function lowerModuleScoreTerms(
 function lowerModuleGuardrailIds(
   guardrailIds: readonly string[] | undefined,
   path: string,
+  compileGuardrail: (guardrailId: string) => { readonly costClass: ModuleCostClass } | null,
   diagnostics: Diagnostic[],
   reportModuleRefUnknown: (refPath: string, path: string) => void,
 ): readonly string[] | null {
@@ -342,18 +346,10 @@ function lowerModuleGuardrailIds(
     return null;
   }
   for (const [index, guardrailId] of guardrailIds.entries()) {
-    if (guardrailId.startsWith('prune')) {
-      diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_GUARDRAIL_REQUIRES_PRUNE_FALLBACK,
-        path: `${path}.${index}`,
-        severity: 'error',
-        message: `Strategy module references prune guardrail "${guardrailId}" before an onAllPruned fallback can be validated.`,
-        suggestion: 'Land the guardrail bucket and pass-fallback declaration before binding prune guardrails to modules.',
-      });
+    if (compileGuardrail(guardrailId) === null) {
+      reportModuleRefUnknown(`guardrail.${guardrailId}`, `${path}.${index}`);
       return null;
     }
-    reportModuleRefUnknown(`guardrail.${guardrailId}`, `${path}.${index}`);
-    return null;
   }
   return guardrailIds;
 }
@@ -417,6 +413,7 @@ function deriveModuleCostClass(costClasses: readonly (AgentPolicyCostClass | Mod
 function mergeModuleDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
   const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -424,6 +421,7 @@ function mergeModuleDependencies(dependencies: readonly CompiledAgentDependencyR
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

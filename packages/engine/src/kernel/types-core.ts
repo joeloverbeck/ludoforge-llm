@@ -372,6 +372,8 @@ export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
 export type SelectorCostClass = 'state' | 'candidate' | 'microturn' | 'preview' | 'auditOnly';
+export type GuardrailCostClass = SelectorCostClass;
+export type GuardrailSeverity = 'prune' | 'demote' | 'warn' | 'auditOnly';
 export type SelectorId = string & { readonly __brand: 'SelectorId' };
 export type ModuleId = string & { readonly __brand: 'ModuleId' };
 export type GuardrailId = string & { readonly __brand: 'GuardrailId' };
@@ -804,6 +806,25 @@ export interface StrategyModuleDef {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface PassFallbackSpec {
+  readonly actionId: ActionId;
+  readonly traceLabel: string;
+}
+
+export interface GuardrailDef {
+  readonly id: GuardrailId;
+  readonly traceLabel: string;
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly when: CompiledPolicyExpr;
+  readonly severity: GuardrailSeverity;
+  readonly penalty?: CompiledPolicyExpr;
+  readonly safe?: true;
+  readonly onAllPruned?: PassFallbackSpec;
+  readonly onUnavailable: 'warnUnknown' | 'noFire' | 'fire';
+  readonly costClass: GuardrailCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
 export interface CompiledPolicyConsideration {
   readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
@@ -847,6 +868,7 @@ export interface CompiledPolicyCatalog {
   readonly candidateAggregates: Readonly<Record<string, CompiledPolicyAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
   readonly strategyModules?: Readonly<Record<string, StrategyModuleDef>>;
+  readonly guardrails?: Readonly<Record<string, GuardrailDef>>;
   readonly pruningRules: Readonly<Record<string, CompiledPolicyPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
@@ -983,6 +1005,7 @@ export interface CompiledAgentDependencyRefs {
   readonly aggregates: readonly string[];
   readonly selectors?: readonly string[];
   readonly strategyModules?: readonly string[];
+  readonly guardrails?: readonly string[];
   readonly strategicConditions: readonly string[];
 }
 
@@ -1071,6 +1094,17 @@ export interface CompiledAgentStrategyModule {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface CompiledAgentGuardrail {
+  readonly traceLabel: string;
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly severity: GuardrailSeverity;
+  readonly costClass: GuardrailCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+  readonly safe?: true;
+  readonly onUnavailable: 'warnUnknown' | 'noFire' | 'fire';
+  readonly onAllPruned?: PassFallbackSpec;
+}
+
 export interface CompiledAgentPruningRule {
   readonly costClass: AgentPolicyCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
@@ -1112,6 +1146,7 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
   readonly strategyModules?: Readonly<Record<string, CompiledAgentStrategyModule>>;
+  readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
@@ -1202,12 +1237,16 @@ export interface CompiledAgentProfile {
   readonly strategyModules?: {
     readonly maxCostClass: ModuleCostClass;
   };
+  readonly guardrails?: {
+    readonly maxCostClass: GuardrailCostClass;
+  };
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
     readonly selectors?: readonly string[];
     readonly strategyModules?: readonly string[];
+    readonly guardrails?: readonly string[];
     readonly considerations: readonly string[];
   };
 }

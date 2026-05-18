@@ -1093,6 +1093,7 @@ const SelectorCostClassSchema = z.union([
   z.literal('auditOnly'),
 ]);
 const ModuleCostClassSchema = SelectorCostClassSchema;
+const GuardrailCostClassSchema = SelectorCostClassSchema;
 
 const CompiledAgentDependencyRefsSchema = z
   .object({
@@ -1102,6 +1103,7 @@ const CompiledAgentDependencyRefsSchema = z
     aggregates: z.array(StringSchema),
     selectors: z.array(StringSchema).optional(),
     strategyModules: z.array(StringSchema).optional(),
+    guardrails: z.array(StringSchema).optional(),
     strategicConditions: z.array(StringSchema),
   })
   .strict();
@@ -1374,6 +1376,39 @@ const CompiledAgentStrategyModuleSchema = z.object({
   dependencies: CompiledAgentDependencyRefsSchema,
 }).strict();
 
+const PassFallbackSpecSchema = z.object({
+  actionId: StringSchema,
+  traceLabel: StringSchema,
+}).strict();
+
+const GuardrailSeveritySchema = z.enum(['prune', 'demote', 'warn', 'auditOnly']);
+const GuardrailOnUnavailableSchema = z.enum(['warnUnknown', 'noFire', 'fire']);
+
+const GuardrailSchema = z.object({
+  id: StringSchema,
+  traceLabel: StringSchema,
+  scopes: z.array(z.union([z.literal('move'), z.literal('microturn')])).min(1),
+  when: CompiledPolicyExprSchema,
+  severity: GuardrailSeveritySchema,
+  penalty: CompiledPolicyExprSchema.optional(),
+  safe: z.literal(true).optional(),
+  onAllPruned: PassFallbackSpecSchema.optional(),
+  onUnavailable: GuardrailOnUnavailableSchema,
+  costClass: GuardrailCostClassSchema,
+  dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const CompiledAgentGuardrailSchema = z.object({
+  traceLabel: StringSchema,
+  scopes: z.array(z.union([z.literal('move'), z.literal('microturn')])).min(1),
+  severity: GuardrailSeveritySchema,
+  costClass: GuardrailCostClassSchema,
+  dependencies: CompiledAgentDependencyRefsSchema,
+  safe: z.literal(true).optional(),
+  onUnavailable: GuardrailOnUnavailableSchema,
+  onAllPruned: PassFallbackSpecSchema.optional(),
+}).strict();
+
 const CompiledPolicyPruningRuleSchema = z
   .object({
     costClass: AgentPolicyCostClassSchema,
@@ -1413,6 +1448,7 @@ const CompiledPolicyCatalogSchema = z
     candidateAggregates: z.record(StringSchema, CompiledPolicyAggregateSchema),
     selectors: z.record(StringSchema, CompiledPolicySelectorSchema).optional(),
     strategyModules: z.record(StringSchema, StrategyModuleSchema).optional(),
+    guardrails: z.record(StringSchema, GuardrailSchema).optional(),
     pruningRules: z.record(StringSchema, CompiledPolicyPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
@@ -1447,6 +1483,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     selectors: z.record(StringSchema, CompiledAgentSelectorSchema).optional(),
     strategyModules: z.record(StringSchema, CompiledAgentStrategyModuleSchema).optional(),
+    guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
@@ -1534,11 +1571,13 @@ const CompiledAgentProfileSchema = z
         candidateAggregates: z.array(StringSchema),
         selectors: z.array(StringSchema).optional(),
         strategyModules: z.array(StringSchema).optional(),
+        guardrails: z.array(StringSchema).optional(),
         considerations: z.array(StringSchema),
       })
       .strict(),
     selector: z.object({ maxCostClass: SelectorCostClassSchema }).strict().optional(),
     strategyModules: z.object({ maxCostClass: ModuleCostClassSchema }).strict().optional(),
+    guardrails: z.object({ maxCostClass: GuardrailCostClassSchema }).strict().optional(),
   })
   .strict();
 

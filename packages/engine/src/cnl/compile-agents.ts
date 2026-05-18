@@ -41,8 +41,10 @@ import type {
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewOutcomeGrantContinuationConfig,
   CompiledAgentSelector,
+  CompiledAgentGuardrail,
   CompiledAgentStrategyModule,
   CompiledPolicySelector,
+  GuardrailCostClass,
   ModuleCostClass,
   ContinuedDeepeningConfig,
   QualitySpec,
@@ -99,6 +101,10 @@ import {
   parseModuleRef,
   type AgentStrategyModuleWithExpr,
 } from './compile-agent-strategy-modules.js';
+import {
+  compileGuardrailDefinition,
+  type AgentGuardrailWithExpr,
+} from './compile-agent-guardrails.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -113,7 +119,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -123,6 +129,7 @@ type AgentAggregateWithExpr = CompiledAgentAggregate & {
   readonly where?: AgentPolicyExpr;
 };
 type AgentSelectorWithExpr = CompiledPolicySelector;
+type AgentGuardrailWithExprInternal = AgentGuardrailWithExpr;
 type AgentPruningRuleWithExpr = CompiledAgentPruningRule & { readonly when: AgentPolicyExpr };
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
@@ -234,6 +241,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
   const selectors: Record<string, CompiledAgentSelector> = {};
   const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
+  const guardrails: Record<string, CompiledAgentGuardrail> = {};
   const pruningRules: Record<string, CompiledAgentPruningRule> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
@@ -285,6 +293,18 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       dependencies: module.dependencies,
     };
   }
+  for (const [id, guardrail] of Object.entries(library.guardrails ?? {})) {
+    guardrails[id] = {
+      traceLabel: guardrail.traceLabel,
+      scopes: guardrail.scopes,
+      severity: guardrail.severity,
+      costClass: guardrail.costClass,
+      dependencies: guardrail.dependencies,
+      ...(guardrail.safe === undefined ? {} : { safe: guardrail.safe }),
+      onUnavailable: guardrail.onUnavailable,
+      ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
+    };
+  }
   for (const [id, rule] of Object.entries(library.pruningRules)) {
     pruningRules[id] = {
       costClass: rule.costClass,
@@ -326,6 +346,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
+    ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
     pruningRules,
     considerations,
     tieBreakers,
@@ -862,6 +883,7 @@ function lowerProfile(
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
   const selector = lowerSelectorProfileConfig(profileId, profileDef, diagnostics);
   const strategyModules = lowerStrategyModulesProfileConfig(profileId, profileDef, diagnostics);
+  const guardrails = lowerGuardrailsProfileConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
   if (plan !== null && (plan.selectors?.length ?? 0) > 0) {
@@ -875,6 +897,9 @@ function lowerProfile(
       library,
       diagnostics,
     );
+  }
+  if (plan !== null && (plan.guardrails?.length ?? 0) > 0) {
+    validateProfileGuardrailCostClass(profileId, guardrails?.maxCostClass ?? 'preview', plan.guardrails ?? [], library, diagnostics);
   }
 
   if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
@@ -892,6 +917,7 @@ function lowerProfile(
     selection: selection ?? { mode: 'argmax' },
     ...(selector === undefined ? {} : { selector }),
     ...(strategyModules === undefined ? {} : { strategyModules }),
+    ...(guardrails === undefined ? {} : { guardrails }),
     plan,
   };
 }
@@ -1813,6 +1839,30 @@ function lowerStrategyModulesProfileConfig(
   return { maxCostClass };
 }
 
+function lowerGuardrailsProfileConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): NonNullable<CompiledAgentProfile['guardrails']> | undefined {
+  const authored = profileDef.guardrails;
+  if (authored === undefined) {
+    return undefined;
+  }
+  const path = `doc.agents.profiles.${profileId}.guardrails.maxCostClass`;
+  const maxCostClass = authored.maxCostClass ?? 'preview';
+  if (!isSelectorCostClass(maxCostClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_COST_CLASS_EXCEEDS_LIMIT,
+      path,
+      severity: 'error',
+      message: `Profile "${profileId}" guardrails.maxCostClass must be state, candidate, microturn, preview, or auditOnly.`,
+      suggestion: 'Set guardrails.maxCostClass to the highest guardrail cost class this profile permits.',
+    });
+    return undefined;
+  }
+  return { maxCostClass };
+}
+
 function validateProfileModuleCostClass(
   profileId: string,
   maxCostClass: ModuleCostClass,
@@ -1835,6 +1885,28 @@ function validateProfileModuleCostClass(
   }
 }
 
+function validateProfileGuardrailCostClass(
+  profileId: string,
+  maxCostClass: GuardrailCostClass,
+  guardrailIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const guardrailId of guardrailIds) {
+    const guardrail = library.guardrails?.[guardrailId];
+    if (guardrail === undefined || selectorCostClassLeq(guardrail.costClass, maxCostClass)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_COST_CLASS_EXCEEDS_LIMIT,
+      path: `doc.agents.profiles.${profileId}.guardrails.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses guardrail "${guardrailId}" with costClass "${guardrail.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Raise guardrails.maxCostClass or remove the higher-cost guardrail dependency.',
+    });
+  }
+}
+
 function buildProfilePlan(
   profileId: string,
   use: CompiledAgentProfile['use'],
@@ -1846,11 +1918,13 @@ function buildProfilePlan(
   const candidateAggregates: string[] = [];
   const selectors: string[] = [];
   const strategyModules: string[] = [];
+  const guardrails: string[] = [];
   const stateSeen = new Set<string>();
   const candidateSeen = new Set<string>();
   const aggregateSeen = new Set<string>();
   const selectorSeen = new Set<string>();
   const moduleSeen = new Set<string>();
+  const guardrailSeen = new Set<string>();
   const considerationSeen = new Set<string>();
   const considerations: string[] = [];
   let hasError = false;
@@ -1975,6 +2049,27 @@ function buildProfilePlan(
     strategyModules.push(moduleId);
   };
 
+  const visitGuardrail = (guardrailId: string): void => {
+    if (guardrailSeen.has(guardrailId)) {
+      return;
+    }
+    const guardrail = library.guardrails?.[guardrailId];
+    if (guardrail === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid guardrail "${guardrailId}".`,
+        suggestion: 'Fix the referenced guardrail so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(guardrail.dependencies);
+    guardrailSeen.add(guardrailId);
+    guardrails.push(guardrailId);
+  };
+
   const addDependencies = (dependencies: CompiledAgentDependencyRefs): void => {
     for (const featureId of dependencies.stateFeatures) {
       visitStateFeature(featureId);
@@ -1990,6 +2085,9 @@ function buildProfilePlan(
     }
     for (const moduleId of dependencies.strategyModules ?? []) {
       visitModule(moduleId);
+    }
+    for (const guardrailId of dependencies.guardrails ?? []) {
+      visitGuardrail(guardrailId);
     }
   };
 
@@ -2035,6 +2133,7 @@ function buildProfilePlan(
     candidateAggregates,
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
     considerations,
   };
 }
@@ -2101,6 +2200,7 @@ class AgentLibraryCompiler {
     readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
     readonly selectors: Record<string, AgentSelectorWithExpr>;
     readonly strategyModules: Record<string, AgentStrategyModuleWithExpr>;
+    readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
     readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
@@ -2112,6 +2212,7 @@ class AgentLibraryCompiler {
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly strategyModuleStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
@@ -2122,6 +2223,7 @@ class AgentLibraryCompiler {
   private readonly aggregateStack: string[] = [];
   private readonly selectorStack: string[] = [];
   private readonly strategyModuleStack: string[] = [];
+  private readonly guardrailStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -2139,6 +2241,7 @@ class AgentLibraryCompiler {
       candidateAggregates: {},
       selectors: {},
       strategyModules: {},
+      guardrails: {},
       pruningRules: {},
       considerations: {},
       tieBreakers: {},
@@ -2161,6 +2264,10 @@ class AgentLibraryCompiler {
     for (const selectorId of Object.keys(this.authoredLibrary.selectors ?? {})) {
       this.compileSelector(selectorId);
     }
+    for (const guardrailId of Object.keys(this.authoredLibrary.guardrails ?? {})) {
+      this.compileGuardrail(guardrailId);
+    }
+    this.validateGuardrailTraceLabels();
     for (const moduleId of Object.keys(this.authoredLibrary.strategyModules ?? {})) {
       this.compileStrategyModule(moduleId);
     }
@@ -2214,6 +2321,26 @@ class AgentLibraryCompiler {
       });
       this.strategyModuleStatus.set(moduleId, 'failed');
       delete this.compiled.strategyModules[moduleId];
+    }
+  }
+
+  private validateGuardrailTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [guardrailId, guardrail] of Object.entries(this.compiled.guardrails)) {
+      const priorId = seen.get(guardrail.traceLabel);
+      if (priorId === undefined) {
+        seen.set(guardrail.traceLabel, guardrailId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.guardrails.${guardrailId}.traceLabel`,
+        severity: 'error',
+        message: `Guardrail traceLabel "${guardrail.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique guardrail trace labels for deterministic grouped traces.',
+      });
+      this.guardrailStatus.set(guardrailId, 'failed');
+      delete this.compiled.guardrails[guardrailId];
     }
   }
 
@@ -2533,6 +2660,7 @@ class AgentLibraryCompiler {
       context,
       diagnostics: this.diagnostics,
       compileSelector: (selectorId) => this.compileSelector(selectorId),
+      compileGuardrail: (guardrailId) => this.compileGuardrail(guardrailId),
       reportModuleRefUnknown: (refPath, path) => this.reportModuleRefUnknown(refPath, path),
     });
     this.strategyModuleStack.pop();
@@ -2543,6 +2671,49 @@ class AgentLibraryCompiler {
     }
     this.compiled.strategyModules[moduleId] = compiled;
     this.strategyModuleStatus.set(moduleId, 'done');
+    return compiled;
+  }
+
+  private compileGuardrail(guardrailId: string): AgentGuardrailWithExprInternal | null {
+    const status = this.guardrailStatus.get(guardrailId);
+    if (status === 'done') {
+      return this.compiled.guardrails[guardrailId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportGuardrailCycle(guardrailId);
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.guardrails?.[guardrailId];
+    if (def === undefined) {
+      this.reportGuardrailRefUnknown(`guardrail.${guardrailId}`, `doc.agents.library.guardrails.${guardrailId}`);
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+
+    this.guardrailStatus.set(guardrailId, 'compiling');
+    this.guardrailStack.push(guardrailId);
+    const context = this.createExprContext('guardrail');
+    const compiled = compileGuardrailDefinition({
+      guardrailId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      ...(this.options.actionDefs === undefined ? {} : { actionDefs: this.options.actionDefs }),
+      reportGuardrailRefUnknown: (refPath, path) => this.reportGuardrailRefUnknown(refPath, path),
+    });
+    this.guardrailStack.pop();
+
+    if (compiled === null) {
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+    this.compiled.guardrails[guardrailId] = compiled;
+    this.guardrailStatus.set(guardrailId, 'done');
     return compiled;
   }
 
@@ -4197,6 +4368,16 @@ class AgentLibraryCompiler {
     });
   }
 
+  private reportGuardrailCycle(guardrailId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.guardrails.${guardrailId}`,
+      severity: 'error',
+      message: `Agent policy guardrail dependency cycle detected: ${[...this.guardrailStack, guardrailId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each guardrail depends on an acyclic graph.',
+    });
+  }
+
   private reportModuleRefUnknown(refPath: string, path: string): void {
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
@@ -4204,6 +4385,16 @@ class AgentLibraryCompiler {
       severity: 'error',
       message: `Strategy module references unknown or unsupported ref "${refPath}".`,
       suggestion: 'Use declared selectors, modules, conditions, features, or supported module fields.',
+    });
+  }
+
+  private reportGuardrailRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Guardrail references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared modules, conditions, features, selectors, or supported guardrail fields.',
     });
   }
 
@@ -5362,6 +5553,7 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
   const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -5369,6 +5561,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

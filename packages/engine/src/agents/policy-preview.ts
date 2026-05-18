@@ -44,6 +44,7 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
+  isPolicyStandingRoleToken,
   isSurfaceVisibilityAccessible,
   resolvePolicyRoleSelector,
   resolveSurfaceRefValue,
@@ -693,6 +694,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       const visibility = input.def.agents === undefined ? null : getPolicySurfaceVisibility(input.def.agents.surfaceVisibility, ref);
       if (visibility === null) {
         return { kind: 'unavailable' };
+      }
+      if (ref.selector?.kind === 'role' && isPolicyStandingRoleToken(ref.selector.seatToken) && visibility.preview.visibility !== 'public') {
+        return { kind: 'unknown', reason: 'hidden' };
       }
       const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
         ? ref.selector.kind === 'player'

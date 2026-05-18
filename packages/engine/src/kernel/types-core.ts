@@ -64,6 +64,7 @@ import type {
   AgentPolicyMicroturnOptionIntrinsic,
   AgentPolicyPreviewOptionRefKind,
   AgentPolicySeatAggAvailability,
+  AgentPolicyStandingRoleSelector,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -71,13 +72,11 @@ import type {
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
 import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
-
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
   readonly version: 1;
   readonly state: readonly bigint[];
 }
-
 export interface Rng {
   readonly state: RngState;
 }
@@ -442,6 +441,7 @@ export type SurfaceSelector =
       readonly kind: 'player';
       readonly player: 'self' | 'active';
     };
+export type AgentPolicySeatAggOver = 'opponents' | 'all' | readonly string[] | { readonly role: AgentPolicyStandingRoleSelector };
 export interface CompiledSurfaceRefBase {
   readonly family: SurfaceRefFamily;
   readonly id: string;
@@ -615,7 +615,7 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[]; readonly expr: AgentPolicyExpr;
+      readonly over: AgentPolicySeatAggOver; readonly expr: AgentPolicyExpr;
       readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {
@@ -674,7 +674,7 @@ export type CompiledPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[]; readonly expr: CompiledPolicyExpr;
+      readonly over: AgentPolicySeatAggOver; readonly expr: CompiledPolicyExpr;
       readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {

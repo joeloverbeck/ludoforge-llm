@@ -15,6 +15,7 @@ import {
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type AgentPolicySeatAggOver,
   type GameDef,
   type PolicyAgentDecisionTrace,
   type CompiledAgentProfile,
@@ -27,7 +28,7 @@ const considerationId = 'opponentProjectedStandingSum';
 type SeatAggAvailability = 'requireAllReady' | 'requireAnyReady' | 'selfAndTargetReady' | 'skipUnavailable';
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
-const currentStandingRef = (): AgentPolicyExpr => ({
+export const currentStandingRef = (): AgentPolicyExpr => ({
   kind: 'ref',
   ref: {
     kind: 'currentSurface',
@@ -57,7 +58,7 @@ const previewSelfStandingRef = (): AgentPolicyExpr => ({
 const previewStandingSum = (options: {
   readonly availability?: SeatAggAvailability;
   readonly expr?: AgentPolicyExpr;
-  readonly over?: 'opponents' | 'all' | readonly string[];
+  readonly over?: AgentPolicySeatAggOver;
 } = {}): AgentPolicyExpr => ({
   kind: 'seatAgg',
   over: options.over ?? 'opponents',
@@ -76,9 +77,11 @@ export function createStandingPreviewDef(options: {
   readonly primeUnknownPreviewRef?: boolean;
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
-  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly seatAggOver?: AgentPolicySeatAggOver;
   readonly useSelfPreviewRef?: boolean;
   readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
+  readonly rankingOrder?: 'asc' | 'desc';
+  readonly currentVisibility?: 'public' | 'seatVisible' | 'hidden';
 }): GameDef {
   const initialStandings = options.initialStandings ?? {};
   return assertValidatedGameDef({
@@ -187,7 +190,7 @@ export function createStandingPreviewDef(options: {
         { seat: 'south', value: { _t: 2 as const, ref: 'gvar', var: 'southStanding' } },
         { seat: 'west', value: { _t: 2 as const, ref: 'gvar', var: 'westStanding' } },
       ],
-      ranking: { order: 'desc', tieBreakOrder: ['north', 'east', 'south', 'west'] },
+      ranking: { order: options.rankingOrder ?? 'desc', tieBreakOrder: ['north', 'east', 'south', 'west'] },
     },
   });
 }
@@ -198,9 +201,11 @@ export function runStandingPreviewTrace(options: {
   readonly primeUnknownPreviewRef?: boolean;
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
-  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly seatAggOver?: AgentPolicySeatAggOver;
   readonly useSelfPreviewRef?: boolean;
   readonly initialStandings?: Partial<Record<'north' | 'east' | 'south' | 'west', number>>;
+  readonly rankingOrder?: 'asc' | 'desc';
+  readonly currentVisibility?: 'public' | 'seatVisible' | 'hidden';
 }): PolicyAgentDecisionTrace {
   const def = createStandingPreviewDef(options);
   const runtime = createGameDefRuntime(def);
@@ -235,8 +240,9 @@ function createStandingCatalog(options: {
   readonly primeUnknownPreviewRef?: boolean;
   readonly seatAggAvailability?: SeatAggAvailability;
   readonly seatAggExpr?: AgentPolicyExpr;
-  readonly seatAggOver?: 'opponents' | 'all' | readonly string[];
+  readonly seatAggOver?: AgentPolicySeatAggOver;
   readonly useSelfPreviewRef?: boolean;
+  readonly currentVisibility?: 'public' | 'seatVisible' | 'hidden';
 }): AgentPolicyCatalog {
   const considerations = options.primeUnknownPreviewRef
     ? ['primeOpponentProjectedStandingSum', considerationId]
@@ -264,7 +270,7 @@ function createStandingCatalog(options: {
   };
 
   const visibility = {
-    current: 'public' as const,
+    current: options.currentVisibility ?? ('public' as const),
     preview: {
       visibility: options.previewVisibility,
       allowWhenHiddenSampling: options.previewVisibility === 'public',

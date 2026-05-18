@@ -53,7 +53,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
-import type { PolicyValue } from './policy-surface.js';
+import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
@@ -1483,7 +1483,7 @@ export class PolicyEvaluationContext {
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     const seatIds = this.resolveSeatAggregateSeatIds(over);
-    if (seatIds === undefined || seatIds.length === 0) return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
+    if (seatIds === undefined || seatIds.length === 0) return seatIds === undefined ? undefined : aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
 
     const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
     const values: number[] = []; let anySeatUnavailable = false;
@@ -1582,9 +1582,8 @@ export class PolicyEvaluationContext {
     }
     return aggregate;
   }
-
   private resolveSeatAggregateSeatIds(
-    over: 'opponents' | 'all' | readonly string[],
+    over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
   ): readonly string[] | undefined {
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
     if (seatIds === undefined) {
@@ -1596,9 +1595,15 @@ export class PolicyEvaluationContext {
     if (over === 'opponents') {
       return seatIds.filter((seatId) => seatId !== this.input.seatId);
     }
+    if ('role' in over) {
+      if (this.input.catalog.surfaceVisibility.victory.currentMargin.current !== 'public') {
+        return undefined;
+      }
+      const resolved = resolvePolicyStandingRoleSelector(this.input.def, this.activeState, over.role, this.input.seatId);
+      return resolved === undefined ? undefined : [resolved];
+    }
     return over;
   }
-
   private resolveAgentPolicyRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     switch (ref.kind) {
       case 'library':

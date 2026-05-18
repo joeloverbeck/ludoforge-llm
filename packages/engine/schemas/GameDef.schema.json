@@ -2118,7 +2118,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_40acdc5f"
@@ -2148,7 +2148,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_40acdc5f"
@@ -2181,12 +2181,12 @@
                     "$ref": "#/definitions/anon_4682db72"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_c3a30ec5"
+                        "$ref": "#/definitions/anon_be9eaf08"
                       }
                     ]
                   },
@@ -2216,7 +2216,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_40acdc5f"
@@ -2264,15 +2264,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_c3a30ec5"
+                        "$ref": "#/definitions/anon_be9eaf08"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "hasPreviewRef": {
                     "$ref": "#/definitions/anon_def33f2f"
@@ -2374,7 +2374,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_c3a30ec5"
+                        "$ref": "#/definitions/anon_be9eaf08"
                       }
                     ]
                   },
@@ -2405,13 +2405,13 @@
                 "type": "object",
                 "properties": {
                   "target": {
-                    "$ref": "#/definitions/anon_c3a30ec5"
+                    "$ref": "#/definitions/anon_be9eaf08"
                   },
                   "proximity": {
                     "type": "object",
                     "properties": {
                       "current": {
-                        "$ref": "#/definitions/anon_c3a30ec5"
+                        "$ref": "#/definitions/anon_be9eaf08"
                       },
                       "threshold": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
@@ -10368,78 +10368,7 @@
       ],
       "additionalProperties": false
     },
-    "anon_beea98c1": {
-      "type": "object",
-      "properties": {
-        "tokens": {
-          "$ref": "#/definitions/anon_5024d89c_2"
-        },
-        "zones": {
-          "$ref": "#/definitions/anon_5024d89c_2"
-        },
-        "variables": {
-          "$ref": "#/definitions/anon_5024d89c_2"
-        },
-        "scores": {
-          "$ref": "#/definitions/anon_5024d89c_2"
-        }
-      },
-      "required": [
-        "tokens",
-        "zones",
-        "variables",
-        "scores"
-      ],
-      "additionalProperties": false
-    },
-    "anon_bf7328ad": {
-      "anyOf": [
-        {
-          "type": "string",
-          "const": "globalVar"
-        },
-        {
-          "type": "string",
-          "const": "globalMarker"
-        },
-        {
-          "type": "string",
-          "const": "perPlayerVar"
-        },
-        {
-          "type": "string",
-          "const": "derivedMetric"
-        },
-        {
-          "type": "string",
-          "const": "victoryCurrentMargin"
-        },
-        {
-          "type": "string",
-          "const": "victoryCurrentRank"
-        }
-      ]
-    },
-    "anon_bfd35d2c": {
-      "type": "object",
-      "propertyNames": {
-        "$ref": "#/definitions/anon_4682db72"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/anon_1bee30a1"
-      }
-    },
-    "anon_c0e4ebfe": {
-      "type": "number"
-    },
-    "anon_c342798d": {
-      "minItems": 1,
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/anon_af8b64f1_14"
-      }
-    },
-    "anon_c3a30ec5": {
+    "anon_be9eaf08": {
       "anyOf": [
         {
           "type": "object",
@@ -10814,7 +10743,7 @@
                     "key": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/anon_c3a30ec5"
+                          "$ref": "#/definitions/anon_be9eaf08"
                         }
                       ]
                     },
@@ -11215,7 +11144,7 @@
             "args": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_c3a30ec5"
+                "$ref": "#/definitions/anon_be9eaf08"
               }
             }
           },
@@ -11239,7 +11168,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_c3a30ec5"
+                  "$ref": "#/definitions/anon_be9eaf08"
                 }
               ]
             },
@@ -11398,7 +11327,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_c3a30ec5"
+                  "$ref": "#/definitions/anon_be9eaf08"
                 }
               ]
             },
@@ -11456,11 +11385,29 @@
                   "items": {
                     "$ref": "#/definitions/anon_4682db72"
                   }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "currentLeader",
+                        "nearestThreat",
+                        "closestAhead",
+                        "closestBehind"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": false
                 }
               ]
             },
             "expr": {
-              "$ref": "#/definitions/anon_c3a30ec5"
+              "$ref": "#/definitions/anon_be9eaf08"
             },
             "aggOp": {
               "type": "string",
@@ -11502,7 +11449,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_c3a30ec5"
+                  "$ref": "#/definitions/anon_be9eaf08"
                 }
               ]
             },
@@ -11518,6 +11465,77 @@
           "additionalProperties": false
         }
       ]
+    },
+    "anon_beea98c1": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "$ref": "#/definitions/anon_5024d89c_2"
+        },
+        "zones": {
+          "$ref": "#/definitions/anon_5024d89c_2"
+        },
+        "variables": {
+          "$ref": "#/definitions/anon_5024d89c_2"
+        },
+        "scores": {
+          "$ref": "#/definitions/anon_5024d89c_2"
+        }
+      },
+      "required": [
+        "tokens",
+        "zones",
+        "variables",
+        "scores"
+      ],
+      "additionalProperties": false
+    },
+    "anon_bf7328ad": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "globalVar"
+        },
+        {
+          "type": "string",
+          "const": "globalMarker"
+        },
+        {
+          "type": "string",
+          "const": "perPlayerVar"
+        },
+        {
+          "type": "string",
+          "const": "derivedMetric"
+        },
+        {
+          "type": "string",
+          "const": "victoryCurrentMargin"
+        },
+        {
+          "type": "string",
+          "const": "victoryCurrentRank"
+        }
+      ]
+    },
+    "anon_bfd35d2c": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/anon_4682db72"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/anon_1bee30a1"
+      }
+    },
+    "anon_c0e4ebfe": {
+      "type": "number"
+    },
+    "anon_c342798d": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/anon_af8b64f1_14"
+      }
     },
     "anon_c546736f": {
       "type": "object",

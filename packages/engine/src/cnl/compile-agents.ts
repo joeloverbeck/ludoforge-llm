@@ -12,6 +12,7 @@ import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
   AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
 } from '../contracts/index.js';
+import { parsePolicyStandingRoleToken, POLICY_STANDING_ROLE_TOKEN_PREFIX } from '../agents/policy-standing-roles.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
@@ -3357,6 +3358,10 @@ class AgentLibraryCompiler {
     if (resolved.selector?.kind === 'role' && !this.isKnownSeatToken(resolved.selector.seatToken, path, refPath)) {
       return false;
     }
+    if (resolved.selector?.kind === 'role' && resolved.selector.seatToken.startsWith(POLICY_STANDING_ROLE_TOKEN_PREFIX) && this.options.hasVictoryMargins === false) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
     if (resolved.family === 'perPlayerVar' && resolved.selector?.kind === 'role') {
       if (resolved.selector.seatToken === 'self' || resolved.selector.seatToken === 'active') {
         this.diagnostics.push({
@@ -3381,21 +3386,18 @@ class AgentLibraryCompiler {
     }
     return true;
   }
-
   private isKnownSeatToken(seatToken: string, path: string, refPath: string): boolean {
-    if (seatToken === 'self' || seatToken === 'active' || seatToken === '$seat') {
-      return true;
+    if (seatToken === 'self' || seatToken === 'active' || seatToken === '$seat') return true;
+    if (seatToken.startsWith(POLICY_STANDING_ROLE_TOKEN_PREFIX)) {
+      if (parsePolicyStandingRoleToken(seatToken) !== undefined) return true;
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
     }
-    if (this.options.referenceSeatIds === undefined) {
-      return true;
-    }
-    if (this.options.referenceSeatIds.includes(seatToken)) {
-      return true;
-    }
+    if (this.options.referenceSeatIds === undefined) return true;
+    if (this.options.referenceSeatIds.includes(seatToken)) return true;
     this.reportUnknownLibraryRef(refPath, path);
     return false;
   }
-
   private resolveObjectRef(
     scope: LibraryRefScope,
     expr: Readonly<Record<string, GameSpecPolicyExpr>>,
@@ -3412,12 +3414,10 @@ class AgentLibraryCompiler {
       });
       return null;
     }
-
     const [refPath, options] = entries[0]!;
     if (refPath.startsWith('candidate.params.')) {
       return this.resolveCandidateParamRef(scope, refPath, path, options);
     }
-
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,

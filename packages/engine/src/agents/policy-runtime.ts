@@ -42,6 +42,7 @@ import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
   isSurfaceVisibilityAccessible,
+  isPolicyStandingRoleToken,
   resolveSurfaceRefValue,
   resolvePolicyRoleSelector,
   type PolicyValue,
@@ -618,6 +619,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             `Policy runtime ref "${ref.family}:${ref.id}" is unsupported by the non-preview evaluator runtime.`,
             { ref },
           );
+        }
+        if (ref.selector?.kind === 'role' && isPolicyStandingRoleToken(ref.selector.seatToken) && visibility.current !== 'public') {
+          return undefined;
         }
         const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
           ? ref.selector.kind === 'player'

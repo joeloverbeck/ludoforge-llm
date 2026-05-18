@@ -4,6 +4,7 @@ import {
   AGENT_POLICY_MICROTURN_INTRINSICS,
   AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
   AGENT_POLICY_PREVIEW_OPTION_REF_KINDS, AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
+  AGENT_POLICY_STANDING_ROLE_SELECTORS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_FILTER_OPS,
   AGENT_POLICY_ZONE_SCOPES,
@@ -833,6 +834,13 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
 ]);
 
+const AgentPolicySeatAggOverSchema = z.union([
+  z.literal('opponents'),
+  z.literal('all'),
+  z.array(StringSchema).readonly(),
+  z.object({ role: z.enum(AGENT_POLICY_STANDING_ROLE_SELECTORS) }).strict(),
+]);
+
 const AgentPolicyTokenFilterSchema = z.object({
   type: StringSchema.optional(),
   props: z.record(
@@ -934,11 +942,7 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('seatAgg'),
-      over: z.union([
-        z.literal('opponents'),
-        z.literal('all'),
-        z.array(StringSchema).readonly(),
-      ]),
+      over: AgentPolicySeatAggOverSchema,
       expr: AgentPolicyExprSchema, aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
       availability: z.enum(AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES).optional(),
     }).strict(),
@@ -1027,11 +1031,7 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('seatAgg'),
-      over: z.union([
-        z.literal('opponents'),
-        z.literal('all'),
-        z.array(StringSchema).readonly(),
-      ]),
+      over: AgentPolicySeatAggOverSchema,
       expr: CompiledPolicyExprSchema, aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
       availability: z.enum(AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES).optional(),
     }).strict(),

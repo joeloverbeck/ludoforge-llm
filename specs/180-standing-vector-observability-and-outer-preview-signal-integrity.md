@@ -298,7 +298,7 @@ Ticket decomposition created by `archive/tickets/179ACTSELPRE-009.md`:
 - [`archive/tickets/180STDVECOBSROL-002.md`](../archive/tickets/180STDVECOBSROL-002.md) — Phase 1 bounded standing-projection route.
 - [`archive/tickets/180STDVECOBSROL-003.md`](../archive/tickets/180STDVECOBSROL-003.md) — Phase 2 status-aware `seatAgg` (IR + evaluator + compiler diagnostic + four-mode test).
 - [`archive/tickets/180STDVECOBSROL-004.md`](../archive/tickets/180STDVECOBSROL-004.md) — Phase 3 `previewUsage.seatMatrix` (materialization + trace-shape regression + replay determinism).
-- [`tickets/180STDVECOBSROL-005.md`](../tickets/180STDVECOBSROL-005.md) — Phase 4 named role primitives (resolvers + ref form + `seatAgg.over: { role: ... }` form + asc/desc fixture).
+- [`archive/tickets/180STDVECOBSROL-005.md`](../archive/tickets/180STDVECOBSROL-005.md) — Phase 4 named role primitives (resolvers + ref form + `seatAgg.over: { role: ... }` form + asc/desc fixture).
 - [`tickets/180STDVECOBSROL-006.md`](../tickets/180STDVECOBSROL-006.md) — Phase 5 FITL ARVN witness + cookbook addendum + FOUNDATIONS Appendix amendment.
 
 Tickets 2-4 depend on ticket 1; ticket 5 depends on ticket 3; ticket 6 depends on tickets 2-5. No phase depends on production `outcomeGrantResolve` activation.

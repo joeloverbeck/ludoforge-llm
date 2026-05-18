@@ -88,6 +88,8 @@ When every preview-derived per-seat value in the standing projection is unavaila
 
 ## Outcome (2026-05-17)
 
+Outcome amended: 2026-05-18
+
 Completed on 2026-05-17.
 
 Boundary reset:
@@ -102,9 +104,9 @@ What landed:
 - `packages/engine/test/architecture/preview-standing/standing-preview-fixture.ts` gives the standing-preview consideration an explicit `previewFallback: noContribution`.
 - `packages/engine/test/architecture/preview-standing/spec-180-ordinary-operation-standing-projection-witness.test.ts` turns green without changing its assertion target.
 - `packages/engine/test/architecture/preview-integrity/spec-180-outer-preview-silent-zero-witness.test.ts` is rewritten from the Phase 0 bug pin into the Phase 1 regression: all-unavailable standing aggregates fire fallback and record unknown preview refs without score contribution.
-- `packages/engine/test/architecture/preview-config-back-compat/old-profiles-compile.test.ts` was updated as same-package verification fallout after the ticket-named engine test lane exposed stale Spec 179 expectations. It now preserves the default opt-out assertion while recognizing the ticketed `arvn-evolved` opt-in substrate recorded by `tickets/179ACTSELPRE-005.md`.
+- `packages/engine/test/architecture/preview-config-back-compat/old-profiles-compile.test.ts` was updated as same-package verification fallout after the ticket-named engine test lane exposed stale Spec 179 expectations. It now preserves the default opt-out assertion while recognizing the ticketed `arvn-evolved` opt-in substrate recorded by `archive/tickets/179ACTSELPRE-005.md`.
 - Four WASM timing/stat probe tests were updated as same-package verification fallout after the ticket-named engine test lane exposed package-cwd subprocess-output assumptions. Their subprocess probes now receive the repo root and write JSON to an explicit temp file, preserving the existing child-process boundary while making the package script lane deterministic.
-- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` and `archive/tickets/180STDVECOBSROL-003.md` now record the Phase 1/Phase 2 ownership split.
+- `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` and `archive/tickets/180STDVECOBSROL-003.md` now record the Phase 1/Phase 2 ownership split.
 
 Post-review correction:
 

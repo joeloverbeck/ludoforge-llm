@@ -1,6 +1,6 @@
 # 180STDVECOBSROL-007: ARVN standing causal-action and outcome witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Profile/report/tooling only unless the witness exposes focused generic trace fallout.
@@ -93,3 +93,60 @@ Write `reports/180-fitl-arvn-standing-causal-action-witness.md` with exact comma
 3. `node campaigns/fitl-arvn-agent-evolution/diagnose-standing-witness.mjs`
 4. `pnpm -F @ludoforge/engine test` if profile or shared trace behavior changes.
 5. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-18)
+
+Status is complete. The owned implementation, profile retune, durable report, profile-golden fallout refresh, and final proof lanes are in place.
+
+What landed:
+
+- `campaigns/fitl-arvn-agent-evolution/diagnose-standing-causal-action.mjs` adds the durable causal/action diagnostic. It reads the 15-seed trace set, subtracts reconstructed `hurtCurrentLeader` and `reduceNearestThreat` contributions from unpruned candidates, reports counterfactual selected-action flips, reports projected opponent-margin optimality, and reruns the value-bearing seed subset through the generic simulator step seam to measure after-action opponent-margin deltas.
+- `campaigns/fitl-arvn-agent-evolution/diagnose-standing-witness.mjs` now reconstructs the role-standing contribution using the retained profile weight of `600`.
+- `data/games/fire-in-the-lake/92-agents.md` retunes only `hurtCurrentLeader` and `reduceNearestThreat`, from `200` to `600`, after the pre-retune causal diagnostic found `0 / 16` selected-action flips.
+- `reports/180-fitl-arvn-standing-causal-action-witness.md` is the durable report. Raw traces remain ignored runtime artifacts and are transcribed into the report instead of checked in.
+
+Witness result:
+
+- Pre-retune causal diagnostic: `16` opponent-standing-shift decisions; selected actions `govern=14`, `event=2`; `0 / 16` counterfactual selected-action flips; targeted margin deltas were all unchanged when measured at the too-early immediate action-selection boundary.
+- Intermediate `1200`-weight probe: `7 / 20` counterfactual selected-action flips, but the 15-seed tournament summary worsened to `compositeScore=-7.8667`, `avgMargin=-8.5333`, `wins=1/15`.
+- Retained `600`-weight run: `completed=15`, `truncated=0`, `errors=0`, `compositeScore=-7.2`, `avgMargin=-7.8667`, `wins=1/15`, `wasmEnabled=true`.
+- Standing aggregation on retained traces: `mainPhaseActionSelectionDecisions=150`, `decisionsWithSeatMatrix=150`, `decisionsWithOpponentStandingShift=20`, `hurtCurrentLeader=20/20`, `reduceNearestThreat=20/20`.
+- Causal/action diagnostic on retained traces: `counterfactualSelectionFlips=5/20`, selected action distribution `govern=12`, `event=4`, `sweep=4`, selected candidate best/tied-best by projected opponent margin `15/20`, selected candidate not best `1/20`.
+- Outcome deltas on retained traces: `3 / 16` targeted opponent-seat rows improved, `13 / 16` unchanged, `0 / 16` worsened.
+
+Boundary corrections and residual limits:
+
+- The original immediate `marginAfter` shape was too early for FITL operations/events because top-level action selection can be followed by microturns. The new diagnostic records outcome deltas after the selected action's microturn sequence completes, before the next action-selection begins.
+- The retained retune proves selected-action causality for a subset of opponent-shift decisions, but it does not prove an aggregate profile-quality improvement. The tournament summary is worse than the ticket-006 witness.
+- Some standing-driven selected actions have no ready targeted opponent cell on the selected candidate; those rows count for selected-action causality but are excluded from the targeted-margin delta denominator.
+- No engine code or Spec 180 standing substrate changed.
+
+Command ledger:
+
+| Ticket section | Literal command/shorthand | Status | Final citation |
+| --- | --- | --- | --- |
+| Test Plan | `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --trace-default all --concurrency 8` | run directly | witness report |
+| Test Plan | Causal/action diagnostic command selected by the implementation | selected and run as `node campaigns/fitl-arvn-agent-evolution/diagnose-standing-causal-action.mjs` | witness report |
+| Test Plan | `node campaigns/fitl-arvn-agent-evolution/diagnose-standing-witness.mjs` | run directly | witness report |
+| Test Plan | `pnpm -F @ludoforge/engine test` if profile or shared trace behavior changes | passed | profile changed |
+| Test Plan | `pnpm run check:ticket-deps` | passed | status/dependency integrity |
+
+Profile-golden fallout:
+
+- The first engine package test after the profile retune failed only in `packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js`, as expected for authored-profile golden fallout.
+- The five Spec 178 ARVN continued-deepening parity fixtures were regenerated from the test's own capture logic: `178-outcome-parity-1005.json`, `178-outcome-parity-1011.json`, `178-outcome-parity-1008.json`, `178-outcome-parity-1013.json`, and `178-outcome-parity-1009.json`. `178-outcome-parity-1011.json` ended byte-identical to HEAD.
+- Focused parity proof passed with `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-preview-inner-outcome-parity.test.js`: `5` tests passed.
+- Final package proof passed with `pnpm -F @ludoforge/engine test`: schema artifacts check passed and `92 / 92` test files passed.
+- Dependency proof passed with `pnpm run check:ticket-deps`: dependency integrity passed for `4` active tickets and `2407` archived tickets.
+
+Generated/artifact fallout:
+
+- `reports/180-fitl-arvn-standing-causal-action-witness.md` is checked in.
+- `campaigns/fitl-arvn-agent-evolution/traces/`, `.gamedef-cache/`, and other campaign runtime files remain ignored.
+- No schema artifact changes are expected because this ticket changes authored profile/tooling/report only.
+
+Source-size decision:
+
+- New helper `campaigns/fitl-arvn-agent-evolution/diagnose-standing-causal-action.mjs` is 457 lines, under the 800-line cap and below the 600-line source-size sweep trigger.
+- Existing helper `campaigns/fitl-arvn-agent-evolution/diagnose-standing-witness.mjs` changed one constant only.
+- Touched data/report/ticket files are not source-size gated. No TypeScript source file grew.

@@ -56,7 +56,7 @@ Create `packages/engine/test/architecture/preview-integrity/spec-180-outer-previ
 ### Tests That Must Pass
 
 1. The silent-zero witness passes and records the current bug shape.
-2. The ordinary-operation standing witness is checked in as the focused RED witness for `tickets/180STDVECOBSROL-002.md`.
+2. The ordinary-operation standing witness is checked in as the focused RED witness for `archive/tickets/180STDVECOBSROL-002.md`.
 3. `pnpm -F @ludoforge/engine build`.
 4. `pnpm run check:ticket-deps`.
 
@@ -81,6 +81,8 @@ Create `packages/engine/test/architecture/preview-integrity/spec-180-outer-previ
 
 ## Outcome (2026-05-17)
 
+Outcome amended: 2026-05-18
+
 Outcome amended: 2026-05-17
 
 Phase 0 landed as a test-only witness slice. No production standing-projection implementation, `seatAgg.availability`, FITL campaign rerun, schema change, generated artifact, or `previewEffect.*` namespace was introduced.
@@ -89,7 +91,7 @@ What landed:
 
 - `packages/engine/test/architecture/preview-standing/standing-preview-fixture.ts` adds the generic four-seat standing-preview fixture used by both witnesses. It has ordinary operation candidates for no standing change, east-opponent standing change, and a deeper south-opponent standing body.
 - `packages/engine/test/architecture/preview-integrity/spec-180-outer-preview-silent-zero-witness.test.ts` pins the current outer-preview bug shape: `seatAgg(sum)` over unavailable opponent preview cells records a numeric `0` contribution, has zero ready ref values, and does not fire an explicit fallback.
-- `packages/engine/test/architecture/preview-standing/spec-180-ordinary-operation-standing-projection-witness.test.ts` is checked in as the focused RED witness for `tickets/180STDVECOBSROL-002.md`. The public ordinary-operation candidate already differentiates a ready opponent-standing value, and the future-facing RED assertion requires the unavailable opponent-standing path to become status-bearing (`hidden`) instead of a numeric zero contribution.
+- `packages/engine/test/architecture/preview-standing/spec-180-ordinary-operation-standing-projection-witness.test.ts` is checked in as the focused RED witness for `archive/tickets/180STDVECOBSROL-002.md`. The public ordinary-operation candidate already differentiates a ready opponent-standing value, and the future-facing RED assertion requires the unavailable opponent-standing path to become status-bearing (`hidden`) instead of a numeric zero contribution.
 
 Touched-file scope correction:
 

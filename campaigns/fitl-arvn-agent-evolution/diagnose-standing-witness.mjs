@@ -16,7 +16,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const tracesDir = process.argv[2] ? process.argv[2] : join(HERE, 'traces');
 const TERMS = ['hurtCurrentLeader', 'reduceNearestThreat'];
 const MATRIX_REF_ID = 'victoryCurrentMargin.currentMargin.$seat';
-const TERM_WEIGHT = 200;
+const TERM_WEIGHT = 600;
 
 const files = readdirSync(tracesDir)
   .filter((file) => file.startsWith('trace-') && file.endsWith('.json'))

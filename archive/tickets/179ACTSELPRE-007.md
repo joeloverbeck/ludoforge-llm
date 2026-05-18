@@ -1,10 +1,10 @@
 # 179ACTSELPRE-007: Phase 2b — Classify FITL ARVN post-grant witness activation
 
-**Status**: BLOCKED by Spec 180 ordinary-operation successor `archive/tickets/180STDVECOBSROL-001.md`
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None in this ticket; generic contract investigation found the witness targets the wrong live surface.
-**Deps**: `tickets/179ACTSELPRE-005.md`
+**Deps**: `archive/tickets/179ACTSELPRE-005.md`
 
 ## Problem
 
@@ -58,12 +58,12 @@ Do not rerun the same 15-seed gate as a closing proof. The current gate cannot s
 ## Files to Touch
 
 - `reports/179-phase-2-post-opt-in-witness.md` (modify — contract reassessment result)
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify — Phase 2 witness handoff truthing)
+- `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify — Phase 2 witness handoff truthing)
 - No source/profile edits unless a later user-approved ticket retargets the witness or changes the preview architecture.
 
 ## Out of Scope
 
-- WASM-route alignment unless the activation gap is proven to be WASM-specific; `tickets/179ACTSELPRE-006.md` remains the optional WASM owner.
+- WASM-route alignment unless the activation gap is proven to be WASM-specific; `archive/tickets/179ACTSELPRE-006.md` remains the optional WASM owner.
 - New `previewEffect.*` or standing-vector surfaces; those are Spec 180+ territory. Ticket 009 selected the integrated Spec 180 standing route rather than a separate `previewEffect.*` namespace.
 - Raising the `postGrant16` cap class without user approval.
 
@@ -94,3 +94,20 @@ Do not rerun the same 15-seed gate as a closing proof. The current gate cannot s
 2. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --trace-default all --concurrency 1 --no-wasm`
 3. Contract probe over `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json` showing zero `outcomeGrantResolve` moves.
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-18)
+
+Status is complete and archive-ready. This ticket's owned job was classification, and the classification is final: the FITL ARVN Phase 2 operation witness targets ordinary operations and does not exercise the `outcomeGrantResolve` frame that Spec 179 extends.
+
+What landed:
+
+- The red Phase 2 evidence remained preserved in `reports/179-phase-2-post-opt-in-witness.md`.
+- The ticket established that the gap is a witness contract mismatch, not a WASM-only bug and not simple action-mix starvation.
+- `archive/tickets/179ACTSELPRE-008.md` confirmed there is no usable production FITL event/free-operation replacement witness.
+- `archive/tickets/179ACTSELPRE-009.md` selected Spec 180 as the ordinary-operation preview visibility successor.
+- Spec 180 completed that successor route through `archive/tickets/180STDVECOBSROL-001.md` through `archive/tickets/180STDVECOBSROL-007.md`.
+
+Verification:
+
+- No additional source change is part of this closeout.
+- Archival integrity is covered by `pnpm run check:ticket-deps`.

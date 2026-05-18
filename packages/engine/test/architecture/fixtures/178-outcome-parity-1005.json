@@ -14528,9 +14528,9 @@
     {
       "turnCount": null,
       "turnId": 45,
-      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@phu-bon-phu-yen:none[0]",
-      "selectedValue": "patronage",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@phu-bon-phu-yen:none[0]:\"patronage\"",
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@khanh-hoa:none[0]",
+      "selectedValue": "guerrilla",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@khanh-hoa:none[0]:\"guerrilla\"",
       "previewUsage": {
         "mode": "exactWorld",
         "evaluatedCandidateCount": 2,
@@ -14542,14 +14542,14 @@
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 2,
-            "distinctValueCount": 2,
-            "min": 0,
-            "max": 1,
-            "range": 1,
-            "allReadyValuesEqual": false
+            "distinctValueCount": 1,
+            "min": -1,
+            "max": -1,
+            "range": 0,
+            "allReadyValuesEqual": true
           }
         },
-        "utility": "differentiating",
+        "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
           "ready": 2,
@@ -14568,7 +14568,7 @@
           "readyRootOptionCount": 2,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
           "strategy": "continuedDeepening",
           "capClass": "deep1024"
         }
@@ -14576,12 +14576,52 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@phu-bon-phu-yen:none[0]:\"aid\"",
-          "score": 0,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@khanh-hoa:none[0]:\"guerrilla\"",
+          "score": -300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 0
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@khanh-hoa:none[0]:\"base\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
             }
           ],
           "unknownPreviewRefs": [],
@@ -14589,23 +14629,178 @@
           "selectionReason": "gated",
           "previewOutcome": "ready",
           "previewDrive": {
-            "depth": 1,
+            "depth": 3,
             "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 45,
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]",
+      "selectedValue": "guerrilla",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]:\"guerrilla\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 1,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 1,
+            "distinctValueCount": 1,
+            "min": -1,
+            "max": -1,
+            "range": 0,
+            "allReadyValuesEqual": true
           }
         },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 1,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 1,
+          "readyRootOptionCount": 1,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@phu-bon-phu-yen:none[0]:\"patronage\"",
-          "score": 300,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[1]:\"guerrilla\"",
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 300
+              "contribution": -300
             }
           ],
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
-          "selectionReason": "scored",
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 45,
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]",
+      "selectedValue": "guerrilla",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]:\"guerrilla\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 1,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 1,
+            "distinctValueCount": 1,
+            "min": -1,
+            "max": -1,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 1,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 1,
+          "readyRootOptionCount": 1,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-cam-ranh-da-lat:none[2]:\"guerrilla\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 1,
@@ -14633,8 +14828,8 @@
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 5,
             "distinctValueCount": 1,
-            "min": 4,
-            "max": 4,
+            "min": 0,
+            "max": 0,
             "range": 0,
             "allReadyValuesEqual": true
           }
@@ -14667,11 +14862,11 @@
       "scoreContributionsByOption": [
         {
           "stableMoveKey": "chooseOne:decision:eventTarget:0:$targetCity::$targetCity:\"cam-ranh:none\"",
-          "score": 1200,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 1200
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -14686,11 +14881,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:eventTarget:0:$targetCity::$targetCity:\"can-tho:none\"",
-          "score": 1200,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 1200
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -14705,11 +14900,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:eventTarget:0:$targetCity::$targetCity:\"da-nang:none\"",
-          "score": 1200,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 1200
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -14724,11 +14919,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:eventTarget:0:$targetCity::$targetCity:\"kontum:none\"",
-          "score": 1200,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 1200
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -14743,678 +14938,6 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:eventTarget:0:$targetCity::$targetCity:\"qui-nhon:none\"",
-          "score": 1200,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 1200
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 54,
-      "decisionKey": "decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin",
-      "selectedValue": "an-loc:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"an-loc:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 5,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 5,
-            "distinctValueCount": 3,
-            "min": -2,
-            "max": 1,
-            "range": 3,
-            "allReadyValuesEqual": false
-          }
-        },
-        "utility": "differentiating",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 5,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 5,
-          "readyRootOptionCount": 5,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"an-loc:none\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "scored",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-tuy-binh-thuan:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"can-tho:none\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"an-loc:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"hue:none\"",
-          "score": -600,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -600
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"quang-nam:none\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"qui-nhon:none\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 54,
-      "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
-      "selectedValue": "kien-phong:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kien-phong:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 22,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 22,
-            "distinctValueCount": 3,
-            "min": 0,
-            "max": 2,
-            "range": 2,
-            "allReadyValuesEqual": false
-          }
-        },
-        "utility": "differentiating",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 22,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 22,
-          "readyRootOptionCount": 22,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-tuy-binh-thuan:none\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"cam-ranh:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"can-tho:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"khanh-hoa:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kien-hoa-vinh-binh:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kien-phong:none\"",
-          "score": 600,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 600
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "scored",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kontum:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-ban-me-thuot-da-lat:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-cam-ranh-da-lat:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-kontum-ban-me-thuot:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-qui-nhon-cam-ranh:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-an-loc-ban-me-thuot:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-cam-ranh:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-can-tho:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-da-lat:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"phu-bon-phu-yen:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"phuoc-long:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"pleiku-darlac:none\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"quang-duc-long-khanh:none\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"saigon:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"tay-ninh:none\"",
-          "score": 600,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 600
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"the-fishhook:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -15437,6 +14960,96 @@
     {
       "turnCount": null,
       "turnId": 57,
+      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[0]",
+      "selectedValue": "aid",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[0]:\"aid\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 2,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 2,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[0]:\"aid\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[0]:\"patronage\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 61,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]",
       "selectedValue": "patronage",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]:\"patronage\"",
@@ -15505,186 +15118,6 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]:\"patronage\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "scored",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 61,
-      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@qui-nhon:none[0]",
-      "selectedValue": "patronage",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@qui-nhon:none[0]:\"patronage\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 2,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 2,
-            "distinctValueCount": 2,
-            "min": 0,
-            "max": 1,
-            "range": 1,
-            "allReadyValuesEqual": false
-          }
-        },
-        "utility": "differentiating",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 2,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 2,
-          "readyRootOptionCount": 2,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@qui-nhon:none[0]:\"aid\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@qui-nhon:none[0]:\"patronage\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "scored",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 65,
-      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]",
-      "selectedValue": "patronage",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"patronage\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 2,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 2,
-            "distinctValueCount": 2,
-            "min": 0,
-            "max": 1,
-            "range": 1,
-            "allReadyValuesEqual": false
-          }
-        },
-        "utility": "differentiating",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 2,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 2,
-          "readyRootOptionCount": 2,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"aid\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"patronage\"",
           "score": 300,
           "scoreContributions": [
             {

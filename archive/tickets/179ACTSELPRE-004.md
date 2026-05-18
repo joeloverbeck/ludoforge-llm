@@ -111,6 +111,8 @@ Add a short comment in `packages/engine/schemas/Trace.schema.json` (or equivalen
 
 ## Outcome (2026-05-17)
 
+Outcome amended: 2026-05-18
+
 Terminal state: `COMPLETED`.
 
 Implemented the Phase 1c trace surface:
@@ -126,7 +128,7 @@ Ticket corrections / touched-file scope:
 
 - Additional touched files beyond the original list are owned internal fallout for the aggregate-only trace surface: `packages/engine/src/agents/policy-preview.ts`, `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/src/kernel/types-core.ts`.
 - `packages/engine/schemas/GameDef.schema.json` and `packages/engine/schemas/EvalReport.schema.json` were rewritten by `pnpm turbo schema:artifacts` but remained byte-identical; only `packages/engine/schemas/Trace.schema.json` persisted as generated schema fallout.
-- Same-series residual scope remains unchanged: FITL ARVN witness/cookbook work stays with `tickets/179ACTSELPRE-005.md`; WASM-route alignment stays with `tickets/179ACTSELPRE-006.md`.
+- Same-series residual scope later closed: FITL ARVN witness/cookbook work is archived at `archive/tickets/179ACTSELPRE-005.md`; WASM-route alignment is archived at `archive/tickets/179ACTSELPRE-006.md`.
 
 Authorization ledger:
 

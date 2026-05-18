@@ -428,7 +428,7 @@ agents:
             - { ref: feature.projectedVcMargin }
       hurtCurrentLeader:
         scopes: [move]
-        weight: 200
+        weight: 600
         value:
           neg:
             ref: feature.projectedCurrentLeaderMargin
@@ -436,7 +436,7 @@ agents:
           onUnavailable: noContribution
       reduceNearestThreat:
         scopes: [move]
-        weight: 200
+        weight: 600
         value:
           neg:
             ref: feature.projectedNearestThreatMargin

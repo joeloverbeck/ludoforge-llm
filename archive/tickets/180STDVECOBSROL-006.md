@@ -81,6 +81,8 @@ Update the cookbook with standing projection, `seatAgg.availability`, role primi
 
 ## Outcome (2026-05-18)
 
+Outcome amended: 2026-05-18
+
 Status is complete. The final package proof completed after the profile/docs/report updates and the owned Spec 178 fixture fallout refresh.
 
 What landed:
@@ -96,7 +98,7 @@ Post-review clarification:
 
 - This ticket proves the accepted Phase 5 claim: candidate-score differentiation for the two role-standing terms when opponent standing shifts through the projection.
 - It does not prove that the terms are decisive in selected action choice, and it does not prove executed selected actions reduce enemy margins after the action boundary.
-- Follow-up `tickets/180STDVECOBSROL-007.md` owns the stronger causal-action and outcome-delta witness.
+- Follow-up `archive/tickets/180STDVECOBSROL-007.md` completed the stronger causal-action and outcome-delta witness.
 
 Witness result:
 

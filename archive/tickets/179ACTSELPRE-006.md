@@ -1,6 +1,6 @@
 # 179ACTSELPRE-006: (Optional) WASM-route alignment for `outcomeGrantContinuation`
 
-**Status**: BLOCKED by Spec 180 ordinary-operation successor `archive/tickets/180STDVECOBSROL-001.md`
+**Status**: DEFERRED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-preview-drive.ts` (or equivalent WASM-route file).
@@ -97,3 +97,24 @@ Descope: no new tests.
 2. Full engine: `pnpm -F @ludoforge/engine test`
 3. Full turbo: `pnpm turbo test`
 4. Lint + typecheck: `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-18)
+
+Status is deferred and archive-ready. This optional WASM-route alignment ticket was scoped to `outcomeGrantContinuation`, but Spec 180 completed the production ordinary-operation opponent-standing route without relying on that opt-in.
+
+What landed:
+
+- No code change landed under this optional ticket.
+- Spec 179's TypeScript `outcomeGrantContinuation` substrate remains historical for synthetic or future production paths that actually publish `outcomeGrantResolve`.
+- The live production FITL ordinary-operation goal moved to Spec 180 and is completed through `archive/tickets/180STDVECOBSROL-001.md` through `archive/tickets/180STDVECOBSROL-007.md`.
+
+Why no WASM work remains active:
+
+- Ticket 005's red witness and ticket 007's contract classification showed the original ARVN operation witness does not exercise `outcomeGrantResolve`.
+- Ticket 008 found no usable production event/free-operation replacement witness.
+- Ticket 009 selected Spec 180's standing-projection route, and that route completed the opponent-margin AI authoring goal without requiring a WASM implementation of this optional post-grant opt-in.
+
+Verification:
+
+- No source or test lanes were required for this no-code deferral.
+- Archival integrity is covered by `pnpm run check:ticket-deps`.

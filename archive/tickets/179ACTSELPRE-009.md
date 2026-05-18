@@ -28,7 +28,7 @@ This ticket owns the next ordinary-operation preview visibility surface. It must
 
 ### 1. Reassess successor architecture
 
-Compare the live options against `docs/FOUNDATIONS.md`, Spec 179 evidence, `reports/spec-179-remediation.md`, and `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md`:
+Compare the live options against `docs/FOUNDATIONS.md`, Spec 179 evidence, `reports/spec-179-remediation.md`, and `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md`:
 
 - focused `previewEffect.*` / ordinary-operation effect projection,
 - amendment of Spec 180 so it owns both signal production and observability,
@@ -44,10 +44,10 @@ Specify the smallest bounded FITL ARVN ordinary-operation witness and the generi
 
 ## Files to Touch
 
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify if successor ownership changes Spec 179 wording)
-- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` (modify if selected as the successor architecture)
+- `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify if successor ownership changes Spec 179 wording)
+- `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` (modify if selected as the successor architecture)
 - `reports/179-phase-2-post-opt-in-witness.md` (modify if the successor changes the witness ledger)
-- `tickets/179ACTSELPRE-005.md`, `tickets/179ACTSELPRE-006.md`, `tickets/179ACTSELPRE-007.md`, `archive/tickets/179ACTSELPRE-008.md` (modify only for dependency/status cleanup)
+- `archive/tickets/179ACTSELPRE-005.md`, `archive/tickets/179ACTSELPRE-006.md`, `archive/tickets/179ACTSELPRE-007.md`, `archive/tickets/179ACTSELPRE-008.md` (modify only for dependency/status cleanup)
 - `packages/engine/src/**` and `packages/engine/test/**` (modify only after the successor surface and first failing witness are specified)
 
 ## Out of Scope
@@ -82,6 +82,8 @@ Specify the smallest bounded FITL ARVN ordinary-operation witness and the generi
 
 ## Outcome (2026-05-17)
 
+Outcome amended: 2026-05-18
+
 Completed design/graph closeout; no engine implementation under this ticket.
 
 Selected successor:
@@ -92,7 +94,7 @@ Selected successor:
 
 What changed:
 
-- `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` is now active as the standing-vector / ordinary-operation preview signal successor.
+- `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` completed as the standing-vector / ordinary-operation preview signal successor.
 - Spec 180 tickets `archive/tickets/180STDVECOBSROL-001.md` through `archive/tickets/180STDVECOBSROL-006.md` define the implementation chain:
   - 001: focused ordinary-operation standing-projection RED witness plus silent-zero pin before production implementation (archived).
   - 002: bounded standing-projection route.
@@ -100,7 +102,7 @@ What changed:
   - 004: `previewUsage.seatMatrix`.
   - 005: standing role primitives.
   - 006: FITL ARVN standing witness and cookbook addendum.
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md`, `reports/179-phase-2-post-opt-in-witness.md`, and same-family tickets 005/006/007 now point at the Spec 180 successor instead of leaving 009 as the ongoing owner.
+- `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md`, `reports/179-phase-2-post-opt-in-witness.md`, and same-family tickets 005/006/007 point at the completed Spec 180 successor instead of leaving 009 as the ongoing owner.
 
 Bounded proof plan:
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement-only on current `arvn-evolved` substrate; no source modifications.
-**Deps**: `specs/179-action-selection-preview-outcome-grant-opt-in.md`
+**Deps**: `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md`
 
 ## Problem
 
@@ -89,6 +89,8 @@ After capturing the report, revert the `penalizeOpponentMargin` + supporting fea
 - Tightening the perf gate beyond ≤ 5% slow-tier regression — the gate is owned by ticket 005's Phase 2 acceptance comparison.
 
 ## Outcome
+
+Outcome amended: 2026-05-18
 
 Completed: 2026-05-17
 

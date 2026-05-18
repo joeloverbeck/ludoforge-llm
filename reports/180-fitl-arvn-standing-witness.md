@@ -128,7 +128,7 @@ Per-seed standing rows:
 
 - The witness proves ordinary-operation role-standing signal for ARVN. It does not claim Spec 179 `outcomeGrantContinuation.exitCounts` activation.
 - `currentLeader` and `nearestThreat` resolved to the same target in these observed FITL decisions, so the two terms move together in this workload. The generic role distinction is already covered by Phase 4 architecture tests.
-- Post-review inspection found that this report proves candidate-score differentiation, not selected-action causality or executed enemy-margin reduction. In the 16 opponent-standing-shift decisions, selected actions were `govern` 14 times and `event` 2 times; a review reconstruction over unpruned candidates found no selected-action flips when the reconstructed standing-term contribution was removed. Follow-up ticket `tickets/180STDVECOBSROL-007.md` owns a durable causal/action and outcome-delta witness.
+- Post-review inspection found that this report proves candidate-score differentiation, not selected-action causality or executed enemy-margin reduction. In the 16 opponent-standing-shift decisions, selected actions were `govern` 14 times and `event` 2 times; a review reconstruction over unpruned candidates found no selected-action flips when the reconstructed standing-term contribution was removed. Follow-up ticket `archive/tickets/180STDVECOBSROL-007.md` owns the completed durable causal/action and outcome-delta witness.
 - Raw traces are ignored runtime artifacts; rerun the commands above to regenerate them.
 
 ## Fixture Fallout

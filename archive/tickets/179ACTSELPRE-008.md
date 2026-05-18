@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Unknown — discovery first; no engine changes unless a generic `outcomeGrantResolve` defect is proven with TDD.
-**Deps**: `tickets/179ACTSELPRE-007.md`
+**Deps**: `archive/tickets/179ACTSELPRE-007.md`
 
 ## Problem
 
@@ -39,7 +39,7 @@ The discovery must classify:
 
 ### 2. Reset or defer the Phase 2 acceptance gate
 
-If a valid witness exists, update `specs/179-action-selection-preview-outcome-grant-opt-in.md`, `reports/179-phase-2-post-opt-in-witness.md`, and active tickets so Phase 2 targets the event/free-operation grant contract truthfully.
+If a valid witness exists, update `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md`, `reports/179-phase-2-post-opt-in-witness.md`, and active tickets so Phase 2 targets the event/free-operation grant contract truthfully.
 
 If no valid witness exists, keep Spec 179 blocked/deferred and create or update the next owner for ordinary-operation preview visibility without weakening the `outcomeGrantResolve` acceptance claim.
 
@@ -54,11 +54,11 @@ For a valid replacement witness, run a bounded Phase 2 replacement gate and reco
 
 ## Files to Touch
 
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify — reset Phase 2 witness contract or defer Spec 179 truthfully)
+- `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md` (modify — reset Phase 2 witness contract or defer Spec 179 truthfully)
 - `reports/179-phase-2-post-opt-in-witness.md` (modify — append replacement witness or deferral evidence)
-- `tickets/179ACTSELPRE-005.md` (modify — residual owner/path cleanup if Phase 2 resets)
-- `tickets/179ACTSELPRE-007.md` (modify — handoff cleanup if Phase 2 resets)
-- `tickets/179ACTSELPRE-006.md` (modify only if replacement witness data changes WASM-route ownership)
+- `archive/tickets/179ACTSELPRE-005.md` (modify — residual owner/path cleanup if Phase 2 resets)
+- `archive/tickets/179ACTSELPRE-007.md` (modify — handoff cleanup if Phase 2 resets)
+- `archive/tickets/179ACTSELPRE-006.md` (modify only if replacement witness data changes WASM-route ownership)
 - `data/games/fire-in-the-lake/92-agents.md` and campaign diagnostics (modify only if the replacement witness requires profile/campaign routing)
 - `packages/engine/src/**` and `packages/engine/test/**` (modify only if TDD proves a generic engine defect)
 
@@ -67,7 +67,7 @@ For a valid replacement witness, run a bounded Phase 2 replacement gate and reco
 - FITL-specific engine branches.
 - Retuning ordinary operation action selection as if it proved `outcomeGrantResolve`.
 - Implementing a new `previewEffect.*` or standing-vector surface directly in this ticket; create or update a separate spec/ticket if discovery chooses that path.
-- WASM-route alignment, except for recording replacement witness route data needed by `tickets/179ACTSELPRE-006.md`.
+- WASM-route alignment, except for recording replacement witness route data needed by `archive/tickets/179ACTSELPRE-006.md`.
 
 ## Acceptance Criteria
 
@@ -101,6 +101,7 @@ For a valid replacement witness, run a bounded Phase 2 replacement gate and reco
 ## Outcome (2026-05-17)
 
 Outcome amended: 2026-05-17
+Outcome amended: 2026-05-18
 
 Completed reset verdict; Spec 179 remains blocked/deferred. No usable production FITL event/free-operation replacement witness was found.
 
@@ -116,9 +117,9 @@ Classification:
 
 - Discovery class: `no usable FITL event/free-operation grant witness found`.
 - Engine source/test edits: none. The evidence proves a contract mismatch between Spec 179's frame target and current production FITL grant routing, not a generic `outcomeGrantResolve` behavior defect requiring TDD.
-- Spec 179 status: still blocked/deferred, now by `tickets/179ACTSELPRE-009.md`.
+- Spec 179 status: deferred and archived at `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md`.
 - Same-family ticket updates: 005 and 007 remain blocked/not archive-ready; 006 is blocked until the successor surface defines whether `outcomeGrantContinuation` or another preview route still needs WASM alignment.
-- Successor: `tickets/179ACTSELPRE-009.md` owns specifying the ordinary-operation preview visibility surface without weakening the old Spec 179 gate.
+- Successor: `archive/tickets/179ACTSELPRE-009.md` owned specifying the ordinary-operation preview visibility surface without weakening the old Spec 179 gate.
 
 Command ledger:
 
@@ -133,4 +134,4 @@ Generated/schema fallout: none. This ticket changed spec/report/ticket graph art
 
 Proof validity: final proof is graph/report integrity plus bounded probe transcription. The source-level engine build preceded the probes and no source files changed afterward. No-invalidation: terminal status/proof transcription and post-check dependency result transcription only; no source, schema, command semantics, acceptance threshold, or successor ownership changed after `pnpm run check:ticket-deps`.
 
-Archive status: archived by post-ticket review on 2026-05-17; series continuation is `$implement-ticket tickets/179ACTSELPRE-009.md`.
+Archive status: archived by post-ticket review on 2026-05-17; series continuation completed via `archive/tickets/179ACTSELPRE-009.md` and Spec 180.

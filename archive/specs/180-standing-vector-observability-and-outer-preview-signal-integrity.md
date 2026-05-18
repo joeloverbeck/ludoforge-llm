@@ -1,11 +1,11 @@
 # Spec 180 — Standing-Vector Observability and Ordinary-Operation Preview Signal Integrity
 
-**Status**: ACTIVE — successor for ordinary-operation opponent-visibility work deferred by Spec 179.
+**Status**: COMPLETED
 **Priority**: High — `archive/tickets/179ACTSELPRE-009.md` selected this spec as the bounded generic successor after production FITL event/free-operation routing failed to provide a closing `outcomeGrantResolve` witness.
 **Complexity**: M–L — one signal-production pillar plus observability/ergonomics pillars; each phase remains independently mergeable after the Phase 0 witness locks the contract.
 **Date**: 2026-05-17
 **Dependencies**:
-- `specs/179-action-selection-preview-outcome-grant-opt-in.md` (synthetic `outcomeGrantResolve` substrate only; production ordinary-operation visibility is deferred here by `archive/tickets/179ACTSELPRE-009.md`)
+- `archive/specs/179-action-selection-preview-outcome-grant-opt-in.md` (synthetic `outcomeGrantResolve` substrate only; production ordinary-operation visibility was deferred here by `archive/tickets/179ACTSELPRE-009.md`)
 - `archive/specs/162-preview-signal-integrity.md` (Foundation #20 introduced for inner-preview; this spec extends it to the outer-preview `seatAgg` aggregate path)
 - `archive/specs/122-cross-seat-victory-aggregation.md` (`seatAgg`, `$seat`, `over: opponents` IR — substrate this spec extends, not replaces)
 - `archive/specs/113-preview-state-policy-surface.md` (per-seat preview surface — substrate)
@@ -324,3 +324,22 @@ ChatGPT-Pro's deep-research proposal is reassessed against the codebase per the 
 | `tieBreak: terminalRanking | stableSeatId` field on aggregates | **Adopted implicitly via role primitive resolution** | Roles resolve via `def.terminal.ranking` tie-break chain. Explicit `tieBreak` on every `seatAgg` is overspecified — most aggregates don't need it. Surface in Open Question §9.1's "field count" decision; can be added if Phase 3 finds a witness case requiring it. |
 | External research citations (MaxN, GGP, OpenSpiel, AlphaStar, COIN) | **Acknowledged as context** | Useful framing for why a standing-vector evaluation model is well-precedented. None directly drive an IR decision in this spec — Spec 180's design choices are codebase-grounded — but the citations strengthen the case for the surface being game-agnostic. |
 | `Risk: opponent-margin signals may still be genuinely unavailable at root action-selection scope` (ChatGPT-Pro §12) | **Adopted as Spec 180 Phase 0/1 owner** | Tickets 007/008 proved the risk against the production FITL witness. Spec 180 now owns the focused ordinary-operation standing-projection witness and the bounded generic signal-production route before observability and role ergonomics land. |
+
+## Outcome (2026-05-18)
+
+Status is complete. Spec 180 landed the bounded ordinary-operation standing projection, outer-preview signal integrity, per-candidate seat matrix, role primitives, FITL ARVN witness, cookbook/foundations updates, and the follow-up causal/action witness.
+
+What landed:
+
+- Phase 0 through Phase 5 are archived at `archive/tickets/180STDVECOBSROL-001.md` through `archive/tickets/180STDVECOBSROL-006.md`.
+- The causal/action follow-up is archived at `archive/tickets/180STDVECOBSROL-007.md`.
+- The implementation kept the standing route generic and avoided FITL-specific engine branches.
+- The final ARVN profile uses the new role-standing signal through `hurtCurrentLeader` and `reduceNearestThreat`; ticket 007 retuned only those two standing weights to make the signal selected-action-causal in a bounded subset.
+
+Verification and residual limits:
+
+- Final engine package proof for ticket 007 passed with `pnpm -F @ludoforge/engine test`: schema artifacts check passed and `92 / 92` test files passed.
+- Dependency proof passed with `pnpm run check:ticket-deps`.
+- The ticket-007 retained witness proved `5 / 20` counterfactual selected-action flips and `3 / 16` targeted opponent-seat rows improved, with `0 / 16` worsened.
+- The final 15-seed ARVN aggregate score remained worse than the ticket-006 witness, so this spec proves the opponent-standing signal is available and action-causal in a subset, not that the ARVN profile is globally stronger.
+- Spec 179's production ordinary-operation goal is superseded by this completed standing-projection route; Spec 179's narrower synthetic `outcomeGrantResolve` substrate remains historical.

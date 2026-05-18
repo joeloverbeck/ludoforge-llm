@@ -1,7 +1,7 @@
 # Spec 179 — Action-Selection Preview: `outcomeGrantResolve` Opt-In
 
-**Status**: BLOCKED by `archive/tickets/180STDVECOBSROL-001.md` and the remaining active Spec 180 implementation chain.
-**Priority**: Medium — the profile opt-in substrate exists for synthetic `outcomeGrantResolve` frames, but current production FITL event/free-operation paths do not provide a closing witness; ordinary-operation preview visibility is deferred to Spec 180's standing-projection successor, whose Phase 0 witness and Phase 1 bounded standing-projection route are archived at `archive/tickets/180STDVECOBSROL-001.md` and `archive/tickets/180STDVECOBSROL-002.md`.
+**Status**: DEFERRED
+**Priority**: Medium — the profile opt-in substrate exists for synthetic `outcomeGrantResolve` frames, but current production FITL event/free-operation paths do not provide a closing witness; ordinary-operation preview visibility was superseded by Spec 180's completed standing-projection route.
 **Complexity**: S–M — single bounded driver change with profile-side opt-in; phased measure-then-implement-then-document.
 **Date**: 2026-05-17
 **Dependencies**:
@@ -124,7 +124,7 @@ A profile that opts in must produce trace-visible continuation through `outcomeG
 
 ## 7. Out-of-Scope (Cross-Reference)
 
-- **Direction B** of the trigger report (separate `previewEffect.*` or equivalent ordinary-operation preview surface): resolved by `archive/tickets/179ACTSELPRE-009.md` into Spec 180's bounded standing-projection route. A separate `previewEffect.*` namespace remains rejected unless the active Spec 180 implementation chain proves the integrated standing route cannot observe ordinary-operation effects without duplicating kernel effect semantics.
+- **Direction B** of the trigger report (separate `previewEffect.*` or equivalent ordinary-operation preview surface): resolved by `archive/tickets/179ACTSELPRE-009.md` into Spec 180's bounded standing-projection route. A separate `previewEffect.*` namespace remains rejected because the completed Spec 180 route observed ordinary-operation effects without duplicating kernel effect semantics.
 - **Direction C** of the trigger report (declarative action effect annotations): rejected by the trigger report itself ("not the right answer for this gap").
 - **Adjacent concern #2** of the report (which 4.5% of VC decisions currently differentiate): a small follow-up investigation, not in this spec.
 - **`preview.feature.X` for opponent-tied features** (report adjacent concern #1): the Phase 1 driver change *should* lift this as a free side-effect (the post-grant state would expose the opponent-tied feature recomputations), but Phase 2 acceptance only pins `currentMargin.<opp>`; a separate witness run can confirm features lift, and Phase 2 should record the observed behavior.
@@ -157,10 +157,33 @@ Decomposed via `/spec-to-tickets` on 2026-05-17:
 - [`archive/tickets/179ACTSELPRE-002.md`](../archive/tickets/179ACTSELPRE-002.md) — Phase 1a — Schema/compiler/validator wiring for `outcomeGrantContinuation` (covers §5 Phase 1 schema)
 - [`archive/tickets/179ACTSELPRE-003.md`](../archive/tickets/179ACTSELPRE-003.md) — Phase 1b — Driver change in `driveSyntheticCompletion` (post-grant continuation) (covers §5 Phase 1 driver, §4.2)
 - [`archive/tickets/179ACTSELPRE-004.md`](../archive/tickets/179ACTSELPRE-004.md) — Phase 1c — `previewUsage.outcomeGrantContinuation` trace surface (covers §5 Phase 1 trace, §4.3)
-- [`tickets/179ACTSELPRE-005.md`](../tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (red witness / blocked handoff)
-- [`tickets/179ACTSELPRE-007.md`](../tickets/179ACTSELPRE-007.md) — Phase 2b — Classify FITL ARVN post-grant witness activation (blocked: original witness targets ordinary operations, not `outcomeGrantResolve`)
+- [`archive/tickets/179ACTSELPRE-005.md`](../archive/tickets/179ACTSELPRE-005.md) — Phase 2 — FITL ARVN witness + cookbook addendum (red witness / deferred handoff)
+- [`archive/tickets/179ACTSELPRE-007.md`](../archive/tickets/179ACTSELPRE-007.md) — Phase 2b — Classify FITL ARVN post-grant witness activation (completed classification: original witness targets ordinary operations, not `outcomeGrantResolve`)
 - [`archive/tickets/179ACTSELPRE-008.md`](../archive/tickets/179ACTSELPRE-008.md) — Phase 2c — Reset Spec 179 witness contract (completed: no usable production event/free-operation `outcomeGrantResolve` replacement witness found)
 - [`archive/tickets/179ACTSELPRE-009.md`](../archive/tickets/179ACTSELPRE-009.md) — Phase 2d — Specify ordinary-operation preview visibility successor (selected Spec 180; Phase 0 witness archived at [`archive/tickets/180STDVECOBSROL-001.md`](../archive/tickets/180STDVECOBSROL-001.md); Phase 1 bounded standing-projection route archived at [`archive/tickets/180STDVECOBSROL-002.md`](../archive/tickets/180STDVECOBSROL-002.md))
-- [`tickets/179ACTSELPRE-006.md`](../tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (covers Open Question §8.4)
+- [`archive/tickets/179ACTSELPRE-006.md`](../archive/tickets/179ACTSELPRE-006.md) — (Optional) WASM-route alignment for `outcomeGrantContinuation` (deferred because Spec 180 completed the production ordinary-operation route without relying on this opt-in)
 
 Namespace `179ACTSELPRE` finalized from user invocation (brainstorm proposal `179POSTGRANTPREV` superseded). Ticket 001 added to cover §5 Phase 0 which was omitted from the brainstorm-time decomposition.
+
+## Outcome (2026-05-18)
+
+Status is deferred and superseded for the production ordinary-operation opponent-margin goal. Spec 179's implemented substrate remains valid for synthetic or future production paths that actually publish `outcomeGrantResolve`, but the live FITL ARVN ordinary-operation witness could not close through that contract.
+
+What landed:
+
+- Phase 0 through Phase 1c are archived at `archive/tickets/179ACTSELPRE-001.md` through `archive/tickets/179ACTSELPRE-004.md`.
+- The Phase 2 profile/docs/report work landed and is archived at `archive/tickets/179ACTSELPRE-005.md`, but the witness remained red.
+- The activation classifier is archived at `archive/tickets/179ACTSELPRE-007.md`: ordinary FITL operation actions do not exercise `outcomeGrantResolve`.
+- The reset and successor-selection tickets are archived at `archive/tickets/179ACTSELPRE-008.md` and `archive/tickets/179ACTSELPRE-009.md`; they found no usable production event/free-operation `outcomeGrantResolve` replacement witness and selected Spec 180 instead.
+- The optional WASM alignment ticket is archived at `archive/tickets/179ACTSELPRE-006.md` as deferred because the completed production ordinary-operation route no longer depends on `outcomeGrantContinuation`.
+
+Supersession:
+
+- Spec 180 is archived at `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md`.
+- The completed Spec 180 route satisfies the original product intent in spirit: AI agents can now receive and act on opponent standing/victory-margin signal for ordinary operations through the generic standing-projection surface.
+- Spec 179 did not pass its original Phase 2 production witness gate and should not be read as proof that `outcomeGrantContinuation` solves ordinary-operation opponent visibility.
+
+Verification:
+
+- The final Spec 180 closeout passed `pnpm -F @ludoforge/engine test` and `pnpm run check:ticket-deps`.
+- This archival closeout re-ran `pnpm run check:ticket-deps` after moving the deferred/completed Spec 179 artifacts.

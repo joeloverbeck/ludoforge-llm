@@ -28,7 +28,7 @@ Spec 179's mechanical fix is at `packages/engine/src/agents/policy-preview.ts:98
    Only the `outcomeGrantResolve` branch becomes opt-in-extensible; the other exits remain hard.
 3. `PolicyPreviewTraceOutcome` is at `policy-preview.ts:163-171` — adding `postGrantCap` extends the union; trace consumers must handle the new variant. Spec 162's Foundation #20 preview-status taxonomy already includes `depthCap` for the pre-grant cap — `postGrantCap` is a sibling.
 4. Ticket 002 has landed `outcomeGrantContinuation` on `AgentPreviewConfig` — this ticket consumes it.
-5. Boundary reset approved by user on 2026-05-17: this ticket owns the generic driver continuation/cap/taxonomy proof. The older synthetic opponent-margin differentiation witness belongs with the FITL/ARVN profile proof in `tickets/179ACTSELPRE-005.md`.
+5. Boundary reset approved by user on 2026-05-17: this ticket owns the generic driver continuation/cap/taxonomy proof. The older synthetic opponent-margin differentiation witness belongs with the FITL/ARVN profile proof archived at `archive/tickets/179ACTSELPRE-005.md`.
 
 ## Architecture Check
 
@@ -172,6 +172,8 @@ Grep for `case 'depthCap'` / `outcome === 'depthCap'` and any exhaustive `switch
 
 ## Outcome (2026-05-17)
 
+Outcome amended: 2026-05-18
+
 Implemented the Foundation-aligned Phase 1b driver seam:
 
 - `driveSyntheticCompletion` now consumes `preview.outcomeGrantContinuation` when enabled, auto-publishes and applies generic `outcomeGrantResolve` decisions, tracks post-grant continuation with a separate bounded counter, and exits with `postGrantCap` when the extra budget is exhausted.
@@ -179,7 +181,7 @@ Implemented the Foundation-aligned Phase 1b driver seam:
 - Existing opt-out profiles preserve the previous trace shape: advisory `unavailabilityBreakdown.postGrantCap` is absent unless the new reason is observed.
 - Generic post-grant tests prove opt-out boundary behavior, opt-in continuation, deterministic same-input preview output, and the `postGrantCap` exit path.
 
-Boundary note: the previously drafted opponent-margin distinctness witness was intentionally not implemented here. User approved the narrower Option 1 boundary on 2026-05-17; FITL/ARVN opponent-margin differentiation remains owned by `tickets/179ACTSELPRE-005.md`, and decision-level `previewUsage.outcomeGrantContinuation` aggregation was completed by `archive/tickets/179ACTSELPRE-004.md`.
+Boundary note: the previously drafted opponent-margin distinctness witness was intentionally not implemented here. User approved the narrower Option 1 boundary on 2026-05-17; FITL/ARVN opponent-margin differentiation was owned by `archive/tickets/179ACTSELPRE-005.md`, and decision-level `previewUsage.outcomeGrantContinuation` aggregation was completed by `archive/tickets/179ACTSELPRE-004.md`.
 
 ### Verification
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/` only (no engine src changes)
-**Deps**: `tickets/181STRSTRPOL-001.md`
+**Deps**: `archive/tickets/181STRSTRPOL-001.md`
 
 ## Problem
 

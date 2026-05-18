@@ -1,6 +1,6 @@
 # 181STRSTRPOL-001: Phase 0 — Audit probe runner scaffold + replay-prefix integration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/` (new harness, no engine src changes)
@@ -133,3 +133,28 @@ Same probe + same engine version + same kernel + same seed = bit-identical `Prob
 
 1. `pnpm -F @ludoforge/engine test -- probe-runner` (or the node:test equivalent path filter)
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-18
+
+What changed:
+- Added the Phase 0 probe scaffold under `packages/engine/test/policy-profile-quality/probes/`: `Probe`/`ProbeResult` types, `defineProbe()` validation, the generic `runProbe()` runner, README authoring notes, a zero-probe FITL wrapper template, and runner-level tests.
+- `runProbe()` now iterates `seed` or `seedRange`, creates initial state through a caller-supplied game loader, applies `replayPrefix` via public kernel decision application, checks `expectedStateHash`, drives decisions through `PolicyAgent`, records selected decision plus `PolicyAgentDecisionTrace`, and reports deterministic aggregate outcomes and `traceBytes`.
+- Assertion kinds intentionally remain absent: `ProbeAssertion` is an empty union for this ticket, with assertion dispatch left to `tickets/181STRSTRPOL-002.md`.
+
+Deviations from original plan:
+- The reusable runner does not hardcode a scenario/game registry. It accepts `loadGame` so per-game wrappers own fixture selection while the runner remains game-agnostic.
+- The shorthand command `pnpm -F @ludoforge/engine test -- probe-runner` is not accepted by the current `run-tests.mjs` pattern resolver (`Could not find 'probe-runner'`). The equivalent repo-valid focused command is the concrete test path form below.
+- The scaffold tests use the existing `architectural-invariant` marker because `policy-profile-quality` is a lane name, not a valid `@test-class` marker.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine test -- packages/engine/test/policy-profile-quality/probes/probe-runner.test.ts` — passed; schema artifacts check plus 4 probe-runner tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js` — passed; zero-probe wrapper loads as an empty suite.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js dist/test/policy-profile-quality/probes/probe-runner.test.js dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js` — passed after marker correction.
+- `pnpm run check:ticket-deps` — passed for 12 active tickets and 2411 archived tickets.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed after marker correction; engine default lane reported 92/92 files passed, runner reported 205/205 files passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.

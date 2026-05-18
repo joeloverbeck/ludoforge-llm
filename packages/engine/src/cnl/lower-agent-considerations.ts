@@ -250,7 +250,13 @@ export function lowerAgentPolicyExpr(expr: AgentPolicyExpr): CompiledPolicyExpr 
     case 'seatAgg': {
       const inner = lowerAgentPolicyExpr(expr.expr);
       if (inner === null) return null;
-      return { kind: 'seatAgg', over: expr.over, expr: inner, aggOp: expr.aggOp };
+      return {
+        kind: 'seatAgg',
+        over: expr.over,
+        expr: inner,
+        aggOp: expr.aggOp,
+        ...(expr.availability === undefined ? {} : { availability: expr.availability }),
+      };
     }
     case 'zoneProp': {
       const zone = lowerAgentPolicyZoneSource(expr.zone);

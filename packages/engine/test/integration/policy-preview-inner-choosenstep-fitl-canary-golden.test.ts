@@ -151,6 +151,10 @@ function captureChooseNStepFitlCanary(): ChooseNStepFitlCanaryFixture {
   const agentDecision = decision.agentDecision;
   assert.ok(agentDecision, 'Expected verbose policy trace');
   assert.ok(agentDecision.candidates, 'Expected verbose candidate trace');
+  assert.equal(agentDecision.previewUsage.utility, 'differentiating');
+  assert.equal(agentDecision.previewUsage.coverage.readyRootOptionCount > 0, true);
+  assert.equal(agentDecision.previewUsage.coverage.allRootsUnavailable, false);
+  assert.equal(agentDecision.previewUsage.outcomeBreakdown?.unknownDepthCap, 0);
 
   const options = agentDecision.candidates
     .filter((candidate) => candidate.previewRefIds.includes(PREVIEW_REF_ID))

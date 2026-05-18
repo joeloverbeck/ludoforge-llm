@@ -119,8 +119,68 @@ function validateProfiles(
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
+    validatePreviewOutcomeGrantContinuation(profileId, profileDef, profilePath, diagnostics);
     validatePolicyGuidedMicroturnConsiderations(profileId, profileDef, profilePath, library, diagnostics);
     validateInnerPreviewOptionConsiderations(profileId, profileDef, profilePath, library, diagnostics);
+  }
+}
+
+function validatePreviewOutcomeGrantContinuation(
+  profileId: string,
+  profileDef: Record<string, unknown>,
+  profilePath: string,
+  diagnostics: Diagnostic[],
+): void {
+  const preview = profileDef.preview;
+  const block = isRecord(preview) ? preview.outcomeGrantContinuation : undefined;
+  if (block === undefined) {
+    return;
+  }
+  if (!isRecord(block)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${profilePath}.preview.outcomeGrantContinuation`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation must be an object.`,
+      suggestion: 'Use preview.outcomeGrantContinuation with enabled, extraDepthCap, and capClass.',
+    });
+    return;
+  }
+  const enabled = block.enabled ?? false;
+  if (typeof enabled !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${profilePath}.preview.outcomeGrantContinuation.enabled`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.enabled must be a boolean, got ${typeof enabled}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.enabled to true or false.',
+    });
+    return;
+  }
+  if (!enabled) {
+    return;
+  }
+  if (
+    typeof block.extraDepthCap !== 'number'
+    || !Number.isSafeInteger(block.extraDepthCap)
+    || block.extraDepthCap <= 0
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${profilePath}.preview.outcomeGrantContinuation.extraDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap must be a positive safe integer when outcomeGrantContinuation is enabled.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.extraDepthCap to 4 for capClass postGrant16.',
+    });
+  }
+  if (block.capClass !== 'postGrant16') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN,
+      path: `${profilePath}.preview.outcomeGrantContinuation.capClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.capClass must be postGrant16.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.capClass to postGrant16.',
+    });
   }
 }
 

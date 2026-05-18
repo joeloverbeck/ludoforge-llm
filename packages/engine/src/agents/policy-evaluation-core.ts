@@ -33,6 +33,7 @@ import type {
   GameState,
   LookupUnavailabilityReason,
   MoveParamValue,
+  PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
   ZoneDef,
@@ -52,7 +53,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
-import type { PolicyValue } from './policy-surface.js';
+import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
@@ -144,11 +145,13 @@ export class PolicyRuntimeError extends Error {
 export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
+  previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
   readonly unknownCandidateParamRefs: Map<string, CandidateParamUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  outcomeGrantContinuationDepth?: number;
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
   scheduleFallbackFired?: PolicyScheduleFallbackFired;
@@ -365,7 +368,9 @@ export class PolicyEvaluationContext {
   private currentCandidates: PolicyEvaluationCandidate[];
   private activeState: GameState;
   private currentSeatContext: string | undefined;
+  private currentSeatMatrixContext: { readonly seatId: string } | undefined;
   private candidateParamUnavailableDuringValue = false;
+  private previewUnavailableEventCount = 0;
   private scheduleUnavailableDuringValue = false;
   private schedulePartialsDuringValue: { readonly refId: string; readonly lowerBound: number }[] = [];
 
@@ -409,6 +414,7 @@ export class PolicyEvaluationContext {
     this.transientZoneReadContext = null;
     this.currentCandidates = [];
     this.currentSeatContext = undefined;
+    this.currentSeatMatrixContext = undefined;
     this.runtimeProviders.dispose();
   }
 
@@ -481,6 +487,7 @@ export class PolicyEvaluationContext {
       this.resolvedPreviewRefValues.set(candidate.stableMoveKey, candidateValues);
     }
     candidateValues.set(refId, value);
+    this.recordSeatMatrixCell(candidate, refId, { status: 'ready', value });
   }
 
   getResolvedPreviewRefValue(candidate: PolicyEvaluationCandidate, refId: string): number | undefined {
@@ -606,13 +613,13 @@ export class PolicyEvaluationContext {
 
     const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
     const unknownCandidateParamRefsBefore = this.unknownCandidateParamRefCount(candidate);
-    const unknownPreviewRefsBefore = this.unknownPreviewRefCount(candidate);
+    const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
     const unknownLookupRefsBefore = this.unknownLookupRefCount(candidate);
     this.candidateParamUnavailableDuringValue = false;
     const value = this.evaluateCompiledExpr(consideration.value, candidate);
     const candidateParamUnavailable = this.candidateParamUnavailableDuringValue
       || this.unknownCandidateParamRefCount(candidate) > unknownCandidateParamRefsBefore;
-    const previewUnavailable = this.unknownPreviewRefCount(candidate) > unknownPreviewRefsBefore;
+    const previewUnavailable = this.previewUnavailableEventCount > previewUnavailableEventsBefore;
     const lookupUnavailable = this.unknownLookupRefCount(candidate) > unknownLookupRefsBefore;
     this.candidateParamUnavailableDuringValue = false;
     const scheduleUnavailable = this.scheduleUnavailableDuringValue;
@@ -804,10 +811,34 @@ export class PolicyEvaluationContext {
       ?? 0;
   }
 
-  private unknownPreviewRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
-    return candidate?.unknownPreviewRefs.size
-      ?? this.input.previewOption?.unknownPreviewRefs?.size
-      ?? 0;
+  private recordUnknownPreviewRef(
+    candidate: PolicyEvaluationCandidate | undefined,
+    refId: string,
+    reason: PolicyPreviewUnavailabilityReason,
+  ): void {
+    candidate?.unknownPreviewRefs.set(refId, reason);
+    this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+    if (candidate !== undefined) {
+      this.recordSeatMatrixCell(candidate, refId, { status: reason });
+    }
+    this.previewUnavailableEventCount += 1;
+  }
+
+  private recordSeatMatrixCell(
+    candidate: PolicyEvaluationCandidate,
+    refId: string,
+    cell: PolicyPreviewSeatMatrixCellTrace,
+  ): void {
+    const context = this.currentSeatMatrixContext;
+    if (context === undefined || candidate.previewSeatMatrix === undefined) {
+      return;
+    }
+    let refCells = candidate.previewSeatMatrix.get(refId);
+    if (refCells === undefined) {
+      refCells = new Map<string, PolicyPreviewSeatMatrixCellTrace>();
+      candidate.previewSeatMatrix.set(refId, refCells);
+    }
+    refCells.set(context.seatId, cell);
   }
 
   private unknownLookupRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
@@ -1006,6 +1037,7 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledSeatAggregate(
           expr.over,
           expr.aggOp,
+          expr.availability ?? 'skipUnavailable',
           (seatCandidate) => this.evaluateCompiledExprDirect(expr.expr, seatCandidate),
           candidate,
         );
@@ -1446,36 +1478,43 @@ export class PolicyEvaluationContext {
 
   evaluateCompiledSeatAggregate(
     over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
-    aggOp: AgentPolicyZoneTokenAggOp,
+    aggOp: AgentPolicyZoneTokenAggOp, availability: NonNullable<Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['availability']>,
     inner: (candidate: PolicyEvaluationCandidate | undefined) => PolicyValue,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     const seatIds = this.resolveSeatAggregateSeatIds(over);
-    if (seatIds === undefined || seatIds.length === 0) {
-      return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
-    }
+    if (seatIds === undefined || seatIds.length === 0) return seatIds === undefined ? undefined : aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
 
-    const values: number[] = [];
-    for (const seatId of seatIds) {
+    const previewUnavailableEventsBefore = this.previewUnavailableEventCount;
+    const values: number[] = []; let anySeatUnavailable = false;
+    const evaluateForSeat = (seatId: string, collectValue: boolean): void => {
       const previousSeatContext = this.currentSeatContext;
+      const previousSeatMatrixContext = this.currentSeatMatrixContext;
+      const seatPreviewUnavailableEventsBefore = this.previewUnavailableEventCount;
       this.currentSeatContext = seatId;
+      if (candidate !== undefined) {
+        candidate.previewSeatMatrix ??= new Map();
+        this.currentSeatMatrixContext = { seatId };
+      }
       try {
         const value = inner(candidate);
-        if (typeof value === 'number') {
-          values.push(value);
-        }
+        anySeatUnavailable ||= this.previewUnavailableEventCount > seatPreviewUnavailableEventsBefore;
+        if (collectValue && typeof value === 'number') values.push(value);
       } finally {
         this.currentSeatContext = previousSeatContext;
+        this.currentSeatMatrixContext = previousSeatMatrixContext;
       }
-    }
+    };
 
+    if (availability === 'selfAndTargetReady' && !seatIds.includes(this.input.seatId)) evaluateForSeat(this.input.seatId, false);
+    for (const seatId of seatIds) evaluateForSeat(seatId, true);
+    if ((availability === 'requireAllReady' || availability === 'selfAndTargetReady') && anySeatUnavailable) return undefined;
     if (aggOp === 'count') {
       return values.length;
     }
     if (values.length === 0) {
-      return aggOp === 'sum' ? 0 : undefined;
+      return aggOp === 'sum' && this.previewUnavailableEventCount === previewUnavailableEventsBefore ? 0 : undefined;
     }
-
     switch (aggOp) {
       case 'sum':
         return values.reduce((acc, value) => acc + value, 0);
@@ -1543,9 +1582,8 @@ export class PolicyEvaluationContext {
     }
     return aggregate;
   }
-
   private resolveSeatAggregateSeatIds(
-    over: 'opponents' | 'all' | readonly string[],
+    over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
   ): readonly string[] | undefined {
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
     if (seatIds === undefined) {
@@ -1557,9 +1595,15 @@ export class PolicyEvaluationContext {
     if (over === 'opponents') {
       return seatIds.filter((seatId) => seatId !== this.input.seatId);
     }
+    if ('role' in over) {
+      if (this.input.catalog.surfaceVisibility.victory.currentMargin.current !== 'public') {
+        return undefined;
+      }
+      const resolved = resolvePolicyStandingRoleSelector(this.input.def, this.activeState, over.role, this.input.seatId);
+      return resolved === undefined ? undefined : [resolved];
+    }
     return over;
   }
-
   private resolveAgentPolicyRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     switch (ref.kind) {
       case 'library':
@@ -1711,13 +1755,11 @@ export class PolicyEvaluationContext {
     const key = previewOptionRefKey(ref);
     const status = resolvedRefs.get(key);
     if (status === undefined) {
-      candidate?.unknownPreviewRefs.set(key, 'noPreviewDecision');
-      this.input.previewOption?.unknownPreviewRefs?.set(key, 'noPreviewDecision');
+      this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
       return undefined;
     }
     if (status.kind === 'unavailable') {
-      candidate?.unknownPreviewRefs.set(key, status.reason);
-      this.input.previewOption?.unknownPreviewRefs?.set(key, status.reason);
+      this.recordUnknownPreviewRef(candidate, key, status.reason);
       return undefined;
     }
     return status.value;
@@ -1749,19 +1791,16 @@ export class PolicyEvaluationContext {
   ): PolicyValue {
     const projected = this.input.previewOption?.projectedState;
     if (projected === undefined) {
-      candidate?.unknownPreviewRefs.set(refId, 'gated');
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'gated');
+      this.recordUnknownPreviewRef(candidate, refId, 'gated');
       return undefined;
     }
     if (projected.outcome !== 'ready') {
       const reason = previewOutcomeToUnavailabilityReason(projected.outcome);
-      candidate?.unknownPreviewRefs.set(refId, reason);
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+      this.recordUnknownPreviewRef(candidate, refId, reason);
       return undefined;
     }
     if (projected.state === undefined) {
-      candidate?.unknownPreviewRefs.set(refId, 'failed');
-      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'failed');
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
       return undefined;
     }
     const resolution = this.runtimeProviders.lookupSurface.resolveLookupAgainstState({
@@ -2048,7 +2087,7 @@ export class PolicyEvaluationContext {
         // the preview surface itself is 'ready'. syncPreviewMetadata (called by
         // resolvePreviewStateFeatureRef or finalizePreviewOutcome) determines the
         // canonical outcome from the preview surface.
-        candidate.unknownPreviewRefs.set(refId, resolution.reason);
+        this.recordUnknownPreviewRef(candidate, refId, resolution.reason);
         return undefined;
       }
       if (candidate.previewOutcome === undefined) {
@@ -2106,13 +2145,13 @@ export class PolicyEvaluationContext {
     const previewOutcome = candidate.previewOutcome;
     if (previewOutcome !== 'ready' && previewOutcome !== 'stochastic') {
       if (previewOutcome !== undefined) {
-        candidate.unknownPreviewRefs.set(refId, previewOutcome);
+        this.recordUnknownPreviewRef(candidate, refId, previewOutcome);
       }
       return undefined;
     }
     const previewState = this.runtimeProviders.previewSurface.getPreviewState(candidate);
     if (previewState === undefined) {
-      candidate.unknownPreviewRefs.set(refId, 'failed');
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
       if (candidate.previewOutcome === undefined) {
         candidate.previewOutcome = 'failed';
       }
@@ -2142,6 +2181,10 @@ export class PolicyEvaluationContext {
     if (candidate.completionPolicyFallbackCount === undefined) {
       candidate.completionPolicyFallbackCount =
         this.runtimeProviders.previewSurface.getCompletionPolicyFallbackCount(candidate);
+    }
+    if (candidate.outcomeGrantContinuationDepth === undefined) {
+      candidate.outcomeGrantContinuationDepth =
+        this.runtimeProviders.previewSurface.getOutcomeGrantContinuationDepth(candidate);
     }
   }
 

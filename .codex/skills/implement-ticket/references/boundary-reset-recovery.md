@@ -74,6 +74,20 @@ Use this path when the active ticket remains closeable after the correction. If 
 
 Before terminal closeout after this path, run the same reset compliance check: authorization recorded, active artifacts corrected before resumed coding or explicitly repaired with rerun proof, fresh checkpoint emitted, proof lanes re-extracted, and no unapproved later mismatch class folded into the terminal status.
 
+## Late Reset Artifact Recovery
+
+Use this when a user-approved boundary reset is clear, but source/test/schema/fixture edits already exist and the active ticket/spec/sibling artifacts still preserve the old contract.
+
+1. Pause source edits. Do not add more implementation under the old artifact story.
+2. Patch the active ticket, and any directly affected spec or sibling text, to the approved boundary before launching more proof.
+3. Emit a late reset checkpoint with: approved option, old artifact claim, corrected active boundary, deferred owner, already-landed diff, invalidated proof lanes, and next proof order.
+4. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket.
+5. Classify existing edits as `still in-scope`, `exploratory but retained as evidence`, or `abandoned cleanup required`.
+6. Rerun the narrowest affected producer/consumer proof after the artifact correction. If the correction only changes proof-story prose, run the integrity/hygiene lane that covers that story and record why broad source proof is still valid.
+7. Only then continue implementation or terminal closeout.
+
+This is a recovery path, not a normal ordering option. Final closeout must say the artifact repair happened late and why the rerun proof covers the corrected story.
+
 Use this compact checkpoint delta immediately after a user-approved narrowed, deferred, or sibling-owned option when the reset changes the active deliverable, proof lane, witness path, status, or residual owner:
 
 - `approved option`: `<option label and user confirmation>`

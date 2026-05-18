@@ -1,7 +1,9 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -10,12 +12,17 @@ const REPO_ROOT = resolve(TEST_DIR, '../../../../../../');
 
 const childScript = String.raw`
 import * as assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const runtimeModule = await import(pathToFileURL(join(process.cwd(), 'packages/engine/dist/src/agents/policy-wasm-runtime.js')).href);
-const loaderModule = await import(pathToFileURL(join(process.cwd(), 'packages/engine/dist/src/agents/policy-wasm-runtime-node-loader.js')).href);
-const bytecodeModule = await import(pathToFileURL(join(process.cwd(), 'packages/engine/dist/src/cnl/policy-bytecode/index.js')).href);
+const repoRoot = process.env.LUDOFORGE_REPO_ROOT;
+assert.equal(typeof repoRoot, 'string');
+const outputPath = process.env.POLICY_WASM_PROBE_OUTPUT;
+assert.equal(typeof outputPath, 'string');
+const runtimeModule = await import(pathToFileURL(join(repoRoot, 'packages/engine/dist/src/agents/policy-wasm-runtime.js')).href);
+const loaderModule = await import(pathToFileURL(join(repoRoot, 'packages/engine/dist/src/agents/policy-wasm-runtime-node-loader.js')).href);
+const bytecodeModule = await import(pathToFileURL(join(repoRoot, 'packages/engine/dist/src/cnl/policy-bytecode/index.js')).href);
 process.env.POLICY_WASM_TIMING_PROFILE = process.argv[1];
 
 const runtime = await loaderModule.loadPolicyWasmRuntime();
@@ -109,7 +116,7 @@ assert.deepEqual(runtime.evaluatePolicyBytecodeBatch(bytecode, encoded, {
 }, [
   { actionId: 'move', stableMoveKey: 'move:{}' },
 ]), [13]);
-process.stdout.write(JSON.stringify({
+writeFileSync(outputPath, JSON.stringify({
   serializationStats: runtimeModule.__internal_for_tests.snapshotPolicyWasmSerializationStats(),
   cacheWriteStats: runtimeModule.__internal_for_tests.snapshotPolicyWasmBytecodeInputCacheWriteStats(),
 }));
@@ -122,13 +129,18 @@ const runProbe = (initialFlag: 'enabled' | 'disabled', mutation: '1' | '') => {
   } else {
     delete env.POLICY_WASM_TIMING_PROFILE;
   }
+  env.LUDOFORGE_REPO_ROOT = REPO_ROOT;
+  const outputPath = join(tmpdir(), `policy-wasm-serialization-${process.pid}-${initialFlag}-${mutation || 'default'}.json`);
+  env.POLICY_WASM_PROBE_OUTPUT = outputPath;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', childScript, mutation], {
     cwd: REPO_ROOT,
     env,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  const output = readFileSync(outputPath, 'utf8');
+  unlinkSync(outputPath);
+  return JSON.parse(output);
 };
 
 describe('policy WASM serialization stats', () => {

@@ -81,6 +81,34 @@ export function isAgentPolicyZoneTokenAggOp(value: unknown): value is AgentPolic
     && AGENT_POLICY_ZONE_TOKEN_AGG_OPS.includes(value as AgentPolicyZoneTokenAggOp);
 }
 
+export const AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES = [
+  'requireAllReady',
+  'requireAnyReady',
+  'selfAndTargetReady',
+  'skipUnavailable',
+] as const;
+
+export type AgentPolicySeatAggAvailability = typeof AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES[number];
+
+export function isAgentPolicySeatAggAvailability(value: unknown): value is AgentPolicySeatAggAvailability {
+  return typeof value === 'string'
+    && AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES.includes(value as AgentPolicySeatAggAvailability);
+}
+
+export const AGENT_POLICY_STANDING_ROLE_SELECTORS = [
+  'currentLeader',
+  'nearestThreat',
+  'closestAhead',
+  'closestBehind',
+] as const;
+
+export type AgentPolicyStandingRoleSelector = typeof AGENT_POLICY_STANDING_ROLE_SELECTORS[number];
+
+export function isAgentPolicyStandingRoleSelector(value: unknown): value is AgentPolicyStandingRoleSelector {
+  return typeof value === 'string'
+    && AGENT_POLICY_STANDING_ROLE_SELECTORS.includes(value as AgentPolicyStandingRoleSelector);
+}
+
 export const AGENT_POLICY_ZONE_FILTER_OPS = ['eq', 'gt', 'gte', 'lt', 'lte'] as const;
 
 export type AgentPolicyZoneFilterOp = typeof AGENT_POLICY_ZONE_FILTER_OPS[number];

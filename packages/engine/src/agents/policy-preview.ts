@@ -30,6 +30,7 @@ import type {
   AgentPreviewMode,
   ChoicePendingChooseNRequest,
   ChoicePendingChooseOneRequest,
+  CompiledAgentPreviewOutcomeGrantContinuationConfig,
   CompiledAgentProfile,
   CompiledPreviewSurfaceRef,
   ExecutionOptions,
@@ -43,6 +44,7 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
+  isPolicyStandingRoleToken,
   isSurfaceVisibilityAccessible,
   resolvePolicyRoleSelector,
   resolveSurfaceRefValue,
@@ -55,7 +57,7 @@ import { buildMicroturnChooseCallback, selectBestMicroturnChooseOneValue } from 
 export const K_PREVIEW_DEPTH = 6;
 
 interface DriveExitInfo {
-  readonly kind: 'completed' | 'depthCap' | 'stochastic' | 'failed';
+  readonly kind: 'completed' | 'depthCap' | 'postGrantCap' | 'stochastic' | 'failed';
   readonly depth: number;
   readonly seatId: string;
   readonly playerId: number;
@@ -69,7 +71,7 @@ interface DriveResultCapture {
   readonly stableMoveKey: string;
   readonly paramsJSON: string;
   readonly sourceStateHash: bigint;
-  readonly resultKind: 'completed' | 'stochastic' | 'depthCap' | 'failed';
+  readonly resultKind: 'completed' | 'stochastic' | 'depthCap' | 'postGrantCap' | 'failed';
   readonly resultDepth?: number;
   readonly resultStateHash?: bigint;
   readonly resultReason?: PolicyPreviewUnavailabilityReason;
@@ -134,6 +136,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly completionPolicy?: AgentPreviewAuthoredCompletionPolicy;
   readonly fallbackCompletionPolicy?: AgentPreviewFallbackCompletionPolicy;
   readonly completionDepthCap?: number;
+  readonly outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig;
   readonly captureSyntheticDecisions?: boolean;
   readonly policyGuidedDeps?: {
     readonly catalog: AgentPolicyCatalog;
@@ -155,6 +158,7 @@ export interface PolicyPreviewRuntime {
   getCompletionMetadata(candidate: PolicyPreviewCandidate): PolicyPreviewCompletionMetadata | undefined;
   getCompletionPolicyFallbackCount(candidate: PolicyPreviewCandidate): number;
   getPreviewDrive(candidate: PolicyPreviewCandidate): PolicyPreviewDriveTrace | undefined;
+  getOutcomeGrantContinuationDepth(candidate: PolicyPreviewCandidate): number;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyPreviewCandidate): boolean;
@@ -166,6 +170,7 @@ export type PolicyPreviewUnavailabilityReason =
   | 'unresolved'
   | 'failed'
   | 'depthCap'
+  | 'postGrantCap'
   | 'noPreviewDecision'
   | 'gated';
 export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
@@ -213,6 +218,7 @@ export interface SyntheticDecisionTraceEntry {
 }
 
 export interface PolicyPreviewDriveTrace {
+  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'stochastic';
   readonly depth: number;
   readonly completionPolicy: AgentPreviewCompletionPolicy;
   readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
@@ -223,7 +229,9 @@ type PreviewOutcome =
       readonly kind: 'ready';
       readonly state: GameState;
       readonly trustedMove: TrustedExecutableMove;
+      readonly driveKind: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -237,7 +245,9 @@ type PreviewOutcome =
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly trustedMove: TrustedExecutableMove;
+      readonly driveKind: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -251,7 +261,9 @@ type PreviewOutcome =
       readonly kind: 'unknown';
       readonly reason: PolicyPreviewUnavailabilityReason;
       readonly failureReason?: string;
+      readonly driveKind?: PolicyPreviewDriveTrace['kind'];
       readonly driveDepth?: number;
+      readonly outcomeGrantContinuationDepth?: number;
       readonly completionPolicy?: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions?: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount?: number;
@@ -272,6 +284,7 @@ type DriveResult =
       readonly kind: 'completed';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -279,6 +292,7 @@ type DriveResult =
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -286,6 +300,15 @@ type DriveResult =
       readonly kind: 'depthCap';
       readonly state: GameState;
       readonly depth: number;
+      readonly postGrantDepth?: number;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
+    }
+  | {
+      readonly kind: 'postGrantCap';
+      readonly state: GameState;
+      readonly depth: number;
+      readonly postGrantDepth?: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
     }
@@ -293,6 +316,7 @@ type DriveResult =
       readonly kind: 'failed';
       readonly reason: PolicyPreviewUnavailabilityReason;
       readonly depth?: number;
+      readonly postGrantDepth?: number;
       readonly failureReason?: string;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
@@ -302,6 +326,7 @@ type DriveResultWithoutSynthetic =
   | Omit<Extract<DriveResult, { readonly kind: 'completed' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
   | Omit<Extract<DriveResult, { readonly kind: 'stochastic' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
   | Omit<Extract<DriveResult, { readonly kind: 'depthCap' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
+  | Omit<Extract<DriveResult, { readonly kind: 'postGrantCap' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
   | Omit<Extract<DriveResult, { readonly kind: 'failed' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>;
 
 type ChooseOneMicroturn = MicroturnState & {
@@ -608,6 +633,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const completionPolicy = input.completionPolicy ?? 'greedy';
   const fallbackCompletionPolicy = input.fallbackCompletionPolicy ?? 'greedy';
   const completionDepthCap = input.completionDepthCap ?? K_PREVIEW_DEPTH;
+  const outcomeGrantContinuation = input.outcomeGrantContinuation?.enabled === true
+    ? input.outcomeGrantContinuation
+    : undefined;
   // origin is computed against `input.state`, which is invariant across all
   // candidates in this runtime. Cache lazily so each driveSyntheticCompletion
   // pays the publishMicroturn cost once instead of once per candidate.
@@ -667,6 +695,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       if (visibility === null) {
         return { kind: 'unavailable' };
       }
+      if (ref.selector?.kind === 'role' && isPolicyStandingRoleToken(ref.selector.seatToken) && visibility.preview.visibility !== 'public') {
+        return { kind: 'unknown', reason: 'hidden' };
+      }
       const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
         ? ref.selector.kind === 'player'
           ? ref.selector.player === 'self' ? Number(input.playerId) : Number(preview.state.activePlayer)
@@ -687,7 +718,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         Number(input.playerId),
         targetPlayerIndex,
       )) {
-        return { kind: 'unavailable' };
+        return { kind: 'unknown', reason: 'hidden' };
       }
       if (preview.hiddenSamplingZones.length > 0 && !visibility.preview.allowWhenHiddenSampling) {
         return { kind: 'unknown', reason: 'hidden' };
@@ -771,10 +802,17 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return outcome.driveDepth === undefined || outcome.completionPolicy === undefined
         ? undefined
         : {
+            ...(outcome.driveKind === undefined ? {} : { kind: outcome.driveKind }),
             depth: outcome.driveDepth,
             completionPolicy: outcome.completionPolicy,
             syntheticDecisions: outcome.syntheticDecisions ?? [],
           };
+    },
+    getOutcomeGrantContinuationDepth(candidate) {
+      if (disposed) {
+        return 0;
+      }
+      return getPreviewOutcome(candidate).outcomeGrantContinuationDepth ?? 0;
     },
     getGrantedOperation(candidate) {
       if (disposed) {
@@ -864,8 +902,10 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   function driveSyntheticCompletion(trustedMove: TrustedExecutableMove): DriveResult {
     const syntheticDecisions: SyntheticDecisionTraceEntry[] = [];
     let completionPolicyFallbackCount = 0;
+    let postGrantDepth = 0;
     const finish = (result: DriveResultWithoutSynthetic): DriveResult => emitExit({
       ...result,
+      ...(postGrantDepth > 0 ? { postGrantDepth } : {}),
       syntheticDecisions: [...syntheticDecisions],
       completionPolicyFallbackCount,
     } as DriveResult);
@@ -985,12 +1025,31 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         const topSeatId = top.context.seatId;
         if (
           ctxKind === 'actionSelection'
-          || ctxKind === 'outcomeGrantResolve'
           || ctxKind === 'turnRetirement'
-          || topSeatId !== origin.seatId
+          || (ctxKind !== 'outcomeGrantResolve' && topSeatId !== origin.seatId)
           || top.turnId !== origin.turnId
         ) {
           return finish({ kind: 'completed', state: canonicalizeForExit(), depth });
+        }
+        if (ctxKind === 'outcomeGrantResolve') {
+          if (outcomeGrantContinuation === undefined) {
+            return finish({ kind: 'completed', state: canonicalizeForExit(), depth });
+          }
+          if (postGrantDepth >= outcomeGrantContinuation.extraDepthCap) {
+            return finish({ kind: 'postGrantCap', state: canonicalizeForExit(), depth });
+          }
+          postGrantDepth += 1;
+          const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+          const decision = microturn.legalActions[0];
+          if (decision === undefined || decision.kind !== 'outcomeGrantResolve') {
+            return finish({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
+          }
+          const prevState = state;
+          state = applyPublishedDecisionFromPreviewStateNoFinalHash(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
+          stateIsCanonical = false;
+          draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
+          draftTokenStateIndex.attachPreviewState(state);
+          continue;
         }
         if (ctxKind === 'stochasticResolve') {
           return finish({ kind: 'stochastic', state: canonicalizeForExit(), depth });
@@ -1079,6 +1138,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         kind: 'unknown',
         reason: result.reason,
         ...(result.depth === undefined ? {} : { driveDepth: result.depth, completionPolicy }),
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1089,7 +1149,22 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         kind: 'unknown',
         reason: 'depthCap',
         failureReason: 'depthCap',
+        driveKind: 'depthCap',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
+        completionPolicy,
+        syntheticDecisions: result.syntheticDecisions,
+        completionPolicyFallbackCount: result.completionPolicyFallbackCount,
+      };
+    }
+    if (result.kind === 'postGrantCap') {
+      return {
+        kind: 'unknown',
+        reason: 'postGrantCap',
+        failureReason: 'postGrantCap',
+        driveKind: 'postGrantCap',
+        driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1100,7 +1175,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return {
         kind: 'unknown',
         reason: 'random',
+        driveKind: 'stochastic',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1112,7 +1189,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return {
         kind: 'unknown',
         reason: 'random',
+        driveKind: 'completed',
         driveDepth: result.depth,
+        ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
         completionPolicyFallbackCount: result.completionPolicyFallbackCount,
@@ -1129,7 +1208,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       kind: result.kind === 'stochastic' || rngDiverged ? 'stochastic' : 'ready',
       state: result.state,
       trustedMove,
+      driveKind: result.kind,
       driveDepth: result.depth,
+      ...(result.postGrantDepth === undefined ? {} : { outcomeGrantContinuationDepth: result.postGrantDepth }),
       completionPolicy,
       syntheticDecisions: result.syntheticDecisions,
       completionPolicyFallbackCount: result.completionPolicyFallbackCount,

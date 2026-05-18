@@ -12,6 +12,7 @@ import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
   AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
 } from '../contracts/index.js';
+import { parsePolicyStandingRoleToken, POLICY_STANDING_ROLE_TOKEN_PREFIX } from '../agents/policy-standing-roles.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
@@ -36,8 +37,10 @@ import type {
   CompiledAgentParameterDef,
   CompiledAgentPreviewBudgetConfig,
   CompiledAgentPreviewInnerConfig,
+  CompiledAgentPreviewOutcomeGrantContinuationConfig,
   ContinuedDeepeningConfig,
   DeepTrigger,
+  AgentPreviewPostGrantCapClass,
   CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
@@ -68,6 +71,7 @@ import type {
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
+import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
   buildPhaseBoundaryValidationContext,
@@ -114,8 +118,12 @@ export const CAP_CLASS_BUDGETS: Record<CapClass, number> = {
   standard256: INNER_PREVIEW_HARD_CAP,
   deep1024: 1024,
 };
+export const POST_GRANT_CAP_CLASS_BUDGETS: Record<AgentPreviewPostGrantCapClass, number> = {
+  postGrant16: 4,
+};
 const PREVIEW_INNER_STRATEGIES = new Set(['singlePass', 'continuedDeepening']);
 const PREVIEW_INNER_CAP_CLASSES = new Set(['standard256', 'deep1024']);
+const PREVIEW_POST_GRANT_CAP_CLASSES = new Set(['postGrant16']);
 const DEEP_TRIGGERS = new Set(['allRequestedRefsDepthCapped', 'allReadyValuesUniform']);
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
@@ -866,6 +874,7 @@ function lowerPreviewConfig(
     completionDepthCap,
     budget,
     inner,
+    outcomeGrantContinuation,
     phase1,
     phase1CompletionsPerAction,
   } = authored;
@@ -992,6 +1001,15 @@ function lowerPreviewConfig(
   if (loweredInner === undefined && inner !== undefined) {
     return undefined;
   }
+  const loweredOutcomeGrantContinuation = lowerPreviewOutcomeGrantContinuationConfig(
+    profileId,
+    path,
+    outcomeGrantContinuation,
+    diagnostics,
+  );
+  if (loweredOutcomeGrantContinuation === undefined && outcomeGrantContinuation !== undefined) {
+    return undefined;
+  }
 
   if (phase1 !== undefined && typeof phase1 !== 'boolean') {
     diagnostics.push({
@@ -1041,8 +1059,93 @@ function lowerPreviewConfig(
     ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
     ...(loweredBudget === undefined ? {} : { budget: loweredBudget }),
     ...(loweredInner === undefined ? {} : { inner: loweredInner }),
+    ...(loweredOutcomeGrantContinuation === undefined
+      ? {}
+      : { outcomeGrantContinuation: loweredOutcomeGrantContinuation }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
+  };
+}
+
+function lowerPreviewOutcomeGrantContinuationConfig(
+  profileId: string,
+  path: string,
+  block: NonNullable<GameSpecAgentProfileDef['preview']>['outcomeGrantContinuation'] | undefined,
+  diagnostics: Diagnostic[],
+): CompiledAgentPreviewOutcomeGrantContinuationConfig | undefined {
+  if (block === undefined) {
+    return undefined;
+  }
+  if (block === null || typeof block !== 'object' || Array.isArray(block)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${path}.outcomeGrantContinuation`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation must be an object.`,
+      suggestion: 'Use preview.outcomeGrantContinuation with enabled, extraDepthCap, and capClass.',
+    });
+    return undefined;
+  }
+
+  const enabled = block.enabled ?? false;
+  if (typeof enabled !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
+      path: `${path}.outcomeGrantContinuation.enabled`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.enabled must be a boolean, got ${typeof enabled}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.enabled to true or false.',
+    });
+    return undefined;
+  }
+  if (!enabled) {
+    return { enabled: false, extraDepthCap: POST_GRANT_CAP_CLASS_BUDGETS.postGrant16, capClass: 'postGrant16' };
+  }
+
+  const extraDepthCap = block.extraDepthCap;
+  if (
+    typeof extraDepthCap !== 'number'
+    || !Number.isSafeInteger(extraDepthCap)
+    || extraDepthCap <= 0
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${path}.outcomeGrantContinuation.extraDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap must be a positive safe integer when outcomeGrantContinuation is enabled, got ${String(extraDepthCap)}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.extraDepthCap to the selected cap-class budget, such as 4.',
+    });
+    return undefined;
+  }
+
+  const capClass = block.capClass;
+  if (typeof capClass !== 'string' || !PREVIEW_POST_GRANT_CAP_CLASSES.has(capClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN,
+      path: `${path}.outcomeGrantContinuation.capClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.capClass must be postGrant16, got ${String(capClass)}.`,
+      suggestion: 'Set preview.outcomeGrantContinuation.capClass to postGrant16.',
+    });
+    return undefined;
+  }
+
+  const expectedCap = POST_GRANT_CAP_CLASS_BUDGETS[capClass as AgentPreviewPostGrantCapClass];
+  if (extraDepthCap !== expectedCap) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${path}.outcomeGrantContinuation.extraDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap ${extraDepthCap} must equal capClass ${capClass} budget ${expectedCap}.`,
+      suggestion: `Set preview.outcomeGrantContinuation.extraDepthCap to ${expectedCap} for capClass ${capClass}.`,
+    });
+    return undefined;
+  }
+
+  return {
+    enabled: true,
+    extraDepthCap,
+    capClass: capClass as AgentPreviewPostGrantCapClass,
   };
 }
 
@@ -2179,19 +2282,18 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    const previewOptionRefIds = collectPreviewOptionRefIds(value.expr);
-    const previewDerivedRefIds = uniqueSorted([...previewOptionRefIds, ...projectedStateLookupRefIds]);
-    if (previewOptionRefIds.length > 0 && previewFallback === undefined) {
+    const previewOptionRefIds = collectPreviewOptionRefIds(value.expr), previewSeatAggRefs = collectPreviewSeatAggRefIds(value.expr);
+    const previewDerivedRefIds = uniqueSorted([...previewOptionRefIds, ...previewSeatAggRefs.fallbackRequired, ...projectedStateLookupRefIds]);
+    if ((previewOptionRefIds.length > 0 || previewSeatAggRefs.fallbackRequired.length > 0) && previewFallback === undefined) {
       this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK,
-        path: `${path}.previewFallback`,
-        severity: 'error',
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK, path: `${path}.previewFallback`, severity: 'error',
         message: `Consideration "${considerationId}" references ${previewDerivedRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
         suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
       });
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    warnImplicitPreviewSeatAggAvailability(this.diagnostics, considerationId, path, previewSeatAggRefs.implicitSkipUnavailable);
     if (projectedStateLookupRefIds.length > 0 && previewFallback === undefined) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK,
@@ -3256,6 +3358,10 @@ class AgentLibraryCompiler {
     if (resolved.selector?.kind === 'role' && !this.isKnownSeatToken(resolved.selector.seatToken, path, refPath)) {
       return false;
     }
+    if (resolved.selector?.kind === 'role' && resolved.selector.seatToken.startsWith(POLICY_STANDING_ROLE_TOKEN_PREFIX) && this.options.hasVictoryMargins === false) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
+    }
     if (resolved.family === 'perPlayerVar' && resolved.selector?.kind === 'role') {
       if (resolved.selector.seatToken === 'self' || resolved.selector.seatToken === 'active') {
         this.diagnostics.push({
@@ -3280,21 +3386,18 @@ class AgentLibraryCompiler {
     }
     return true;
   }
-
   private isKnownSeatToken(seatToken: string, path: string, refPath: string): boolean {
-    if (seatToken === 'self' || seatToken === 'active' || seatToken === '$seat') {
-      return true;
+    if (seatToken === 'self' || seatToken === 'active' || seatToken === '$seat') return true;
+    if (seatToken.startsWith(POLICY_STANDING_ROLE_TOKEN_PREFIX)) {
+      if (parsePolicyStandingRoleToken(seatToken) !== undefined) return true;
+      this.reportUnknownLibraryRef(refPath, path);
+      return false;
     }
-    if (this.options.referenceSeatIds === undefined) {
-      return true;
-    }
-    if (this.options.referenceSeatIds.includes(seatToken)) {
-      return true;
-    }
+    if (this.options.referenceSeatIds === undefined) return true;
+    if (this.options.referenceSeatIds.includes(seatToken)) return true;
     this.reportUnknownLibraryRef(refPath, path);
     return false;
   }
-
   private resolveObjectRef(
     scope: LibraryRefScope,
     expr: Readonly<Record<string, GameSpecPolicyExpr>>,
@@ -3311,12 +3414,10 @@ class AgentLibraryCompiler {
       });
       return null;
     }
-
     const [refPath, options] = entries[0]!;
     if (refPath.startsWith('candidate.params.')) {
       return this.resolveCandidateParamRef(scope, refPath, path, options);
     }
-
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,

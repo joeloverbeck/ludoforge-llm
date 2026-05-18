@@ -2,6 +2,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   AgentPolicyCostClass,
   AgentPolicyExpr,
+  AgentPolicySeatAggOver,
   AgentPolicyLiteral,
   AgentPolicyOperator,
   AgentPolicyValueType,
@@ -11,14 +12,14 @@ import type {
 } from '../kernel/types.js';
 import type { GameSpecPolicyExpr } from '../cnl/game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../cnl/compiler-diagnostic-codes.js';
-import type {
-  AgentPolicyZoneAggSource,
-  AgentPolicyZoneScope,
-  AgentPolicyZoneTokenAggOp,
-} from '../contracts/index.js';
+import type { AgentPolicyZoneAggSource, AgentPolicyZoneScope, AgentPolicyZoneTokenAggOp } from '../contracts/index.js';
 import {
+  AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
+  AGENT_POLICY_STANDING_ROLE_SELECTORS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_TOKEN_AGG_OPS,
+  isAgentPolicySeatAggAvailability,
+  isAgentPolicyStandingRoleSelector,
   isAgentPolicyZoneAggSource,
   isAgentPolicyZoneFilterOp,
   isAgentPolicyZoneScope,
@@ -1331,11 +1332,14 @@ function analyzeSeatAggOperator(
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
-  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp'], diagnostics, `${path}.seatAgg`)) {
-    return null;
-  }
+  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp', 'availability'], diagnostics, `${path}.seatAgg`)) return null;
   const over = analyzeSeatAggOver(obj['over'], context.referenceSeatIds, diagnostics, `${path}.seatAgg.over`);
   const aggOp = obj['aggOp'];
+  const availability = obj['availability'];
+  if (availability !== undefined && !isAgentPolicySeatAggAvailability(availability)) {
+    diagnostics.push({ code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID, path: `${path}.seatAgg.availability`, severity: 'error', message: `seatAgg.availability must be one of: ${AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES.join(', ')}.`, suggestion: 'Use "requireAllReady", "requireAnyReady", "selfAndTargetReady", or "skipUnavailable".' });
+    return null;
+  }
   const innerExpr = analyzePolicyExpr(
     obj['expr'] as GameSpecPolicyExpr,
     { ...context, withinSeatAggExpr: true },
@@ -1353,11 +1357,7 @@ function analyzeSeatAggOperator(
     });
     return null;
   }
-
-  if (over === null || innerExpr === null) {
-    return null;
-  }
-
+  if (over === null || innerExpr === null) return null;
   if (!matchesType(innerExpr.valueType, 'number')) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -1368,13 +1368,13 @@ function analyzeSeatAggOperator(
     });
     return null;
   }
-
   return {
     expr: {
       kind: 'seatAgg',
       over,
       expr: innerExpr.expr,
       aggOp,
+      ...(availability === undefined ? {} : { availability }),
     },
     valueType: 'number',
     costClass: innerExpr.costClass,
@@ -1382,13 +1382,12 @@ function analyzeSeatAggOperator(
     isStaticallyZero: aggOp === 'sum' && innerExpr.isStaticallyZero,
   };
 }
-
 function analyzeSeatAggOver(
   over: unknown,
   referenceSeatIds: readonly string[] | undefined,
   diagnostics: Diagnostic[],
   path: string,
-): 'opponents' | 'all' | readonly string[] | null {
+): AgentPolicySeatAggOver | null {
   if (referenceSeatIds === undefined || referenceSeatIds.length === 0) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
@@ -1400,21 +1399,26 @@ function analyzeSeatAggOver(
     return null;
   }
 
-  if (over === 'opponents' || over === 'all') {
-    return over;
+  if (over === 'opponents' || over === 'all') return over;
+  if (typeof over === 'object' && over !== null && !Array.isArray(over)) {
+    const obj = over as Readonly<Record<string, unknown>>;
+    if (!validateAllowedObjectKeys(obj, ['role'], diagnostics, path)) return null;
+    if (!isAgentPolicyStandingRoleSelector(obj['role'])) {
+      diagnostics.push({ code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID, path: `${path}.role`, severity: 'error', message: `seatAgg.over.role must be one of: ${AGENT_POLICY_STANDING_ROLE_SELECTORS.join(', ')}.`, suggestion: 'Use "currentLeader", "nearestThreat", "closestAhead", or "closestBehind".' });
+      return null;
+    }
+    return { role: obj['role'] };
   }
-
   if (!Array.isArray(over) || over.length === 0) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'seatAgg.over must be "opponents", "all", or a non-empty array of canonical seat ids.',
-      suggestion: `Use "opponents", "all", or one of the resolved canonical seat ids: ${referenceSeatIds.join(', ')}.`,
+      message: 'seatAgg.over must be "opponents", "all", a role object, or a non-empty array of canonical seat ids.',
+      suggestion: `Use "opponents", "all", { role: "nearestThreat" }, or one of the resolved canonical seat ids: ${referenceSeatIds.join(', ')}.`,
     });
     return null;
   }
-
   const knownSeatIds = new Set(referenceSeatIds);
   const normalized: string[] = [];
   for (const [index, seatId] of over.entries()) {
@@ -1440,14 +1444,11 @@ function analyzeSeatAggOver(
     }
     normalized.push(seatId);
   }
-
   return normalized;
 }
-
 function containsSeatPlaceholder(refPath: string): boolean {
   return refPath.split('.').includes('$seat');
 }
-
 function validateAllowedObjectKeys(
   obj: Readonly<Record<string, unknown>>,
   allowedKeys: readonly string[],
@@ -1470,7 +1471,6 @@ function validateAllowedObjectKeys(
   }
   return valid;
 }
-
 function analyzeGlobalTokenAggTokenFilter(
   expr: unknown,
   diagnostics: Diagnostic[],

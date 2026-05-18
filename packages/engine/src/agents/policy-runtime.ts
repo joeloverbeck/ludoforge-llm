@@ -42,6 +42,7 @@ import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
   isSurfaceVisibilityAccessible,
+  isPolicyStandingRoleToken,
   resolveSurfaceRefValue,
   resolvePolicyRoleSelector,
   type PolicyValue,
@@ -155,6 +156,7 @@ export interface PolicyPreviewSurfaceProvider {
   getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
   getCompletionPolicyFallbackCount(candidate: PolicyRuntimeCandidate): number;
   getPreviewDrive(candidate: PolicyRuntimeCandidate): PolicyPreviewDriveTrace | undefined;
+  getOutcomeGrantContinuationDepth(candidate: PolicyRuntimeCandidate): number;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
@@ -448,6 +450,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
     fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
+    ...(activeProfile?.preview.outcomeGrantContinuation === undefined
+      ? {}
+      : { outcomeGrantContinuation: activeProfile.preview.outcomeGrantContinuation }),
     captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasMicroturnConsiderations
       ? { policyGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
@@ -615,6 +620,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             { ref },
           );
         }
+        if (ref.selector?.kind === 'role' && isPolicyStandingRoleToken(ref.selector.seatToken) && visibility.current !== 'public') {
+          return undefined;
+        }
         const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
           ? ref.selector.kind === 'player'
             ? ref.selector.player === 'self' ? Number(input.playerId) : Number(state.activePlayer)
@@ -679,6 +687,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getPreviewDrive(candidate) {
         return previewRuntime.getPreviewDrive(candidate);
+      },
+      getOutcomeGrantContinuationDepth(candidate) {
+        return previewRuntime.getOutcomeGrantContinuationDepth(candidate);
       },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);

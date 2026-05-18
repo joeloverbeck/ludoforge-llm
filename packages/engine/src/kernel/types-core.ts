@@ -63,6 +63,8 @@ import type {
   AgentPolicyMicroturnIntrinsic,
   AgentPolicyMicroturnOptionIntrinsic,
   AgentPolicyPreviewOptionRefKind,
+  AgentPolicySeatAggAvailability,
+  AgentPolicyStandingRoleSelector,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -70,13 +72,11 @@ import type {
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
 import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
-
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
   readonly version: 1;
   readonly state: readonly bigint[];
 }
-
 export interface Rng {
   readonly state: RngState;
 }
@@ -441,6 +441,7 @@ export type SurfaceSelector =
       readonly kind: 'player';
       readonly player: 'self' | 'active';
     };
+export type AgentPolicySeatAggOver = 'opponents' | 'all' | readonly string[] | { readonly role: AgentPolicyStandingRoleSelector };
 export interface CompiledSurfaceRefBase {
   readonly family: SurfaceRefFamily;
   readonly id: string;
@@ -614,9 +615,8 @@ export type AgentPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[];
-      readonly expr: AgentPolicyExpr;
-      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly over: AgentPolicySeatAggOver; readonly expr: AgentPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {
       readonly kind: 'zoneProp';
@@ -674,9 +674,8 @@ export type CompiledPolicyExpr =
     }
   | {
       readonly kind: 'seatAgg';
-      readonly over: 'opponents' | 'all' | readonly string[];
-      readonly expr: CompiledPolicyExpr;
-      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly over: AgentPolicySeatAggOver; readonly expr: CompiledPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp; readonly availability?: AgentPolicySeatAggAvailability;
     }
   | {
       readonly kind: 'zoneProp';
@@ -965,6 +964,7 @@ export type AgentPreviewFallbackCompletionPolicy = 'greedy' | 'fail';
 export type AgentPreviewBudgetStrategy = 'balancedCoverage';
 export type AgentPreviewInnerStrategy = 'singlePass' | 'continuedDeepening';
 export type AgentPreviewInnerCapClass = 'standard256' | 'deep1024';
+export type AgentPreviewPostGrantCapClass = 'postGrant16';
 export type DeepTrigger = 'allRequestedRefsDepthCapped' | 'allReadyValuesUniform';
 
 export interface CompiledAgentPreviewBudgetConfig {
@@ -998,6 +998,12 @@ export interface ContinuedDeepeningConfig {
   };
 }
 
+export interface CompiledAgentPreviewOutcomeGrantContinuationConfig {
+  readonly enabled: boolean;
+  readonly extraDepthCap: number;
+  readonly capClass: AgentPreviewPostGrantCapClass;
+}
+
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewAuthoredCompletionPolicy;
@@ -1005,6 +1011,7 @@ export interface CompiledAgentPreviewConfig {
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly inner?: CompiledAgentPreviewInnerConfig;
+  readonly outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }
@@ -1889,7 +1896,7 @@ export type PolicyScheduleInputRefTrace =
 
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
-  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
 }
 
 export interface PolicyLookupUnknownRefTrace {
@@ -1942,6 +1949,7 @@ export interface SyntheticDecisionTraceEntry {
 }
 
 export interface PolicyPreviewDriveTrace {
+  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'stochastic';
   readonly depth: number;
   readonly completionPolicy: AgentPreviewCompletionPolicy;
   readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
@@ -1976,7 +1984,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
-  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
@@ -1999,6 +2007,35 @@ export interface PolicyTieBreakStepTrace {
   readonly candidateCountAfter: number;
 }
 
+export type PolicyPreviewSeatMatrixStatusTrace =
+  | 'ready'
+  | 'stochastic'
+  | 'random'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'postGrantCap'
+  | 'noPreviewDecision'
+  | 'gated';
+
+export type PolicyPreviewSeatMatrixCellTrace =
+  | {
+      readonly status: 'ready';
+      readonly value: number;
+    }
+  | {
+      readonly status: Exclude<PolicyPreviewSeatMatrixStatusTrace, 'ready'>;
+    };
+
+export interface PolicyPreviewSeatMatrixCandidateTrace {
+  readonly perSeatRefs: Readonly<Record<string, Readonly<Record<string, PolicyPreviewSeatMatrixCellTrace>>>>;
+}
+
+export interface PolicyPreviewSeatMatrixTrace {
+  readonly byCandidate: Readonly<Record<string, PolicyPreviewSeatMatrixCandidateTrace>>;
+}
+
 export interface PolicyPreviewUsageTrace {
   readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
@@ -2006,10 +2043,24 @@ export interface PolicyPreviewUsageTrace {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
+  readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
+  readonly outcomeGrantContinuation?: PolicyPreviewOutcomeGrantContinuationTrace;
   readonly utility: PolicyPreviewUtilityTrace;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverageTrace;
+}
+
+export interface PolicyPreviewOutcomeGrantContinuationTrace {
+  readonly enabled: true;
+  readonly extraDepthCap: number;
+  readonly capClass: AgentPreviewPostGrantCapClass;
+  readonly extraDepthReached: number;
+  readonly exitCounts: {
+    readonly completed: number;
+    readonly postGrantCap: number;
+    readonly stochastic: number;
+  };
 }
 
 export interface PolicyPreviewCoverageTrace {
@@ -2041,7 +2092,8 @@ export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnknownRefTrace['reason'], number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnknownRefTrace['reason'], 'postGrantCap'>, number> & {
+    readonly postGrantCap?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;

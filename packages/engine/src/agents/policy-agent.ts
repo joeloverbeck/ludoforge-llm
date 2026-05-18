@@ -205,8 +205,11 @@ const selectionReasonForFrontierCandidate = (
 const unavailabilityBreakdownFor = (
   frontier: readonly FrontierCandidate[],
   previewUsage?: PolicyEvaluationMetadata['previewUsage'],
-): Readonly<Record<PolicyPreviewUnavailabilityReason, number>> => {
-  const breakdown: Record<PolicyPreviewUnavailabilityReason, number> & { afterDeepPass?: number } = {
+): PolicyPreviewSignalUnavailableAdvisory['unavailabilityBreakdown'] => {
+  const breakdown: Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap'>, number> & {
+    postGrantCap?: number;
+    afterDeepPass?: number;
+  } = {
     random: 0,
     hidden: 0,
     unresolved: 0,
@@ -217,7 +220,11 @@ const unavailabilityBreakdownFor = (
   };
   for (const candidate of frontier) {
     for (const reason of candidate.unknownPreviewRefs?.values() ?? []) {
-      breakdown[reason] += 1;
+      if (reason === 'postGrantCap') {
+        breakdown.postGrantCap = (breakdown.postGrantCap ?? 0) + 1;
+      } else {
+        breakdown[reason] += 1;
+      }
     }
   }
   if (previewUsage?.coverage.deep !== undefined) {

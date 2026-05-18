@@ -64,6 +64,14 @@ agents:
         type: number
         expr:
           ref: victory.currentMargin.self
+      nvaMargin:
+        type: number
+        expr:
+          ref: victory.currentMargin.nva
+      vcMargin:
+        type: number
+        expr:
+          ref: victory.currentMargin.vc
       patronage:
         type: number
         expr:
@@ -136,6 +144,18 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
+      projectedNvaMargin:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.victory.currentMargin.nva }
+            - { ref: feature.nvaMargin }
+      projectedVcMargin:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.victory.currentMargin.vc }
+            - { ref: feature.vcMargin }
       projectedCapabilityGain:
         type: number
         expr:
@@ -152,6 +172,22 @@ agents:
           coalesce:
             - { ref: preview.victory.currentRank.self }
             - { ref: feature.selfRank }
+      projectedCurrentLeaderMargin:
+        type: number
+        expr:
+          seatAgg:
+            over: { role: currentLeader }
+            expr: { ref: preview.victory.currentMargin.$seat }
+            aggOp: sum
+            availability: selfAndTargetReady
+      projectedNearestThreatMargin:
+        type: number
+        expr:
+          seatAgg:
+            over: { role: nearestThreat }
+            expr: { ref: preview.victory.currentMargin.$seat }
+            aggOp: sum
+            availability: selfAndTargetReady
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -383,6 +419,29 @@ agents:
                 - sub:
                     - { ref: aggregate.maxMarginScore }
                     - { ref: aggregate.minMarginScore }
+      penalizeOpponentMargin:
+        scopes: [move]
+        weight: -200
+        value:
+          add:
+            - { ref: feature.projectedNvaMargin }
+            - { ref: feature.projectedVcMargin }
+      hurtCurrentLeader:
+        scopes: [move]
+        weight: 600
+        value:
+          neg:
+            ref: feature.projectedCurrentLeaderMargin
+        previewFallback:
+          onUnavailable: noContribution
+      reduceNearestThreat:
+        scopes: [move]
+        weight: 600
+        value:
+          neg:
+            ref: feature.projectedNearestThreatMargin
+        previewFallback:
+          onUnavailable: noContribution
       valueCapabilityGain:
         scopes: [move]
         weight: 300
@@ -484,6 +543,10 @@ agents:
                 - allRequestedRefsDepthCapped
                 - allReadyValuesUniform
               rootPolicy: allRootsWithinCap
+        outcomeGrantContinuation:
+          enabled: true
+          extraDepthCap: 4
+          capClass: postGrant16
       params:
         projectedMarginWeight: 300
         governWeight: 1000
@@ -495,6 +558,9 @@ agents:
           - preferProjectedSelfMargin
           - preferProjectedRank
           - preferStrongNormalizedMargin
+          - penalizeOpponentMargin
+          - hurtCurrentLeader
+          - reduceNearestThreat
           - preferGovernWeighted
           - trainWhenControlLow
           - preferOptionProjectedMargin

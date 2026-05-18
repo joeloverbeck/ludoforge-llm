@@ -21,6 +21,8 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { extractAnnotationValue } from './policy-annotation-resolve.js';
+import { parsePolicyStandingRoleToken } from './policy-standing-roles.js';
+import type { AgentPolicyStandingRoleSelector } from '../contracts/index.js';
 
 export interface PolicyVictorySurface {
   readonly marginBySeat: ReadonlyMap<string, number>;
@@ -387,7 +389,39 @@ export function resolvePolicyRoleSelector(
   if (seatToken === '$seat') {
     return seatContext;
   }
+  const role = parsePolicyStandingRoleToken(seatToken);
+  if (role !== undefined) return resolvePolicyStandingRoleSelector(def, state, role, actingSeatId);
   return seatToken;
+}
+
+export function resolvePolicyStandingRoleSelector(
+  def: GameDef | undefined,
+  state: GameState,
+  role: AgentPolicyStandingRoleSelector,
+  actingSeatId: string,
+): string | undefined {
+  if (def === undefined) return undefined;
+  const surface = buildPolicyVictorySurface(def, state);
+  const rankedSeats = [...surface.rankBySeat.entries()]
+    .sort((left, right) => left[1] - right[1])
+    .map(([seatId]) => seatId);
+  const selfRank = surface.rankBySeat.get(actingSeatId);
+  switch (role) {
+    case 'currentLeader':
+      return rankedSeats[0];
+    case 'nearestThreat':
+      return rankedSeats.find((seatId) => seatId !== actingSeatId);
+    case 'closestAhead':
+      if (selfRank === undefined) return undefined;
+      return rankedSeats.filter((seatId) => (surface.rankBySeat.get(seatId) ?? Number.MAX_SAFE_INTEGER) < selfRank).at(-1);
+    case 'closestBehind':
+      if (selfRank === undefined) return undefined;
+      return rankedSeats.find((seatId) => (surface.rankBySeat.get(seatId) ?? 0) > selfRank);
+  }
+}
+
+export function isPolicyStandingRoleToken(seatToken: string): boolean {
+  return parsePolicyStandingRoleToken(seatToken) !== undefined;
 }
 
 export type StrategicConditionRefField = 'satisfied' | 'proximity';

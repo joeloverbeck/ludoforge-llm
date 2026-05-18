@@ -761,6 +761,11 @@ export interface GameSpecAgentProfileDef {
         };
       };
     };
+    readonly outcomeGrantContinuation?: {
+      readonly enabled?: boolean;
+      readonly extraDepthCap?: number;
+      readonly capClass?: string;
+    };
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;
   };

@@ -3,7 +3,8 @@ import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
   AGENT_POLICY_MICROTURN_INTRINSICS,
   AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
-  AGENT_POLICY_PREVIEW_OPTION_REF_KINDS,
+  AGENT_POLICY_PREVIEW_OPTION_REF_KINDS, AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
+  AGENT_POLICY_STANDING_ROLE_SELECTORS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_FILTER_OPS,
   AGENT_POLICY_ZONE_SCOPES,
@@ -833,6 +834,13 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
 ]);
 
+const AgentPolicySeatAggOverSchema = z.union([
+  z.literal('opponents'),
+  z.literal('all'),
+  z.array(StringSchema).readonly(),
+  z.object({ role: z.enum(AGENT_POLICY_STANDING_ROLE_SELECTORS) }).strict(),
+]);
+
 const AgentPolicyTokenFilterSchema = z.object({
   type: StringSchema.optional(),
   props: z.record(
@@ -934,13 +942,9 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('seatAgg'),
-      over: z.union([
-        z.literal('opponents'),
-        z.literal('all'),
-        z.array(StringSchema).readonly(),
-      ]),
-      expr: AgentPolicyExprSchema,
-      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      over: AgentPolicySeatAggOverSchema,
+      expr: AgentPolicyExprSchema, aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      availability: z.enum(AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES).optional(),
     }).strict(),
     z.object({
       kind: z.literal('zoneProp'),
@@ -1027,13 +1031,9 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       kind: z.literal('seatAgg'),
-      over: z.union([
-        z.literal('opponents'),
-        z.literal('all'),
-        z.array(StringSchema).readonly(),
-      ]),
-      expr: CompiledPolicyExprSchema,
-      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      over: AgentPolicySeatAggOverSchema,
+      expr: CompiledPolicyExprSchema, aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      availability: z.enum(AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES).optional(),
     }).strict(),
     z.object({
       kind: z.literal('zoneProp'),
@@ -1345,6 +1345,14 @@ const CompiledAgentProfileSchema = z
               })
               .strict()
               .optional(),
+          })
+          .strict()
+          .optional(),
+        outcomeGrantContinuation: z
+          .object({
+            enabled: z.boolean(),
+            extraDepthCap: z.number().int().positive(),
+            capClass: z.literal('postGrant16'),
           })
           .strict()
           .optional(),
@@ -2217,6 +2225,7 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
       z.literal('depthCap'),
+      z.literal('postGrantCap'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]),
@@ -2263,6 +2272,7 @@ const SyntheticDecisionTraceEntrySchema = z
 
 const PolicyPreviewDriveTraceSchema = z
   .object({
+    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'stochastic']).optional(),
     depth: IntegerSchema.nonnegative(),
     completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
@@ -2387,6 +2397,41 @@ const PolicyPreviewCoverageTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
+  // Spec 179: decision-level aggregate for the opt-in post-grant preview drive.
+  .object({
+    enabled: z.literal(true),
+    extraDepthCap: IntegerSchema.positive(),
+    capClass: z.literal('postGrant16'),
+    extraDepthReached: IntegerSchema.nonnegative(),
+    exitCounts: z
+      .object({
+        completed: IntegerSchema.nonnegative(),
+        postGrantCap: IntegerSchema.nonnegative(),
+        stochastic: IntegerSchema.nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+
+const PolicyPreviewSeatMatrixCellTraceSchema = z
+  .discriminatedUnion('status', [
+    z.object({ status: z.literal('ready'), value: NumberSchema }).strict(),
+    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'noPreviewDecision', 'gated']) }).strict(),
+  ]);
+
+const PolicyPreviewSeatMatrixCandidateTraceSchema = z
+  .object({
+    perSeatRefs: z.record(StringSchema, z.record(StringSchema, PolicyPreviewSeatMatrixCellTraceSchema)),
+  })
+  .strict();
+
+const PolicyPreviewSeatMatrixTraceSchema = z
+  .object({
+    byCandidate: z.record(StringSchema, PolicyPreviewSeatMatrixCandidateTraceSchema),
+  })
+  .strict();
+
 const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
@@ -2395,6 +2440,8 @@ const PolicyPreviewUsageTraceSchema = z
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
+    seatMatrix: PolicyPreviewSeatMatrixTraceSchema.optional(),
+    outcomeGrantContinuation: PolicyPreviewOutcomeGrantContinuationTraceSchema.optional(),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
@@ -2418,6 +2465,7 @@ const PolicyPreviewSignalUnavailableAdvisoryTraceSchema = z
       unresolved: IntegerSchema.nonnegative(),
       failed: IntegerSchema.nonnegative(),
       depthCap: IntegerSchema.nonnegative(),
+      postGrantCap: IntegerSchema.nonnegative().optional(),
       noPreviewDecision: IntegerSchema.nonnegative(),
       gated: IntegerSchema.nonnegative(),
       afterDeepPass: IntegerSchema.nonnegative().optional(),

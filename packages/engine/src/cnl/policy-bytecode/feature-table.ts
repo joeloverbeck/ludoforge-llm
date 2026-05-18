@@ -239,7 +239,7 @@ export function collectFeatureRefsFromCompiledPolicyExpr(
         refs.push({
           kind: 'seatAgg',
           layoutIndex: DYNAMIC_LAYOUT_INDEX,
-          aux: [aggOpCode(current.aggOp), stablePayloadCode(current.over)],
+          aux: [aggOpCode(current.aggOp), stablePayloadCode(current.over), stablePayloadCode(current.availability ?? 'skipUnavailable')],
         });
         return;
       case 'zoneProp':

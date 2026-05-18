@@ -2007,7 +2007,7 @@
                   "unknownRefs": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_a6408f6b"
+                      "$ref": "#/definitions/anon_27d91bdf"
                     }
                   },
                   "readyRefStats": {
@@ -2078,6 +2078,158 @@
                       ],
                       "additionalProperties": false
                     }
+                  },
+                  "seatMatrix": {
+                    "type": "object",
+                    "properties": {
+                      "byCandidate": {
+                        "type": "object",
+                        "propertyNames": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "perSeatRefs": {
+                              "type": "object",
+                              "propertyNames": {
+                                "$ref": "#/definitions/anon_4682db72"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "additionalProperties": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "const": "ready"
+                                        },
+                                        "value": {
+                                          "$ref": "#/definitions/anon_c0e4ebfe"
+                                        }
+                                      },
+                                      "required": [
+                                        "status",
+                                        "value"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "stochastic",
+                                            "random",
+                                            "hidden",
+                                            "unresolved",
+                                            "failed",
+                                            "depthCap",
+                                            "postGrantCap",
+                                            "noPreviewDecision",
+                                            "gated"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "status"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "required": [
+                            "perSeatRefs"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "byCandidate"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "outcomeGrantContinuation": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "const": true
+                      },
+                      "extraDepthCap": {
+                        "exclusiveMinimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "capClass": {
+                        "type": "string",
+                        "const": "postGrant16"
+                      },
+                      "extraDepthReached": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "exitCounts": {
+                        "type": "object",
+                        "properties": {
+                          "completed": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
+                          "postGrantCap": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
+                          "stochastic": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "completed",
+                          "postGrantCap",
+                          "stochastic"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "enabled",
+                      "extraDepthCap",
+                      "capClass",
+                      "extraDepthReached",
+                      "exitCounts"
+                    ],
+                    "additionalProperties": false
                   },
                   "utility": {
                     "type": "string",
@@ -2321,6 +2473,14 @@
                             }
                           ]
                         },
+                        "postGrantCap": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
                         "noPreviewDecision": {
                           "minimum": 0,
                           "allOf": [
@@ -2499,7 +2659,7 @@
                     "unknownPreviewRefs": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_a6408f6b"
+                        "$ref": "#/definitions/anon_27d91bdf"
                       }
                     },
                     "unknownLookupRefs": {
@@ -2889,6 +3049,15 @@
                     "previewDrive": {
                       "type": "object",
                       "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "completed",
+                            "depthCap",
+                            "postGrantCap",
+                            "stochastic"
+                          ]
+                        },
                         "depth": {
                           "minimum": 0,
                           "allOf": [
@@ -3913,6 +4082,55 @@
       "items": {
         "$ref": "#/definitions/anon_3a403105"
       }
+    },
+    "anon_27d91bdf": {
+      "type": "object",
+      "properties": {
+        "refId": {
+          "$ref": "#/definitions/anon_4682db72"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "random"
+            },
+            {
+              "type": "string",
+              "const": "hidden"
+            },
+            {
+              "type": "string",
+              "const": "unresolved"
+            },
+            {
+              "type": "string",
+              "const": "failed"
+            },
+            {
+              "type": "string",
+              "const": "depthCap"
+            },
+            {
+              "type": "string",
+              "const": "postGrantCap"
+            },
+            {
+              "type": "string",
+              "const": "noPreviewDecision"
+            },
+            {
+              "type": "string",
+              "const": "gated"
+            }
+          ]
+        }
+      },
+      "required": [
+        "refId",
+        "reason"
+      ],
+      "additionalProperties": false
     },
     "anon_3456318e": {
       "minItems": 1,
@@ -6898,51 +7116,6 @@
         "decisionKey",
         "decision",
         "frameId"
-      ],
-      "additionalProperties": false
-    },
-    "anon_a6408f6b": {
-      "type": "object",
-      "properties": {
-        "refId": {
-          "$ref": "#/definitions/anon_4682db72"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "random"
-            },
-            {
-              "type": "string",
-              "const": "hidden"
-            },
-            {
-              "type": "string",
-              "const": "unresolved"
-            },
-            {
-              "type": "string",
-              "const": "failed"
-            },
-            {
-              "type": "string",
-              "const": "depthCap"
-            },
-            {
-              "type": "string",
-              "const": "noPreviewDecision"
-            },
-            {
-              "type": "string",
-              "const": "gated"
-            }
-          ]
-        }
-      },
-      "required": [
-        "refId",
-        "reason"
       ],
       "additionalProperties": false
     },

@@ -6,6 +6,7 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
   CompiledAgentPreviewBudgetConfig,
+  CompiledAgentPreviewOutcomeGrantContinuationConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
   DeepTrigger,
@@ -17,6 +18,8 @@ import type {
   LookupUnavailabilityReason,
   Move,
   PolicyPreviewOutcomeBreakdownTrace,
+  PolicyPreviewSeatMatrixCellTrace,
+  PolicyPreviewSeatMatrixTrace,
   Rng,
   TrustedExecutableMove,
 } from '../kernel/types.js';
@@ -207,10 +210,24 @@ export interface PolicyEvaluationPreviewUsage {
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
+  readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
+  readonly outcomeGrantContinuation?: PolicyEvaluationOutcomeGrantContinuationUsage;
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverage;
+}
+
+export interface PolicyEvaluationOutcomeGrantContinuationUsage {
+  readonly enabled: true;
+  readonly extraDepthCap: number;
+  readonly capClass: CompiledAgentPreviewOutcomeGrantContinuationConfig['capClass'];
+  readonly extraDepthReached: number;
+  readonly exitCounts: {
+    readonly completed: number;
+    readonly postGrantCap: number;
+    readonly stochastic: number;
+  };
 }
 
 export interface PolicyPreviewCoverage {
@@ -242,7 +259,8 @@ export interface PolicyPreviewSignalUnavailableAdvisory {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnavailabilityReason, number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap'>, number> & {
+    readonly postGrantCap?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;
@@ -338,7 +356,9 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  outcomeGrantContinuationDepth?: number;
   completionPolicyFallbackCount?: number;
+  previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
   candidateParamFallbackFired?: Map<string, number>;
   grantedOperation?: PolicyPreviewGrantedOperation;
@@ -869,7 +889,13 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         candidates.length,
         ` selectedCandidates=${selectionCandidates.length} finalScore=${selected.score}`,
       );
-      const previewUsageForMemory = summarizePreviewUsage(candidates, profile.preview.mode, evaluation);
+      const previewUsageForMemory = summarizePreviewUsage(
+        candidates,
+        profile.preview.mode,
+        evaluation,
+        false,
+        profile.preview.outcomeGrantContinuation,
+      );
       updatePreviewWideningMemory(
         input.previewWideningState,
         allocatorOutput.decisionClassKey,
@@ -1105,6 +1131,7 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
       scoreContributions: [],
       previewRefIds: new Set<string>(),
       unknownPreviewRefs: new Map<string, PolicyPreviewUnavailabilityReason>(),
+      previewSeatMatrix: new Map(),
       unknownLookupRefs: new Map<string, LookupUnavailabilityReason>(),
       unknownCandidateParamRefs: new Map<string, CandidateParamUnavailabilityReason>(),
       score: Number.NEGATIVE_INFINITY,
@@ -1160,6 +1187,10 @@ function scoreCandidateForGateFlipProbe(
     scoreContributions: [],
     previewRefIds: new Set(candidate.previewRefIds),
     unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
+    previewSeatMatrix: new Map(
+      [...candidate.previewSeatMatrix?.entries() ?? []]
+        .map(([refId, seatCells]) => [refId, new Map(seatCells)]),
+    ),
     unknownLookupRefs: new Map(candidate.unknownLookupRefs),
     unknownCandidateParamRefs: new Map(candidate.unknownCandidateParamRefs),
     ...(candidate.scheduleInputRefs === undefined ? {} : { scheduleInputRefs: new Map(candidate.scheduleInputRefs) }),
@@ -1170,6 +1201,9 @@ function scoreCandidateForGateFlipProbe(
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
+    ...(candidate.outcomeGrantContinuationDepth === undefined
+      ? {}
+      : { outcomeGrantContinuationDepth: candidate.outcomeGrantContinuationDepth }),
     ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
   };
   return considerationIds.reduce((total, considerationId) => (
@@ -1224,6 +1258,7 @@ function summarizePreviewUsage(
   mode: AgentPreviewMode,
   evaluation: PolicyEvaluationContext,
   widenedBecauseUniform = false,
+  outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig,
 ): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
@@ -1234,6 +1269,7 @@ function summarizePreviewUsage(
   }
   const sortedRefIds = [...refIds].sort();
   const readyRefStats = summarizeReadyRefStats(candidates, sortedRefIds, evaluation);
+  const seatMatrix = summarizeSeatMatrix(evaluatedCandidates);
   return {
     mode,
     evaluatedCandidateCount: evaluatedCandidates.length,
@@ -1246,6 +1282,10 @@ function summarizePreviewUsage(
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
+    ...(seatMatrix === undefined ? {} : { seatMatrix }),
+    ...(outcomeGrantContinuation?.enabled === true
+      ? { outcomeGrantContinuation: summarizeOutcomeGrantContinuation(evaluatedCandidates, outcomeGrantContinuation) }
+      : {}),
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform,
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
@@ -1260,6 +1300,70 @@ function summarizePreviewUsage(
       selectedByTieBreakerBecausePreviewUnavailable: false,
       strategy: 'singlePass',
       capClass: 'standard256',
+    },
+  };
+}
+
+function summarizeSeatMatrix(evaluatedCandidates: readonly CandidateEntry[]): PolicyPreviewSeatMatrixTrace | undefined {
+  const byCandidate: Record<string, PolicyPreviewSeatMatrixTrace['byCandidate'][string]> = {};
+  for (const candidate of [...evaluatedCandidates].sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey))) {
+    if (candidate.previewSeatMatrix === undefined || candidate.previewSeatMatrix.size === 0) {
+      continue;
+    }
+    const perSeatRefs: Record<string, PolicyPreviewSeatMatrixTrace['byCandidate'][string]['perSeatRefs'][string]> = {};
+    for (const [refId, seatCells] of [...candidate.previewSeatMatrix.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (seatCells.size === 0) {
+        continue;
+      }
+      perSeatRefs[refId] = Object.fromEntries([...seatCells.entries()].sort(([left], [right]) => left.localeCompare(right)));
+    }
+    if (Object.keys(perSeatRefs).length > 0) {
+      byCandidate[candidate.stableMoveKey] = { perSeatRefs };
+    }
+  }
+  return Object.keys(byCandidate).length === 0 ? undefined : { byCandidate };
+}
+
+function summarizeOutcomeGrantContinuation(
+  evaluatedCandidates: readonly CandidateEntry[],
+  config: CompiledAgentPreviewOutcomeGrantContinuationConfig,
+): PolicyEvaluationOutcomeGrantContinuationUsage {
+  let completed = 0;
+  let postGrantCap = 0;
+  let stochastic = 0;
+  let extraDepthReached = 0;
+
+  for (const candidate of evaluatedCandidates) {
+    const postGrantDepth = candidate.outcomeGrantContinuationDepth ?? 0;
+    if (postGrantDepth <= 0) {
+      continue;
+    }
+    extraDepthReached = Math.max(extraDepthReached, postGrantDepth);
+    switch (candidate.previewDrive?.kind) {
+      case 'completed':
+        completed += 1;
+        break;
+      case 'postGrantCap':
+        postGrantCap += 1;
+        break;
+      case 'stochastic':
+        stochastic += 1;
+        break;
+      case 'depthCap':
+      case undefined:
+        break;
+    }
+  }
+
+  return {
+    enabled: true,
+    extraDepthCap: config.extraDepthCap,
+    capClass: config.capClass,
+    extraDepthReached,
+    exitCounts: {
+      completed,
+      postGrantCap,
+      stochastic,
     },
   };
 }
@@ -1437,7 +1541,7 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
-    if (outcome === 'depthCap') {
+    if (outcome === 'depthCap' || outcome === 'postGrantCap') {
       depthCap += 1;
       continue;
     }

@@ -1674,6 +1674,8 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'selector':
+        return undefined;
       case 'candidateTag': {
         if (candidate === undefined) return undefined;
         const tags = this.input.def.actionTagIndex?.byAction[candidate.actionId];

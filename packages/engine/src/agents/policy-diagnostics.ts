@@ -22,6 +22,7 @@ export interface PolicyDiagnosticsSnapshot {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
+    readonly selectors: readonly string[];
     readonly pruningRules: readonly string[];
     readonly considerations: readonly string[];
     readonly tieBreakers: readonly string[];
@@ -58,6 +59,7 @@ export function buildPolicyDiagnosticsSnapshot(
         stateFeatures: [],
         candidateFeatures: [],
         candidateAggregates: [],
+        selectors: [],
         pruningRules: [],
         considerations: [],
         tieBreakers: [],
@@ -88,6 +90,7 @@ export function buildPolicyDiagnosticsSnapshot(
       stateFeatures: profile.plan.stateFeatures,
       candidateFeatures: profile.plan.candidateFeatures,
       candidateAggregates: profile.plan.candidateAggregates,
+      selectors: profile.plan.selectors ?? [],
       pruningRules: profile.use.pruningRules,
       considerations: profile.use.considerations,
       tieBreakers: profile.use.tieBreakers,
@@ -193,6 +196,17 @@ function collectCostTiers(
     const aggregate = catalog.library.candidateAggregates[aggregateId];
     if (aggregate !== undefined) {
       push(aggregate.costClass, `aggregate:${aggregateId}`);
+    }
+  }
+  for (const selectorId of profile.plan.selectors ?? []) {
+    const selector = catalog.library.selectors?.[selectorId];
+    if (selector !== undefined) {
+      const costClass = selector.costClass === 'preview'
+        ? 'preview'
+        : selector.costClass === 'state'
+          ? 'state'
+          : 'candidate';
+      push(costClass, `selector:${selectorId}`);
     }
   }
   for (const ruleId of profile.use.pruningRules) {
@@ -303,6 +317,16 @@ function collectSurfaceRefs(
       walkExpr(aggregate.of, visitRef);
       if (aggregate.where !== undefined) {
         walkExpr(aggregate.where, visitRef);
+      }
+    }
+  }
+  for (const selectorId of profile.plan.selectors ?? []) {
+    const selector = catalog.compiled.selectors?.[selectorId];
+    if (selector !== undefined) {
+      if (selector.where !== undefined) walkExpr(selector.where, visitRef);
+      if (selector.minImpact !== undefined) walkExpr(selector.minImpact, visitRef);
+      for (const component of selector.quality?.components ?? []) {
+        walkExpr(component.value, visitRef);
       }
     }
   }

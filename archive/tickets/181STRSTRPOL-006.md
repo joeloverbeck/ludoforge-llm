@@ -1,6 +1,6 @@
 # 181STRSTRPOL-006: Phase 1 — Selector compiled IR, library bucket, compiler diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, `packages/engine/src/kernel/types-core.ts`
@@ -184,3 +184,46 @@ Add a stub `### Selectors` section to `docs/agent-dsl-cookbook.md` linking to th
 
 1. `pnpm -F @ludoforge/engine test -- agent-selector`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-18)
+
+Implemented the Phase 1 selector compiler/IR substrate:
+
+- Added the `selectors` agent library bucket, selector authoring types, compiled IR types, selector refs, selector cost classes, and selector cap metadata.
+- Added selector lowering through `compile-agents.ts`, extracted selector normalization helpers to `packages/engine/src/cnl/compile-agent-selectors.ts`, wired selector dependencies into policy expression analysis, diagnostics, policy bytecode feature-table traversal, and schema artifacts.
+- Added profile-level `selector.maxCostClass` validation without emitting default selector metadata for profiles that do not use selectors, preserving existing non-selector catalog shapes.
+- Added selector diagnostics and positive-trigger tests for all selector diagnostic codes in `packages/engine/test/unit/cnl/agent-selector-diagnostics.test.ts`.
+- Added selector IR happy-path, dependency-cycle, and cost-class derivation tests in `packages/engine/test/unit/cnl/agent-selector-ir.test.ts`.
+- Added the cookbook `### Selectors` placeholder in `docs/agent-dsl-cookbook.md`.
+
+Deviations and substitutions:
+
+- The ticket's test paths named `packages/engine/test/cnl/...`; the live repo uses `packages/engine/test/unit/cnl/...`, so the new tests landed there.
+- The literal command `pnpm -F @ludoforge/engine test -- agent-selector` is not a valid current runner selector; it fails with `Could not find 'agent-selector'`. The proving replacement is the direct compiled Node test command for the two selector test files after `pnpm -F @ludoforge/engine build`.
+- Broad `pnpm turbo test` remains red outside this ticket: with production GameDef cache disabled, `arvn-evolved` compiles from the live FITL profile with already-present considerations (`penalizeOpponentMargin`, `hurtCurrentLeader`, `reduceNearestThreat`) that the Spec 178 parity fixtures and `fitl-policy-catalog.golden.json` do not include. The failure is in `packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js`, not in selector tests.
+
+Source-size ledger:
+
+| File | Before | After | Active delta | Note |
+| --- | ---: | ---: | ---: | --- |
+| `packages/engine/src/cnl/compile-agents.ts` | 4720 | 5172 | +452 | Pre-existing oversize central compiler. Selector-specific parsing/normalization was extracted to `compile-agent-selectors.ts`; residual orchestration stays in the central compiler because it owns library dependency planning, profile lowering, and ref resolution. |
+| `packages/engine/src/cnl/compile-agent-selectors.ts` | 0 | 253 | +253 | New focused helper below the cap. |
+| `packages/engine/src/kernel/schemas-core.ts` | 2799 | 2890 | +91 | Pre-existing oversize central schema file; selector schema additions stay with the adjacent agent policy schemas. |
+| `packages/engine/src/kernel/types-core.ts` | 2377 | 2463 | +86 | Pre-existing oversize central kernel contract file; selector IR types are colocated with the compiled agent policy contracts they extend. |
+| `packages/engine/src/cnl/game-spec-doc.ts` | 882 | 920 | +38 | Pre-existing oversize authoring contract file; selector authoring types are colocated with other agent authoring types. |
+| `packages/engine/src/agents/policy-expr.ts` | 1767 | 1771 | +4 | Optional selector dependency propagation only. |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2285 | 2287 | +2 | Runtime selector refs are explicitly non-evaluating until 007. |
+| `packages/engine/src/cnl/policy-bytecode/feature-table.ts` | 616 | 623 | +7 | Selector expression traversal only. |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — pass
+- `node --test packages/engine/dist/test/unit/cnl/agent-selector-ir.test.js packages/engine/dist/test/unit/cnl/agent-selector-diagnostics.test.js` — pass (7 tests)
+- `node --test packages/engine/dist/test/unit/agents/policy-expr.test.js packages/engine/dist/test/unit/compile-agents-authoring.test.js packages/engine/dist/test/unit/cnl/agent-selector-ir.test.js packages/engine/dist/test/unit/cnl/agent-selector-diagnostics.test.js` — pass (95 tests)
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — pass
+- `pnpm run check:ticket-deps` — pass
+- `git diff --check` — pass
+- `pnpm turbo build` — pass
+- `pnpm turbo lint` — pass
+- `pnpm turbo typecheck` — pass
+- `pnpm turbo test` — red in the unrelated FITL Spec 178 parity fixture drift described above

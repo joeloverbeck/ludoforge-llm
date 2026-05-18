@@ -13,6 +13,7 @@ import type {
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
   CompiledPolicyPruningRule,
+  CompiledPolicySelector,
   CompiledPolicyStateFeature,
   CompiledPolicyStrategicCondition,
   CompiledPolicyTieBreaker,
@@ -45,6 +46,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly where?: AgentPolicyExpr;
     readonly dependencies: CompiledAgentDependencyRefs;
   }>>;
+  readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
   readonly pruningRules: Readonly<Record<string, {
     readonly costClass: AgentPolicyCostClass;
     readonly when: AgentPolicyExpr;
@@ -92,6 +94,7 @@ export function lowerAgentConsiderations(
   const stateFeatures: Record<string, CompiledPolicyStateFeature> = {};
   const candidateFeatures: Record<string, CompiledPolicyCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledPolicyAggregate> = {};
+  const selectors: Record<string, CompiledPolicySelector> = {};
   const pruningRules: Record<string, CompiledPolicyPruningRule> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
@@ -117,6 +120,33 @@ export function lowerAgentConsiderations(
       ...aggregate,
       of,
       ...(where === null ? {} : { where }),
+    };
+  }
+
+  for (const [selectorId, selector] of Object.entries(library.selectors)) {
+    const where = selector.where === undefined ? null : lowerAgentPolicyExpr(selector.where);
+    const minImpact = selector.minImpact === undefined ? null : lowerAgentPolicyExpr(selector.minImpact);
+    const components = selector.quality?.components.map((component) => {
+      const value = lowerAgentPolicyExpr(component.value);
+      return value === null ? null : { ...component, value };
+    });
+    if (
+      (selector.where !== undefined && where === null)
+      || (selector.minImpact !== undefined && minImpact === null)
+      || components?.some((component) => component === null) === true
+    ) {
+      continue;
+    }
+    selectors[selectorId] = {
+      ...selector,
+      ...(where === null ? {} : { where }),
+      ...(selector.quality === undefined ? {} : {
+        quality: {
+          ...selector.quality,
+          components: components as NonNullable<CompiledPolicySelector['quality']>['components'],
+        },
+      }),
+      ...(minImpact === null ? {} : { minImpact }),
     };
   }
 
@@ -187,6 +217,7 @@ export function lowerAgentConsiderations(
     stateFeatures,
     candidateFeatures,
     candidateAggregates,
+    ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     pruningRules,
     considerations,
     tieBreakers,

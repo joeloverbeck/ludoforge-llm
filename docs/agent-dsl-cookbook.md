@@ -1236,6 +1236,39 @@ Guidance:
 
 If you use `softmaxSample`, you must provide `temperature`.
 
+### Selectors
+
+Selectors are the first-class ranking layer introduced by Spec 181. They live
+under `agents.library.selectors` and rank a finite source such as zones,
+tokens, cards, players, microturn options, candidate params, or a bounded
+product. This ticket lands the compiler IR and diagnostics only; runtime
+selector evaluation and production ARVN examples land in follow-up tickets.
+
+```yaml
+agents:
+  library:
+    selectors:
+      zonePriority:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: constant
+              value: 1
+              weight: 1
+          order: qualityDesc
+        result:
+          maxItems: 4
+          order: [qualityDesc, stableKeyAsc]
+          onEmpty: noContribution
+```
+
+Selector result bounds are mandatory (`maxItems`, and `maxPairs` for product
+sources), and deterministic result ordering must include a stable-key
+tiebreaker. Components that read preview-derived refs must declare an explicit
+`previewFallback`.
+
 ## Full Production-Style Example
 
 ```yaml

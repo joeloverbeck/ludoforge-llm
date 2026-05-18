@@ -600,6 +600,13 @@ function forEachCompiledPolicyExpr(def: GameDef, visit: (expr: CompiledPolicyExp
     visit(aggregate.of);
     if (aggregate.where !== undefined) visit(aggregate.where);
   }
+  for (const selector of Object.values(compiled.selectors ?? {})) {
+    if (selector.where !== undefined) visit(selector.where);
+    if (selector.minImpact !== undefined) visit(selector.minImpact);
+    for (const component of selector.quality?.components ?? []) {
+      visit(component.value);
+    }
+  }
   for (const rule of Object.values(compiled.pruningRules)) visit(rule.when);
   for (const consideration of Object.values(compiled.considerations)) {
     if (consideration.when !== undefined) visit(consideration.when);

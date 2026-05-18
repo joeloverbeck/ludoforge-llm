@@ -371,6 +371,13 @@ export type AgentParameterType = 'number' | 'integer' | 'boolean' | 'enum' | 'id
 export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
+export type SelectorCostClass = 'state' | 'candidate' | 'microturn' | 'preview' | 'auditOnly';
+export type SelectorId = string & { readonly __brand: 'SelectorId' };
+export type ComponentId = string & { readonly __brand: 'ComponentId' };
+export type GameAuthoredCollectionId = string & { readonly __brand: 'GameAuthoredCollectionId' };
+export type CandidateParamRef = string & { readonly __brand: 'CandidateParamRef' };
+export const MAX_SELECTOR_RESULT_ITEMS = 32;
+export const MAX_SELECTOR_PRODUCT_PAIRS = 256;
 export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
 export type AgentPreviewFallback = {
@@ -472,6 +479,19 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'library';
       readonly refKind: CompiledAgentPolicyLibraryRefKind;
       readonly id: string;
+    }
+  | {
+      readonly kind: 'selector';
+      readonly selectorId: string;
+      readonly field:
+        | 'selected.matches'
+        | 'selected.key'
+        | 'selected.quality'
+        | 'selected.rank'
+        | 'impactSatisfied'
+        | 'size'
+        | { readonly kind: 'selected.component'; readonly componentId: string }
+        | { readonly kind: 'candidate.quality'; readonly key: string };
     }
   | CompiledSurfaceRef
   | {
@@ -756,6 +776,7 @@ export interface CompiledPolicyCatalog {
   readonly stateFeatures: Readonly<Record<string, CompiledPolicyStateFeature>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledPolicyCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledPolicyAggregate>>;
+  readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
   readonly pruningRules: Readonly<Record<string, CompiledPolicyPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
@@ -890,6 +911,7 @@ export interface CompiledAgentDependencyRefs {
   readonly stateFeatures: readonly string[];
   readonly candidateFeatures: readonly string[];
   readonly aggregates: readonly string[];
+  readonly selectors?: readonly string[];
   readonly strategicConditions: readonly string[];
 }
 
@@ -909,6 +931,61 @@ export interface CompiledAgentAggregate {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly op: string;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export type SelectorSource =
+  | { readonly kind: 'collection'; readonly collection: CollectionRef; readonly key?: KeyBinding }
+  | { readonly kind: 'product'; readonly left: CollectionRef; readonly right: CollectionRef; readonly maxPairs: number }
+  | { readonly kind: 'microturnOptions' }
+  | { readonly kind: 'candidateParams'; readonly param: CandidateParamRef };
+
+export type CollectionRef =
+  | { readonly kind: 'zones' }
+  | { readonly kind: 'tokens'; readonly tokenType?: string }
+  | { readonly kind: 'cards'; readonly deck?: string }
+  | { readonly kind: 'players' }
+  | { readonly kind: 'authoredFinite'; readonly collectionId: GameAuthoredCollectionId };
+
+export interface KeyBinding {
+  readonly from: string;
+}
+
+export interface QualitySpec {
+  readonly components: readonly QualityComponent[];
+  readonly order: 'qualityDesc' | 'qualityAsc';
+}
+
+export interface QualityComponent {
+  readonly id: ComponentId;
+  readonly value: AgentPolicyExpr;
+  readonly weight: number;
+  readonly previewFallback?: AgentPreviewFallback;
+}
+
+export interface ResultSpec {
+  readonly maxItems: number;
+  readonly order: readonly ('qualityDesc' | 'qualityAsc' | 'stableKeyAsc' | 'stableKeyDesc')[];
+  readonly onEmpty: 'noContribution' | 'traceAndNoContribution' | 'demote';
+}
+
+export interface CompiledPolicySelector {
+  readonly id: SelectorId;
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly source: SelectorSource;
+  readonly where?: AgentPolicyExpr;
+  readonly quality?: QualitySpec;
+  readonly minImpact?: AgentPolicyExpr;
+  readonly result: ResultSpec;
+  readonly costClass: SelectorCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledAgentSelector {
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly source: SelectorSource;
+  readonly result: ResultSpec;
+  readonly costClass: SelectorCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
@@ -951,6 +1028,7 @@ export interface CompiledAgentLibraryIndex {
   readonly stateFeatures: Readonly<Record<string, CompiledAgentStateFeature>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
+  readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
   readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
@@ -1034,10 +1112,14 @@ export interface CompiledAgentProfile {
   };
   readonly preview: CompiledAgentPreviewConfig;
   readonly selection: CompiledAgentSelectionConfig;
+  readonly selector?: {
+    readonly maxCostClass: SelectorCostClass;
+  };
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
+    readonly selectors?: readonly string[];
     readonly considerations: readonly string[];
   };
 }
@@ -1052,6 +1134,10 @@ export interface AgentPolicyCatalog {
   readonly compiled: CompiledPolicyCatalog;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;
+  readonly selectorCaps?: {
+    readonly maxResultItems: number;
+    readonly maxProductPairs: number;
+  };
 }
 
 export interface CompiledActionTagIndex {

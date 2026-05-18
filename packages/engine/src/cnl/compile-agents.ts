@@ -15,6 +15,7 @@ import {
 import { parsePolicyStandingRoleToken, POLICY_STANDING_ROLE_TOKEN_PREFIX } from '../agents/policy-standing-roles.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
 import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
+import { MAX_SELECTOR_PRODUCT_PAIRS, MAX_SELECTOR_RESULT_ITEMS } from '../kernel/types.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
@@ -27,6 +28,7 @@ import type {
   AgentPreviewFallback,
   SurfaceVisibilityClass,
   AgentPolicyValueType,
+  CandidateParamRef,
   CompiledAgentPolicyRef,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
@@ -38,7 +40,12 @@ import type {
   CompiledAgentPreviewBudgetConfig,
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewOutcomeGrantContinuationConfig,
+  CompiledAgentSelector,
+  CompiledPolicySelector,
   ContinuedDeepeningConfig,
+  QualitySpec,
+  SelectorCostClass,
+  SelectorSource,
   DeepTrigger,
   AgentPreviewPostGrantCapClass,
   CompiledObserverCatalog,
@@ -63,6 +70,8 @@ import type {
   GameSpecCandidateParamFallbackDef,
   GameSpecLookupFallbackDef,
   GameSpecPolicyExpr,
+  GameSpecSelectorDef,
+  GameSpecSelectorSource,
   GameSpecPolicySurfaceVisibilityDef,
   GameSpecPreviewFallbackDef,
   GameSpecScheduleFallbackDef,
@@ -71,6 +80,17 @@ import type {
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
+import {
+  deriveSelectorCostClass,
+  isSelectorCostClass,
+  isSelectorProductPairCapExceeded,
+  normalizeSelectorCollection,
+  normalizeSelectorResult,
+  normalizeSelectorScopes,
+  parseSelectorRef,
+  selectorCostClassLeq,
+  selectorCostToPolicyCostClass,
+} from './compile-agent-selectors.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -85,7 +105,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -94,6 +114,7 @@ type AgentAggregateWithExpr = CompiledAgentAggregate & {
   readonly of: AgentPolicyExpr;
   readonly where?: AgentPolicyExpr;
 };
+type AgentSelectorWithExpr = CompiledPolicySelector;
 type AgentPruningRuleWithExpr = CompiledAgentPruningRule & { readonly when: AgentPolicyExpr };
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
@@ -177,6 +198,7 @@ export function lowerAgents(
   );
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
   const compiled = lowerAgentConsiderations(library);
+  const hasSelectors = Object.keys(library.selectors ?? {}).length > 0;
   const catalogWithoutFingerprint = {
     schemaVersion: 2,
     surfaceVisibility,
@@ -186,6 +208,10 @@ export function lowerAgents(
     compiled,
     profiles,
     bindingsBySeat,
+    ...(hasSelectors ? { selectorCaps: {
+      maxResultItems: MAX_SELECTOR_RESULT_ITEMS,
+      maxProductPairs: MAX_SELECTOR_PRODUCT_PAIRS,
+    } } : {}),
   } satisfies Omit<AgentPolicyCatalog, 'catalogFingerprint'>;
 
   return {
@@ -198,6 +224,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const stateFeatures: Record<string, CompiledAgentStateFeature> = {};
   const candidateFeatures: Record<string, CompiledAgentCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
+  const selectors: Record<string, CompiledAgentSelector> = {};
   const pruningRules: Record<string, CompiledAgentPruningRule> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
@@ -223,6 +250,15 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       costClass: aggregate.costClass,
       op: aggregate.op,
       dependencies: aggregate.dependencies,
+    };
+  }
+  for (const [id, selector] of Object.entries(library.selectors ?? {})) {
+    selectors[id] = {
+      scopes: selector.scopes,
+      source: selector.source,
+      result: selector.result,
+      costClass: selector.costClass,
+      dependencies: selector.dependencies,
     };
   }
   for (const [id, rule] of Object.entries(library.pruningRules)) {
@@ -264,6 +300,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     stateFeatures,
     candidateFeatures,
     candidateAggregates,
+    ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     pruningRules,
     considerations,
     tieBreakers,
@@ -795,8 +832,12 @@ function lowerProfile(
   };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
+  const selector = lowerSelectorProfileConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
+  if (plan !== null && (plan.selectors?.length ?? 0) > 0) {
+    validateProfileSelectorCostClass(profileId, selector?.maxCostClass ?? 'preview', plan.selectors ?? [], library, diagnostics);
+  }
 
   if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
     return null;
@@ -811,6 +852,7 @@ function lowerProfile(
     use,
     preview: preview ?? { mode: 'exactWorld' },
     selection: selection ?? { mode: 'argmax' },
+    ...(selector === undefined ? {} : { selector }),
     plan,
   };
 }
@@ -1662,6 +1704,52 @@ function lowerSelectionConfig(
   return { mode };
 }
 
+function lowerSelectorProfileConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): NonNullable<CompiledAgentProfile['selector']> | undefined {
+  const authored = profileDef.selector;
+  if (authored === undefined) {
+    return undefined;
+  }
+  const path = `doc.agents.profiles.${profileId}.selector.maxCostClass`;
+  const maxCostClass = authored.maxCostClass ?? 'preview';
+  if (!isSelectorCostClass(maxCostClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_COST_CLASS_EXCEEDS_LIMIT,
+      path,
+      severity: 'error',
+      message: `Profile "${profileId}" selector.maxCostClass must be state, candidate, microturn, preview, or auditOnly.`,
+      suggestion: 'Set selector.maxCostClass to the highest selector cost class this profile permits.',
+    });
+    return undefined;
+  }
+  return { maxCostClass };
+}
+
+function validateProfileSelectorCostClass(
+  profileId: string,
+  maxCostClass: SelectorCostClass,
+  selectorIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const selectorId of selectorIds) {
+    const selector = library.selectors?.[selectorId];
+    if (selector === undefined || selectorCostClassLeq(selector.costClass, maxCostClass)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_COST_CLASS_EXCEEDS_LIMIT,
+      path: `doc.agents.profiles.${profileId}.selector.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses selector "${selectorId}" with costClass "${selector.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Raise selector.maxCostClass or remove the higher-cost selector dependency.',
+    });
+  }
+}
+
 function buildProfilePlan(
   profileId: string,
   use: CompiledAgentProfile['use'],
@@ -1671,9 +1759,11 @@ function buildProfilePlan(
   const stateFeatures: string[] = [];
   const candidateFeatures: string[] = [];
   const candidateAggregates: string[] = [];
+  const selectors: string[] = [];
   const stateSeen = new Set<string>();
   const candidateSeen = new Set<string>();
   const aggregateSeen = new Set<string>();
+  const selectorSeen = new Set<string>();
   const considerationSeen = new Set<string>();
   const considerations: string[] = [];
   let hasError = false;
@@ -1756,6 +1846,27 @@ function buildProfilePlan(
     candidateAggregates.push(aggregateId);
   };
 
+  const visitSelector = (selectorId: string): void => {
+    if (selectorSeen.has(selectorId)) {
+      return;
+    }
+    const selector = library.selectors?.[selectorId];
+    if (selector === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid selector "${selectorId}".`,
+        suggestion: 'Fix the referenced selector so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(selector.dependencies);
+    selectorSeen.add(selectorId);
+    selectors.push(selectorId);
+  };
+
   const addDependencies = (dependencies: CompiledAgentDependencyRefs): void => {
     for (const featureId of dependencies.stateFeatures) {
       visitStateFeature(featureId);
@@ -1765,6 +1876,9 @@ function buildProfilePlan(
     }
     for (const aggregateId of dependencies.aggregates) {
       visitAggregate(aggregateId);
+    }
+    for (const selectorId of dependencies.selectors ?? []) {
+      visitSelector(selectorId);
     }
   };
 
@@ -1805,6 +1919,7 @@ function buildProfilePlan(
     stateFeatures,
     candidateFeatures,
     candidateAggregates,
+    ...(selectors.length === 0 ? {} : { selectors }),
     considerations,
   };
 }
@@ -1869,6 +1984,7 @@ class AgentLibraryCompiler {
     readonly stateFeatures: Record<string, AgentStateFeatureWithExpr>;
     readonly candidateFeatures: Record<string, AgentCandidateFeatureWithExpr>;
     readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
+    readonly selectors: Record<string, AgentSelectorWithExpr>;
     readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
@@ -1878,6 +1994,7 @@ class AgentLibraryCompiler {
   private readonly stateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly candidateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
@@ -1886,6 +2003,7 @@ class AgentLibraryCompiler {
   private readonly stateFeatureStack: string[] = [];
   private readonly candidateFeatureStack: string[] = [];
   private readonly aggregateStack: string[] = [];
+  private readonly selectorStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -1901,6 +2019,7 @@ class AgentLibraryCompiler {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
+      selectors: {},
       pruningRules: {},
       considerations: {},
       tieBreakers: {},
@@ -1919,6 +2038,9 @@ class AgentLibraryCompiler {
     }
     for (const aggregateId of Object.keys(this.authoredLibrary.candidateAggregates ?? {})) {
       this.compileAggregate(aggregateId);
+    }
+    for (const selectorId of Object.keys(this.authoredLibrary.selectors ?? {})) {
+      this.compileSelector(selectorId);
     }
     for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
       this.compilePruningRule(ruleId);
@@ -2136,6 +2258,105 @@ class AgentLibraryCompiler {
     };
     this.compiled.candidateAggregates[aggregateId] = compiled;
     this.aggregateStatus.set(aggregateId, 'done');
+    return compiled;
+  }
+
+  private compileSelector(selectorId: string): AgentSelectorWithExpr | null {
+    const status = this.selectorStatus.get(selectorId);
+    if (status === 'done') {
+      return this.compiled.selectors[selectorId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportSelectorCycle(selectorId);
+      this.selectorStatus.set(selectorId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.selectors?.[selectorId];
+    if (def === undefined) {
+      this.reportSelectorRefUnknown(`selector.${selectorId}`, `doc.agents.library.selectors.${selectorId}`);
+      this.selectorStatus.set(selectorId, 'failed');
+      return null;
+    }
+
+    const basePath = `doc.agents.library.selectors.${selectorId}`;
+    this.selectorStatus.set(selectorId, 'compiling');
+    this.selectorStack.push(selectorId);
+    const context = this.createExprContext('selector');
+    const source = this.lowerSelectorSource(def.source, `${basePath}.source`);
+    const scopes = normalizeSelectorScopes(def.scopes, `${basePath}.scopes`, this.diagnostics);
+    const result = normalizeSelectorResult(def.result, `${basePath}.result`, this.diagnostics);
+    const where = def.where === undefined
+      ? null
+      : analyzePolicyExpr(def.where, context, this.diagnostics, `${basePath}.where`);
+    const minImpact = def.minImpact === undefined
+      ? null
+      : analyzePolicyExpr(def.minImpact, context, this.diagnostics, `${basePath}.minImpact`);
+    const quality = this.lowerSelectorQuality(def.quality, `${basePath}.quality`, context);
+    this.selectorStack.pop();
+
+    if (
+      source === null
+      || scopes === null
+      || result === null
+      || (def.where !== undefined && where === null)
+      || (def.minImpact !== undefined && minImpact === null)
+      || quality === null
+    ) {
+      this.selectorStatus.set(selectorId, 'failed');
+      return null;
+    }
+    if (where !== null && where.valueType !== 'boolean' && where.valueType !== 'unknown') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${basePath}.where`,
+        severity: 'error',
+        message: `Selector "${selectorId}" where must compile to boolean.`,
+        suggestion: 'Use a boolean policy expression in selector.where.',
+      });
+      this.selectorStatus.set(selectorId, 'failed');
+      return null;
+    }
+    if (minImpact !== null && minImpact.valueType !== 'boolean' && minImpact.valueType !== 'unknown') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+        path: `${basePath}.minImpact`,
+        severity: 'error',
+        message: `Selector "${selectorId}" minImpact must compile to boolean.`,
+        suggestion: 'Use a boolean policy expression in selector.minImpact.',
+      });
+      this.selectorStatus.set(selectorId, 'failed');
+      return null;
+    }
+
+    const analyses = [
+      where,
+      minImpact,
+      ...(quality.components.map((component) => component.analysis)),
+    ].filter((entry): entry is PolicyExprAnalysis => entry !== null);
+    const dependencies = mergeDependencies(analyses.map((entry) => entry.dependencies));
+    const costClass = deriveSelectorCostClass(source, analyses);
+    const compiled: AgentSelectorWithExpr = {
+      id: selectorId as AgentSelectorWithExpr['id'],
+      scopes,
+      source,
+      ...(where === null ? {} : { where: where.expr }),
+      ...(quality.components.length === 0 ? {} : {
+        quality: {
+          components: quality.components.map((component) => component.component),
+          order: quality.order,
+        },
+      }),
+      ...(minImpact === null ? {} : { minImpact: minImpact.expr }),
+      result,
+      costClass,
+      dependencies,
+    };
+    this.compiled.selectors[selectorId] = compiled;
+    this.selectorStatus.set(selectorId, 'done');
     return compiled;
   }
 
@@ -2563,6 +2784,175 @@ class AgentLibraryCompiler {
     }
   }
 
+  private lowerSelectorSource(source: GameSpecSelectorSource | undefined, path: string): SelectorSource | null {
+    if (source === undefined || source === null || typeof source !== 'object' || Array.isArray(source)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
+        path,
+        severity: 'error',
+        message: 'Selector source must be a supported finite source object.',
+        suggestion: 'Use source.collection, source.kind: product, source.kind: microturnOptions, or source.kind: candidateParams.',
+      });
+      return null;
+    }
+    if (source.kind === 'product') {
+      const left = normalizeSelectorCollection(source.left, `${path}.left`, this.diagnostics);
+      const right = normalizeSelectorCollection(source.right, `${path}.right`, this.diagnostics);
+      if (source.maxPairs === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MISSING_MAXPAIRS,
+          path: `${path}.maxPairs`,
+          severity: 'error',
+          message: 'Product selector source requires maxPairs.',
+          suggestion: `Set maxPairs to a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
+        });
+        return null;
+      }
+      if (isSelectorProductPairCapExceeded(source.maxPairs)) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MAXPAIRS_EXCEEDS_CAP,
+          path: `${path}.maxPairs`,
+          severity: 'error',
+          message: `Product selector maxPairs must be a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
+          suggestion: `Reduce maxPairs to ${MAX_SELECTOR_PRODUCT_PAIRS} or less.`,
+        });
+        return null;
+      }
+      return left === null || right === null ? null : { kind: 'product', left, right, maxPairs: source.maxPairs };
+    }
+    if (source.kind === 'microturnOptions') {
+      return { kind: 'microturnOptions' };
+    }
+    if (source.kind === 'candidateParams') {
+      if (typeof source.param !== 'string' || source.param.length === 0 || this.candidateParamDefs[source.param] === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
+          path: `${path}.param`,
+          severity: 'error',
+          message: `Selector candidateParams source references unknown candidate param "${String(source.param)}".`,
+          suggestion: 'Reference a declared doc.agents.candidateParams entry.',
+        });
+        return null;
+      }
+      return { kind: 'candidateParams', param: source.param as CandidateParamRef };
+    }
+    const collection = normalizeSelectorCollection(source.collection, `${path}.collection`, this.diagnostics);
+    if (collection === null) {
+      return null;
+    }
+    const sourceRecord = source as Readonly<Record<string, unknown>>;
+    const key = sourceRecord.key;
+    const keyFrom = key === null || typeof key !== 'object'
+      ? undefined
+      : (key as Readonly<Record<string, unknown>>).from;
+    if (key !== undefined && (typeof keyFrom !== 'string' || keyFrom.length === 0)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_BINDING_TYPE_MISMATCH,
+        path: `${path}.key.from`,
+        severity: 'error',
+        message: 'Selector source key.from must be a non-empty string when source.key is declared.',
+        suggestion: 'Use key: { from: <candidate field> } or omit source.key.',
+      });
+      return null;
+    }
+    return {
+      kind: 'collection',
+      collection,
+      ...(source.key?.from === undefined ? {} : { key: { from: source.key.from } }),
+    };
+  }
+
+  private lowerSelectorQuality(
+    quality: GameSpecSelectorDef['quality'] | undefined,
+    path: string,
+    context: AnalyzePolicyExprContext,
+  ): {
+    readonly order: QualitySpec['order'];
+    readonly components: readonly {
+      readonly component: QualitySpec['components'][number];
+      readonly analysis: PolicyExprAnalysis;
+    }[];
+  } | null {
+    if (quality === undefined) {
+      return { order: 'qualityDesc', components: [] };
+    }
+    const order = quality.order ?? 'qualityDesc';
+    if (order !== 'qualityDesc' && order !== 'qualityAsc') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.order`,
+        severity: 'error',
+        message: 'Selector quality.order must be qualityDesc or qualityAsc.',
+        suggestion: 'Set quality.order to qualityDesc or qualityAsc.',
+      });
+      return null;
+    }
+    const components = quality.components ?? [];
+    const lowered = [];
+    for (const [index, component] of components.entries()) {
+      const componentPath = `${path}.components.${index}`;
+      if (typeof component.id !== 'string' || component.id.length === 0) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+          path: `${componentPath}.id`,
+          severity: 'error',
+          message: 'Selector quality component id must be a non-empty string.',
+          suggestion: 'Set an id such as target-pressure.',
+        });
+        return null;
+      }
+      if (!Number.isSafeInteger(component.weight)) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+          path: `${componentPath}.weight`,
+          severity: 'error',
+          message: 'Selector quality component weight must be a safe integer.',
+          suggestion: 'Use exact integer weights for deterministic selector quality.',
+        });
+        return null;
+      }
+      const analysis = analyzePolicyExpr(component.value, context, this.diagnostics, `${componentPath}.value`);
+      if (analysis === null) {
+        return null;
+      }
+      if (analysis.valueType !== 'number' && analysis.valueType !== 'unknown') {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+          path: `${componentPath}.value`,
+          severity: 'error',
+          message: 'Selector quality component value must compile to number.',
+          suggestion: 'Use a numeric policy expression for component.value.',
+        });
+        return null;
+      }
+      const previewRefs = collectPreviewOptionRefIds(analysis.expr);
+      if (previewRefs.length > 0 && component.previewFallback === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_COMPONENT_REQUIRES_FALLBACK,
+          path: `${componentPath}.previewFallback`,
+          severity: 'error',
+          message: `Selector quality component "${component.id}" references preview-derived refs but has no previewFallback.`,
+          suggestion: 'Add previewFallback: { onUnavailable: noContribution } to the component.',
+        });
+        return null;
+      }
+      const fallback = lowerPreviewFallback(component.id, `${componentPath}.previewFallback`, component.previewFallback, this.diagnostics);
+      if (fallback === null) {
+        return null;
+      }
+      lowered.push({
+        component: {
+          id: component.id as QualitySpec['components'][number]['id'],
+          value: analysis.expr,
+          weight: component.weight,
+          ...(fallback === undefined ? {} : { previewFallback: fallback }),
+        },
+        analysis,
+      });
+    }
+    return { order, components: lowered };
+  }
+
   private createExprContext(scope: LibraryRefScope, allowLookup = false): AnalyzePolicyExprContext {
     const context: AnalyzePolicyExprContext = {
       parameterDefs: this.parameterDefs,
@@ -2792,6 +3182,24 @@ class AgentLibraryCompiler {
         costClass: aggregate.costClass,
         ref: { kind: 'library', refKind: 'aggregate', id: aggregateId },
         dependency: { kind: 'aggregates', id: aggregateId },
+      };
+    }
+
+    if (refPath.startsWith('selector.')) {
+      const parsed = parseSelectorRef(refPath);
+      if (parsed === null) {
+        this.reportSelectorRefUnknown(refPath, path);
+        return null;
+      }
+      const selector = this.compileSelector(parsed.selectorId);
+      if (selector === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: selectorCostToPolicyCostClass(selector.costClass),
+        ref: { kind: 'selector', selectorId: parsed.selectorId, field: parsed.field },
+        dependency: { kind: 'selectors', id: parsed.selectorId },
       };
     }
 
@@ -3236,6 +3644,10 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('var.global.')) {
       const id = optionPath.slice('var.global.'.length);
       if (id.length === 0 || this.surfaceVisibility.globalVars[id] === undefined) {
+        if (scope === 'selector') {
+          this.reportSelectorUnregisteredPreviewRef(refPath, path);
+          return null;
+        }
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
@@ -3245,6 +3657,10 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('var.player.self.')) {
       const id = optionPath.slice('var.player.self.'.length);
       if (id.length === 0 || this.surfaceVisibility.perPlayerVars[id] === undefined) {
+        if (scope === 'selector') {
+          this.reportSelectorUnregisteredPreviewRef(refPath, path);
+          return null;
+        }
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
@@ -3254,6 +3670,10 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('metric.')) {
       const id = optionPath.slice('metric.'.length);
       if (id.length === 0 || this.surfaceVisibility.derivedMetrics[id] === undefined) {
+        if (scope === 'selector') {
+          this.reportSelectorUnregisteredPreviewRef(refPath, path);
+          return null;
+        }
         this.reportUnknownLibraryRef(refPath, path);
         return null;
       }
@@ -3550,6 +3970,36 @@ class AgentLibraryCompiler {
       severity: 'error',
       message: `Agent policy dependency cycle detected: ${[...stack, entryId].join(' -> ')}.`,
       suggestion: 'Break the cycle so each policy library item depends on an acyclic graph.',
+    });
+  }
+
+  private reportSelectorCycle(selectorId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.selectors.${selectorId}`,
+      severity: 'error',
+      message: `Agent policy selector dependency cycle detected: ${[...this.selectorStack, selectorId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each selector depends on an acyclic graph.',
+    });
+  }
+
+  private reportSelectorRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Selector expression references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared selector ids and supported selector.<id>.selected.* refs.',
+    });
+  }
+
+  private reportSelectorUnregisteredPreviewRef(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_REQUIRES_UNREGISTERED_PREVIEW_REF,
+      path,
+      severity: 'error',
+      message: `Selector expression references preview ref "${refPath}" that is not registered on a visible policy surface.`,
+      suggestion: 'Register the preview-visible surface or remove the preview-derived selector component.',
     });
   }
 
@@ -4686,11 +5136,13 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
 }
 
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
+  const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
+    ...(selectors.length === 0 ? {} : { selectors }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

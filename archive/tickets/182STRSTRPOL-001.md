@@ -1,6 +1,6 @@
 # 182STRSTRPOL-001: Phase 2 — Strategic modules library bucket + compiled IR + compiler diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/cnl/compile-agents.ts`, compiler diagnostic codes module
@@ -89,3 +89,43 @@ Create `packages/engine/test/unit/cnl/agent-module-diagnostics.test.ts` (sibling
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/agent-module-diagnostics.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Implementation Outcome (2026-05-18)
+
+Completed the Phase 2 compile-time strategic-module surface:
+
+1. Added `strategyModules` to the agent policy library contract and GameSpecDoc/schema authoring surfaces.
+2. Added module ids, selector-role ids, score-group ids, `MAX_MODULE_PRIORITY_TIER`, module cost/fallback/priority/binding/score-group IR, compiled catalog/index/dependency/profile refs, and profile plan wiring.
+3. Added compiler lowering for library modules, profile module refs, status graph tracking, dependency refs, dependency footprinting, feature-table walking, schema artifacts, and compile-time diagnostics.
+4. Added `packages/engine/test/unit/cnl/agent-module-diagnostics.test.ts` with positive coverage for all 9 `CNL_COMPILER_AGENT_MODULE_*` diagnostics.
+
+Boundary notes:
+
+1. Runtime module dispatch/evaluation remains out of scope for this ticket and is owned by `182STRSTRPOL-002`; runtime policy-ref resolution for `strategyModule` currently returns unavailable/undefined rather than scoring.
+2. The guardrail bucket is still out of scope until Phase 3. Module guardrail ids therefore remain forward references; the prune-fallback diagnostic is limited to the compile-time module guardrail-ref convention until the guardrail catalog lands.
+
+Source-size ledger:
+
+1. `packages/engine/src/cnl/compile-agents.ts` was already over the preferred file-size ceiling and grew by 224 net lines for central compiler orchestration/hooks.
+2. Module-specific normalization/lowering was extracted to `packages/engine/src/cnl/compile-agent-strategy-modules.ts` (451 lines) after the source-size checkpoint.
+3. The remaining `compile-agents.ts` growth is the integration seam for existing compiler state, status/cycle tracking, profile refs, and plan/dependency wiring.
+
+Generated artifact provenance:
+
+1. Generated artifact: `packages/engine/schemas/GameDef.schema.json` (`13,282` lines after regeneration).
+2. Generation command: `pnpm -F @ludoforge/engine run schema:artifacts`.
+3. Canonical inputs: `packages/engine/src/kernel/schemas-core.ts` and `packages/engine/scripts/schema-artifacts.mjs`.
+4. Hygiene proof: `pnpm -F @ludoforge/engine run schema:artifacts:check` passed after regeneration.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/unit/cnl/agent-module-diagnostics.test.js packages/engine/dist/test/unit/cnl/agent-selector-diagnostics.test.js` — passed (`7` tests, `2` suites).
+3. `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after `schema:artifacts` regeneration.
+4. `pnpm -F @ludoforge/engine lint` — passed.
+5. `pnpm -F @ludoforge/engine typecheck` — passed.
+6. `pnpm run check:ticket-deps` — passed.
+7. `pnpm turbo build` — passed.
+8. `pnpm turbo lint` — passed.
+9. `pnpm turbo typecheck` — passed.
+10. `pnpm turbo test` — passed (`5` tasks successful).

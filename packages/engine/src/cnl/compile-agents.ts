@@ -41,7 +41,9 @@ import type {
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewOutcomeGrantContinuationConfig,
   CompiledAgentSelector,
+  CompiledAgentStrategyModule,
   CompiledPolicySelector,
+  ModuleCostClass,
   ContinuedDeepeningConfig,
   QualitySpec,
   SelectorCostClass,
@@ -91,6 +93,12 @@ import {
   selectorCostClassLeq,
   selectorCostToPolicyCostClass,
 } from './compile-agent-selectors.js';
+import {
+  compileStrategyModuleDefinition,
+  moduleCostToPolicyCostClass,
+  parseModuleRef,
+  type AgentStrategyModuleWithExpr,
+} from './compile-agent-strategy-modules.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -105,7 +113,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -225,6 +233,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const candidateFeatures: Record<string, CompiledAgentCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
   const selectors: Record<string, CompiledAgentSelector> = {};
+  const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
   const pruningRules: Record<string, CompiledAgentPruningRule> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
@@ -259,6 +268,21 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       result: selector.result,
       costClass: selector.costClass,
       dependencies: selector.dependencies,
+    };
+  }
+  for (const [id, module] of Object.entries(library.strategyModules ?? {})) {
+    strategyModules[id] = {
+      traceLabel: module.traceLabel,
+      applies: module.applies,
+      selectors: module.selectors,
+      scoreGroups: module.scoreGroups.map((group) => ({
+        id: group.id,
+        summary: group.summary,
+      })),
+      guardrailIds: module.guardrailIds,
+      fallback: module.fallback,
+      costClass: module.costClass,
+      dependencies: module.dependencies,
     };
   }
   for (const [id, rule] of Object.entries(library.pruningRules)) {
@@ -301,6 +325,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     candidateFeatures,
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
+    ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     pruningRules,
     considerations,
     tieBreakers,
@@ -833,10 +858,20 @@ function lowerProfile(
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
   const selector = lowerSelectorProfileConfig(profileId, profileDef, diagnostics);
+  const strategyModules = lowerStrategyModulesProfileConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
   if (plan !== null && (plan.selectors?.length ?? 0) > 0) {
     validateProfileSelectorCostClass(profileId, selector?.maxCostClass ?? 'preview', plan.selectors ?? [], library, diagnostics);
+  }
+  if (plan !== null && (plan.strategyModules?.length ?? 0) > 0) {
+    validateProfileModuleCostClass(
+      profileId,
+      strategyModules?.maxCostClass ?? 'preview',
+      plan.strategyModules ?? [],
+      library,
+      diagnostics,
+    );
   }
 
   if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
@@ -853,6 +888,7 @@ function lowerProfile(
     preview: preview ?? { mode: 'exactWorld' },
     selection: selection ?? { mode: 'argmax' },
     ...(selector === undefined ? {} : { selector }),
+    ...(strategyModules === undefined ? {} : { strategyModules }),
     plan,
   };
 }
@@ -1750,6 +1786,52 @@ function validateProfileSelectorCostClass(
   }
 }
 
+function lowerStrategyModulesProfileConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): NonNullable<CompiledAgentProfile['strategyModules']> | undefined {
+  const authored = profileDef.strategyModules;
+  if (authored === undefined) {
+    return undefined;
+  }
+  const path = `doc.agents.profiles.${profileId}.strategyModules.maxCostClass`;
+  const maxCostClass = authored.maxCostClass ?? 'preview';
+  if (!isSelectorCostClass(maxCostClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_COST_CLASS_EXCEEDS_LIMIT,
+      path,
+      severity: 'error',
+      message: `Profile "${profileId}" strategyModules.maxCostClass must be state, candidate, microturn, preview, or auditOnly.`,
+      suggestion: 'Set strategyModules.maxCostClass to the highest module cost class this profile permits.',
+    });
+    return undefined;
+  }
+  return { maxCostClass };
+}
+
+function validateProfileModuleCostClass(
+  profileId: string,
+  maxCostClass: ModuleCostClass,
+  moduleIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const moduleId of moduleIds) {
+    const module = library.strategyModules?.[moduleId];
+    if (module === undefined || selectorCostClassLeq(module.costClass, maxCostClass)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_COST_CLASS_EXCEEDS_LIMIT,
+      path: `doc.agents.profiles.${profileId}.strategyModules.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses strategy module "${moduleId}" with costClass "${module.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Raise strategyModules.maxCostClass or remove the higher-cost module dependency.',
+    });
+  }
+}
+
 function buildProfilePlan(
   profileId: string,
   use: CompiledAgentProfile['use'],
@@ -1760,10 +1842,12 @@ function buildProfilePlan(
   const candidateFeatures: string[] = [];
   const candidateAggregates: string[] = [];
   const selectors: string[] = [];
+  const strategyModules: string[] = [];
   const stateSeen = new Set<string>();
   const candidateSeen = new Set<string>();
   const aggregateSeen = new Set<string>();
   const selectorSeen = new Set<string>();
+  const moduleSeen = new Set<string>();
   const considerationSeen = new Set<string>();
   const considerations: string[] = [];
   let hasError = false;
@@ -1867,6 +1951,27 @@ function buildProfilePlan(
     selectors.push(selectorId);
   };
 
+  const visitModule = (moduleId: string): void => {
+    if (moduleSeen.has(moduleId)) {
+      return;
+    }
+    const module = library.strategyModules?.[moduleId];
+    if (module === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid strategy module "${moduleId}".`,
+        suggestion: 'Fix the referenced strategy module so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(module.dependencies);
+    moduleSeen.add(moduleId);
+    strategyModules.push(moduleId);
+  };
+
   const addDependencies = (dependencies: CompiledAgentDependencyRefs): void => {
     for (const featureId of dependencies.stateFeatures) {
       visitStateFeature(featureId);
@@ -1879,6 +1984,9 @@ function buildProfilePlan(
     }
     for (const selectorId of dependencies.selectors ?? []) {
       visitSelector(selectorId);
+    }
+    for (const moduleId of dependencies.strategyModules ?? []) {
+      visitModule(moduleId);
     }
   };
 
@@ -1910,6 +2018,9 @@ function buildProfilePlan(
     }
     addDependencies(tieBreaker.dependencies);
   }
+  for (const moduleId of Object.keys(library.strategyModules ?? {})) {
+    visitModule(moduleId);
+  }
 
   if (hasError) {
     return null;
@@ -1920,6 +2031,7 @@ function buildProfilePlan(
     candidateFeatures,
     candidateAggregates,
     ...(selectors.length === 0 ? {} : { selectors }),
+    ...(strategyModules.length === 0 ? {} : { strategyModules }),
     considerations,
   };
 }
@@ -1985,6 +2097,7 @@ class AgentLibraryCompiler {
     readonly candidateFeatures: Record<string, AgentCandidateFeatureWithExpr>;
     readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
     readonly selectors: Record<string, AgentSelectorWithExpr>;
+    readonly strategyModules: Record<string, AgentStrategyModuleWithExpr>;
     readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
@@ -1995,6 +2108,7 @@ class AgentLibraryCompiler {
   private readonly candidateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly strategyModuleStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
@@ -2004,6 +2118,7 @@ class AgentLibraryCompiler {
   private readonly candidateFeatureStack: string[] = [];
   private readonly aggregateStack: string[] = [];
   private readonly selectorStack: string[] = [];
+  private readonly strategyModuleStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -2020,6 +2135,7 @@ class AgentLibraryCompiler {
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
+      strategyModules: {},
       pruningRules: {},
       considerations: {},
       tieBreakers: {},
@@ -2042,6 +2158,10 @@ class AgentLibraryCompiler {
     for (const selectorId of Object.keys(this.authoredLibrary.selectors ?? {})) {
       this.compileSelector(selectorId);
     }
+    for (const moduleId of Object.keys(this.authoredLibrary.strategyModules ?? {})) {
+      this.compileStrategyModule(moduleId);
+    }
+    this.validateModuleTraceLabels();
     for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
       this.compilePruningRule(ruleId);
     }
@@ -2071,6 +2191,26 @@ class AgentLibraryCompiler {
         message: `Feature id "${candidateId}" is defined in both stateFeatures and candidateFeatures, which makes feature refs ambiguous.`,
         suggestion: 'Use distinct ids across stateFeatures and candidateFeatures.',
       });
+    }
+  }
+
+  private validateModuleTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [moduleId, module] of Object.entries(this.compiled.strategyModules)) {
+      const priorId = seen.get(module.traceLabel);
+      if (priorId === undefined) {
+        seen.set(module.traceLabel, moduleId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.strategyModules.${moduleId}.traceLabel`,
+        severity: 'error',
+        message: `Strategy module traceLabel "${module.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique strategy module trace labels for deterministic grouped traces.',
+      });
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      delete this.compiled.strategyModules[moduleId];
     }
   }
 
@@ -2357,6 +2497,49 @@ class AgentLibraryCompiler {
     };
     this.compiled.selectors[selectorId] = compiled;
     this.selectorStatus.set(selectorId, 'done');
+    return compiled;
+  }
+
+  private compileStrategyModule(moduleId: string): AgentStrategyModuleWithExpr | null {
+    const status = this.strategyModuleStatus.get(moduleId);
+    if (status === 'done') {
+      return this.compiled.strategyModules[moduleId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportModuleCycle(moduleId);
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.strategyModules?.[moduleId];
+    if (def === undefined) {
+      this.reportModuleRefUnknown(`module.${moduleId}`, `doc.agents.library.strategyModules.${moduleId}`);
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      return null;
+    }
+
+    this.strategyModuleStatus.set(moduleId, 'compiling');
+    this.strategyModuleStack.push(moduleId);
+    const context = this.createExprContext('strategyModule');
+    const compiled = compileStrategyModuleDefinition({
+      moduleId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      compileSelector: (selectorId) => this.compileSelector(selectorId),
+      reportModuleRefUnknown: (refPath, path) => this.reportModuleRefUnknown(refPath, path),
+    });
+    this.strategyModuleStack.pop();
+
+    if (compiled === null) {
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      return null;
+    }
+    this.compiled.strategyModules[moduleId] = compiled;
+    this.strategyModuleStatus.set(moduleId, 'done');
     return compiled;
   }
 
@@ -3237,6 +3420,24 @@ class AgentLibraryCompiler {
       };
     }
 
+    if (refPath.startsWith('module.')) {
+      const parsed = parseModuleRef(refPath);
+      if (parsed === null) {
+        this.reportModuleRefUnknown(refPath, path);
+        return null;
+      }
+      const module = this.compileStrategyModule(parsed.moduleId);
+      if (module === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: moduleCostToPolicyCostClass(module.costClass),
+        ref: { kind: 'strategyModule', moduleId: parsed.moduleId, field: parsed.field },
+        dependency: { kind: 'strategyModules', id: parsed.moduleId },
+      };
+    }
+
     return this.resolveRuntimeRef(scope, refPath, path);
   }
 
@@ -3980,6 +4181,26 @@ class AgentLibraryCompiler {
       severity: 'error',
       message: `Agent policy selector dependency cycle detected: ${[...this.selectorStack, selectorId].join(' -> ')}.`,
       suggestion: 'Break the cycle so each selector depends on an acyclic graph.',
+    });
+  }
+
+  private reportModuleCycle(moduleId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.strategyModules.${moduleId}`,
+      severity: 'error',
+      message: `Agent policy strategy module dependency cycle detected: ${[...this.strategyModuleStack, moduleId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each strategy module depends on an acyclic graph.',
+    });
+  }
+
+  private reportModuleRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Strategy module references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared selectors, modules, conditions, features, or supported module fields.',
     });
   }
 
@@ -5137,12 +5358,14 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
 
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
+  const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
+    ...(strategyModules.length === 0 ? {} : { strategyModules }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/cnl/compile-agents.ts`, compiler diagnostic codes module
-**Deps**: `tickets/182STRSTRPOL-001.md`
+**Deps**: `archive/tickets/182STRSTRPOL-001.md`
 
 ## Problem
 

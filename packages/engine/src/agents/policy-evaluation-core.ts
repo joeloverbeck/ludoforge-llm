@@ -1702,6 +1702,8 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'strategyModule':
+        return undefined;
       case 'selector':
         return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {

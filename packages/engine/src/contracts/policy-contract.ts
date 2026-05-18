@@ -3,6 +3,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'candidateFeatures',
   'candidateAggregates',
   'selectors',
+  'strategyModules',
   'pruningRules',
   'considerations',
   'tieBreakers',

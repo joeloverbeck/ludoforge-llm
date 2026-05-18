@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`
-**Deps**: `tickets/182STRSTRPOL-001.md`
+**Deps**: `archive/tickets/182STRSTRPOL-001.md`
 
 ## Problem
 

@@ -18,6 +18,7 @@ import type {
   CompiledPolicyStrategicCondition,
   CompiledPolicyTieBreaker,
   CompiledPolicyZoneSource,
+  StrategyModuleDef,
 } from '../kernel/types.js';
 import {
   computeDependenciesReadFootprint,
@@ -47,6 +48,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly dependencies: CompiledAgentDependencyRefs;
   }>>;
   readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
+  readonly strategyModules: Readonly<Record<string, StrategyModuleDef>>;
   readonly pruningRules: Readonly<Record<string, {
     readonly costClass: AgentPolicyCostClass;
     readonly when: AgentPolicyExpr;
@@ -95,6 +97,7 @@ export function lowerAgentConsiderations(
   const candidateFeatures: Record<string, CompiledPolicyCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledPolicyAggregate> = {};
   const selectors: Record<string, CompiledPolicySelector> = {};
+  const strategyModules: Record<string, StrategyModuleDef> = {};
   const pruningRules: Record<string, CompiledPolicyPruningRule> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
@@ -147,6 +150,34 @@ export function lowerAgentConsiderations(
         },
       }),
       ...(minImpact === null ? {} : { minImpact }),
+    };
+  }
+
+  for (const [moduleId, module] of Object.entries(library.strategyModules)) {
+    const when = lowerAgentPolicyExpr(module.when);
+    const priorityValue = module.priority.value === undefined ? null : lowerAgentPolicyExpr(module.priority.value);
+    const scoreGroups = module.scoreGroups.map((group) => {
+      const terms = group.terms.map((term) => {
+        const value = lowerAgentPolicyExpr(term.value);
+        return value === null ? null : { ...term, value };
+      });
+      return terms.some((term) => term === null) ? null : { ...group, terms };
+    });
+    if (
+      when === null
+      || (module.priority.value !== undefined && priorityValue === null)
+      || scoreGroups.some((group) => group === null)
+    ) {
+      continue;
+    }
+    strategyModules[moduleId] = {
+      ...module,
+      when,
+      priority: {
+        ...module.priority,
+        ...(priorityValue === null ? {} : { value: priorityValue }),
+      },
+      scoreGroups: scoreGroups as StrategyModuleDef['scoreGroups'],
     };
   }
 
@@ -218,6 +249,7 @@ export function lowerAgentConsiderations(
     candidateFeatures,
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
+    ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     pruningRules,
     considerations,
     tieBreakers,

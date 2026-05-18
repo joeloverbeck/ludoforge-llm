@@ -18,6 +18,7 @@ import type {
   LookupUnavailabilityReason,
   Move,
   PolicyPreviewOutcomeBreakdownTrace,
+  PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
   PolicyPreviewSeatMatrixTrace,
   Rng,
@@ -287,6 +288,7 @@ export interface PolicyEvaluationMetadata {
   readonly previewUsage: PolicyEvaluationPreviewUsage;
   readonly selectedReason?: SelectionReason;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
+  readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -896,6 +898,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       }
 
       const stateFeatures = collectDiagnostics ? evaluation.getEvaluatedStateFeatures() : {};
+      const selectorTraces = collectDiagnostics && input.traceLevel !== 'none'
+        ? evaluation.getEvaluatedSelectorTraces(input.traceLevel === 'verbose' ? 'verbose' : 'summary')
+        : [];
       logPolicyEvalOomTrace(
         'success',
         currentDepth,
@@ -940,6 +945,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           finalScore: Number.isFinite(selected.score) ? selected.score : null,
           previewGatedCount,
           candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
+          ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),

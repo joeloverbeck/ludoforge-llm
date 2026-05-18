@@ -1,6 +1,6 @@
 # 181STRSTRPOL-008: Phase 1 — Trace integration (`selectors` field on PolicyAgentDecisionTrace)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/agents/policy-eval.ts`
@@ -112,3 +112,39 @@ Search for `PolicyAgentDecisionTrace` consumers (golden trace fixtures, trace se
 
 1. `pnpm -F @ludoforge/engine test -- policy-selector-trace`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-18)
+
+Implemented the selector trace integration:
+
+1. Added `PolicySelectorTraceEntry` / `PolicySelectorTopKTraceEntry` and optional `selectors` on `PolicyAgentDecisionTrace`.
+2. Exposed evaluated selector trace entries from `PolicyEvaluationContext`, sourced only from the selector cache so trace collection does not force extra selector or preview evaluation.
+3. Threaded selector traces through `PolicyEvaluationMetadata` and `buildPolicyAgentDecisionTrace`.
+4. Added `packages/engine/test/unit/agents/policy-selector-trace.test.ts` covering summary entries, verbose top-K cap, deterministic bytes, empty selector traces, and omission of unevaluated selectors.
+
+Implementation note: component maps use `Readonly<Record<string, number>>` rather than runtime `Map` objects because the existing trace surface is JSON-shaped and serializes records deterministically.
+
+## Verification (2026-05-18)
+
+Passing:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/unit/agents/policy-selector-trace.test.js packages/engine/dist/test/unit/agents/policy-selector-eval.test.js packages/engine/dist/test/unit/infrastructure/test-class-markers.test.js`
+3. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+4. `pnpm run check:ticket-deps`
+5. `git diff --check`
+6. `pnpm turbo build`
+7. `pnpm turbo lint`
+8. `pnpm turbo typecheck`
+
+Red, unchanged from the known broad-suite state:
+
+1. `pnpm turbo test` still fails in `dist/test/architecture/policy-preview-inner-outcome-parity.test.js` for Spec 178 ARVN continuedDeepening seeds `1005`, `1011`, `1008`, `1013`, and `1009`, with turnId/golden drift in the `arvn-evolved` outcome-parity fixture. Unit tests, runner tests, and the new selector trace tests pass before the architecture lane reaches that existing failure.
+
+Source size check:
+
+1. `packages/engine/src/kernel/types-core.ts` — 2483 lines, pre-existing shared kernel type file.
+2. `packages/engine/src/agents/policy-evaluation-core.ts` — 2394 lines, pre-existing shared runtime file.
+3. `packages/engine/src/agents/policy-eval.ts` — 1634 lines, pre-existing shared runtime file.
+4. `packages/engine/src/agents/policy-diagnostics.ts` — 412 lines.
+5. `packages/engine/test/unit/agents/policy-selector-trace.test.ts` — 215 lines.

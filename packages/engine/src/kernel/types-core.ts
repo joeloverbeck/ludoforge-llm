@@ -2093,6 +2093,25 @@ export interface PolicyTieBreakStepTrace {
   readonly candidateCountAfter: number;
 }
 
+export interface PolicySelectorTopKTraceEntry {
+  readonly key: string;
+  readonly quality: number;
+  readonly rank: number;
+  readonly components: Readonly<Record<string, number>>;
+}
+
+export interface PolicySelectorTraceEntry {
+  readonly selectorId: SelectorId;
+  readonly selectedKey?: string;
+  readonly selectedQuality?: number;
+  readonly selectedRank?: number;
+  readonly impactSatisfied: boolean;
+  readonly emptyReason?: 'whereExcludedAll' | 'sourceEmpty' | 'minImpactFailed';
+  readonly components?: Readonly<Record<string, number>>;
+  readonly topK?: readonly PolicySelectorTopKTraceEntry[];
+  readonly truncated?: boolean;
+}
+
 export type PolicyPreviewSeatMatrixStatusTrace =
   | 'ready'
   | 'stochastic'
@@ -2226,6 +2245,7 @@ export interface PolicyAgentDecisionTrace {
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisoryTrace[];
+  readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

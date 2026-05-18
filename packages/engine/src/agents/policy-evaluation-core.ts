@@ -33,6 +33,7 @@ import type {
   GameState,
   LookupUnavailabilityReason,
   MoveParamValue,
+  PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
@@ -447,6 +448,19 @@ export class PolicyEvaluationContext {
 
   getEvaluatedSelectorCacheSize(): number {
     return this.selectorCache.size;
+  }
+
+  getEvaluatedSelectorTraces(traceLevel: 'summary' | 'verbose' = 'summary'): readonly PolicySelectorTraceEntry[] {
+    const seen = new Set<string>();
+    const entries: PolicySelectorTraceEntry[] = [];
+    for (const [, view] of [...this.selectorCache.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (seen.has(view.selectorId)) {
+        continue;
+      }
+      seen.add(view.selectorId);
+      entries.push(selectorTraceEntry(view, traceLevel));
+    }
+    return entries.sort((left, right) => left.selectorId.localeCompare(right.selectorId));
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
@@ -2292,6 +2306,40 @@ export class PolicyEvaluationContext {
   ): PolicyRuntimeError {
     return new PolicyRuntimeError({ code, message, ...(detail === undefined ? {} : { detail }) });
   }
+}
+
+function selectorTraceEntry(
+  view: SelectedSelectorView,
+  traceLevel: 'summary' | 'verbose',
+): PolicySelectorTraceEntry {
+  const first = view.selected[0];
+  const topK = traceLevel === 'verbose' ? view.selected.slice(0, 5) : [];
+  return {
+    selectorId: view.selectorId as PolicySelectorTraceEntry['selectorId'],
+    ...(first === undefined
+      ? {}
+      : {
+          selectedKey: first.key,
+          selectedQuality: first.quality,
+          selectedRank: first.rank,
+          components: Object.fromEntries([...first.components.entries()].sort(([left], [right]) => left.localeCompare(right))),
+        }),
+    impactSatisfied: view.impactSatisfied,
+    ...(view.emptyReason === undefined ? {} : { emptyReason: view.emptyReason }),
+    ...(traceLevel === 'verbose' && topK.length > 0
+      ? {
+          topK: topK.map((item) => ({
+            key: item.key,
+            quality: item.quality,
+            rank: item.rank,
+            components: Object.fromEntries([...item.components.entries()].sort(([left], [right]) => left.localeCompare(right))),
+          })),
+        }
+      : {}),
+    ...(traceLevel === 'verbose'
+      ? view.selected.length > topK.length ? { truncated: true } : {}
+      : view.selected.length > 1 ? { truncated: true } : {}),
+  };
 }
 
 function scalarZonePropValue(value: AttributeValue | undefined): string | number | boolean | undefined {

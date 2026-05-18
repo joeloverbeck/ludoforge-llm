@@ -1463,6 +1463,7 @@ const CompiledAgentProfileSchema = z
       .object({
         considerations: z.array(StringSchema),
         pruningRules: z.array(StringSchema),
+        strategyModules: z.array(StringSchema).optional(),
         tieBreakers: z.array(StringSchema),
       })
       .strict(),

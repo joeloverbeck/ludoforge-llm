@@ -6,6 +6,7 @@ import { evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import { asActionId, asPlayerId } from '../../../src/kernel/index.js';
 import {
   createInitialStrategyModuleState,
+  createStrategyModuleDef,
   createStrategyModuleGameDef,
   emptyDependencies,
   moduleRef,
@@ -35,6 +36,78 @@ describe('strategy module dispatch order', () => {
     const bad = result.metadata.candidates.find((candidate) => candidate.actionId === 'badMove');
     assert.deepEqual(good?.scoreContributions, [{ termId: 'moduleContribution', contribution: 7 }]);
     assert.deepEqual(bad?.scoreContributions, [{ termId: 'moduleContribution', contribution: 0 }]);
+  });
+
+  it('keeps planned module trace visible after pruning invalidates candidate-dependent caches', () => {
+    const base = createStrategyModuleGameDef(createStrategyModuleDef({
+      applies: { scopes: ['move'], actionTags: ['bad'] },
+      costClass: 'candidate',
+    }));
+    const catalog = base.agents!;
+    const def = {
+      ...base,
+      agents: {
+        ...catalog,
+        compiled: {
+          ...catalog.compiled,
+          pruningRules: {
+            ...catalog.compiled.pruningRules,
+            dropInactive: {
+              ...catalog.compiled.pruningRules.dropInactive!,
+              when: {
+                kind: 'op',
+                op: 'eq',
+                args: [
+                  moduleRef('buildEngine', { kind: 'strategyModule', moduleId: 'buildEngine', field: 'contribution' }),
+                  { kind: 'literal', value: 0 },
+                ],
+              } as const,
+            },
+          },
+        },
+        profiles: {
+          ...catalog.profiles,
+          baseline: {
+            ...catalog.profiles.baseline!,
+            use: {
+              ...catalog.profiles.baseline!.use,
+              considerations: [],
+            },
+            plan: {
+              ...catalog.profiles.baseline!.plan,
+              considerations: [],
+            },
+          },
+        },
+      },
+    };
+    const state = createInitialStrategyModuleState(def);
+    const result = evaluatePolicyMoveCore({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        { actionId: asActionId('badMove'), params: {} },
+        { actionId: asActionId('goodMove'), params: {} },
+      ],
+      trustedMoveIndex: new Map(),
+      rng: { state: state.rng },
+      diagnosticsMode: 'enabled',
+    });
+
+    assert.equal(result.kind, 'success');
+    assert.deepEqual(result.move, { actionId: asActionId('badMove'), params: {} });
+    assert.equal(result.metadata.pruningSteps[0]?.remainingCandidateCount, 1);
+    assert.deepEqual(result.metadata.modules?.active, [
+      {
+        id: 'buildEngine',
+        traceLabel: 'build engine',
+        priorityTier: 10,
+        activationValue: 4,
+        contribution: 7,
+        scoreGroups: { standing: 7 },
+      },
+    ]);
   });
 
   it('resolves module score-group and selector binding refs from downstream considerations', () => {

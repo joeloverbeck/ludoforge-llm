@@ -104,6 +104,27 @@ const logPolicyEvalOomTrace = (
   );
 };
 
+const evaluatePlannedStrategyModules = (input: {
+  readonly profile: AgentPolicyCatalog['profiles'][string];
+  readonly catalog: AgentPolicyCatalog;
+  readonly evaluation: PolicyEvaluationContext;
+  readonly candidates: readonly PolicyEvaluationCandidate[];
+}): void => {
+  for (const moduleId of input.profile.plan.strategyModules ?? []) {
+    const module = input.catalog.compiled.strategyModules?.[moduleId];
+    if (module === undefined || module.costClass === 'auditOnly') {
+      continue;
+    }
+    if (module.costClass === 'state') {
+      input.evaluation.evaluatePlannedStrategyModule(moduleId);
+      continue;
+    }
+    for (const candidate of input.candidates) {
+      input.evaluation.evaluatePlannedStrategyModule(moduleId, candidate);
+    }
+  }
+};
+
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
   readonly reason: PolicyPreviewUnavailabilityReason;
@@ -676,19 +697,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           evaluation.evaluatePlannedSelector(selectorId, candidate);
         }
       }
-      for (const moduleId of profile.plan.strategyModules ?? []) {
-        const module = catalog.compiled.strategyModules?.[moduleId];
-        if (module === undefined || module.costClass === 'auditOnly') {
-          continue;
-        }
-        if (module.costClass === 'state') {
-          evaluation.evaluatePlannedStrategyModule(moduleId);
-          continue;
-        }
-        for (const candidate of activeCandidates) {
-          evaluation.evaluatePlannedStrategyModule(moduleId, candidate);
-        }
-      }
+      evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
 
       for (const pruningRuleId of profile.use.pruningRules) {
         const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
@@ -739,6 +748,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           skippedBecauseEmpty: false,
         });
       }
+      evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
 
       const considerations = catalog.compiled.considerations;
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(

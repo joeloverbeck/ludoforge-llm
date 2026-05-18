@@ -227,6 +227,31 @@ agents:
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
 
+    strategyModules:
+      arvnPursueProjectedMargin:
+        traceLabel: "ARVN pursue projected margin"
+        when: true
+        applies:
+          scopes: [move, microturn]
+        priority:
+          tier: 20
+        selectors:
+          - role: primaryTarget
+            selectorId: arvnMicroturnOptionProjectedMargin
+        scoreGroups:
+          - id: targetQuality
+            summary: sum
+            terms:
+              - weight: 1
+                value: 1
+              - weight: 10
+                value:
+                  ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+        guardrailIds: []
+        fallback:
+          ifInactive: noContribution
+          ifSelectorEmpty: noContribution
+
     pruningRules:
       dropPassWhenOtherMovesExist:
         when:
@@ -508,6 +533,8 @@ agents:
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
+        strategyModules:
+          - arvnPursueProjectedMargin
         considerations:
           - preferProjectedSelfMargin
           - preserveResources

@@ -373,7 +373,9 @@ const aggregateWindowSize = (probe: Probe): number | null => {
     return null;
   }
   const windows = probe.assertions.flatMap((assertion) => (
-    assertion.kind === 'actionFamilyDistributionBelow' ? [assertion.windowMinDecisions] : []
+    assertion.kind === 'actionFamilyDistributionBelow' || assertion.kind === 'moduleActiveContributionRateAtLeast'
+      ? [assertion.windowMinDecisions]
+      : []
   ));
   return windows.length === 0 ? null : Math.max(...windows);
 };

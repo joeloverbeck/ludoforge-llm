@@ -167,6 +167,15 @@ $post-ticket-review <completed-ticket>
 
 Before invoking `post-ticket-review`, re-open the completed ticket's `Acceptance Criteria`, `Test Plan`, `Commands`, and `Outcome`/proof ledger and confirm every ticket-named broad lane that could affect status, acceptance wording, dependency ownership, or archive eligibility has either run after the final boundary text, been explicitly substituted by a repo-valid lane, or been classified as intentionally post-archive-safe. If a remaining broad lane could expose a Foundations/repo-policy contradiction or force ticket/spec/follow-up truthing, run or classify that lane before archival rather than archiving first and amending after the fact. If running the lane is infeasible in the current turn, keep the ticket active with an implemented-not-archived handoff instead of invoking review.
 
+Before invoking review, also map each acceptance criterion and invariant to current proof:
+
+```text
+Acceptance-to-command map:
+- <criterion/invariant>: <direct command | covered by broader command | substituted with rationale | not exercised/blocking>
+```
+
+Use this map to catch semantic gates that are not named as exact commands, such as budget harnesses, policy-profile-quality lanes, generated-artifact checks, or repo integrity scripts. If any entry is `not exercised/blocking`, do not archive yet.
+
 Use the live `post-ticket-review` skill exactly. It owns closeout truthing, archival, dependency/path repairs, and warranted follow-up creation.
 
 After review, print:
@@ -220,6 +229,12 @@ Before committing:
      - `why checked in instead of generated on demand`
      - `hygiene proof`
      If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
+   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
+     - `artifact path`
+     - `generation command or retained script`
+     - `canonical inputs`
+     - `why the refresh is expected`
+     Record this in the ticket outcome, a report, or the final handoff before staging. If the generator was ad hoc, preserve the exact command text in that durable location.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
@@ -265,6 +280,14 @@ After each iteration work commit or no-commit checkpoint, update the state file 
 - blocker summary when blocked
 - normalized dirty-state classification
 - `updated_at`
+
+No-commit finalization is still a terminal handoff state. Before any final response that does not create a work commit:
+
+1. Refresh `git status --short`.
+2. Update `.codex/run-state/implement-spec-tickets.json` so `last_work_commit: "none"` unless a prior reachable commit genuinely represents the just-completed iteration, `last_state_commit` is `"none"` or `"self"` as appropriate, and `dirty_state` truthfully records owned/unrelated dirty paths instead of `clean`.
+3. Re-read the state file and confirm queued paths, `next_target`, `phase`, `in_progress_ticket`, `owned_dirty_summary`, and `dirty_state` match the live repo.
+4. Emit the full `Harness handoff` block below with `Work commit: none` and `State commit: none` unless a state-only commit was actually created.
+5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
 
 If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 

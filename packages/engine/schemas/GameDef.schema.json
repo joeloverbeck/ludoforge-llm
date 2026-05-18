@@ -2834,6 +2834,12 @@
                       "$ref": "#/definitions/anon_4682db72"
                     }
                   },
+                  "strategyModules": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
                   "tieBreakers": {
                     "type": "array",
                     "items": {

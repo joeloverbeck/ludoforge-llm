@@ -55,6 +55,15 @@ export type ProbeAssertion =
       readonly threshold: number;
       readonly windowMinDecisions: number;
     }
+  | {
+      readonly id?: string;
+      readonly kind: 'moduleActiveContributionRateAtLeast';
+      readonly module: string;
+      readonly traceLabel: string;
+      readonly minActiveRate: number;
+      readonly minNonZeroContributionRate: number;
+      readonly windowMinDecisions: number;
+    }
   | { readonly id?: string; readonly kind: 'traceContainsField'; readonly field: string }
   | { readonly id?: string; readonly kind: 'traceHasAdvisory'; readonly code: AdvisoryCode }
   | { readonly id?: string; readonly kind: 'traceLacksAdvisory'; readonly code: AdvisoryCode }

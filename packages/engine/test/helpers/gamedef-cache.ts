@@ -110,12 +110,24 @@ function currentCompilerStamp(): string {
     return memoizedCompilerStamp;
   }
 
-  memoizedCompilerStamp = createHash('sha256').update(readFileSync(compilerStampPath())).digest('hex');
+  const hash = createHash('sha256');
+  for (const path of compilerStampPaths()) {
+    hash.update(path);
+    hash.update('\0');
+    hash.update(readFileSync(path));
+    hash.update('\0');
+  }
+  memoizedCompilerStamp = hash.digest('hex');
   return memoizedCompilerStamp;
 }
 
-function compilerStampPath(): string {
-  return join(resolveRepoRoot(), 'packages', 'engine', 'dist', 'src', 'cnl', 'staged-pipeline.js');
+function compilerStampPaths(): readonly string[] {
+  const root = resolveRepoRoot();
+  return [
+    join(root, 'packages', 'engine', 'dist', 'src', 'cnl', 'staged-pipeline.js'),
+    join(root, 'packages', 'engine', 'dist', 'src', 'cnl', 'validate-agents.js'),
+    join(root, 'packages', 'engine', 'dist', 'src', 'contracts', 'policy-contract.js'),
+  ];
 }
 
 function resolveRepoRoot(): string {

@@ -14,6 +14,7 @@ export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[numbe
 
 export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
   'pruningRules',
+  'strategyModules',
   'considerations',
   'tieBreakers',
 ] as const;
@@ -22,6 +23,7 @@ export type AgentPolicyProfileUseBucket = typeof AGENT_POLICY_PROFILE_USE_BUCKET
 
 export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
   pruningRules: 'pruningRules',
+  strategyModules: 'strategyModules',
   considerations: 'considerations',
   tieBreakers: 'tieBreakers',
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;

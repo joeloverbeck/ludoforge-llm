@@ -1191,6 +1191,7 @@ export interface CompiledAgentProfile {
   readonly use: {
     readonly considerations: readonly string[];
     readonly pruningRules: readonly string[];
+    readonly strategyModules?: readonly string[];
     readonly tieBreakers: readonly string[];
   };
   readonly preview: CompiledAgentPreviewConfig;

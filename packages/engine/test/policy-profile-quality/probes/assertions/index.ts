@@ -4,6 +4,7 @@ import { evaluateActionFamilyDistributionBelow } from './action-family-distribut
 import { assertNever } from './common.js';
 import { evaluateGuardrailFired } from './guardrail-fired.js';
 import { evaluateGuardrailNotFired } from './guardrail-not-fired.js';
+import { evaluateModuleActiveContributionRateAtLeast } from './module-active-contribution-rate-at-least.js';
 import { evaluatePreviewRefStatusIn } from './preview-ref-status-in.js';
 import { evaluatePublishedFrontierConstructible } from './published-frontier-constructible.js';
 import { evaluateSelectedCandidateHasTag } from './selected-candidate-has-tag.js';
@@ -42,6 +43,8 @@ export const dispatchAssertion = (
       return evaluateSelectedNotByReason({ ...context, assertion });
     case 'actionFamilyDistributionBelow':
       return evaluateActionFamilyDistributionBelow({ ...context, assertion });
+    case 'moduleActiveContributionRateAtLeast':
+      return evaluateModuleActiveContributionRateAtLeast({ ...context, assertion });
     case 'traceContainsField':
       return evaluateTraceContainsField({ ...context, assertion });
     case 'traceHasAdvisory':

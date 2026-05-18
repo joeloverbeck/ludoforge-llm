@@ -649,6 +649,191 @@
   },
   {
     "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "can-tho:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "da-nang:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "hue:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "khanh-hoa:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "khanh-hoa:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "kien-hoa-vinh-binh:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "kontum:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "phu-bon-phu-yen:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "phu-bon-phu-yen:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "quang-nam:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "qui-nhon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "saigon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
     "actionId": "coupArvnRedeployOptionalTroops",
     "move": {
       "actionId": "coupArvnRedeployOptionalTroops",
@@ -695,69 +880,6 @@
     "move": {
       "actionId": "coupArvnRedeployOptionalTroops",
       "params": {
-        "sourceSpace": "can-tho:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployOptionalTroops",
-    "move": {
-      "actionId": "coupArvnRedeployOptionalTroops",
-      "params": {
-        "sourceSpace": "hue:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployOptionalTroops",
-    "move": {
-      "actionId": "coupArvnRedeployOptionalTroops",
-      "params": {
-        "sourceSpace": "qui-nhon:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployOptionalTroops",
-    "move": {
-      "actionId": "coupArvnRedeployOptionalTroops",
-      "params": {
         "sourceSpace": "saigon:none"
       },
       "actionClass": "operation"
@@ -792,96 +914,6 @@
   {
     "kind": "chooseOne",
     "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployPolice",
-    "move": {
-      "actionId": "coupArvnRedeployPolice",
-      "params": {
-        "sourceSpace": "da-nang:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployPolice",
-    "move": {
-      "actionId": "coupArvnRedeployPolice",
-      "params": {
-        "sourceSpace": "kien-hoa-vinh-binh:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployPolice",
-    "move": {
-      "actionId": "coupArvnRedeployPolice",
-      "params": {
-        "sourceSpace": "kontum:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployPolice",
-    "move": {
-      "actionId": "coupArvnRedeployPolice",
-      "params": {
-        "sourceSpace": "quang-nam:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "coupArvnRedeployPolice",
-    "move": {
-      "actionId": "coupArvnRedeployPolice",
-      "params": {
-        "sourceSpace": "saigon:none"
-      },
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
-    "value": "an-loc:none"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]",
     "value": "an-loc:none"
   },
   {
@@ -987,28 +1019,28 @@
   },
   {
     "kind": "actionSelection",
-    "actionId": "govern",
+    "actionId": "sweep",
     "move": {
-      "actionId": "govern",
+      "actionId": "sweep",
       "params": {},
       "actionClass": "operationPlusSpecialActivity"
     }
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "an-loc:none"
+    "value": "khanh-hoa:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "confirm"
   },
   {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]",
-    "value": "patronage"
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.3.if.then.0.chooseN::$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__if_then_0__hopLocs_khanh-hoa:none[0]",
+    "command": "confirm"
   },
   {
     "kind": "actionSelection",
@@ -1357,28 +1389,28 @@
   },
   {
     "kind": "actionSelection",
-    "actionId": "govern",
+    "actionId": "sweep",
     "move": {
-      "actionId": "govern",
+      "actionId": "sweep",
       "params": {},
       "actionClass": "operationPlusSpecialActivity"
     }
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "ba-xuyen:none"
+    "value": "southern-laos:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "confirm"
   },
   {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]",
-    "value": "patronage"
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.5.stages[1].effects.0.forEach.effects.3.if.then.0.chooseN::$__macro_sweep_loc_hop_actionPipelines_5__stages_1__effects_0__forEach_effects_3__if_then_0__hopLocs_southern-laos:none[0]",
+    "command": "confirm"
   },
   {
     "kind": "actionSelection",

@@ -851,9 +851,12 @@ function lowerProfile(
         diagnostics,
       ),
     ]),
-  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'tieBreakers'>;
+  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'strategyModules' | 'tieBreakers'>;
   const use: CompiledAgentProfile['use'] = {
-    ...loweredUse,
+    considerations: loweredUse.considerations,
+    pruningRules: loweredUse.pruningRules,
+    ...(loweredUse.strategyModules?.length === 0 ? {} : { strategyModules: loweredUse.strategyModules }),
+    tieBreakers: loweredUse.tieBreakers,
   };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);

@@ -1,6 +1,6 @@
 # 181STRSTRPOL-002: Phase 0 — Probe assertion library
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/` only (no engine src changes)
@@ -108,3 +108,40 @@ For aggregate kinds (`actionFamilyDistributionBelow`, `selectedNotByReason` with
 
 1. `pnpm -F @ludoforge/engine test -- assertions`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-18
+
+What changed:
+- Replaced the `ProbeAssertion = never` placeholder with the Phase 0 assertion union and supporting probe assertion ids/status types.
+- Added the `probes/assertions/` dispatcher plus per-kind evaluators for tag, rank, selected-reason, action-family distribution, preview-ref status, trace-field, advisory, standing-role target, and reserved selector/guardrail assertions.
+- Wired `runProbe` to evaluate assertions for matched decision groups, pass the current state/def into assertion context, and add selected action tags to `ProbeMatch` so tag/family assertions stay data-driven.
+- Removed the temporary `occurrence: "every"` validation block now that aggregate assertion kinds are available.
+- Added per-kind unit tests and dispatcher coverage with repo-required `@test-class` markers.
+
+Deviations:
+- The literal focused command `pnpm -F @ludoforge/engine test -- assertions` is stale in the live package runner; it forwards `assertions` to `run-tests.mjs` and fails with `Could not find 'assertions'`. The equivalent focused compiled test lane used for this ticket was `pnpm -F @ludoforge/engine exec node --test "dist/test/policy-profile-quality/probes/assertions/*.test.js" "dist/test/policy-profile-quality/probes/probe-runner.test.js"` after `pnpm -F @ludoforge/engine build`.
+- The implementation added a small shared assertion test helper instead of duplicating synthetic trace fixtures in every assertion test file.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine test -- assertions` — failed as a stale command shape (`Could not find 'assertions'`); replaced by the focused compiled Node test lane above.
+- `pnpm -F @ludoforge/engine exec node --test "dist/test/policy-profile-quality/probes/assertions/*.test.js" "dist/test/policy-profile-quality/probes/probe-runner.test.js"` — passed, 30 tests.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — initially failed only because the new assertion tests lacked `@test-class` markers; after adding markers, rerun passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed after terminal status edit.
+- `git diff --check` — passed.
+- `rg -n '[ \t]+$' packages/engine/test/policy-profile-quality/probes/assertions` — no trailing whitespace in new assertion files.
+
+Post-review correction:
+- Review found that the initial assertion dispatcher did not pass the current state/def even though the ticket defined assertion inputs as candidate/trace/state. The dispatcher now carries `def` and `state`, and `selectedSeatTargetMatchesRole` uses the existing generic standing-role resolver when state is available, with a trace fallback for synthetic unit fixtures.
+- Post-review correction verification: `pnpm -F @ludoforge/engine build`, focused assertion/probe-runner Node test lane, `pnpm turbo lint`, and `pnpm turbo typecheck` all passed after the correction. The earlier successful `pnpm turbo test` was not rerun because the correction is confined to the policy-profile-quality probe harness, and the focused probe lane plus rebuild/typecheck exercises the changed compiled output.
+
+Closeout ledgers:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed after this terminal status edit.
+- Source-size sweep: largest touched/new test/probe source file is `packages/engine/test/policy-profile-quality/probes/probe-runner.ts` at 254 lines; no file is near the 800-line cap.
+- Untracked/touched-file hygiene: new `packages/engine/test/policy-profile-quality/probes/assertions/` files are ticket-owned and will be staged with this ticket.
+- Post-review: run in this session; the ticket is archive-ready after the state/def assertion-context correction above.

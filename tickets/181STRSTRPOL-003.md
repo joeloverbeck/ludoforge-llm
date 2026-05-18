@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/` only (no engine src changes)
-**Deps**: `tickets/181STRSTRPOL-002.md`
+**Deps**: `archive/tickets/181STRSTRPOL-002.md`
 
 ## Problem
 

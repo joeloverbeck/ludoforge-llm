@@ -23,7 +23,4 @@ const validateProbe = (probe: Probe): void => {
   if (typeof occurrence === 'object' && occurrence.n < 1) {
     throw new Error(`Probe ${probe.id} nth occurrence must be >= 1.`);
   }
-  if (occurrence === 'every' && probe.assertions.length > 0) {
-    throw new Error(`Probe ${probe.id} uses occurrence "every" before aggregate assertion kinds are available.`);
-  }
 };

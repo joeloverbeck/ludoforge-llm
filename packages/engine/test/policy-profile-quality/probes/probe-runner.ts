@@ -23,6 +23,7 @@ import type {
   ProbeRunOptions,
   ProbeSeedOutcome,
 } from './probe-types.js';
+import { dispatchAssertion } from './assertions/index.js';
 
 const DEFAULT_MAX_DECISION_STEPS = 256;
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
@@ -96,7 +97,7 @@ const runProbeForSeed = (
       if (isOccurrenceSatisfied(probe, matches.length)) {
         return {
           seed,
-          outcome: { kind: 'pass' },
+          outcome: evaluateProbeAssertions(probe, matches, { def: loaded.def, state }),
           matches,
         };
       }
@@ -108,7 +109,7 @@ const runProbeForSeed = (
   if (probe.decisionBinding.occurrence === 'every' && matches.length > 0) {
     return {
       seed,
-      outcome: { kind: 'pass' },
+      outcome: evaluateProbeAssertions(probe, matches, { def: loaded.def, state }),
       matches,
     };
   }
@@ -161,6 +162,7 @@ const selectDecisionForProbe = (
           seed,
           stateHash: formatStateHash(state),
           selectedDecision: selected.decision,
+          selectedActionTags: actionTagsForDecision(context.def, selected.decision),
           trace,
           contextKind: microturn.kind,
           decisionKey,
@@ -209,6 +211,32 @@ const aggregateProbeOutcome = (outcomes: readonly ProbeSeedOutcome[]): ProbeOutc
   const firstNonPass = outcomes.find((outcome) => outcome.outcome.kind !== 'pass');
   return firstNonPass?.outcome ?? { kind: 'pass' };
 };
+
+const evaluateProbeAssertions = (
+  probe: Probe,
+  matches: readonly ProbeMatch[],
+  context: {
+    readonly def: Parameters<PolicyAgent['chooseDecision']>[0]['def'];
+    readonly state: GameState;
+  },
+): ProbeOutcome => {
+  for (const assertion of probe.assertions) {
+    const outcome = dispatchAssertion(assertion, { probe, matches, ...context });
+    if (outcome.kind !== 'pass') {
+      return outcome;
+    }
+  }
+  return { kind: 'pass' };
+};
+
+const actionTagsForDecision = (
+  def: Parameters<PolicyAgent['chooseDecision']>[0]['def'],
+  decision: Decision,
+): readonly string[] => (
+  decision.kind === 'actionSelection'
+    ? def.actionTagIndex?.byAction[String(decision.actionId)] ?? []
+    : []
+);
 
 const formatStateHash = (state: GameState): string => `0x${state.stateHash.toString(16)}`;
 

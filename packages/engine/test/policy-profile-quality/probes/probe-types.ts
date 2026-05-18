@@ -18,7 +18,46 @@ export type PhaseId = string;
 export type ProbeSeverity = 'profileQuality' | 'architecturalInvariant';
 export type ProbeOutcomeKind = 'pass' | 'fail' | 'error';
 
-export type ProbeAssertion = never;
+export type ActionTagId = string;
+export type SelectorId = string;
+export type GuardrailId = string;
+export type AdvisoryCode = string;
+export type SelectedByReason = 'scored' | 'tiebreak' | 'fallbackExplicit' | 'tiebreakAfterPreviewNoSignal' | string;
+export type PreviewRefStatus =
+  | 'ready'
+  | 'stochastic'
+  | 'random'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'postGrantCap'
+  | 'noPreviewDecision'
+  | 'gated'
+  | 'unavailableWithFallback';
+
+export type StandingRoleId = 'currentLeader' | 'nearestThreat' | 'closestAhead' | 'closestBehind';
+
+export type ProbeAssertion =
+  | { readonly id?: string; readonly kind: 'selectedCandidateHasTag'; readonly tag: ActionTagId }
+  | { readonly id?: string; readonly kind: 'selectedCandidateLacksTag'; readonly tag: ActionTagId }
+  | { readonly id?: string; readonly kind: 'selectedCandidateRankWithinTopK'; readonly k: number }
+  | { readonly id?: string; readonly kind: 'selectedTargetSatisfiesSelector'; readonly selector: SelectorId; readonly minRank?: number }
+  | { readonly id?: string; readonly kind: 'selectedSeatTargetMatchesRole'; readonly role: StandingRoleId }
+  | { readonly id?: string; readonly kind: 'previewRefStatusIn'; readonly ref: string; readonly allowed: readonly PreviewRefStatus[] }
+  | { readonly id?: string; readonly kind: 'selectedNotByReason'; readonly reason: SelectedByReason; readonly maxRate?: number }
+  | {
+      readonly id?: string;
+      readonly kind: 'actionFamilyDistributionBelow';
+      readonly family: 'any' | { readonly tags: readonly ActionTagId[] };
+      readonly threshold: number;
+      readonly windowMinDecisions: number;
+    }
+  | { readonly id?: string; readonly kind: 'traceContainsField'; readonly field: string }
+  | { readonly id?: string; readonly kind: 'traceHasAdvisory'; readonly code: AdvisoryCode }
+  | { readonly id?: string; readonly kind: 'traceLacksAdvisory'; readonly code: AdvisoryCode }
+  | { readonly id?: string; readonly kind: 'guardrailFired'; readonly guardrail: GuardrailId }
+  | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId };
 
 export interface Probe {
   readonly id: string;
@@ -80,6 +119,7 @@ export interface ProbeMatch {
   readonly seed: number;
   readonly stateHash: string;
   readonly selectedDecision: Decision;
+  readonly selectedActionTags: readonly ActionTagId[];
   readonly trace: PolicyAgentDecisionTrace | null;
   readonly contextKind: DecisionContextKind;
   readonly decisionKey: string | null;

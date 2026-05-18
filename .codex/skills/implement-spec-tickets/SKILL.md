@@ -72,7 +72,8 @@ On resume, read this file first, then verify it against live repo state before i
 - `originating_spec` still exists unless `archived_spec` is set
 - `next_target` exists and is active unless the next action is final spec archival or blocked exit
 - queued ticket paths still exist and still belong to the originating spec family
-- recorded commit SHAs are reachable from `HEAD`; `"self"` and `"none"` are allowed for `last_state_commit`
+- `last_work_commit` is either a full reachable commit SHA or `"none"`; `"self"` is not valid for `last_work_commit`
+- `last_state_commit` is a full reachable commit SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`
 - `phase`, `in_progress_ticket`, and `owned_dirty_summary` match the live ticket and worktree when present
 - `git status --short` matches or safely supersedes `dirty_state`
 
@@ -209,21 +210,34 @@ Before committing:
 2. Inspect `git diff --cached --name-status` before staging. Pre-existing unrelated staged entries must not enter a harness commit.
 3. Verify every dirty path is owned by the iteration, explicitly approved, or intentionally left unstaged.
 4. Run whitespace/hygiene over owned files. For newly untracked files, use `git diff --no-index --check /dev/null <path>` or an equivalent trailing-whitespace check.
-5. Stage only owned and approved paths.
-6. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
-7. Emit the checkpoint below.
-8. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
+   - For any new generated fixture, witness, report, trace, or serialized-state artifact over 1 MB or over 10,000 lines, emit a generated-artifact provenance ledger before staging:
+     - `artifact path`
+     - `size / line count`
+     - `generation command or retained script`
+     - `canonical inputs`
+     - `why checked in instead of generated on demand`
+     - `hygiene proof`
+     If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
+5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
+6. Stage only owned and approved paths.
+7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
+8. Emit the checkpoint below.
+9. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
-Required checkpoint:
+Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 
 ```text
 Required-visible-block checkpoint:
 - implement-ticket audit block: <emitted | not_applicable: reason>
 - post-ticket-review block: <emitted | not_applicable: reason>
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
+- state-file validity: <valid | not_changed | blocked: reason>
+- generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
+
+Manual review is not a substitute for a child-skill workflow unless it is explicitly classified in this checkpoint. If you manually perform any `post-ticket-review` step, still emit the `Post-ticket review:` block and classify it as `child-skill invocation`, `manual late recovery`, or `not_applicable`.
 
 If a required-visible block was missed at its intended point, emit a `late harness recovery checkpoint` before committing or finalizing. Name the missed block, classify why it was late, provide the current truthful contents, and do not describe the recovered block as timely in the commit or handoff.
 
@@ -252,6 +266,12 @@ After each iteration work commit or no-commit checkpoint, update the state file 
 If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
+
+Do not write `"self"` into `last_work_commit`. When the state file is included in the same commit as the work and the finalized work SHA is not yet knowable, choose one of these valid patterns:
+
+1. Commit the work without the final SHA, then immediately make a state-file-only commit that records `last_work_commit` as the full work commit SHA and `last_state_commit: "self"`.
+2. If no work commit was created, record `last_work_commit: "none"` and `last_state_commit: "none"` or `"self"` depending on whether the state file itself was committed.
+3. If the state file must be included in the work commit for a non-SHA reason, set `last_work_commit` to the previous reachable work SHA only when that is still the truthful last completed work commit; otherwise use the state-file-only follow-up commit pattern.
 
 Print:
 

@@ -223,8 +223,9 @@ Before committing:
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
-8. Emit the checkpoint below.
-9. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
+8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
+9. Emit the checkpoint below.
+10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
 Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 
@@ -274,6 +275,12 @@ Do not write `"self"` into `last_work_commit`. When the state file is included i
 1. Commit the work without the final SHA, then immediately make a state-file-only commit that records `last_work_commit` as the full work commit SHA and `last_state_commit: "self"`.
 2. If no work commit was created, record `last_work_commit: "none"` and `last_state_commit: "none"` or `"self"` depending on whether the state file itself was committed.
 3. If the state file must be included in the work commit for a non-SHA reason, set `last_work_commit` to the previous reachable work SHA only when that is still the truthful last completed work commit; otherwise use the state-file-only follow-up commit pattern.
+
+After committing state separately, revalidate the final handoff state before responding:
+
+1. Refresh `git status --short`; `dirty_state` in the state file must match the final worktree classification.
+2. Re-read `.codex/run-state/implement-spec-tickets.json` and confirm the paths, queue, `last_work_commit`, `last_state_commit`, `phase`, `in_progress_ticket`, and `dirty_state` describe the post-state-commit repo state.
+3. If the state-only commit was amended, rerun the same checks against the amended commit before finalizing.
 
 Print:
 
@@ -343,6 +350,8 @@ Do not create or push a branch if the loop stopped blocked or if the worktree st
 ## Final Report
 
 After each ticket iteration, include the `Harness handoff` block from `Persist State And Prepare Reset` verbatim unless the final spec archive or branch/push path supersedes it. End with:
+
+Before the final response, perform a handoff preflight: confirm the response includes every `Harness handoff` row when applicable, including originating spec, last ticket processed, work commit, state commit, next target, queue, dirty state, state file, required next invocation, and reset boundary. If the final spec archive or blocked path supersedes the normal block, explicitly state why the normal row is not applicable.
 
 - originating spec path and archived path, if archived
 - tickets implemented, blocked, archived, or left active

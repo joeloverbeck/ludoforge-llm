@@ -21,6 +21,8 @@ This harness also grants explicit authorization to patch child skills when a chi
 
 For any nonzero child-audit finding count, include enough evidence in the compact block to justify each apply, reject, or defer decision. Do not collapse nonzero findings into unexplained counts.
 
+For a zero-finding child audit, the `Evidence basis` line must still name at least two concrete exercised surfaces that were checked, such as boundary reset handling, archival/reference repair, proof invalidation, ticket graph updates, state persistence, or terminal-status gating. Do not emit a bare "no findings" audit without saying which parts of the child workflow were actually exercised.
+
 ## Required Reads
 
 Before the first loop iteration, read:
@@ -113,6 +115,8 @@ Use the live `implement-ticket` skill exactly. It owns reassessment, implementat
 
 If any user-approved `1-3-1`, `docs/FOUNDATIONS.md` reassessment, or other explicit boundary reset changes the active ticket's deliverable, proof lane, dependency story, or ownership boundary, patch the affected active ticket/spec/sibling artifacts before source or test edits resume. Then re-emit a compact working checkpoint that names the approved option, invalidated proof lanes, replacement proof plan, and next terminal-status boundary. This applies whether or not the ticket entered a durable blocked state.
 
+If a red proof lane or repo invariant exposes a contradiction between the active ticket/spec wording and `docs/FOUNDATIONS.md`, `AGENTS.md`, or a current repo policy test, stop before proposing implementation choices as neutral alternatives. Present the problem with three options already ranked by Foundations/repo-rule alignment, explicitly reject or demote any option that would weaken the rule, recommend the compliant option, and wait for user confirmation before patching the boundary or resuming implementation. After confirmation, record the approved option in the affected active ticket/spec/sibling artifacts and rerun the affected proof lanes before terminal status or archival.
+
 If implementation blocks:
 
 - if a concrete follow-up or prerequisite ticket is created or named as next owner, put it at the front of the queue
@@ -159,6 +163,8 @@ If the target ticket reaches a repo-local terminal implemented/completed status,
 ```text
 $post-ticket-review <completed-ticket>
 ```
+
+Before invoking `post-ticket-review`, re-open the completed ticket's `Acceptance Criteria`, `Test Plan`, `Commands`, and `Outcome`/proof ledger and confirm every ticket-named broad lane that could affect status, acceptance wording, dependency ownership, or archive eligibility has either run after the final boundary text, been explicitly substituted by a repo-valid lane, or been classified as intentionally post-archive-safe. If a remaining broad lane could expose a Foundations/repo-policy contradiction or force ticket/spec/follow-up truthing, run or classify that lane before archival rather than archiving first and amending after the fact. If running the lane is infeasible in the current turn, keep the ticket active with an implemented-not-archived handoff instead of invoking review.
 
 Use the live `post-ticket-review` skill exactly. It owns closeout truthing, archival, dependency/path repairs, and warranted follow-up creation.
 

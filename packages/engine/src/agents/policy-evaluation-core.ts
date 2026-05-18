@@ -58,6 +58,7 @@ import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+import { evaluateSelector, type SelectedSelectorView } from './policy-selector-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -355,6 +356,7 @@ export class PolicyEvaluationContext {
   private readonly rootStateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
+  private readonly selectorCache = new Map<string, SelectedSelectorView>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -407,6 +409,7 @@ export class PolicyEvaluationContext {
     this.rootStateFeatureCache.clear();
     this.candidateFeatureCache.clear();
     this.aggregateCache.clear();
+    this.selectorCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -420,11 +423,16 @@ export class PolicyEvaluationContext {
 
   invalidateAggregates(): void {
     this.aggregateCache.clear();
+    this.selectorCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
     this.currentCandidates = candidates;
     this.invalidateAggregates();
+  }
+
+  evaluatePlannedSelector(selectorId: string, candidate?: PolicyEvaluationCandidate): void {
+    this.evaluateSelectorView(selectorId, candidate);
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
@@ -435,6 +443,10 @@ export class PolicyEvaluationContext {
       }
     }
     return result;
+  }
+
+  getEvaluatedSelectorCacheSize(): number {
+    return this.selectorCache.size;
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
@@ -1065,6 +1077,7 @@ export class PolicyEvaluationContext {
         case 'ref':
           return current.ref.kind === 'previewSurface'
             || current.ref.kind === 'candidateTag'
+            || current.ref.kind === 'selector'
             || this.isTopNVisibleScheduleDistanceRef(current.ref);
         case 'globalTokenAgg':
           return current.tokenFilter !== undefined || current.zoneFilter !== undefined;
@@ -1675,7 +1688,7 @@ export class PolicyEvaluationContext {
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
       case 'selector':
-        return undefined;
+        return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {
         if (candidate === undefined) return undefined;
         const tags = this.input.def.actionTagIndex?.byAction[candidate.actionId];
@@ -1688,6 +1701,52 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveSelectorRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'selector' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const view = this.evaluateSelectorView(ref.selectorId, candidate);
+    const first = view.selected[0];
+    const { field } = ref;
+    if (field === 'selected.matches') return view.selected.length > 0;
+    if (field === 'selected.key') return first?.key;
+    if (field === 'selected.quality') return first?.quality ?? view.emptyPenalty;
+    if (field === 'selected.rank') return first?.rank;
+    if (field === 'impactSatisfied') return view.impactSatisfied;
+    if (field === 'size') return view.selected.length;
+    if (typeof field === 'object' && field.kind === 'selected.component') {
+      return first?.components.get(field.componentId);
+    }
+    if (typeof field === 'object' && field.kind === 'candidate.quality') {
+      return view.selected.find((item) => item.key === field.key)?.quality ?? view.emptyPenalty;
+    }
+    return undefined;
+  }
+
+  private evaluateSelectorView(
+    selectorId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): SelectedSelectorView {
+    const selector = this.input.catalog.compiled.selectors?.[selectorId];
+    if (selector === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown selector "${selectorId}".`, { selectorId });
+    }
+    const cacheKey = `${selectorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.selectorCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const view = evaluateSelector(selector, {
+      def: this.input.def,
+      state: this.activeState,
+      candidates: this.currentCandidates,
+      ...(candidate === undefined ? {} : { candidate }),
+      evaluateExpr: (expr, itemCandidate) => this.evaluateCompiledExpr(expr, itemCandidate as PolicyEvaluationCandidate | undefined),
+    });
+    this.selectorCache.set(cacheKey, view);
+    return view;
   }
 
   private resolveCandidateParamRef(

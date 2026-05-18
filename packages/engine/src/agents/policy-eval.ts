@@ -659,6 +659,19 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           evaluation.evaluateCandidateFeature(candidate, featureId);
         }
       }
+      for (const selectorId of profile.plan.selectors ?? []) {
+        const selector = catalog.compiled.selectors?.[selectorId];
+        if (selector === undefined || selector.costClass === 'auditOnly') {
+          continue;
+        }
+        if (selector.costClass === 'state') {
+          evaluation.evaluatePlannedSelector(selectorId);
+          continue;
+        }
+        for (const candidate of activeCandidates) {
+          evaluation.evaluatePlannedSelector(selectorId, candidate);
+        }
+      }
 
       for (const pruningRuleId of profile.use.pruningRules) {
         const pruningRule = catalog.compiled.pruningRules[pruningRuleId];

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/agents/conformance/` (test only)
-**Deps**: `archive/tickets/181STRSTRPOL-006.md`, `tickets/181STRSTRPOL-007.md`, `tickets/181STRSTRPOL-008.md`
+**Deps**: `archive/tickets/181STRSTRPOL-006.md`, `archive/tickets/181STRSTRPOL-007.md`, `tickets/181STRSTRPOL-008.md`
 
 ## Problem
 

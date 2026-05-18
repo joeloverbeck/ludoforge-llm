@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/agents/policy-eval.ts`
-**Deps**: `tickets/181STRSTRPOL-007.md`
+**Deps**: `archive/tickets/181STRSTRPOL-007.md`
 
 ## Problem
 

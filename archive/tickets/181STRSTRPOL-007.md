@@ -1,6 +1,6 @@
 # 181STRSTRPOL-007: Phase 1 — Runtime selector evaluation + caching
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-eval.ts`, possibly new `packages/engine/src/agents/policy-selector-eval.ts`
@@ -152,3 +152,39 @@ When the selected set is empty after `where`/`minImpact`:
 
 1. `pnpm -F @ludoforge/engine test -- policy-selector`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-18)
+
+Implemented the runtime selector evaluation seam:
+
+1. Added `packages/engine/src/agents/policy-selector-eval.ts` with deterministic source materialisation for zones/tokens/players/products/candidate params/microturn options, quality component scoring, result ordering/truncation, `minImpact`, `previewFallback` handling, `onEmpty` modes, and product/empty callback hooks.
+2. Wired selector refs through `PolicyEvaluationContext` for `selected.matches`, `selected.key`, `selected.quality`, `selected.rank`, `selected.component`, `impactSatisfied`, `candidate.<key>.quality`, and `size`, with selector refs forced through direct evaluation so string keys are not bytecode-encoded.
+3. Added the per-decision selector cache beside the existing feature/aggregate caches, invalidated it with aggregate/candidate lifecycle changes, exposed cache-size proof for tests, and warmed planned selectors in `policy-eval.ts` by cost class (`state` once, candidate/microturn/preview per candidate, `auditOnly` skipped).
+4. Added focused runtime tests in `packages/engine/test/unit/agents/policy-selector-eval.test.ts` and `packages/engine/test/determinism/agent-selector-determinism.test.ts`.
+
+Trace record integration for selector advisories remains with 008 as originally out of scope; this ticket landed the evaluator callback seam and runtime ref/cache behavior.
+
+## Verification (2026-05-18)
+
+Passing:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/unit/agents/policy-selector-eval.test.js packages/engine/dist/test/unit/cnl/agent-selector-ir.test.js packages/engine/dist/test/unit/cnl/agent-selector-diagnostics.test.js packages/engine/dist/test/determinism/agent-selector-determinism.test.js packages/engine/dist/test/unit/infrastructure/test-class-markers.test.js`
+3. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+4. `pnpm run check:ticket-deps`
+5. `git diff --check`
+6. `pnpm turbo build`
+7. `pnpm turbo lint`
+8. `pnpm turbo typecheck`
+
+Red, unchanged from the known broad-suite state:
+
+1. `pnpm turbo test` still fails in `dist/test/architecture/policy-preview-inner-outcome-parity.test.js` for Spec 178 ARVN continuedDeepening seeds `1005`, `1011`, `1008`, `1013`, and `1009`, with turnId/golden drift in the `arvn-evolved` outcome-parity fixture. The new selector unit/determinism tests and marker checks pass in that run before the architecture lane reaches the existing parity failure.
+
+Source size check:
+
+1. `packages/engine/src/agents/policy-selector-eval.ts` — 228 lines.
+2. `packages/engine/src/agents/policy-evaluation-core.ts` — 2346 lines, pre-existing large shared runtime file.
+3. `packages/engine/src/agents/policy-eval.ts` — 1628 lines, pre-existing large shared runtime file.
+4. `packages/engine/test/unit/agents/policy-selector-eval.test.ts` — 398 lines.
+5. `packages/engine/test/determinism/agent-selector-determinism.test.ts` — 62 lines.

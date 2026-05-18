@@ -375,7 +375,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `181STRSTRPOL`; spec 
 - [`archive/tickets/181STRSTRPOL-004.md`](../archive/tickets/181STRSTRPOL-004.md) — Phase 0 — Architectural-invariant constructibility probe (covers §8 Phase 0 acceptance (c))
 - [`archive/tickets/181STRSTRPOL-005.md`](../archive/tickets/181STRSTRPOL-005.md) — Phase 0 — CI/profile-quality integration + per-probe overhead budget (covers §8 Phase 0 acceptance (a), (e), with profile-quality probes kept out of the default blocking lane per the Foundations Appendix)
 - [`archive/tickets/181STRSTRPOL-006.md`](../archive/tickets/181STRSTRPOL-006.md) — Phase 1 — Selector compiled IR, library bucket, compiler diagnostics (covers §5.1–§5.5)
-- [`tickets/181STRSTRPOL-007.md`](../tickets/181STRSTRPOL-007.md) — Phase 1 — Runtime selector evaluation + caching (covers §5.6, §6, §7)
+- [`archive/tickets/181STRSTRPOL-007.md`](../archive/tickets/181STRSTRPOL-007.md) — Phase 1 — Runtime selector evaluation + caching (covers §5.6, §6, §7)
 - [`tickets/181STRSTRPOL-008.md`](../tickets/181STRSTRPOL-008.md) — Phase 1 — Trace integration (`selectors` field on PolicyAgentDecisionTrace) (covers §5.6 trace surface)
 - [`tickets/181STRSTRPOL-009.md`](../tickets/181STRSTRPOL-009.md) — Phase 1 — Conformance test: FITL zone-collection selector (covers §8 Phase 1 acceptance (b) zone-collection)
 - [`tickets/181STRSTRPOL-010.md`](../tickets/181STRSTRPOL-010.md) — Phase 1 — Conformance test: Texas Hold'em card-collection selector (covers §8 Phase 1 acceptance (b) card-collection)

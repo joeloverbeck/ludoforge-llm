@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/policy-profile-quality/probes/` (new harness, no engine src changes)
-**Deps**: `specs/181-structured-strategy-policy-layer-probes-and-selectors.md`
+**Deps**: `archive/specs/181-structured-strategy-policy-layer-probes-and-selectors.md`
 
 ## Problem
 
@@ -141,7 +141,7 @@ Completed: 2026-05-18
 What changed:
 - Added the Phase 0 probe scaffold under `packages/engine/test/policy-profile-quality/probes/`: `Probe`/`ProbeResult` types, `defineProbe()` validation, the generic `runProbe()` runner, README authoring notes, a zero-probe FITL wrapper template, and runner-level tests.
 - `runProbe()` now iterates `seed` or `seedRange`, creates initial state through a caller-supplied game loader, applies `replayPrefix` via public kernel decision application, checks `expectedStateHash`, drives decisions through `PolicyAgent`, records selected decision plus `PolicyAgentDecisionTrace`, and reports deterministic aggregate outcomes and `traceBytes`.
-- Assertion kinds intentionally remain absent: `ProbeAssertion` is an empty union for this ticket, with assertion dispatch left to `tickets/181STRSTRPOL-002.md`.
+- Assertion kinds intentionally remain absent: `ProbeAssertion` is an empty union for this ticket, with assertion dispatch left to `archive/tickets/181STRSTRPOL-002.md`.
 
 Deviations from original plan:
 - The reusable runner does not hardcode a scenario/game registry. It accepts `loadGame` so per-game wrappers own fixture selection while the runner remains game-agnostic.

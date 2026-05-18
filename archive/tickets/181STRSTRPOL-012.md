@@ -1,6 +1,6 @@
 # 181STRSTRPOL-012: Phase 1 — ARVN consideration migration + Phase 0 probe rerun
 
-**Status**: PENDING
+**Status**: DONE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (profile YAML); possibly `docs/agent-dsl-cookbook.md` (cookbook entry citing the migration)
@@ -32,6 +32,8 @@ Spec 181 §8 Phase 1 acceptance (c) closes the loop: at least one ARVN considera
 ### 1. Select the target consideration
 
 Read `data/games/fire-in-the-lake/92-agents.md` and identify one consideration whose value expression is currently emulating per-zone target ranking via flat terms — typically something like a Govern preference that sums per-zone presence/control/leader contributions. Document the chosen consideration's pre-migration shape in a comment block in the profile YAML and in the cookbook entry.
+
+**Done**: migrated `preferOptionProjectedMargin`, the ARVN microturn preview-margin consideration that directly read `preview.option.delta.victory.currentMargin.self`.
 
 ### 2. Author the selector
 
@@ -71,9 +73,13 @@ Replace the consideration's flat per-zone scoring with a single reference to `se
 
 Run `pnpm -F @ludoforge/engine test -- fire-in-the-lake.probes` and confirm `arvn-action-distribution-not-dominated` still passes (or improves — dominant rate decreases). If it regresses, iterate on selector design before merging; do NOT relax the probe threshold.
 
+**Done**: the live test filename is `fire-in-the-lake.probes.test.ts`; the drafted pattern without `.test.ts` is stale in the current runner.
+
 ### 5. Cookbook entry
 
 Replace the stub `### Selectors` section in `docs/agent-dsl-cookbook.md` (added by 006) with a real entry citing this migration: pre/post YAML snippets, an explanation of why selector authoring is cleaner than flat scalars, and a pointer to the spec.
+
+**Done**: the cookbook now shows the pre/post ARVN migration and explains `selector.<id>.current.quality` for microturn option scoring.
 
 ## Files to Touch
 
@@ -109,10 +115,23 @@ Replace the stub `### Selectors` section in `docs/agent-dsl-cookbook.md` (added 
 
 ### New/Modified Tests
 
-1. No new test files. Existing `arvn-evolved-convergence.test.ts` and `fire-in-the-lake.probes.test.ts` are the gates.
+1. Refreshed Spec 178 ARVN continued-deepening parity fixtures because the profile migration intentionally changes the ARVN trajectory while preserving deterministic preview evidence.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- fire-in-the-lake.probes`
-2. `pnpm -F @ludoforge/engine test -- arvn-evolved-convergence`
-3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+1. `pnpm -F @ludoforge/engine test -- fire-in-the-lake.probes.test.ts`
+2. `pnpm -F @ludoforge/engine test -- fitl-variant-arvn-evolved-convergence.test.ts`
+3. `pnpm -F @ludoforge/engine test -- policy-preview-inner-outcome-parity.test.ts`
+4. `pnpm -F @ludoforge/engine test -- policy-agent-inner-preview.test.ts microturn-option-evaluator.test.ts`
+5. `pnpm -F @ludoforge/engine test -- compile-preview-inner.test.ts fitl-production-data-compilation.test.ts`
+6. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+7. `pnpm run check:ticket-deps`
+8. `git diff --check`
+9. `pnpm turbo build`
+10. `pnpm turbo lint`
+11. `pnpm turbo typecheck`
+12. `pnpm turbo test`
+
+## Implementation Notes
+
+The original YAML-only migration exposed three generic prerequisites, now archived as `181STRSTRPOL-015`, `181STRSTRPOL-016`, and `181STRSTRPOL-017`. Those fixes keep the final 012 diff profile/cookbook/fixture-scoped while preserving Foundation #20 preview signal integrity.

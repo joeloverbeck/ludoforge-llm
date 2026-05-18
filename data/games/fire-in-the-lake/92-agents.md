@@ -204,6 +204,29 @@ agents:
         of:
           ref: feature.projectedSelfMargin
 
+    selectors:
+      # Spec 181 migration: preferOptionProjectedMargin previously read
+      # preview.option.delta.victory.currentMargin.self directly as a flat
+      # microturn scalar. The selector keeps the same projected-margin signal
+      # but makes the option ranking explicit and traceable.
+      arvnMicroturnOptionProjectedMargin:
+        scopes: [microturn]
+        source:
+          kind: microturnOptions
+        quality:
+          components:
+            - id: projectedSelfMargin
+              value:
+                ref: preview.option.delta.victory.currentMargin.self
+              weight: 1
+              previewFallback:
+                onUnavailable: noContribution
+          order: qualityDesc
+        result:
+          maxItems: 8
+          order: [qualityDesc, stableKeyAsc]
+          onEmpty: noContribution
+
     pruningRules:
       dropPassWhenOtherMovesExist:
         when:
@@ -469,9 +492,7 @@ agents:
         costClass: preview
         weight: 300
         value:
-          ref: preview.option.delta.victory.currentMargin.self
-        previewFallback:
-          onUnavailable: noContribution
+          ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
 
     tieBreakers:
       stableMoveKey:

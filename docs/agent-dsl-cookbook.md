@@ -1241,33 +1241,65 @@ If you use `softmaxSample`, you must provide `temperature`.
 Selectors are the first-class ranking layer introduced by Spec 181. They live
 under `agents.library.selectors` and rank a finite source such as zones,
 tokens, cards, players, microturn options, candidate params, or a bounded
-product. This ticket lands the compiler IR and diagnostics only; runtime
-selector evaluation and production ARVN examples land in follow-up tickets.
+product. Use selectors when a profile is really ranking a set and a scalar
+consideration would hide that ranking inside one utility term.
+
+The first production migration is ARVN's microturn target-option margin term in
+`data/games/fire-in-the-lake/92-agents.md`. Before Spec 181, the consideration
+scored each published microturn option directly:
+
+```yaml
+preferOptionProjectedMargin:
+  scopes: [microturn]
+  costClass: preview
+  weight: 300
+  value:
+    ref: preview.option.delta.victory.currentMargin.self
+  previewFallback:
+    onUnavailable: noContribution
+```
+
+After the migration, the preview-derived scalar is a named selector component
+over the published microturn option frontier. The consideration consumes the
+current option's selector quality:
 
 ```yaml
 agents:
   library:
     selectors:
-      zonePriority:
-        scopes: [move]
+      arvnMicroturnOptionProjectedMargin:
+        scopes: [microturn]
         source:
-          collection: { kind: zones }
+          kind: microturnOptions
         quality:
           components:
-            - id: constant
-              value: 1
+            - id: projectedSelfMargin
+              value:
+                ref: preview.option.delta.victory.currentMargin.self
               weight: 1
+              previewFallback:
+                onUnavailable: noContribution
           order: qualityDesc
         result:
-          maxItems: 4
+          maxItems: 8
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
+
+    considerations:
+      preferOptionProjectedMargin:
+        scopes: [microturn]
+        costClass: preview
+        weight: 300
+        value:
+          ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
 ```
 
 Selector result bounds are mandatory (`maxItems`, and `maxPairs` for product
 sources), and deterministic result ordering must include a stable-key
 tiebreaker. Components that read preview-derived refs must declare an explicit
-`previewFallback`.
+`previewFallback`. Use `selector.<id>.current.quality` when a microturn
+consideration is scoring the currently published option; use `selected.*` refs
+when the policy needs the selector's top-ranked result as a separate fact.
 
 ## Full Production-Style Example
 

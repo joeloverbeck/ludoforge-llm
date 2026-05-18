@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, `packages/engine/src/kernel/types-core.ts`
-**Deps**: `specs/181-structured-strategy-policy-layer-probes-and-selectors.md`
+**Deps**: `archive/specs/181-structured-strategy-policy-layer-probes-and-selectors.md`
 
 ## Problem
 

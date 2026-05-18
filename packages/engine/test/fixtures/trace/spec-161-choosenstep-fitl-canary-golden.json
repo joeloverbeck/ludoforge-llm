@@ -2,37 +2,37 @@
   "seed": 1,
   "maxTurns": 10,
   "playerCount": 4,
-  "decisionIndex": 27,
+  "decisionIndex": 9,
   "profileId": "policy-preview-inner-choosenstep-fitl-canary",
   "decision": {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable",
+    "decisionKey": "decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "tok_us-troops_29"
+    "value": "quang-tri-thua-thien:none"
   },
-  "selectedStableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_29\"",
+  "selectedStableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tri-thua-thien:none\"",
   "previewUsage": {
     "mode": "exactWorld",
-    "evaluatedCandidateCount": 22,
-    "completionPolicyFallbackCount": 11,
+    "evaluatedCandidateCount": 18,
+    "completionPolicyFallbackCount": 9,
     "refIds": [
       "preview.option.delta.victory.currentMargin.self"
     ],
     "unknownRefs": [],
     "readyRefStats": {
       "preview.option.delta.victory.currentMargin.self": {
-        "readyCount": 11,
-        "distinctValueCount": 2,
-        "min": 3,
-        "max": 4,
-        "range": 1,
+        "readyCount": 9,
+        "distinctValueCount": 3,
+        "min": 0,
+        "max": 2,
+        "range": 2,
         "allReadyValuesEqual": false
       }
     },
     "utility": "differentiating",
     "widenedBecauseUniform": false,
     "outcomeBreakdown": {
-      "ready": 11,
+      "ready": 9,
       "stochastic": 0,
       "unknownRandom": 0,
       "unknownHidden": 0,
@@ -44,8 +44,8 @@
     },
     "coverage": {
       "requestedRefCount": 1,
-      "evaluatedRootOptionCount": 11,
-      "readyRootOptionCount": 11,
+      "evaluatedRootOptionCount": 9,
+      "readyRootOptionCount": 9,
       "unavailableRootOptionCount": 0,
       "allRootsUnavailable": false,
       "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -55,48 +55,40 @@
   },
   "options": [
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_138\"",
-      "projectedMarginValue": 3
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"binh-dinh:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_39\"",
-      "projectedMarginValue": 3
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"binh-tuy-binh-thuan:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_29\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"kien-giang-an-xuyen:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_28\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"kien-phong:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_32\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"pleiku-darlac:none\"",
+      "projectedMarginValue": 1
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_31\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-duc-long-khanh:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_47\"",
-      "projectedMarginValue": 3
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tin-quang-ngai:none\"",
+      "projectedMarginValue": 0
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-bases_46\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tri-thua-thien:none\"",
+      "projectedMarginValue": 2
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_34\"",
-      "projectedMarginValue": 3
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_1\"",
-      "projectedMarginValue": 4
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-bases_0\"",
-      "projectedMarginValue": 4
+      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"tay-ninh:none\"",
+      "projectedMarginValue": 0
     }
   ]
 }

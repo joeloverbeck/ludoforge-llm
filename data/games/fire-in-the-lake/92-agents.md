@@ -172,6 +172,22 @@ agents:
           coalesce:
             - { ref: preview.victory.currentRank.self }
             - { ref: feature.selfRank }
+      projectedCurrentLeaderMargin:
+        type: number
+        expr:
+          seatAgg:
+            over: { role: currentLeader }
+            expr: { ref: preview.victory.currentMargin.$seat }
+            aggOp: sum
+            availability: selfAndTargetReady
+      projectedNearestThreatMargin:
+        type: number
+        expr:
+          seatAgg:
+            over: { role: nearestThreat }
+            expr: { ref: preview.victory.currentMargin.$seat }
+            aggOp: sum
+            availability: selfAndTargetReady
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -410,6 +426,22 @@ agents:
           add:
             - { ref: feature.projectedNvaMargin }
             - { ref: feature.projectedVcMargin }
+      hurtCurrentLeader:
+        scopes: [move]
+        weight: 200
+        value:
+          neg:
+            ref: feature.projectedCurrentLeaderMargin
+        previewFallback:
+          onUnavailable: noContribution
+      reduceNearestThreat:
+        scopes: [move]
+        weight: 200
+        value:
+          neg:
+            ref: feature.projectedNearestThreatMargin
+        previewFallback:
+          onUnavailable: noContribution
       valueCapabilityGain:
         scopes: [move]
         weight: 300
@@ -527,6 +559,8 @@ agents:
           - preferProjectedRank
           - preferStrongNormalizedMargin
           - penalizeOpponentMargin
+          - hurtCurrentLeader
+          - reduceNearestThreat
           - preferGovernWeighted
           - trainWhenControlLow
           - preferOptionProjectedMargin

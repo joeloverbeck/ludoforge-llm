@@ -407,6 +407,27 @@ Preview trace fields answer three separate questions:
 
 Healthy preview has at least one important ref with `distinctValueCount > 1`. That means candidates are projecting to meaningfully different states. Degenerate preview often shows high `readyCount` but `allReadyValuesEqual: true` for every requested ref; the synthetic drive completed, but it gave the policy no useful ordering signal.
 
+### `previewUsage.seatMatrix`
+
+`previewUsage.seatMatrix` appears when a profile requests a preview-derived per-seat ref through `seatAgg`. It records each evaluated candidate's per-seat readiness for the requested standing ref:
+
+```json
+{
+  "byCandidate": {
+    "<stableMoveKey>": {
+      "perSeatRefs": {
+        "victoryCurrentMargin.currentMargin.$seat": {
+          "nva": { "status": "ready", "value": -12 },
+          "vc": { "status": "depthCap" }
+        }
+      }
+    }
+  }
+}
+```
+
+Use this matrix when authoring opponent-standing considerations. It distinguishes a real ready value from hidden, stochastic, unresolved, failed, gated, capped, or partial signal. A ready row with the same value for every candidate is a low-information signal; a non-ready row must be paired with an explicit fallback before it can affect scoring.
+
 ### `previewUsage.utility`
 
 `previewUsage.utility` classifies the decision-level usefulness of the ready preview set:
@@ -827,7 +848,7 @@ provenance through `previewUsage.coverage.broad` and
 
 ### Preview Signal Integrity
 
-Every consideration whose `value` reads a `preview.option.*` ref must declare `previewFallback.onUnavailable`.
+Every consideration whose `value` reads a `preview.option.*` ref, or a preview-derived `seatAgg` with `availability: requireAllReady`, `requireAnyReady`, or `selfAndTargetReady`, must declare `previewFallback.onUnavailable`.
 
 Use `noContribution` when an unavailable preview ref should not affect the option score. The consideration is omitted from `scoreContributions[]`, and the trace records the unavailable ref and reason.
 
@@ -857,6 +878,34 @@ preferOptionProjectedMargin:
 ```
 
 The compiler rejects preview-ref considerations that omit this declaration with `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`; add `previewFallback.onUnavailable` to fix the profile. The FITL `preferOptionProjectedMargin` recipe in `data/games/fire-in-the-lake/92-agents.md` uses `noContribution`.
+
+For outer-preview standing refs, choose the `seatAgg.availability` mode deliberately:
+
+| Mode | Use when | Fallback posture |
+| --- | --- | --- |
+| `requireAllReady` | Every selected seat must be ready for the aggregate to contribute. | Declare `previewFallback.onUnavailable`. |
+| `requireAnyReady` | Partial ready cells are useful, but skipped seats must remain visible in trace. | Declare `previewFallback.onUnavailable`. |
+| `selfAndTargetReady` | A role-selected opponent standing value is meaningful only when both self and the target role resolve. | Declare `previewFallback.onUnavailable`. |
+| `skipUnavailable` | Legacy partial-ready behavior is intentional. | No implicit silent zero for all-unavailable preview rows; prefer explicit modes for new authoring. |
+
+Named standing roles are resolved from the game's terminal ranking, not from game-specific engine code:
+
+```yaml
+hurtCurrentLeader:
+  scopes: [move]
+  weight: 200
+  value:
+    neg:
+      seatAgg:
+        over: { role: currentLeader }
+        expr: { ref: preview.victory.currentMargin.$seat }
+        aggOp: sum
+        availability: selfAndTargetReady
+  previewFallback:
+    onUnavailable: noContribution
+```
+
+Use `currentLeader` when the policy should react to the best-standing seat, and `nearestThreat` when it should react to the best-standing opponent after excluding self. The same role names are valid in direct refs such as `victory.currentMargin.role:nearestThreat` and in `seatAgg.over: { role: nearestThreat }`.
 
 ### Gap Diagnosis Quick Map
 

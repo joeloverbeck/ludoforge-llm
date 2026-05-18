@@ -103,8 +103,8 @@ What landed:
 Deferred scope:
 
 - `previewUsage.seatMatrix` remains owned by `archive/tickets/180STDVECOBSROL-004.md`.
-- Role primitives remain owned by `tickets/180STDVECOBSROL-005.md`.
-- FITL ARVN witness, cookbook text, and Foundations appendix text remain owned by `tickets/180STDVECOBSROL-006.md`.
+- Role primitives are archived at `archive/tickets/180STDVECOBSROL-005.md`.
+- FITL ARVN witness, cookbook text, and Foundations appendix text are archived at `archive/tickets/180STDVECOBSROL-006.md`.
 
 Source-size ledger:
 

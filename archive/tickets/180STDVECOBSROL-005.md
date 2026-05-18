@@ -147,5 +147,5 @@ inner expressions.
 
 ### Follow-Up
 
-Phase 5 remains owned by `tickets/180STDVECOBSROL-006.md`: add the FITL ARVN
+Phase 5 is archived at `archive/tickets/180STDVECOBSROL-006.md`: FITL ARVN
 role-based witness and cookbook/FOUNDATIONS addendum.

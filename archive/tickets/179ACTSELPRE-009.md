@@ -93,7 +93,7 @@ Selected successor:
 What changed:
 
 - `specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` is now active as the standing-vector / ordinary-operation preview signal successor.
-- Spec 180 tickets `archive/tickets/180STDVECOBSROL-001.md` and active `tickets/180STDVECOBSROL-002.md` through `tickets/180STDVECOBSROL-006.md` define the implementation chain:
+- Spec 180 tickets `archive/tickets/180STDVECOBSROL-001.md` through `archive/tickets/180STDVECOBSROL-006.md` define the implementation chain:
   - 001: focused ordinary-operation standing-projection RED witness plus silent-zero pin before production implementation (archived).
   - 002: bounded standing-projection route.
   - 003: status-aware outer-preview `seatAgg`.
@@ -114,7 +114,7 @@ Ticket-named deliverables ledger:
 | --- | --- |
 | Reassess `previewEffect.*`, Spec 180 amendment, and narrower projection route | done; Spec 180 integrated standing projection selected |
 | Patch active spec/ticket graph | done; Spec 179 and same-family blockers now point to Spec 180 ticket chain |
-| Define smallest bounded FITL ARVN witness | done; Spec 180 Phase 5 / `tickets/180STDVECOBSROL-006.md` |
+| Define smallest bounded FITL ARVN witness | done; Spec 180 Phase 5 / `archive/tickets/180STDVECOBSROL-006.md` |
 | Define generic cross-game/synthetic invariant before code changes | done; `archive/tickets/180STDVECOBSROL-001.md` |
 | Engine/source implementation | not applicable for 009; explicitly deferred to Spec 180 tickets |
 

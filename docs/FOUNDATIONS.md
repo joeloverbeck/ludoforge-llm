@@ -148,6 +148,6 @@ The distinction is architectural, not rhetorical: mixing determinism proof with 
 
 Spec 144 amended Foundation #18 to distinguish the published-legality contract from the runtime-recovery safety net, and formalized the engine-agnostic `tags: [pass]` fallback convention.
 
-Spec 162 added Foundation #20 (Preview Signal Integrity) to formalize the contract that bounded preview output cannot masquerade as ready evidence.
+Spec 162 added Foundation #20 (Preview Signal Integrity) to formalize the contract that bounded preview output cannot masquerade as ready evidence. Spec 180 extended the same integrity contract to outer-preview seat aggregates, standing role refs, and per-candidate seat-matrix trace evidence.
 
 Spec 164 amended Foundation #10 to formalize cap-class naming for bounded-computation tiers.

@@ -1,6 +1,6 @@
 # 181STRSTRPOL-009: Phase 1 — Conformance test: FITL zone-collection selector
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/agents/conformance/` (test only)
@@ -119,3 +119,28 @@ Add a second test asserting two consecutive `evaluateSelector` calls on the same
 
 1. `pnpm -F @ludoforge/engine test -- selector-fitl`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implemented the FITL zone-collection selector conformance test as `packages/engine/test/unit/agents/conformance/selector-fitl-zone-collection.test.ts`. The `unit/agents/conformance` placement keeps the test under the engine default test lane while preserving the ticket's conformance boundary. The test compiles the production FITL `GameDef`, builds a real FITL initial state, evaluates a selector over `kind: 'zones'`, and asserts property-form guarantees:
+
+- result length is bounded by `maxItems`;
+- results are `qualityDesc` ordered with `stableKeyAsc` tie-breaking;
+- selected qualities and components are finite integers;
+- `impactSatisfied` reflects `minImpact`;
+- repeated evaluations over the same `(selector, FITL context)` are bit-identical.
+
+The selector fixture uses literal quality components over the real FITL zone collection. Current selector expression evaluation does not bind per-zone item payload into quality expressions, so this is a zone-collection/runtime conformance proof rather than a per-zone control-score authoring proof.
+
+## Verification
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/conformance/selector-fitl-zone-collection.test.js packages/engine/dist/test/unit/agents/policy-selector-eval.test.js` — passed.
+- `pnpm -F @ludoforge/engine test -- selector-fitl-zone-collection.test.ts` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `git diff --check` — passed.
+- `pnpm turbo build` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — red only in existing Spec 178 ARVN outcome-parity architecture tests for seeds `1005`, `1011`, `1008`, `1013`, and `1009`; the new selector conformance test passed inside the default unit lane.

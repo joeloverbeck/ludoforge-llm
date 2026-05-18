@@ -373,7 +373,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `181STRSTRPOL`; spec 
 - [`archive/tickets/181STRSTRPOL-002.md`](../archive/tickets/181STRSTRPOL-002.md) — Phase 0 — Probe assertion library (covers §4.2)
 - [`archive/tickets/181STRSTRPOL-003.md`](../archive/tickets/181STRSTRPOL-003.md) — Phase 0 — ARVN action-distribution probe (75%-Govern witness) (covers §4.1 exemplar + §8 Phase 0 acceptance (b))
 - [`archive/tickets/181STRSTRPOL-004.md`](../archive/tickets/181STRSTRPOL-004.md) — Phase 0 — Architectural-invariant constructibility probe (covers §8 Phase 0 acceptance (c))
-- [`tickets/181STRSTRPOL-005.md`](../tickets/181STRSTRPOL-005.md) — Phase 0 — CI integration + per-probe overhead budget (covers §8 Phase 0 acceptance (a), (e))
+- [`archive/tickets/181STRSTRPOL-005.md`](../archive/tickets/181STRSTRPOL-005.md) — Phase 0 — CI/profile-quality integration + per-probe overhead budget (covers §8 Phase 0 acceptance (a), (e), with profile-quality probes kept out of the default blocking lane per the Foundations Appendix)
 - [`tickets/181STRSTRPOL-006.md`](../tickets/181STRSTRPOL-006.md) — Phase 1 — Selector compiled IR, library bucket, compiler diagnostics (covers §5.1–§5.5)
 - [`tickets/181STRSTRPOL-007.md`](../tickets/181STRSTRPOL-007.md) — Phase 1 — Runtime selector evaluation + caching (covers §5.6, §6, §7)
 - [`tickets/181STRSTRPOL-008.md`](../tickets/181STRSTRPOL-008.md) — Phase 1 — Trace integration (`selectors` field on PolicyAgentDecisionTrace) (covers §5.6 trace surface)
@@ -381,3 +381,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `181STRSTRPOL`; spec 
 - [`tickets/181STRSTRPOL-010.md`](../tickets/181STRSTRPOL-010.md) — Phase 1 — Conformance test: Texas Hold'em card-collection selector (covers §8 Phase 1 acceptance (b) card-collection)
 - [`tickets/181STRSTRPOL-011.md`](../tickets/181STRSTRPOL-011.md) — Phase 1 — Conformance test: fixture-game declared-product selector (covers §8 Phase 1 acceptance (b) declared-product)
 - [`tickets/181STRSTRPOL-012.md`](../tickets/181STRSTRPOL-012.md) — Phase 1 — ARVN consideration migration + Phase 0 probe rerun (covers §8 Phase 1 acceptance (c))
+- [`tickets/181STRSTRPOL-013.md`](../tickets/181STRSTRPOL-013.md) — Phase 0 follow-up — Reduce ARVN probe overhead below soft budget (split from 005 after the budget gate surfaced a measured 797.43 ms/decision soft overrun on the final rerun)

@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 
-import { PolicyAgent } from '../../../src/agents/index.js';
+import { PolicyAgent, type PolicyDecisionTraceLevel } from '../../../src/agents/index.js';
 import {
   advanceAutoresolvable,
   applyDecision,
@@ -29,6 +29,30 @@ const DEFAULT_MAX_DECISION_STEPS = 256;
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
 export const runProbe = (probe: Probe, options: ProbeRunOptions): ProbeResult => {
+  const result = runProbeOnce(probe, options);
+  if (
+    result.aggregateOutcome.kind === 'fail'
+    && result.aggregateOutcome.trace === undefined
+    && options.traceLevel !== 'verbose'
+    && options.verboseOnFailure !== false
+  ) {
+    const verboseResult = runProbeOnce(probe, {
+      ...options,
+      traceLevel: 'verbose',
+      verboseOnFailure: false,
+    });
+    return {
+      ...result,
+      aggregateOutcome: {
+        ...result.aggregateOutcome,
+        trace: firstMatchedTrace(verboseResult),
+      },
+    };
+  }
+  return result;
+};
+
+const runProbeOnce = (probe: Probe, options: ProbeRunOptions): ProbeResult => {
   const startedAt = performance.now();
   const aggregateWindow = aggregateWindowSize(probe);
   const perSeedOutcomes: ProbeSeedOutcome[] = [];
@@ -108,6 +132,7 @@ const runProbeForSeed = (
     const selection = selectDecisionForProbe(probe, seed, microturn, state, agentRng, {
       def: loaded.def,
       runtime: loaded.runtime,
+      ...(options.traceLevel === undefined ? {} : { traceLevel: options.traceLevel }),
     });
     agentRng = selection.rng;
 
@@ -161,13 +186,14 @@ const selectDecisionForProbe = (
   context: {
     readonly def: Parameters<PolicyAgent['chooseDecision']>[0]['def'];
     readonly runtime: NonNullable<Parameters<PolicyAgent['chooseDecision']>[0]['runtime']>;
+    readonly traceLevel?: PolicyDecisionTraceLevel;
   },
 ): {
   readonly decision: Decision;
   readonly rng: Rng;
   readonly match: ProbeMatch | null;
 } => {
-  const agent = new PolicyAgent({ profileId: probe.profile, traceLevel: 'verbose' });
+  const agent = new PolicyAgent({ profileId: probe.profile, traceLevel: context.traceLevel ?? 'summary' });
   const selected = agent.chooseDecision({
     def: context.def,
     state,
@@ -192,12 +218,16 @@ const selectDecisionForProbe = (
           selectedDecision: selected.decision,
           selectedActionTags: actionTagsForDecision(context.def, selected.decision),
           trace,
-          publishedFrontierConstructibility: evaluatePublishedFrontierConstructibility(
-            context.def,
-            state,
-            microturn,
-            context.runtime,
-          ),
+          ...(probeNeedsPublishedFrontierConstructibility(probe)
+            ? {
+                publishedFrontierConstructibility: evaluatePublishedFrontierConstructibility(
+                  context.def,
+                  state,
+                  microturn,
+                  context.runtime,
+                ),
+              }
+            : {}),
           contextKind: microturn.kind,
           decisionKey,
           phase: String(state.currentPhase),
@@ -250,6 +280,10 @@ const aggregateWindowSize = (probe: Probe): number | null => {
   ));
   return windows.length === 0 ? null : Math.max(...windows);
 };
+
+const probeNeedsPublishedFrontierConstructibility = (probe: Probe): boolean => (
+  probe.assertions.some((assertion) => assertion.kind === 'publishedFrontierConstructible')
+);
 
 const aggregateProbeOutcome = (
   outcomes: readonly ProbeSeedOutcome[],
@@ -321,6 +355,17 @@ const evaluatePublishedFrontierConstructibility = (
 const formatStateHash = (state: GameState): string => `0x${state.stateHash.toString(16)}`;
 
 const deterministicByteLength = (value: unknown): number => Buffer.byteLength(stableStringify(value), 'utf8');
+
+const firstMatchedTrace = (result: ProbeResult): PolicyAgentDecisionTrace | null => {
+  for (const seedOutcome of result.perSeedOutcomes) {
+    for (const match of seedOutcome.matches) {
+      if (match.trace !== null) {
+        return match.trace;
+      }
+    }
+  }
+  return null;
+};
 
 const stableStringify = (value: unknown): string => {
   if (typeof value === 'bigint') {

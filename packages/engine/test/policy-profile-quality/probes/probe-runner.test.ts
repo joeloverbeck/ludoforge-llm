@@ -52,6 +52,30 @@ describe('policy probe runner scaffold', () => {
     assert.ok(match.trace, 'expected policy trace');
   });
 
+  it('uses summary trace by default', () => {
+    const result = runProbe(noAssertionProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
+    const trace = result.perSeedOutcomes[0]?.matches[0]?.trace;
+    assert.ok(trace, 'expected policy trace');
+    assert.equal(trace.candidates, undefined);
+  });
+
+  it('attaches a verbose trace when an assertion fails', () => {
+    const failingProbe = defineProbe({
+      ...noAssertionProbe,
+      id: 'texas-verbose-on-failure',
+      assertions: [
+        {
+          kind: 'selectedCandidateHasTag',
+          tag: '__missing_tag__',
+        },
+      ],
+    });
+
+    const result = runProbe(failingProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
+    assert.equal(result.aggregateOutcome.kind, 'fail');
+    assert.ok(result.aggregateOutcome.kind === 'fail' ? result.aggregateOutcome.trace?.candidates : undefined);
+  });
+
   it('applies replayPrefix before matching decisions', () => {
     const loaded = loadTexasGame();
     const initial = initialState(loaded.def, SEED, loaded.playerCount, undefined, loaded.runtime).state;

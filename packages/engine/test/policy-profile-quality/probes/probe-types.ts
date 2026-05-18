@@ -7,6 +7,7 @@ import type {
   Rng,
   ValidatedGameDef,
 } from '../../../src/kernel/index.js';
+import type { PolicyDecisionTraceLevel } from '../../../src/agents/index.js';
 import type { GameDefRuntime } from '../../../src/kernel/gamedef-runtime.js';
 
 export type GameId = string;
@@ -103,6 +104,8 @@ export interface ProbeRunOptions {
   readonly loadGame: (request: ProbeLoadGameRequest) => ProbeLoadedGame;
   readonly createAgentRng?: (request: ProbeAgentRngRequest) => Rng;
   readonly maxDecisionSteps?: number;
+  readonly traceLevel?: PolicyDecisionTraceLevel;
+  readonly verboseOnFailure?: boolean;
 }
 
 export interface ProbeLoadGameRequest {
@@ -154,6 +157,7 @@ export type ProbeOutcome =
       readonly kind: 'fail';
       readonly assertionId: string;
       readonly reason: string;
+      readonly trace?: PolicyAgentDecisionTrace | null;
     }
   | {
       readonly kind: 'error';

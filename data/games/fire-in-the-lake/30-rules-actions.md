@@ -331,7 +331,7 @@ actions:
     pre: null
     cost: []
     effects: []
-    limits: []
+    limits: [{ scope: phase, max: 1 }]
   - id: coupResourcesResolve
     actor: active
     executor: 'actor'

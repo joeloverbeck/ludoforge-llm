@@ -1,6 +1,7 @@
 # Spec 00-FITL: FITL Implementation Priority Order
 
-**Status**: Draft
+**Status**: REJECTED
+**Rejection reason**: Ancient initial-planning spec superseded by the current repository architecture and archived to avoid confusing current intent.
 **Priority**: P0
 **Complexity**: S
 **Dependencies**: None
@@ -80,7 +81,7 @@ Spec 24 (Scenarios)                           Spec 25 (Mechanics Infra)
 
 ### Milestone B2: Kernel Operations Infrastructure (Spec 25a)
 
-**Status**: COMPLETED
+**Status**: REJECTED
 
 **Criteria**: All 7 kernel primitive gaps resolved.
 

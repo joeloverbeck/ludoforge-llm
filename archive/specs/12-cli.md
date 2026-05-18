@@ -1,6 +1,7 @@
 # Spec 12: CLI
 
-**Status**: Draft
+**Status**: REJECTED
+**Rejection reason**: Ancient initial-planning spec superseded by the current repository architecture and archived to avoid confusing current intent.
 **Priority**: P1 (required for MVP)
 **Complexity**: M
 **Dependencies**: Spec 08a, Spec 08b, Spec 10, Spec 11

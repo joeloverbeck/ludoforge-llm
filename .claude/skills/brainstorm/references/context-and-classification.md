@@ -43,6 +43,7 @@ Mode-specific behavior:
 - **Operational mode**: Always run state verification (Trigger B). The plan's correctness depends on accurate observed state, not assumed state.
 - **Decision-requiring-design / External-LLM analysis**: Verification of the proposal's codebase claims is mandatory per Step 1.2 ("verify factual claims about the codebase before accepting them as constraints") — proceed directly to verification without asking, as in triage mode.
 - Run checks using Explore agents, grep, git log, file reads — whatever the checks require
+- **Parallel agent dispatch for multi-topic verification**: when verification spans multiple distinct topic areas (e.g., DSL primitives + spec history + concrete architecture claims), dispatch parallel Explore agents in a single message rather than sequential checks. Each agent's scope should be one coherent topic area with a ~500-600 word report cap. This mirrors CLAUDE.md's general parallel-tool guidance and is the canonical shape for compound external-LLM proposal verification.
 - Report results before proceeding to the interview
 - Adjust confidence and approach based on what the checks reveal
 - Verification artifacts created during this step (diagnostic scripts, probe fixtures, measurement logs) fall into one of four disposition categories. State which category applies in the Step 6 summary so the user knows what was left behind:

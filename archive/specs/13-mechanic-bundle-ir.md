@@ -1,6 +1,7 @@
 # Spec 13: Mechanic Bundle IR
 
-**Status**: Draft
+**Status**: REJECTED
+**Rejection reason**: Ancient initial-planning spec superseded by the current repository architecture and archived to avoid confusing current intent.
 **Priority**: P2 (post-MVP)
 **Complexity**: L
 **Dependencies**: Spec 02, Spec 08b

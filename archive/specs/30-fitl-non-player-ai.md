@@ -1,6 +1,7 @@
 # Spec 30: FITL Non-Player AI
 
-**Status**: ✅ COMPLETED
+**Status**: REJECTED
+**Rejection reason**: Ancient initial-planning spec superseded by the current repository architecture and archived to avoid confusing current intent.
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 26 (operations), Spec 27 (SAs), Spec 28 (capabilities + momentum), Spec 29 (event cards)

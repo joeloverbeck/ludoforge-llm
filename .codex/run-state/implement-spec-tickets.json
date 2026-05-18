@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/181-structured-strategy-policy-layer-probes-and-selectors.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/181STRSTRPOL-006.md",
+  "last_ticket": "archive/tickets/181STRSTRPOL-007.md",
   "last_result": "completed_archived",
-  "last_work_commit": "8b20ca47eb45c849ebfda6c1cf6a74edef15803f",
+  "last_work_commit": "acae3cef50d89b124a96fbc11469cc8d9ca40e16",
   "last_state_commit": "self",
-  "next_target": "tickets/181STRSTRPOL-007.md",
+  "next_target": "tickets/181STRSTRPOL-008.md",
   "queue": [
-    "tickets/181STRSTRPOL-007.md",
     "tickets/181STRSTRPOL-008.md",
     "tickets/181STRSTRPOL-009.md",
     "tickets/181STRSTRPOL-010.md",

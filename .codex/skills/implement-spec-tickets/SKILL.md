@@ -186,6 +186,8 @@ When reporting stale-path sweeps, distinguish active-path references such as `ti
 
 If post-ticket review makes or requires must-fix-now implementation, ticket, spec, dependency, archive-reference, or proof-story edits after earlier broad verification passed, explicitly classify proof invalidation before committing. Record which paths changed, which earlier proof lanes those changes invalidate, which focused or broad lanes were rerun as substitutes, and why any previously cited broad lane remains valid if it was not rerun.
 
+If a proof lane consumes generated artifacts after `npm run clean`, `pnpm run clean`, package-local clean scripts, archive helpers, fixture refreshes, or any other step that may delete `dist`, schemas, WASM targets, compiled JSON, goldens, or cache-backed outputs, do not trust cached producer logs alone. Either force/rerun the producer that materializes the consumed artifact, or verify the required generated files exist before running or citing the consumer lane. Treat a cached build replay that does not restore a required artifact as non-proving for artifact-consuming tests until the artifact is rebuilt or observed.
+
 When a ticket is archived, independently grep the originating spec for the moved active ticket path before committing, even when `post-ticket-review` or the archive helper reports successful reference repair. Patch actionable stale spec-list or dependency references to the archive path, or report why a remaining reference is historical and harmless.
 
 If review blocks archival because same-seam work remains, put the active ticket back at the front of the queue and continue through `implement-ticket` unless the review requires a user decision.
@@ -243,7 +245,7 @@ If a required-visible block was missed at its intended point, emit a `late harne
 
 When user-approved extra paths are included in the iteration commit even though they are not ticket-owned, list them in the checkpoint and final handoff. The commit message must either mention the extra skill/process hardening if it is material, or the final handoff must explicitly state that the extra path was included by user approval and was not part of the ticket deliverable. Do not let approved unrelated paths appear as silent ticket-owned work.
 
-If a ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then confirm the source deletion/rename appears in `git diff --cached --name-status`.
+If a ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then stage the source-parent deletion with `git add -A <source-parent-dir>` when the old source path no longer exists. A typical move staging shape is `git add <archive-destination>` plus `git add -A tickets` or `git add -A specs`, followed by `git diff --cached --name-status` to confirm the source deletion/rename appears.
 
 If non-destructive git index commands fail because Codex cannot write the index or reports sandbox/read-only errors, rerun the same failed command with required approval/escalation and record the retry in the handoff.
 
@@ -313,8 +315,9 @@ When all originating-spec tickets are completed, reviewed, archived, and committ
 7. Confirm the original `specs/` path no longer exists.
 8. Sweep active tickets, specs, docs, reports, same-family archived tickets, and the state file for stale active-spec path references. Repair actionable references to the archived path; leave clearly historical references only when harmless.
 9. Run `pnpm run check:ticket-deps` and focused `git diff --check` over edited archive/spec/state files.
-10. Commit the final spec archive unless already included in the last ticket-family commit for a documented reason.
-11. Update the state file with `archived_spec`, `next_target: null`, an empty queue, `blocked: false`, the final commit SHA, and clean dirty-state classification.
+10. Before committing the final spec archive, emit the same `Required-visible-block checkpoint` from `Commit The Iteration`, or an explicit `late harness recovery checkpoint` if any row was missed earlier. Mark rows `not_applicable` with reasons when the final archive did not exercise that surface.
+11. Commit the final spec archive unless already included in the last ticket-family commit for a documented reason.
+12. Update the state file with `archived_spec`, `next_target: null`, an empty queue, `blocked: false`, the final commit SHA, and clean dirty-state classification.
 
 ## Branch And Push
 

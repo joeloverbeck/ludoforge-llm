@@ -1,6 +1,6 @@
 # 181STRSTRPOL-011: Phase 1 — Conformance test: fixture-game declared-product selector
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/agents/conformance/` (test only)
@@ -135,3 +135,32 @@ describe('selector conformance — declared product (origin/destination)', () =>
 
 1. `pnpm -F @ludoforge/engine test -- selector-product-pair`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implemented the declared-product selector conformance coverage in `packages/engine/test/unit/agents/conformance/selector-product-pair.test.ts`.
+
+The test uses a minimal inline perfect-information fixture game instead of a separate fixture directory because the owned proof only needs a four-zone, public-state board. It exercises the production `kind: 'product'` selector path over `zones x zones` and asserts:
+
+- deterministic top-K pair selection with `qualityDesc` plus `stableKeyAsc` tie breaking;
+- stable composite pair keys of the form `origin|destination`;
+- deterministic `maxPairs` truncation;
+- one low-level `onProductTruncated` callback per selector evaluation when the source product is truncated;
+- no truncation advisory when `maxPairs` covers the full product.
+
+Boundary correction: the draft path `packages/engine/test/agents/conformance/` was stale. The live engine unit conformance tests are under `packages/engine/test/unit/agents/conformance/`, matching the 009 and 010 selector conformance tests.
+
+No production runtime code changed for this ticket.
+
+## Verification
+
+- `pnpm -F @ludoforge/engine build` — pass.
+- `node --test packages/engine/dist/test/unit/agents/conformance/selector-product-pair.test.js packages/engine/dist/test/unit/agents/policy-selector-eval.test.js` — pass.
+- `pnpm -F @ludoforge/engine test -- selector-product-pair.test.ts` — pass.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — pass.
+- `pnpm run check:ticket-deps` — pass.
+- `git diff --check` — pass.
+- `pnpm turbo build` — pass.
+- `pnpm turbo lint` — pass.
+- `pnpm turbo typecheck` — pass.
+- `pnpm turbo test` — red only in existing Spec 178 ARVN outcome-parity architecture witnesses for seeds `1005`, `1011`, `1008`, `1013`, and `1009`; failures are `turnId`/golden drift in `dist/test/architecture/policy-preview-inner-outcome-parity.test.js`, matching the pre-existing broad-lane boundary observed during the prior selector tickets.

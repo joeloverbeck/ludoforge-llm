@@ -50,6 +50,12 @@ export interface SelectorEvalContext {
   evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined, microturnOption?: SelectorEvalMicroturnOption): PolicyValue;
   onProductTruncated?(selectorId: string): void;
   onSelectorEmpty?(selectorId: string, reason: SelectedSelectorView['emptyReason']): void;
+  onPreviewFallback?(fallback: {
+    readonly selectorId: string;
+    readonly componentId: string;
+    readonly kind: 'noContribution' | 'constant';
+    readonly value?: number;
+  }): void;
 }
 
 export interface SelectorEvalMicroturnOption {
@@ -227,6 +233,17 @@ function scoreItem(
         : typeof component.previewFallback?.onUnavailable === 'object'
           ? component.previewFallback.onUnavailable.value
           : undefined;
+    if (typeof rawValue !== 'number' && component.previewFallback?.onUnavailable !== undefined) {
+      const fallback = component.previewFallback.onUnavailable;
+      if (context.currentItemKey === undefined || item.key === context.currentItemKey) {
+        context.onPreviewFallback?.({
+          selectorId: selector.id,
+          componentId: component.id,
+          kind: fallback === 'noContribution' ? 'noContribution' : 'constant',
+          ...(fallback === 'noContribution' ? {} : { value: fallback.value }),
+        });
+      }
+    }
     if (value === undefined) {
       continue;
     }

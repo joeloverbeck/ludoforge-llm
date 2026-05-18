@@ -1775,6 +1775,11 @@ export class PolicyEvaluationContext {
         itemCandidate as PolicyEvaluationCandidate | undefined,
         microturnOption,
       ),
+      onPreviewFallback: (fallback) => this.recordPreviewFallbackFired(candidate, {
+        termId: `selector.${fallback.selectorId}.${fallback.componentId}`,
+        kind: fallback.kind,
+        ...(fallback.value === undefined ? {} : { value: fallback.value }),
+      }),
     });
     this.selectorCache.set(cacheKey, view);
     return view;

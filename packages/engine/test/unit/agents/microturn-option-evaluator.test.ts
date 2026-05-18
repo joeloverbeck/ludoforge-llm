@@ -379,4 +379,76 @@ describe('microturn option evaluator', () => {
       ['preview.option.delta.victory.currentMargin.self', 'depthCap'],
     ]);
   });
+
+  it('records selector component preview fallback for the current microturn option', () => {
+    const state = initialState(def, 1, 2).state;
+    const optionRanker: CompiledPolicySelector = {
+      id: 'optionRanker' as CompiledPolicySelector['id'],
+      scopes: ['microturn'],
+      source: { kind: 'microturnOptions' },
+      quality: {
+        components: [{
+          id: 'projectedMargin' as any,
+          value: refExpr({
+            kind: 'previewOptionRef',
+            refKind: 'deltaVictoryCurrentMarginSelf',
+          }),
+          weight: 1,
+          previewFallback: { onUnavailable: 'noContribution' },
+        }],
+        order: 'qualityDesc',
+      },
+      result: { maxItems: 2, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+      costClass: 'preview',
+      dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+    };
+    const selectorCatalog: AgentPolicyCatalog = {
+      ...catalog,
+      compiled: {
+        ...catalog.compiled,
+        selectors: { optionRanker },
+        considerations: {
+          preferCurrentSelectorQuality: {
+            scopes: ['microturn'],
+            costClass: 'preview',
+            weight: literal(1),
+            value: selectorRef('optionRanker', 'current.quality'),
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+              selectors: ['optionRanker'],
+              strategicConditions: [],
+            },
+          },
+        },
+      },
+    };
+
+    const result = scoreMicroturnOptionWithContributions(
+      state,
+      def,
+      selectorCatalog,
+      state.activePlayer,
+      asSeatId('us'),
+      {},
+      createChooseOneRequest(),
+      'right',
+      1,
+      ['preferCurrentSelectorQuality'],
+      undefined,
+      new Map([
+        [
+          'preview.option.delta.victory.currentMargin.self',
+          { kind: 'unavailable', reason: 'depthCap' },
+        ],
+      ]),
+    );
+
+    assert.deepEqual(result.previewFallbackFired, {
+      termId: 'selector.optionRanker.projectedMargin',
+      kind: 'noContribution',
+    });
+  });
 });

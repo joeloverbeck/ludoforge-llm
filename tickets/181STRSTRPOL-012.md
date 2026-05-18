@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (profile YAML); possibly `docs/agent-dsl-cookbook.md` (cookbook entry citing the migration)
-**Deps**: `archive/tickets/181STRSTRPOL-003.md`, `archive/tickets/181STRSTRPOL-009.md`, `archive/tickets/181STRSTRPOL-014.md`, `archive/tickets/181STRSTRPOL-015.md`
+**Deps**: `archive/tickets/181STRSTRPOL-003.md`, `archive/tickets/181STRSTRPOL-009.md`, `archive/tickets/181STRSTRPOL-014.md`, `archive/tickets/181STRSTRPOL-015.md`, `archive/tickets/181STRSTRPOL-016.md`
 
 ## Problem
 
@@ -17,6 +17,7 @@ Spec 181 §8 Phase 1 acceptance (c) closes the loop: at least one ARVN considera
 3. Phase 1 selector stack (006/007/008) is fully landed and conformance-tested (009/010/011) before this ticket runs.
 4. Live reassessment found the ARVN target-ranking seam is microturn-scoped. This ticket remains YAML-only and depends on `181STRSTRPOL-014` for generic `microturnOptions` selector evaluation in microturn option scoring.
 5. Live validation found selector-backed preview refs must be planned through selector dependencies before this YAML migration is behavior-preserving. `181STRSTRPOL-015` owns that generic preview-integrity prerequisite.
+6. Live validation found selector component preview fallback must be trace-visible, not silently converted to zero. `181STRSTRPOL-016` owns that generic preview-integrity prerequisite.
 
 ## Architecture Check
 

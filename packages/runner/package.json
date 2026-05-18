@@ -26,11 +26,11 @@
     "gsap": "^3.15.0",
     "pixi-viewport": "^6.0.1",
     "pixi.js": "^8.18.1",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "yaml": "^2.8.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "yaml": "^2.9.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@modyfi/vite-plugin-yaml": "^1.1.1",

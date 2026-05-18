@@ -204,6 +204,29 @@ agents:
         of:
           ref: feature.projectedSelfMargin
 
+    strategicConditions:
+      selfPoliticalEngineBehind:
+        description: "ARVN needs to build political engine when it is not currently leading."
+        target:
+          gte:
+            - { ref: feature.selfRank }
+            - 2
+        proximity:
+          current: { ref: feature.selfRank }
+          threshold: 2
+      militaryBoardCollapsing:
+        description: "ARVN has no resource base left for political consolidation."
+        target:
+          lt:
+            - { ref: feature.selfResources }
+            - 1
+        proximity:
+          current:
+            sub:
+              - 1
+              - { ref: feature.selfResources }
+          threshold: 1
+
     selectors:
       # Spec 181 migration: preferOptionProjectedMargin previously read
       # preview.option.delta.victory.currentMargin.self directly as a flat
@@ -221,6 +244,26 @@ agents:
               weight: 1
               previewFallback:
                 onUnavailable: noContribution
+          order: qualityDesc
+        result:
+          maxItems: 8
+          order: [qualityDesc, stableKeyAsc]
+          onEmpty: noContribution
+      arvnPoliticalTargetOpportunity:
+        scopes: [move]
+        source:
+          collection:
+            kind: zones
+        quality:
+          components:
+            - id: projectedMargin
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 2
+            - id: controlledPopulation
+              value:
+                ref: feature.coinControlPop
+              weight: 1
           order: qualityDesc
         result:
           maxItems: 8
@@ -247,6 +290,42 @@ agents:
               - weight: 10
                 value:
                   ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+        guardrailIds: []
+        fallback:
+          ifInactive: noContribution
+          ifSelectorEmpty: noContribution
+      buildPoliticalEngine:
+        traceLabel: "build political engine"
+        when:
+          and:
+            - { ref: condition.selfPoliticalEngineBehind.satisfied }
+            - not: { ref: condition.militaryBoardCollapsing.satisfied }
+            - or:
+                - gt:
+                    - { ref: feature.coinControlPop }
+                    - 20
+                - gte:
+                    - { ref: feature.projectedSelfMargin }
+                    - -7
+        applies:
+          scopes: [move]
+          actionTags: [train]
+        priority:
+          tier: 30
+        selectors:
+          - role: primaryTarget
+            selectorId: arvnPoliticalTargetOpportunity
+        scoreGroups:
+          - id: targetQuality
+            summary: sum
+            terms:
+              - weight: 325
+                value: 1
+          - id: standing
+            summary: sum
+            terms:
+              - weight: 325
+                value: 1
         guardrailIds: []
         fallback:
           ifInactive: noContribution
@@ -518,6 +597,11 @@ agents:
         weight: 300
         value:
           ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+      applyBuildPoliticalEngineModule:
+        scopes: [move]
+        weight: 1
+        value:
+          ref: module.buildPoliticalEngine.contribution
 
     tieBreakers:
       stableMoveKey:
@@ -597,11 +681,13 @@ agents:
           capClass: postGrant16
       params:
         projectedMarginWeight: 300
-        governWeight: 1000
+        governWeight: 700
         trainWeight: 300
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
+        strategyModules:
+          - buildPoliticalEngine
         considerations:
           - preferProjectedSelfMargin
           - preferProjectedRank
@@ -611,6 +697,7 @@ agents:
           - reduceNearestThreat
           - preferGovernWeighted
           - trainWhenControlLow
+          - applyBuildPoliticalEngineModule
           - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey

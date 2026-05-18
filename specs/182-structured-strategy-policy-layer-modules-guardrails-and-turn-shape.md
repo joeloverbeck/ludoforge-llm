@@ -499,7 +499,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`archive/tickets/182STRSTRPOL-002.md`](../archive/tickets/182STRSTRPOL-002.md) — Phase 2 — Strategic modules runtime evaluator + activation caching + dispatch insertion
 - [`archive/tickets/182STRSTRPOL-003.md`](../archive/tickets/182STRSTRPOL-003.md) — Phase 2 — Strategic modules trace contract extension
 - [`archive/tickets/182STRSTRPOL-004.md`](../archive/tickets/182STRSTRPOL-004.md) — Phase 2 — FITL strategic module conformance test
-- [`tickets/182STRSTRPOL-005.md`](../tickets/182STRSTRPOL-005.md) — Phase 2 — ARVN `build-political-engine` module authoring + cookbook entry
+- [`archive/tickets/182STRSTRPOL-005.md`](../archive/tickets/182STRSTRPOL-005.md) — Phase 2 — ARVN `build-political-engine` module authoring + cookbook entry
 - [`tickets/182STRSTRPOL-006.md`](../tickets/182STRSTRPOL-006.md) — Phase 3 — Guardrails library bucket + compiled IR + compiler diagnostics
 - [`tickets/182STRSTRPOL-007.md`](../tickets/182STRSTRPOL-007.md) — Phase 3 — Guardrails runtime evaluator + severity dispatch + basic trace population
 - [`tickets/182STRSTRPOL-008.md`](../tickets/182STRSTRPOL-008.md) — Phase 3 — Pass-fallback runtime integration (`onAllPruned`) + `allPrunedFallback` trace

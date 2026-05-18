@@ -149,5 +149,5 @@ Verification:
 Post-ticket review:
 
 1. Archived to `archive/tickets/182STRSTRPOL-003.md`.
-2. Updated active dependents `tickets/182STRSTRPOL-004.md` and `tickets/182STRSTRPOL-005.md` to depend on the archived ticket path.
+2. Updated then-active dependents `archive/tickets/182STRSTRPOL-004.md` and `archive/tickets/182STRSTRPOL-005.md` to depend on the archived ticket path.
 3. No follow-up tickets were created.

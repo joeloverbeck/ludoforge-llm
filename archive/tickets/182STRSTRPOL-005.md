@@ -1,6 +1,6 @@
 # 182STRSTRPOL-005: Phase 2 — ARVN `build-political-engine` module authoring + cookbook entry
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (new module + supporting selector binding), `docs/agent-dsl-cookbook.md` (new cookbook entry)
@@ -122,3 +122,32 @@ Run `arvn-action-distribution.probe.ts` against the post-module profile. Documen
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19.
+
+Implemented the ARVN `buildPoliticalEngine` strategic module in `data/games/fire-in-the-lake/92-agents.md` and documented the authoring pattern in `docs/agent-dsl-cookbook.md`.
+
+What changed:
+- Added `selfPoliticalEngineBehind` and `militaryBoardCollapsing` strategic conditions.
+- Added the `arvnPoliticalTargetOpportunity` selector as a minimal available-ref political target selector.
+- Added `buildPoliticalEngine` with grouped `targetQuality` and `standing` score groups, then wired the module through `applyBuildPoliticalEngineModule` on the `arvn-evolved` profile.
+- Reduced `arvn-evolved` `governWeight` from `1000` to `700` and gated the module to targeted political-engine states so the existing ARVN action-distribution probe remains below its dominant-family cap.
+- Added the cookbook section "Authoring a Strategic Module" with activation, selector binding, score group, fallback, and module-application examples.
+- Re-blessed the Spec 178 ARVN continued-deepening outcome-parity fixtures for the intentional `arvn-evolved` trajectory shift.
+
+Deviations from the draft:
+- The drafted `standingRole.self.delta.politicalEngine` ref is not a shipped policy ref. The landed module uses current shipped FITL signals instead.
+- The landed move-scope political target selector uses existing global projected-margin and controlled-population refs. It is intentionally minimal because per-zone political target quality is not currently exposed as a move-scope selector input.
+- The module scores `train` in calibrated political-engine states rather than boosting both `govern` and `train`; boosting both preserved or worsened Govern dominance, while the landed calibration keeps the distribution probe green.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/integration/fitl-production-data-compilation.test.js` — passed, 3 tests.
+- Direct probe-runner check for `arvn-action-distribution-not-dominated` and `arvn-module-activation` — both aggregate outcomes `pass`.
+- `node --test packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js` — passed, 5 tests.
+- `pnpm turbo test` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed.

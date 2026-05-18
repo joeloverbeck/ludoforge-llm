@@ -55,7 +55,9 @@ Classify: design | decision/triage | operational
                        +--> [If recommendation is dismiss] confirm rationale + optional reports/ memo + Continual Learning -> end
                        |
                        v
-              Write design doc to docs/plans/
+              Write output artifact (per output-artifacts.md routing:
+              docs/plans/, specs/, reports/, campaigns/<name>/,
+              or .claude/skills/<name>/)
                        |
                        v
               Next-steps menu (user chooses)
@@ -77,7 +79,7 @@ Classify: design | decision/triage | operational
 
 6. **If Step 5 produced executable code or a new skill**, load `references/validate-executable-artifacts.md` and run the structural checks (syntax, permission/shebang, frontmatter, harness registration, optional smoke run) before handoff.
 
-7. **Present next steps.** Load `references/next-steps-menu.md`. Covers the per-output-type menus (design doc / spec / triage tickets / triage spec+report / operational plan / measurement report / multi-file directory / new skill), namespace derivation, multi-spec and multi-phase adaptations, mixed primary + secondary mutation overlay, Continual Learning prompt evaluation, and auto-mode adaptation.
+7. **Present next steps.** Load `references/next-steps-menu.md`. Covers the per-output-type menus (design doc / spec / triage tickets / triage spec+report / operational plan / measurement report / multi-file directory / new skill), namespace derivation, multi-spec and multi-phase adaptations, mixed primary + secondary mutation overlay, Continual Learning prompt evaluation, and auto-mode adaptation. **Continual Learning MUST be evaluated when** (a) brainstorm output contradicts a `CLAUDE.md` / `docs/FOUNDATIONS.md` / skill / `reports/` claim, (b) brainstorm supersedes a prior report's load-bearing recommendation, OR (c) brainstorm produces the named follow-up artifact a reference report explicitly deferred to — in the third case the offer is to append a `Follow-up: <spec/ticket>` breadcrumb to the source report. Skipping this evaluation is a common miss when reference loading is shortcut.
 
 ## Post-Design Requests
 
@@ -90,6 +92,8 @@ If the design has cross-repo implications (e.g., the same pattern needs to be ap
 - **YAGNI ruthlessly**: Remove unnecessary features from all designs. If a proposed approach has optional extras, strip them unless the user explicitly asked for them.
 - **One question at a time**: Design mode is strict by default — one question per message. Batching is allowed in triage mode and in design-mode terminal rounds where all remaining gaps are multiple-choice terminal decisions that the Step 3 approach selection will close (see Interview Rule 1 in `references/interview-protocol.md` for full exception criteria).
 - **No implementation before approval**: The hard gate at the top means exactly what it says.
+- **Reference loading is mandatory**: Each numbered Procedure step requires loading its named `references/<file>` before executing the step's behavior — even in high-confidence flows where the topic feels familiar. The Procedure-step summaries are pointers to the load-bearing rules, not substitutes for them. Skipping reference loading is the most common cause of missed transparency gates and missed Continual Learning offers in this skill.
+- **Section-bullet preview is non-waivable under compound-move**: When Step 2 used the compound-move variant (High-Confidence Start, auto-mode, or "no clarifying questions"), the section-bullet preview MUST land before the Write tool call. "No clarifying questions" constrains interview rounds, not transparency gates. Bundling the section bullets in the same prose message as the approach + findings recap is permitted; what is forbidden is sending the bullets only inside (or immediately alongside) the Write call. See `references/output-artifacts.md` Section-preview gate and `references/interview-protocol.md` Pre-Set Directives §4 for the canonical specification.
 - **FOUNDATIONS.md is authoritative**: For implementation topics, if a proposed approach violates a Foundation principle, flag it immediately. Do not propose approaches that violate Foundations without explicitly calling out the violation and getting user sign-off.
 - **Worktree discipline**: If working in a worktree, all file paths use the worktree root.
 - **No scope inflation**: The design covers what was asked for. Resist the urge to add "while we're at it" improvements.

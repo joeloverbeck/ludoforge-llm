@@ -320,6 +320,8 @@ Each phase is independently mergeable. Phase 0 ships first because Phase 1's con
 
 ## 11. Out of scope (named follow-on specs)
 
+> **Reassessed 2026-05-18**: deferred-work disposition has moved on. Specs 182 (modules + guardrails + turn-shape evaluators, consolidated engine-layer composition) and 183 (evolution-loop overhaul, campaign-runner-layer work) absorb the items below and the source-proposal sections cross-referenced from them. The Stage 7 influence-fields follow-up listed in `reports/ai-agent-overhaul-proposal.md` §17 is dropped as niche perf optimization rather than load-bearing authoring layer. New work should cite Specs 182 / 183 directly rather than this §11.
+
 - **Spec 182 — Strategic Modules**. Composition layer that groups `(activation conditions, applicable scopes, selectors, scoreGroups, fallback)` into named modules with trace labels. Adds priority bands if traces from the selector cookbook show flat selector ranking obscures intent. Dependency: requires Phase 1 selectors as input surface. Includes the broader cookbook migration the proposal contemplates.
 - **Spec 183 — Guardrails with severity tiers**. Separate negative-evidence layer with `prune | demote | warn | auditOnly`. `prune` requires `safe: true` + `onAllPruned` per the proposal §6.4. Most guardrail predicates need selector outputs (`target failed selector minimum quality`, `selected origin loses more value than destination gains`), so this depends on Spec 181 Phase 1.
 - **Spec 184 — Turn-shape evaluators**. Bounded summaries over already-existing inner-preview drives, with named objectives. Depends on Spec 182 modules (for the objective declarations) and Spec 181 Phase 0 (for property-form probes that validate them).

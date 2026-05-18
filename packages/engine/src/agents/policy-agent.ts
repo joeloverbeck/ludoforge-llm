@@ -639,6 +639,7 @@ export class PolicyAgent implements Agent {
     return {
       decision: selectedDecision,
       rng: evaluation.rng,
+      ...(evaluation.metadata.selectedReason === undefined ? {} : { selectedByReason: evaluation.metadata.selectedReason }),
       ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(evaluation.metadata, this.traceLevel) }),
     };
   }

@@ -33,6 +33,7 @@ import type {
   GameState,
   LookupUnavailabilityReason,
   MoveParamValue,
+  PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
@@ -58,6 +59,7 @@ import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+import { evaluateSelector, type SelectedSelectorView, type SelectorEvalMicroturnOption } from './policy-selector-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -180,6 +182,7 @@ export interface CreatePolicyEvaluationContextInput {
     readonly optionValue: MoveParamValue;
     readonly optionIndex?: number;
   };
+  readonly selectorMicroturnOptions?: readonly SelectorEvalMicroturnOption[];
   readonly previewOption?: {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
@@ -355,6 +358,7 @@ export class PolicyEvaluationContext {
   private readonly rootStateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
+  private readonly selectorCache = new Map<string, SelectedSelectorView>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -407,6 +411,7 @@ export class PolicyEvaluationContext {
     this.rootStateFeatureCache.clear();
     this.candidateFeatureCache.clear();
     this.aggregateCache.clear();
+    this.selectorCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -420,11 +425,16 @@ export class PolicyEvaluationContext {
 
   invalidateAggregates(): void {
     this.aggregateCache.clear();
+    this.selectorCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
     this.currentCandidates = candidates;
     this.invalidateAggregates();
+  }
+
+  evaluatePlannedSelector(selectorId: string, candidate?: PolicyEvaluationCandidate): void {
+    this.evaluateSelectorView(selectorId, candidate);
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
@@ -435,6 +445,23 @@ export class PolicyEvaluationContext {
       }
     }
     return result;
+  }
+
+  getEvaluatedSelectorCacheSize(): number {
+    return this.selectorCache.size;
+  }
+
+  getEvaluatedSelectorTraces(traceLevel: 'summary' | 'verbose' = 'summary'): readonly PolicySelectorTraceEntry[] {
+    const seen = new Set<string>();
+    const entries: PolicySelectorTraceEntry[] = [];
+    for (const [, view] of [...this.selectorCache.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (seen.has(view.selectorId)) {
+        continue;
+      }
+      seen.add(view.selectorId);
+      entries.push(selectorTraceEntry(view, traceLevel));
+    }
+    return entries.sort((left, right) => left.selectorId.localeCompare(right.selectorId));
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
@@ -1065,6 +1092,7 @@ export class PolicyEvaluationContext {
         case 'ref':
           return current.ref.kind === 'previewSurface'
             || current.ref.kind === 'candidateTag'
+            || current.ref.kind === 'selector'
             || this.isTopNVisibleScheduleDistanceRef(current.ref);
         case 'globalTokenAgg':
           return current.tokenFilter !== undefined || current.zoneFilter !== undefined;
@@ -1674,6 +1702,8 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'selector':
+        return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {
         if (candidate === undefined) return undefined;
         const tags = this.input.def.actionTagIndex?.byAction[candidate.actionId];
@@ -1686,6 +1716,126 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveSelectorRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'selector' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const view = this.evaluateSelectorView(ref.selectorId, candidate);
+    const first = view.selected[0];
+    const current = view.current;
+    const { field } = ref;
+    if (field === 'selected.matches') return view.selected.length > 0;
+    if (field === 'selected.key') return first?.key;
+    if (field === 'selected.quality') return first?.quality ?? view.emptyPenalty;
+    if (field === 'selected.rank') return first?.rank;
+    if (field === 'current.matches') return current !== undefined;
+    if (field === 'current.quality') return current?.quality ?? view.emptyPenalty;
+    if (field === 'current.rank') return current?.rank;
+    if (field === 'impactSatisfied') return view.impactSatisfied;
+    if (field === 'size') return view.selected.length;
+    if (typeof field === 'object' && field.kind === 'selected.component') {
+      return first?.components.get(field.componentId);
+    }
+    if (typeof field === 'object' && field.kind === 'current.component') {
+      return current?.components.get(field.componentId);
+    }
+    if (typeof field === 'object' && field.kind === 'candidate.quality') {
+      return view.selected.find((item) => item.key === field.key)?.quality ?? view.emptyPenalty;
+    }
+    return undefined;
+  }
+
+  private evaluateSelectorView(
+    selectorId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): SelectedSelectorView {
+    const selector = this.input.catalog.compiled.selectors?.[selectorId];
+    if (selector === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown selector "${selectorId}".`, { selectorId });
+    }
+    const cacheKey = `${selectorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.selectorCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const currentItemKey = this.currentMicroturnOptionKey();
+    const view = evaluateSelector(selector, {
+      def: this.input.def,
+      state: this.activeState,
+      candidates: this.currentCandidates,
+      ...(candidate === undefined ? {} : { candidate }),
+      ...(this.input.selectorMicroturnOptions === undefined ? {} : { microturnOptions: this.input.selectorMicroturnOptions }),
+      ...(currentItemKey === undefined ? {} : { currentItemKey }),
+      observerPlayerId: this.input.playerId,
+      ...this.resolveSelectorObserverProfile(),
+      evaluateExpr: (expr, itemCandidate, microturnOption) => this.evaluateSelectorItemExpr(
+        expr,
+        itemCandidate as PolicyEvaluationCandidate | undefined,
+        microturnOption,
+      ),
+      onPreviewFallback: (fallback) => this.recordPreviewFallbackFired(candidate, {
+        termId: `selector.${fallback.selectorId}.${fallback.componentId}`,
+        kind: fallback.kind,
+        ...(fallback.value === undefined ? {} : { value: fallback.value }),
+      }),
+    });
+    this.selectorCache.set(cacheKey, view);
+    return view;
+  }
+
+  private currentMicroturnOptionKey(): string | undefined {
+    return this.input.completion === undefined ? undefined : JSON.stringify(this.input.completion.optionValue);
+  }
+
+  private evaluateSelectorItemExpr(
+    expr: CompiledPolicyExpr,
+    candidate: PolicyEvaluationCandidate | undefined,
+    microturnOption: SelectorEvalMicroturnOption | undefined,
+  ): PolicyValue {
+    if (
+      microturnOption === undefined
+      || this.input.completion === undefined
+      || microturnOption.key === this.currentMicroturnOptionKey()
+    ) {
+      return this.evaluateCompiledExpr(expr, candidate);
+    }
+
+    const context = new PolicyEvaluationContext({
+      def: this.input.def,
+      state: this.activeState,
+      playerId: this.input.playerId,
+      seatId: this.input.seatId,
+      catalog: this.input.catalog,
+      parameterValues: this.input.parameterValues,
+      trustedMoveIndex: this.input.trustedMoveIndex,
+      ...(this.input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: this.input.phase1ActionPreviewIndex }),
+      ...(this.input.previewDependencies === undefined ? {} : { previewDependencies: this.input.previewDependencies }),
+      ...(this.input.runtime === undefined ? {} : { runtime: this.input.runtime }),
+      ...(this.input.encodedStateLayout === undefined ? {} : { encodedStateLayout: this.input.encodedStateLayout }),
+      ...(this.input.encodedState === undefined ? {} : { encodedState: this.input.encodedState }),
+      ...(this.input.traceLevel === undefined ? {} : { traceLevel: this.input.traceLevel }),
+      completion: {
+        request: this.input.completion.request,
+        optionValue: microturnOption.value,
+        optionIndex: microturnOption.index,
+      },
+      ...(this.input.selectorMicroturnOptions === undefined ? {} : { selectorMicroturnOptions: this.input.selectorMicroturnOptions }),
+    }, this.currentCandidates);
+    try {
+      return context.evaluateCompiledExpr(expr, candidate);
+    } finally {
+      context.dispose();
+    }
+  }
+
+  private resolveSelectorObserverProfile(): { readonly observerProfile?: NonNullable<GameDef['observers']>['observers'][string] } {
+    const activeProfileId = this.input.catalog.bindingsBySeat[this.input.seatId];
+    const activeProfile = activeProfileId === undefined ? undefined : this.input.catalog.profiles[activeProfileId];
+    const observerName = activeProfile?.observerName ?? this.input.def.observers?.defaultObserverName;
+    const observerProfile = observerName === undefined ? undefined : this.input.def.observers?.observers[observerName];
+    return observerProfile === undefined ? {} : { observerProfile };
   }
 
   private resolveCandidateParamRef(
@@ -2231,6 +2381,40 @@ export class PolicyEvaluationContext {
   ): PolicyRuntimeError {
     return new PolicyRuntimeError({ code, message, ...(detail === undefined ? {} : { detail }) });
   }
+}
+
+function selectorTraceEntry(
+  view: SelectedSelectorView,
+  traceLevel: 'summary' | 'verbose',
+): PolicySelectorTraceEntry {
+  const first = view.selected[0];
+  const topK = traceLevel === 'verbose' ? view.selected.slice(0, 5) : [];
+  return {
+    selectorId: view.selectorId as PolicySelectorTraceEntry['selectorId'],
+    ...(first === undefined
+      ? {}
+      : {
+          selectedKey: first.key,
+          selectedQuality: first.quality,
+          selectedRank: first.rank,
+          components: Object.fromEntries([...first.components.entries()].sort(([left], [right]) => left.localeCompare(right))),
+        }),
+    impactSatisfied: view.impactSatisfied,
+    ...(view.emptyReason === undefined ? {} : { emptyReason: view.emptyReason }),
+    ...(traceLevel === 'verbose' && topK.length > 0
+      ? {
+          topK: topK.map((item) => ({
+            key: item.key,
+            quality: item.quality,
+            rank: item.rank,
+            components: Object.fromEntries([...item.components.entries()].sort(([left], [right]) => left.localeCompare(right))),
+          })),
+        }
+      : {}),
+    ...(traceLevel === 'verbose'
+      ? view.selected.length > topK.length ? { truncated: true } : {}
+      : view.selected.length > 1 ? { truncated: true } : {}),
+  };
 }
 
 function scalarZonePropValue(value: AttributeValue | undefined): string | number | boolean | undefined {

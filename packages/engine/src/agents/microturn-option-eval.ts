@@ -12,6 +12,10 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
+  selectChoiceOptionsByLegalityPrecedence,
+  selectUniqueChoiceOptionValuesByLegalityPrecedence,
+} from '../kernel/choice-option-policy.js';
+import {
   PolicyEvaluationContext,
   type PolicyCandidateParamFallbackFired,
   type PolicyLookupFallbackFired,
@@ -19,6 +23,7 @@ import {
   type PolicyScheduleFallbackFired,
   type PolicyScheduleInputRefTrace,
 } from './policy-evaluation-core.js';
+import type { SelectorEvalMicroturnOption } from './policy-selector-eval.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
@@ -131,6 +136,7 @@ export function scoreMicroturnOptionWithContributions(
     lookupOption: { unknownLookupRefs, lookupFallbackFired },
     scheduleOption: { scheduleFallbackFired, scheduleInputRefs },
     candidateParamOption: { unknownCandidateParamRefs, candidateParamFallbackFired },
+    selectorMicroturnOptions: selectorOptionsForRequest(request),
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -163,6 +169,22 @@ export function scoreMicroturnOptionWithContributions(
   } finally {
     evaluation.dispose();
   }
+}
+
+function selectorOptionsForRequest(request: ChoicePendingRequest): readonly SelectorEvalMicroturnOption[] {
+  if (request.type === 'chooseN') {
+    const selectableOptions = selectChoiceOptionsByLegalityPrecedence(request);
+    return selectUniqueChoiceOptionValuesByLegalityPrecedence(request).map((value) => ({
+      key: JSON.stringify(value),
+      value,
+      index: selectableOptions.findIndex((option) => Object.is(option.value, value)),
+    }));
+  }
+  return selectChoiceOptionsByLegalityPrecedence(request).map((option, index) => ({
+    key: JSON.stringify(option.value),
+    value: option.value,
+    index,
+  }));
 }
 
 function serializeScheduleInputRefs(

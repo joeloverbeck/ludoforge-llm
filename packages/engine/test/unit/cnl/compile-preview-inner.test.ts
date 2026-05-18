@@ -85,6 +85,44 @@ const withPreview = (
   };
 };
 
+const withSelectorPreview = (): GameSpecDoc => {
+  const doc = withPreview({
+    mode: 'exactWorld',
+    inner: { chooseOne: true, chooseNStep: true, maxOptions: 2, chooseNBeamWidth: 1, depthCap: 4 },
+  }, {
+    projectedMargin: {
+      scopes: ['microturn'],
+      weight: 1,
+      value: { ref: 'selector.optionProjectedMargin.current.quality' },
+    },
+  }, ['projectedMargin']);
+  const agents = doc.agents!;
+  return {
+    ...doc,
+    agents: {
+      ...agents,
+      library: {
+        ...agents.library,
+        selectors: {
+          optionProjectedMargin: {
+            scopes: ['microturn'],
+            source: { kind: 'microturnOptions' },
+            quality: {
+              components: [{
+                id: 'projectedMargin',
+                value: refExpr('preview.option.delta.victory.currentMargin.self'),
+                weight: 1,
+                previewFallback: { onUnavailable: 'noContribution' },
+              }],
+            },
+            result: { maxItems: 2, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+          },
+        },
+      },
+    },
+  };
+};
+
 describe('compile preview.inner', () => {
   it('rejects inner preview configs above the hard cap', () => {
     const result = compileGameSpecToGameDef(withPreview({
@@ -208,6 +246,13 @@ describe('compile preview.inner', () => {
         previewFallback: { onUnavailable: 'noContribution' },
       },
     }, ['projectedMargin']));
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === WARNING_CODE), false);
+  });
+
+  it('does not warn when inner preview refs are reached through a selector quality component', () => {
+    const result = compileGameSpecToGameDef(withSelectorPreview());
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === WARNING_CODE), false);

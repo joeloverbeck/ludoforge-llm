@@ -736,6 +736,24 @@ const CompiledAgentPolicyRefSchema = z.union([
     kind: z.literal('candidateIntrinsic'),
     intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
+  z.object({
+    kind: z.literal('selector'),
+    selectorId: StringSchema,
+    field: z.union([
+      z.literal('selected.matches'),
+      z.literal('selected.key'),
+      z.literal('selected.quality'),
+      z.literal('selected.rank'),
+      z.literal('current.matches'),
+      z.literal('current.quality'),
+      z.literal('current.rank'),
+      z.literal('impactSatisfied'),
+      z.literal('size'),
+      z.object({ kind: z.literal('selected.component'), componentId: StringSchema }).strict(),
+      z.object({ kind: z.literal('current.component'), componentId: StringSchema }).strict(),
+      z.object({ kind: z.literal('candidate.quality'), key: StringSchema }).strict(),
+    ]),
+  }).strict(),
   // Spec 166 §4.1: candidate-param refs carry explicit missing-value policy.
   z.object({
     kind: z.literal('candidateParam'),
@@ -1056,12 +1074,21 @@ const AgentPolicyCostClassSchema = z.union([
   z.literal('preview'),
 ]);
 
+const SelectorCostClassSchema = z.union([
+  z.literal('state'),
+  z.literal('candidate'),
+  z.literal('microturn'),
+  z.literal('preview'),
+  z.literal('auditOnly'),
+]);
+
 const CompiledAgentDependencyRefsSchema = z
   .object({
     parameters: z.array(StringSchema),
     stateFeatures: z.array(StringSchema),
     candidateFeatures: z.array(StringSchema),
     aggregates: z.array(StringSchema),
+    selectors: z.array(StringSchema).optional(),
     strategicConditions: z.array(StringSchema),
   })
   .strict();
@@ -1218,6 +1245,66 @@ const CompiledPolicyAggregateSchema = z
   })
   .strict();
 
+const SelectorCollectionRefSchema = z.union([
+  z.object({ kind: z.literal('zones') }).strict(),
+  z.object({ kind: z.literal('tokens'), tokenType: StringSchema.optional() }).strict(),
+  z.object({ kind: z.literal('cards'), deck: StringSchema.optional() }).strict(),
+  z.object({ kind: z.literal('players') }).strict(),
+  z.object({ kind: z.literal('authoredFinite'), collectionId: StringSchema }).strict(),
+]);
+
+const SelectorSourceSchema = z.union([
+  z.object({
+    kind: z.literal('collection'),
+    collection: SelectorCollectionRefSchema,
+    key: z.object({ from: StringSchema }).strict().optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('product'),
+    left: SelectorCollectionRefSchema,
+    right: SelectorCollectionRefSchema,
+    maxPairs: z.number().int().positive().max(256),
+  }).strict(),
+  z.object({ kind: z.literal('microturnOptions') }).strict(),
+  z.object({ kind: z.literal('candidateParams'), param: StringSchema }).strict(),
+]);
+
+const SelectorResultSchema = z.object({
+  maxItems: z.number().int().positive().max(32),
+  order: z.array(z.enum(['qualityDesc', 'qualityAsc', 'stableKeyAsc', 'stableKeyDesc'])),
+  onEmpty: z.enum(['noContribution', 'traceAndNoContribution', 'demote']),
+}).strict();
+
+const SelectorQualitySchema = z.object({
+  components: z.array(z.object({
+    id: StringSchema,
+    value: CompiledPolicyExprSchema,
+    weight: IntegerSchema,
+    previewFallback: AgentPreviewFallbackSchema.optional(),
+  }).strict()),
+  order: z.enum(['qualityDesc', 'qualityAsc']),
+}).strict();
+
+const CompiledPolicySelectorSchema = z.object({
+  id: StringSchema,
+  scopes: z.array(z.enum(['move', 'microturn'])),
+  source: SelectorSourceSchema,
+  where: CompiledPolicyExprSchema.optional(),
+  quality: SelectorQualitySchema.optional(),
+  minImpact: CompiledPolicyExprSchema.optional(),
+  result: SelectorResultSchema,
+  costClass: SelectorCostClassSchema,
+  dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const CompiledAgentSelectorSchema = z.object({
+  scopes: z.array(z.enum(['move', 'microturn'])),
+  source: SelectorSourceSchema,
+  result: SelectorResultSchema,
+  costClass: SelectorCostClassSchema,
+  dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
 const CompiledPolicyPruningRuleSchema = z
   .object({
     costClass: AgentPolicyCostClassSchema,
@@ -1255,6 +1342,7 @@ const CompiledPolicyCatalogSchema = z
     stateFeatures: z.record(StringSchema, CompiledPolicyStateFeatureSchema),
     candidateFeatures: z.record(StringSchema, CompiledPolicyCandidateFeatureSchema),
     candidateAggregates: z.record(StringSchema, CompiledPolicyAggregateSchema),
+    selectors: z.record(StringSchema, CompiledPolicySelectorSchema).optional(),
     pruningRules: z.record(StringSchema, CompiledPolicyPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
@@ -1287,6 +1375,7 @@ const CompiledAgentLibraryIndexSchema = z
     stateFeatures: z.record(StringSchema, CompiledAgentStateFeatureSchema),
     candidateFeatures: z.record(StringSchema, CompiledAgentCandidateFeatureSchema),
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
+    selectors: z.record(StringSchema, CompiledAgentSelectorSchema).optional(),
     pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
@@ -1371,9 +1460,11 @@ const CompiledAgentProfileSchema = z
         stateFeatures: z.array(StringSchema),
         candidateFeatures: z.array(StringSchema),
         candidateAggregates: z.array(StringSchema),
+        selectors: z.array(StringSchema).optional(),
         considerations: z.array(StringSchema),
       })
       .strict(),
+    selector: z.object({ maxCostClass: SelectorCostClassSchema }).strict().optional(),
   })
   .strict();
 
@@ -1388,6 +1479,10 @@ const AgentPolicyCatalogSchema = z
     compiled: CompiledPolicyCatalogSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
+    selectorCaps: z.object({
+      maxResultItems: z.number().int().positive(),
+      maxProductPairs: z.number().int().positive(),
+    }).strict().optional(),
   })
   .strict();
 

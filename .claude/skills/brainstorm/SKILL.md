@@ -65,7 +65,7 @@ Classify: design | decision/triage | operational
 
 ## Procedure
 
-1. **Read context and classify the topic.** Load `references/context-and-classification.md`. Covers reference-file reading, the six topic-classification modes (design / decision-triage / operational / diagnostic / decision-requiring-design / external-LLM), starting-confidence adjustment from prior context (rich reference files, conversation context, artifact investigation, stacked triggers), and the Step 1.5 pre-interview verification rules.
+1. **Read context and classify the topic.** Load `references/context-and-classification.md`. Covers reference-file reading, the five topic-classification modes (design / decision-triage / operational / diagnostic / decision-requiring-design) plus the External-LLM trigger pattern (which redirects to one of the five based on user intent), starting-confidence adjustment from prior context (rich reference files, conversation context, artifact investigation, stacked triggers), and the Step 1.5 pre-interview verification rules.
 
 2. **If plan mode is active**, load `references/plan-mode.md` before continuing — its adaptations override Steps 5 (output path) and 6 (next-steps menu).
 

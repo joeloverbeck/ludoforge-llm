@@ -15,11 +15,11 @@ import {
 
 const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection'] as const;
+const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection', 'selector'] as const;
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
-type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey, Record<string, unknown>>>;
+type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey | 'selectors', Record<string, unknown>>>;
 
 const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'expr',
@@ -29,6 +29,7 @@ const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'stateFeatures',
   'candidateFeatures',
   'candidateAggregates',
+  'selectors',
   'pruningRules',
   'considerations',
   'tieBreakers',
@@ -279,13 +280,17 @@ function hasPreviewOptionMicroturnConsideration(
     return isRecord(consideration)
       && Array.isArray(consideration.scopes)
       && consideration.scopes.includes('microturn')
-      && containsPreviewOptionRef(consideration);
+      && containsPreviewOptionRef(consideration, library);
   });
 }
 
-function containsPreviewOptionRef(value: unknown): boolean {
+function containsPreviewOptionRef(
+  value: unknown,
+  library: AgentLibraryBucketMap | undefined,
+  seenSelectors: ReadonlySet<string> = new Set(),
+): boolean {
   if (Array.isArray(value)) {
-    return value.some((entry) => containsPreviewOptionRef(entry));
+    return value.some((entry) => containsPreviewOptionRef(entry, library, seenSelectors));
   }
   if (!isRecord(value)) {
     return false;
@@ -296,7 +301,17 @@ function containsPreviewOptionRef(value: unknown): boolean {
       && entry.startsWith('preview.option.')) {
       return true;
     }
-    if (containsPreviewOptionRef(entry)) {
+    if (key === 'ref' && typeof entry === 'string' && entry.startsWith('selector.')) {
+      const selectorId = entry.slice('selector.'.length).split('.')[0];
+      if (selectorId !== undefined && selectorId.length > 0 && !seenSelectors.has(selectorId)) {
+        const nextSeen = new Set(seenSelectors);
+        nextSeen.add(selectorId);
+        if (containsPreviewOptionRef(library?.selectors?.[selectorId], library, nextSeen)) {
+          return true;
+        }
+      }
+    }
+    if (containsPreviewOptionRef(entry, library, seenSelectors)) {
       return true;
     }
   }

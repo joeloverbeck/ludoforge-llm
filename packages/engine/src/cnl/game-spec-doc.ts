@@ -709,10 +709,45 @@ export interface GameSpecStrategicConditionDef {
   };
 }
 
+export type GameSpecSelectorSource =
+  | { readonly kind?: 'collection'; readonly collection: GameSpecSelectorCollectionRef; readonly key?: { readonly from: string } }
+  | { readonly kind: 'product'; readonly left: GameSpecSelectorCollectionRef; readonly right: GameSpecSelectorCollectionRef; readonly maxPairs?: number }
+  | { readonly kind: 'microturnOptions' }
+  | { readonly kind: 'candidateParams'; readonly param: string };
+
+export type GameSpecSelectorCollectionRef =
+  | { readonly kind: 'zones' }
+  | { readonly kind: 'tokens'; readonly tokenType?: string }
+  | { readonly kind: 'cards'; readonly deck?: string }
+  | { readonly kind: 'players' }
+  | { readonly kind: 'authoredFinite'; readonly collectionId: string };
+
+export interface GameSpecSelectorDef {
+  readonly scopes?: readonly string[];
+  readonly source: GameSpecSelectorSource;
+  readonly where?: GameSpecPolicyExpr;
+  readonly quality?: {
+    readonly components?: readonly {
+      readonly id: string;
+      readonly value: GameSpecPolicyExpr;
+      readonly weight: number;
+      readonly previewFallback?: GameSpecPreviewFallbackDef;
+    }[];
+    readonly order?: string;
+  };
+  readonly minImpact?: GameSpecPolicyExpr;
+  readonly result?: {
+    readonly maxItems?: number;
+    readonly order?: readonly string[];
+    readonly onEmpty?: string;
+  };
+}
+
 export interface GameSpecAgentLibrary {
   readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
+  readonly selectors?: Readonly<Record<string, GameSpecSelectorDef>>;
   readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
@@ -772,6 +807,9 @@ export interface GameSpecAgentProfileDef {
   readonly selection?: {
     readonly mode?: string;
     readonly temperature?: number;
+  };
+  readonly selector?: {
+    readonly maxCostClass?: string;
   };
 }
 

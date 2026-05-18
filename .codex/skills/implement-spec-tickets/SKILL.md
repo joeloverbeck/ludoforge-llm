@@ -296,6 +296,7 @@ Harness handoff:
 - State file: .codex/run-state/implement-spec-tickets.json
 - Required next invocation: $implement-spec-tickets <spec> <next-target-if-any>
 - Reset boundary: <fresh context recommended | continuing same-seam follow-up/direct dependent with reason | not_applicable: final/blocked>
+- Approved boundary resets: <none | user-approved decision + artifact where recorded>
 ```
 
 Stop after the handoff for a non-follow-up ticket unless context remains small and the next target is an immediate follow-up or explicit direct dependent. The next session must reload this skill, child skills, live active tickets, and `git status --short`.
@@ -351,7 +352,7 @@ Do not create or push a branch if the loop stopped blocked or if the worktree st
 
 After each ticket iteration, include the `Harness handoff` block from `Persist State And Prepare Reset` verbatim unless the final spec archive or branch/push path supersedes it. End with:
 
-Before the final response, perform a handoff preflight: confirm the response includes every `Harness handoff` row when applicable, including originating spec, last ticket processed, work commit, state commit, next target, queue, dirty state, state file, required next invocation, and reset boundary. If the final spec archive or blocked path supersedes the normal block, explicitly state why the normal row is not applicable.
+Before the final response, perform a handoff preflight: confirm the response includes every `Harness handoff` row when applicable, including originating spec, last ticket processed, work commit, state commit, next target, queue, dirty state, state file, required next invocation, reset boundary, and approved boundary resets. If the final spec archive or blocked path supersedes the normal block, explicitly state why the normal row is not applicable.
 
 - originating spec path and archived path, if archived
 - tickets implemented, blocked, archived, or left active

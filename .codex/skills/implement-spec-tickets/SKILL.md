@@ -117,6 +117,14 @@ If implementation blocks:
 - if the current ticket is blocked by active same-family prerequisites, truth the dependency or queue notes as needed, move prerequisites ahead of it, commit that retarget/state update when files changed, print a handoff, and resume at the prerequisite after a reset boundary
 - if no next owner exists, stop and report the blocker, current ticket, proof gap, and required user decision
 
+If the blocker is resolved by a user-approved 1-3-1 option or other explicit boundary reset, do this before resuming implementation:
+
+1. Record the approved option and the user's confirmation in the active ticket, state file, or next visible checkpoint.
+2. Patch any active ticket/spec/sibling artifact whose boundary, deliverable, proof lane, or dependency story changed because of the approved option.
+3. Refresh `.codex/run-state/implement-spec-tickets.json` from `blocked: true` to the truthful resumed phase only after the owned artifacts reflect the new boundary.
+4. Re-emit a compact working checkpoint for the resumed boundary, including invalidated proof lanes and the replacement proof plan.
+5. Rerun affected focused proof before terminal status or archival. Do not cite proof from before the approved reset unless it is explicitly classified as still valid.
+
 ### 2. Audit Implement-Ticket When Exercised
 
 After each implementation phase, run:
@@ -205,8 +213,11 @@ Required-visible-block checkpoint:
 - implement-ticket audit block: <emitted | not_applicable: reason>
 - post-ticket-review block: <emitted | not_applicable: reason>
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
+- approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
+
+When user-approved extra paths are included in the iteration commit even though they are not ticket-owned, list them in the checkpoint and final handoff. The commit message must either mention the extra skill/process hardening if it is material, or the final handoff must explicitly state that the extra path was included by user approval and was not part of the ticket deliverable. Do not let approved unrelated paths appear as silent ticket-owned work.
 
 If a ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then confirm the source deletion/rename appears in `git diff --cached --name-status`.
 

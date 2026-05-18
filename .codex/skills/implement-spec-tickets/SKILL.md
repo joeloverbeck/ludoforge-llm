@@ -11,6 +11,14 @@ This is an orchestration skill. Do not reimplement `.codex/skills/implement-tick
 
 Prefer a fresh context boundary between unrelated ticket iterations. After each iteration commit, persist state, print a compact handoff, and stop for `/new` or context compaction unless the next target is an immediate follow-up or explicit direct dependent whose same-seam continuation is safe to keep in the current context.
 
+## Child Skill Audit Override
+
+This harness intentionally narrows `skill-audit` output when auditing child workflow skills during an implementation loop. Use the live `skill-audit` criteria to identify evidence-backed issues, improvements, and features, but emit the compact child-audit block required below instead of the full report template.
+
+This harness also grants explicit authorization to patch child skills when a child-audit suggestion is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. That authorization applies only inside this orchestrated loop; a standalone `$skill-audit` request remains report-only unless the user separately asks to implement suggestions.
+
+For any nonzero child-audit finding count, include enough evidence in the compact block to justify each apply, reject, or defer decision. Do not collapse nonzero findings into unexplained counts.
+
 ## Required Reads
 
 Before the first loop iteration, read:
@@ -156,6 +164,8 @@ Post-ticket review:
 
 When reporting stale-path sweeps, distinguish active-path references such as `tickets/<id>.md` from already-correct archive references such as `archive/tickets/<id>.md`.
 
+When a ticket is archived, independently grep the originating spec for the moved active ticket path before committing, even when `post-ticket-review` or the archive helper reports successful reference repair. Patch actionable stale spec-list or dependency references to the archive path, or report why a remaining reference is historical and harmless.
+
 If review blocks archival because same-seam work remains, put the active ticket back at the front of the queue and continue through `implement-ticket` unless the review requires a user decision.
 
 ### 4. Audit Post-Ticket Review When It Changes Handoff Surfaces
@@ -213,7 +223,9 @@ After each iteration work commit or no-commit checkpoint, update the state file 
 - normalized dirty-state classification
 - `updated_at`
 
-If the state file changes after the work commit, either amend it into the work commit or commit it separately as a state-file-only commit with `last_state_commit: "self"`. Do not create a chain of state-only commits to embed the state commit's own SHA.
+If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
+
+If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
 
 Print:
 

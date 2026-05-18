@@ -118,6 +118,21 @@ const collectMicroturnPreviewDerivedRefs = (
     }
     const termRefIds = new Set<string>();
     const visitRef = (ref: CompiledAgentPolicyRef): void => {
+      if (ref.kind === 'selector') {
+        const selector = resolvedProfile.catalog.compiled.selectors?.[ref.selectorId];
+        if (selector !== undefined) {
+          if (selector.where !== undefined) {
+            walkPolicyExpr(selector.where, visitRef);
+          }
+          if (selector.minImpact !== undefined) {
+            walkPolicyExpr(selector.minImpact, visitRef);
+          }
+          for (const component of selector.quality?.components ?? []) {
+            walkPolicyExpr(component.value, visitRef);
+          }
+        }
+        return;
+      }
       if (ref.kind === 'previewOptionRef') {
         previewOptionRefs.set(previewOptionRefKey(ref), ref);
       }

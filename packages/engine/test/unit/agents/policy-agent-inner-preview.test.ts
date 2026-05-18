@@ -18,6 +18,7 @@ import {
   type AgentPolicyLiteral,
   type CompiledAgentPolicyRef,
   type CompiledAgentProfile,
+  type CompiledPolicySelector,
   type GameDef,
 } from '../../../src/kernel/index.js';
 import type { ChooseNStepContext, MicroturnState } from '../../../src/kernel/microturn/types.js';
@@ -39,6 +40,10 @@ type ChooseNStepDecision = ChooseNStepMicroturn['legalActions'][number] & {
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const selectorRef = (
+  selectorId: string,
+  field: Extract<CompiledAgentPolicyRef, { readonly kind: 'selector' }>['field'],
+): AgentPolicyExpr => refExpr({ kind: 'selector', selectorId, field });
 const previewDeltaRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }> = {
   kind: 'previewOptionRef',
   refKind: 'deltaVictoryCurrentMarginSelf',
@@ -52,10 +57,10 @@ function microturnConsiderations(
   );
 }
 
-function createProfile(chooseNStep: boolean): CompiledAgentProfile {
+function createProfile(chooseNStep: boolean, selectorDriven = false): CompiledAgentProfile {
   const considerations = ['preferProjectedMargin'];
   return {
-    fingerprint: `policy-agent-inner-preview-${chooseNStep ? 'enabled' : 'disabled'}`,
+    fingerprint: `policy-agent-inner-preview-${chooseNStep ? 'enabled' : 'disabled'}-${selectorDriven ? 'selector' : 'direct'}`,
     params: {},
     preview: {
       mode: 'exactWorld',
@@ -80,16 +85,17 @@ function createProfile(chooseNStep: boolean): CompiledAgentProfile {
       stateFeatures: [],
       candidateFeatures: [],
       candidateAggregates: [],
+      ...(selectorDriven ? { selectors: ['optionProjectedMargin'] } : {}),
       considerations,
     },
   };
 }
 
-function createCatalog(chooseNStep: boolean): AgentPolicyCatalog {
-  const profile = createProfile(chooseNStep);
-  return withCompiledPolicyCatalog({
+function createCatalog(chooseNStep: boolean, selectorDriven = false): AgentPolicyCatalog {
+  const profile = createProfile(chooseNStep, selectorDriven);
+  const baseCatalog = withCompiledPolicyCatalog({
     schemaVersion: 2,
-    catalogFingerprint: `policy-agent-inner-preview-${chooseNStep ? 'enabled' : 'disabled'}`,
+    catalogFingerprint: `policy-agent-inner-preview-${chooseNStep ? 'enabled' : 'disabled'}-${selectorDriven ? 'selector' : 'direct'}`,
     surfaceVisibility: {
       globalVars: {},
       globalMarkers: {},
@@ -116,9 +122,18 @@ function createCatalog(chooseNStep: boolean): AgentPolicyCatalog {
           costClass: 'preview',
           when: literal(true),
           weight: literal(1),
-          value: refExpr(previewDeltaRef),
+          value: selectorDriven
+            ? selectorRef('optionProjectedMargin', 'current.quality')
+            : refExpr(previewDeltaRef),
           previewFallback: { onUnavailable: 'noContribution' },
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: [],
+            aggregates: [],
+            ...(selectorDriven ? { selectors: ['optionProjectedMargin'] } : {}),
+            strategicConditions: [],
+          },
         },
       }),
       tieBreakers: {},
@@ -132,6 +147,33 @@ function createCatalog(chooseNStep: boolean): AgentPolicyCatalog {
       arvn: 'baseline',
     },
   });
+  if (!selectorDriven) {
+    return baseCatalog;
+  }
+  const selector: CompiledPolicySelector = {
+    id: 'optionProjectedMargin' as CompiledPolicySelector['id'],
+    scopes: ['microturn'],
+    source: { kind: 'microturnOptions' },
+    quality: {
+      components: [{
+        id: 'projectedMargin' as any,
+        value: refExpr(previewDeltaRef),
+        weight: 1,
+        previewFallback: { onUnavailable: 'noContribution' },
+      }],
+      order: 'qualityDesc',
+    },
+    result: { maxItems: 4, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+    costClass: 'preview',
+    dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+  };
+  return {
+    ...baseCatalog,
+    compiled: {
+      ...baseCatalog.compiled,
+      selectors: { optionProjectedMargin: selector },
+    },
+  };
 }
 
 function createDef(catalog: AgentPolicyCatalog): GameDef {
@@ -211,14 +253,14 @@ function createInput(
   };
 }
 
-function createFixture(chooseNStep: boolean): {
+function createFixture(chooseNStep: boolean, selectorDriven = false): {
   readonly catalog: AgentPolicyCatalog;
   readonly def: GameDef;
   readonly initialInput: AgentMicroturnDecisionInput;
   readonly chooseNStepInput: AgentMicroturnDecisionInput;
   readonly microturn: ChooseNStepMicroturn;
 } {
-  const catalog = createCatalog(chooseNStep);
+  const catalog = createCatalog(chooseNStep, selectorDriven);
   const def = createDef(catalog);
   const initial = initialState(def, 161, 2);
   const actionSelection = publishMicroturn(def, initial.state);
@@ -294,5 +336,17 @@ describe('policy agent inner preview adapter', () => {
         { kind: 'ready', value: 1 },
       ],
     );
+  });
+
+  it('discovers preview refs used inside selector quality for microturn scoring', () => {
+    const fixture = createFixture(true, true);
+    const preview = createPolicyAgentChooseNStepInnerPreview(
+      fixture.chooseNStepInput,
+      resolvedProfile(fixture.catalog),
+    );
+
+    assert.ok(preview !== undefined);
+    assert.deepEqual(preview.refIds, ['preview.option.delta.victory.currentMargin.self']);
+    assert.equal(preview.usage.readyRefStats['preview.option.delta.victory.currentMargin.self']?.distinctValueCount, 2);
   });
 });

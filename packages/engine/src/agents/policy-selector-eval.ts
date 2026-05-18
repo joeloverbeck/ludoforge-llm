@@ -31,6 +31,7 @@ export interface SelectedItem {
 export interface SelectedSelectorView {
   readonly selectorId: string;
   readonly selected: readonly SelectedItem[];
+  readonly current?: SelectedItem;
   readonly impactSatisfied: boolean;
   readonly emptyReason?: 'whereExcludedAll' | 'sourceEmpty' | 'minImpactFailed';
   readonly emptyMode?: ResultSpec['onEmpty'];
@@ -42,17 +43,25 @@ export interface SelectorEvalContext {
   readonly state: GameState;
   readonly candidates: readonly SelectorEvalCandidate[];
   readonly candidate?: SelectorEvalCandidate;
-  readonly microturnOptions?: readonly { readonly key: string; readonly value: MoveParamValue }[];
+  readonly microturnOptions?: readonly SelectorEvalMicroturnOption[];
   readonly observerPlayerId?: PlayerId;
   readonly observerProfile?: CompiledObserverProfile;
-  evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined): PolicyValue;
+  readonly currentItemKey?: string;
+  evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined, microturnOption?: SelectorEvalMicroturnOption): PolicyValue;
   onProductTruncated?(selectorId: string): void;
   onSelectorEmpty?(selectorId: string, reason: SelectedSelectorView['emptyReason']): void;
+}
+
+export interface SelectorEvalMicroturnOption {
+  readonly key: string;
+  readonly value: MoveParamValue;
+  readonly index: number;
 }
 
 interface SelectorSourceItem {
   readonly key: string;
   readonly candidate?: SelectorEvalCandidate;
+  readonly microturnOption?: SelectorEvalMicroturnOption;
 }
 
 export function evaluateSelector(
@@ -66,22 +75,26 @@ export function evaluateSelector(
 
   const filtered = selector.where === undefined
     ? source
-    : source.filter((item) => context.evaluateExpr(selector.where!, item.candidate ?? context.candidate) === true);
+    : source.filter((item) => context.evaluateExpr(selector.where!, item.candidate ?? context.candidate, item.microturnOption) === true);
   if (filtered.length === 0) {
     return emptyView(selector, context, 'whereExcludedAll');
   }
 
   const scored = filtered.map((item) => scoreItem(selector, context, item));
-  const selected = rankAndTruncate(scored, selector.result.order, selector.result.maxItems);
+  const ranked = rankAndTruncate(scored, selector.result.order, scored.length);
+  const selected = ranked.slice(0, selector.result.maxItems);
   if (selected.length === 0) {
     return emptyView(selector, context, 'sourceEmpty');
   }
+  const current = context.currentItemKey === undefined
+    ? undefined
+    : ranked.find((item) => item.key === context.currentItemKey);
 
   const minImpactSatisfied = selector.minImpact === undefined
     ? true
     : context.evaluateExpr(selector.minImpact, selected[0]?.key === context.candidate?.stableMoveKey ? context.candidate : undefined) === true;
   return minImpactSatisfied
-    ? { selectorId: selector.id, selected, impactSatisfied: true }
+    ? { selectorId: selector.id, selected, ...(current === undefined ? {} : { current }), impactSatisfied: true }
     : emptyView(selector, context, 'minImpactFailed');
 }
 
@@ -129,7 +142,7 @@ function materializeSource(
     case 'candidateParams':
       return materializeCandidateParam(source.param, context.candidate);
     case 'microturnOptions':
-      return (context.microturnOptions ?? []).map((entry) => ({ key: entry.key }));
+      return (context.microturnOptions ?? []).map((entry) => ({ key: entry.key, microturnOption: entry }));
   }
 }
 
@@ -206,7 +219,7 @@ function scoreItem(
   const components = new Map<string, number>();
   let quality = 0;
   for (const component of selector.quality?.components ?? []) {
-    const rawValue = context.evaluateExpr(component.value, item.candidate ?? context.candidate);
+    const rawValue = context.evaluateExpr(component.value, item.candidate ?? context.candidate, item.microturnOption);
     const value = typeof rawValue === 'number'
       ? rawValue
       : component.previewFallback?.onUnavailable === 'noContribution'

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (profile YAML); possibly `docs/agent-dsl-cookbook.md` (cookbook entry citing the migration)
-**Deps**: `archive/tickets/181STRSTRPOL-003.md`, `archive/tickets/181STRSTRPOL-009.md`
+**Deps**: `archive/tickets/181STRSTRPOL-003.md`, `archive/tickets/181STRSTRPOL-009.md`, `archive/tickets/181STRSTRPOL-014.md`
 
 ## Problem
 
@@ -15,6 +15,7 @@ Spec 181 §8 Phase 1 acceptance (c) closes the loop: at least one ARVN considera
 1. `data/games/fire-in-the-lake/92-agents.md` defines the `arvn-evolved` profile with ~20+ scalar considerations on action tags (per Step 2 verification this session). Pick the smallest consideration whose target ranking is currently emulated by flat terms — likely a per-zone target preference embedded in a Govern or Train consideration.
 2. Phase 0 probe (003) measures action-family distribution and `tiebreakAfterPreviewNoSignal` rate. The migration MUST keep both metrics within their thresholds.
 3. Phase 1 selector stack (006/007/008) is fully landed and conformance-tested (009/010/011) before this ticket runs.
+4. Live reassessment found the ARVN target-ranking seam is microturn-scoped. This ticket remains YAML-only and depends on `181STRSTRPOL-014` for generic `microturnOptions` selector evaluation in microturn option scoring.
 
 ## Architecture Check
 

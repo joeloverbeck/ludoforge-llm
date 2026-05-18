@@ -216,6 +216,14 @@ export function parseSelectorRef(refPath: string): {
       type: 'number',
     };
   }
+  const currentComponent = rest.match(/^([^.]+)\.current\.component\.([^.]+)$/);
+  if (currentComponent !== null) {
+    return {
+      selectorId: currentComponent[1]!,
+      field: { kind: 'current.component', componentId: currentComponent[2]! },
+      type: 'number',
+    };
+  }
   const candidateQuality = rest.match(/^([^.]+)\.candidate\.([^.]+)\.quality$/);
   if (candidateQuality !== null) {
     return {
@@ -235,8 +243,12 @@ export function parseSelectorRef(refPath: string): {
       return { selectorId, field, type: 'id' };
     case 'selected.quality':
     case 'selected.rank':
+    case 'current.quality':
+    case 'current.rank':
     case 'size':
       return { selectorId, field, type: 'number' };
+    case 'current.matches':
+      return { selectorId, field, type: 'boolean' };
     case 'impactSatisfied':
       return { selectorId, field, type: 'boolean' };
     default:

@@ -488,9 +488,13 @@ export type CompiledAgentPolicyRef =
         | 'selected.key'
         | 'selected.quality'
         | 'selected.rank'
+        | 'current.matches'
+        | 'current.quality'
+        | 'current.rank'
         | 'impactSatisfied'
         | 'size'
         | { readonly kind: 'selected.component'; readonly componentId: string }
+        | { readonly kind: 'current.component'; readonly componentId: string }
         | { readonly kind: 'candidate.quality'; readonly key: string };
     }
   | CompiledSurfaceRef

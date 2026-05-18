@@ -127,6 +127,7 @@ describe('agent selector IR compilation', () => {
           },
           considerations: {
             useStateSelector: { scopes: ['move'], weight: 1, value: { ref: 'selector.stateSelector.selected.quality' } },
+            useCurrentSelector: { scopes: ['microturn'], weight: 1, value: { ref: 'selector.microturnSelector.current.quality' } },
           },
           tieBreakers: { stableMoveKey: { kind: 'stableMoveKey' } },
         },
@@ -134,7 +135,7 @@ describe('agent selector IR compilation', () => {
           baseline: {
             observer: 'testObserver',
             params: {},
-            use: { considerations: ['useStateSelector'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
+            use: { considerations: ['useStateSelector', 'useCurrentSelector'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { p1: 'baseline' },
@@ -147,6 +148,7 @@ describe('agent selector IR compilation', () => {
     assert.equal(selectors?.candidateSelector?.costClass, 'candidate');
     assert.equal(selectors?.microturnSelector?.costClass, 'microturn');
     assert.equal(selectors?.previewSelector?.costClass, 'preview');
+    assert.deepEqual(result.gameDef?.agents?.library.considerations?.useCurrentSelector?.dependencies.selectors, ['microturnSelector']);
   });
 
   it('reports selector dependency cycles with the selector-specific diagnostic', () => {

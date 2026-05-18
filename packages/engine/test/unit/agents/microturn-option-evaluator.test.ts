@@ -14,6 +14,7 @@ import {
   type AgentPolicyLiteral,
   type ChoicePendingRequest,
   type CompiledAgentPolicyRef,
+  type CompiledPolicySelector,
   type GameDef,
   type MoveParamValue,
 } from '../../../src/kernel/index.js';
@@ -35,6 +36,10 @@ const gtRef = (ref: CompiledAgentPolicyRef, value: number): AgentPolicyExpr =>
   boolToScore(opExpr('gt', refExpr(ref), literal(value)));
 const inTags = (value: string): AgentPolicyExpr =>
   boolToScore(opExpr('in', literal(value), refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'tags' })));
+const selectorRef = (
+  selectorId: string,
+  field: Extract<CompiledAgentPolicyRef, { readonly kind: 'selector' }>['field'],
+): AgentPolicyExpr => refExpr({ kind: 'selector', selectorId, field });
 
 const def: GameDef = assertValidatedGameDef({
   metadata: { id: 'microturn-option-evaluator-test', players: { min: 2, max: 2 } },
@@ -232,6 +237,98 @@ describe('microturn option evaluator', () => {
     assert.equal(result.scoreContributions.find((entry) => entry.termId === 'kind')?.contribution, 0);
     assert.equal(result.scoreContributions.find((entry) => entry.termId === 'remainingRequiredCount')?.contribution, 23);
     assert.equal(result.scoreContributions.find((entry) => entry.termId === 'remainingMaxCount')?.contribution, 29);
+  });
+
+  it('scores the current option through a microturnOptions selector', () => {
+    const state = initialState(def, 1, 2).state;
+    const optionRanker: CompiledPolicySelector = {
+      id: 'optionRanker' as CompiledPolicySelector['id'],
+      scopes: ['microturn'],
+      source: { kind: 'microturnOptions' },
+      quality: {
+        components: [{
+          id: 'optionIndex' as any,
+          value: refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'index' }),
+          weight: 10,
+        }],
+        order: 'qualityDesc',
+      },
+      result: { maxItems: 2, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+      costClass: 'microturn',
+      dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+    };
+    const selectorCatalog: AgentPolicyCatalog = {
+      ...catalog,
+      compiled: {
+        ...catalog.compiled,
+        selectors: { optionRanker },
+        considerations: {
+          preferCurrentSelectorQuality: {
+            scopes: ['microturn'],
+            costClass: 'candidate',
+            weight: literal(1),
+            value: selectorRef('optionRanker', 'current.quality'),
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+              selectors: ['optionRanker'],
+              strategicConditions: [],
+            },
+          },
+          preferCurrentSelectorRank: {
+            scopes: ['microturn'],
+            costClass: 'candidate',
+            weight: literal(1),
+            value: selectorRef('optionRanker', 'current.rank'),
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+              selectors: ['optionRanker'],
+              strategicConditions: [],
+            },
+          },
+        },
+      },
+    };
+
+    const left = scoreMicroturnOptionWithContributions(
+      state,
+      def,
+      selectorCatalog,
+      state.activePlayer,
+      asSeatId('us'),
+      {},
+      createChooseOneRequest(),
+      'left',
+      0,
+      ['preferCurrentSelectorQuality', 'preferCurrentSelectorRank'],
+    );
+    const right = scoreMicroturnOptionWithContributions(
+      state,
+      def,
+      selectorCatalog,
+      state.activePlayer,
+      asSeatId('us'),
+      {},
+      createChooseOneRequest(),
+      'right',
+      1,
+      ['preferCurrentSelectorQuality', 'preferCurrentSelectorRank'],
+    );
+
+    assert.deepEqual(left.scoreContributions, [
+      { termId: 'preferCurrentSelectorQuality', contribution: 0 },
+      { termId: 'preferCurrentSelectorRank', contribution: 2 },
+    ]);
+    assert.deepEqual(right.scoreContributions, [
+      { termId: 'preferCurrentSelectorQuality', contribution: 10 },
+      { termId: 'preferCurrentSelectorRank', contribution: 1 },
+    ]);
+    assert.equal(right.score > left.score, true);
   });
 
   it('records unavailable preview-option refs while preserving numeric fallback scoring', () => {

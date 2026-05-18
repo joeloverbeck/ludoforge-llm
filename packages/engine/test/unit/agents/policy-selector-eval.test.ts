@@ -289,7 +289,7 @@ describe('policy selector evaluator', () => {
       def: {} as GameDef,
       state: tokenState,
       candidates: [],
-      microturnOptions: [{ key: 'second', value: 2 }, { key: 'first', value: 1 }],
+      microturnOptions: [{ key: 'second', value: 2, index: 1 }, { key: 'first', value: 1, index: 0 }],
       evaluateExpr: () => 0,
     });
     assert.deepEqual(microturn.selected.map((item) => item.key), ['first', 'second']);

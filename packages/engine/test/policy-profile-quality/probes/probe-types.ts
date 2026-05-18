@@ -5,6 +5,7 @@ import type {
   GameState,
   PolicyAgentDecisionTrace,
   Rng,
+  SerializedGameState,
   ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import type { PolicyDecisionTraceLevel } from '../../../src/agents/index.js';
@@ -80,11 +81,19 @@ export interface ProbeStateBinding {
     readonly start: number;
     readonly end: number;
   };
+  readonly stateSamples?: readonly ProbeStateSample[];
   readonly replayPrefix?: readonly Decision[];
   readonly expectedStateHash?: string;
+  readonly maxMatchesPerSeed?: number;
   readonly decisionFilter?: {
     readonly phase?: PhaseId;
   };
+}
+
+export interface ProbeStateSample {
+  readonly seed: number;
+  readonly stateHash: string;
+  readonly state: SerializedGameState;
 }
 
 export interface ProbeDecisionBinding {
@@ -124,6 +133,7 @@ export interface ProbeMatch {
   readonly stateHash: string;
   readonly selectedDecision: Decision;
   readonly selectedActionTags: readonly ActionTagId[];
+  readonly selectedByReason?: SelectedByReason;
   readonly trace: PolicyAgentDecisionTrace | null;
   readonly publishedFrontierConstructibility?: ProbePublishedFrontierConstructibility;
   readonly contextKind: DecisionContextKind;

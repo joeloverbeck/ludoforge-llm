@@ -2369,6 +2369,7 @@ export interface AgentMicroturnDecisionResult {
   readonly decision: import('./microturn/types.js').Decision;
   readonly rng: Rng;
   readonly agentDecision?: AgentDecisionTrace;
+  readonly selectedByReason?: string;
 }
 
 export interface Agent {

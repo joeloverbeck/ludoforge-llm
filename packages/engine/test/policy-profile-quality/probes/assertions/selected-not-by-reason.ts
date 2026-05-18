@@ -28,8 +28,9 @@ export const evaluateSelectedNotByReason = (context: AssertionContext): ProbeOut
     : pass();
 };
 
-const selectionReason = (match: { readonly trace: NonNullable<AssertionContext['matches'][number]['trace']> | null }): SelectedByReason | null =>
-  match.trace?.candidates
+const selectionReason = (match: AssertionContext['matches'][number]): SelectedByReason | null =>
+  match.selectedByReason
+  ?? match.trace?.candidates
     ?.find((candidate) => candidate.stableMoveKey === match.trace?.selectedStableMoveKey)
     ?.selectionReason
     ?? selectedTraceCandidate(match as AssertionContext['matches'][number])?.selectionReason

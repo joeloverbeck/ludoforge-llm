@@ -285,6 +285,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly selectedReason?: SelectionReason;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
@@ -919,6 +920,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           previewUsage: collectDiagnostics
             ? { ...previewUsageForMemory, widenedBecauseUniform: allocatorOutput.widenedBecauseUniform }
             : emptyPreviewUsage(profile.preview.mode),
+          ...(selected.selectionReason === undefined ? {} : { selectedReason: selected.selectionReason }),
           ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,

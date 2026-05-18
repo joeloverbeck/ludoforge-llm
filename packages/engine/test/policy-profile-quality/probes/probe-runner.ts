@@ -6,8 +6,10 @@ import {
   applyDecision,
   applyPublishedDecision,
   createRng,
+  deserializeGameState,
   initialState,
   publishMicroturn,
+  terminalResult,
   type Decision,
   type DecisionContext,
   type GameState,
@@ -15,13 +17,16 @@ import {
   type PolicyAgentDecisionTrace,
   type Rng,
 } from '../../../src/kernel/index.js';
+import { forkGameDefRuntimeForRun } from '../../../src/kernel/gamedef-runtime.js';
 import type {
   Probe,
+  ProbeLoadedGame,
   ProbeMatch,
   ProbeOutcome,
   ProbeResult,
   ProbeRunOptions,
   ProbeSeedOutcome,
+  ProbeStateSample,
 } from './probe-types.js';
 import { dispatchAssertion } from './assertions/index.js';
 
@@ -57,14 +62,19 @@ const runProbeOnce = (probe: Probe, options: ProbeRunOptions): ProbeResult => {
   const aggregateWindow = aggregateWindowSize(probe);
   const perSeedOutcomes: ProbeSeedOutcome[] = [];
   const aggregateMatches: ProbeMatch[] = [];
-  for (const seed of seedsForProbe(probe)) {
+  const loaded = options.loadGame({
+    game: probe.game,
+    scenario: probe.stateBinding.scenario,
+  });
+  for (const runBinding of runBindingsForProbe(probe)) {
     const remainingAggregateMatches = aggregateWindow === null
       ? undefined
       : Math.max(0, aggregateWindow - aggregateMatches.length);
     if (remainingAggregateMatches === 0) {
       break;
     }
-    const seedOutcome = runProbeForSeed(probe, seed, options, remainingAggregateMatches);
+    const seedMaxMatches = maxMatchesForSeed(probe, remainingAggregateMatches);
+    const seedOutcome = runProbeForSeed(probe, runBinding.seed, loaded, options, seedMaxMatches, runBinding.sample);
     perSeedOutcomes.push(seedOutcome);
     aggregateMatches.push(...seedOutcome.matches);
     if (seedOutcome.outcome.kind !== 'pass') {
@@ -92,15 +102,19 @@ const runProbeOnce = (probe: Probe, options: ProbeRunOptions): ProbeResult => {
 const runProbeForSeed = (
   probe: Probe,
   seed: number,
+  loadedGame: ProbeLoadedGame,
   options: ProbeRunOptions,
   maxMatches?: number,
+  sample?: ProbeStateSample,
 ): ProbeSeedOutcome => {
-  const loaded = options.loadGame({
-    game: probe.game,
-    scenario: probe.stateBinding.scenario,
-  });
-  let state = initialState(loaded.def, seed, loaded.playerCount, undefined, loaded.runtime).state;
-  let chanceRng = createRng(BigInt(seed));
+  const loaded = {
+    ...loadedGame,
+    runtime: forkGameDefRuntimeForRun(loadedGame.runtime),
+  };
+  let state = sample === undefined
+    ? initialState(loaded.def, seed, loaded.playerCount, undefined, loaded.runtime).state
+    : deserializeGameState(sample.state);
+  let chanceRng = sample === undefined ? createRng(BigInt(seed)) : { state: state.rng };
   let agentRng = options.createAgentRng?.({ probe, seed, seat: probe.seat })
     ?? createRng(BigInt(seed) ^ AGENT_RNG_MIX);
 
@@ -109,7 +123,7 @@ const runProbeForSeed = (
     state = applied.state;
   }
 
-  const expectedStateHash = probe.stateBinding.expectedStateHash;
+  const expectedStateHash = sample?.stateHash ?? probe.stateBinding.expectedStateHash;
   if (expectedStateHash !== undefined && formatStateHash(state) !== expectedStateHash) {
     return {
       seed,
@@ -123,17 +137,34 @@ const runProbeForSeed = (
 
   const matches: ProbeMatch[] = [];
   const maxDecisionSteps = options.maxDecisionSteps ?? DEFAULT_MAX_DECISION_STEPS;
+  const targetSeatAgent = new PolicyAgent({ profileId: probe.profile, traceLevel: traceLevelForProbe(probe, options) });
+  const defaultAgentsBySeat = new Map<string, PolicyAgent>();
   for (let step = 0; step < maxDecisionSteps; step += 1) {
     const auto = advanceAutoresolvable(loaded.def, state, chanceRng, loaded.runtime);
     state = auto.state;
     chanceRng = auto.rng;
 
+    if (terminalResult(loaded.def, state, loaded.runtime) !== null) {
+      return terminalProbeSeedOutcome(probe, seed, matches, loaded.def, state, maxMatches);
+    }
+
     const microturn = publishMicroturn(loaded.def, state, loaded.runtime);
-    const selection = selectDecisionForProbe(probe, seed, microturn, state, agentRng, {
-      def: loaded.def,
-      runtime: loaded.runtime,
-      ...(options.traceLevel === undefined ? {} : { traceLevel: options.traceLevel }),
-    });
+    const selection = selectDecisionForProbe(
+      probe,
+      seed,
+      microturn,
+      state,
+      agentRng,
+      agentForProbeSeat(probe, microturn, {
+        targetSeatAgent,
+        defaultAgentsBySeat,
+      }),
+      {
+        def: loaded.def,
+        runtime: loaded.runtime,
+        ...(options.traceLevel === undefined ? {} : { traceLevel: options.traceLevel }),
+      },
+    );
     agentRng = selection.rng;
 
     if (selection.match !== null) {
@@ -177,12 +208,40 @@ const runProbeForSeed = (
   };
 };
 
+const terminalProbeSeedOutcome = (
+  probe: Probe,
+  seed: number,
+  matches: readonly ProbeMatch[],
+  def: Parameters<PolicyAgent['chooseDecision']>[0]['def'],
+  state: GameState,
+  maxMatches?: number,
+): ProbeSeedOutcome => {
+  if (probe.decisionBinding.occurrence === 'every' && matches.length > 0) {
+    return {
+      seed,
+      outcome: maxMatches === undefined
+        ? evaluateProbeAssertions(probe, matches, { def, state })
+        : { kind: 'pass' },
+      matches,
+    };
+  }
+  return {
+    seed,
+    outcome: {
+      kind: 'error',
+      message: 'probe decision binding reached terminal state before matching',
+    },
+    matches,
+  };
+};
+
 const selectDecisionForProbe = (
   probe: Probe,
   seed: number,
   microturn: MicroturnState,
   state: GameState,
   rng: Rng,
+  agent: PolicyAgent,
   context: {
     readonly def: Parameters<PolicyAgent['chooseDecision']>[0]['def'];
     readonly runtime: NonNullable<Parameters<PolicyAgent['chooseDecision']>[0]['runtime']>;
@@ -193,7 +252,6 @@ const selectDecisionForProbe = (
   readonly rng: Rng;
   readonly match: ProbeMatch | null;
 } => {
-  const agent = new PolicyAgent({ profileId: probe.profile, traceLevel: context.traceLevel ?? 'summary' });
   const selected = agent.chooseDecision({
     def: context.def,
     state,
@@ -203,7 +261,8 @@ const selectDecisionForProbe = (
   });
   const trace = selected.agentDecision?.kind === 'policy' ? selected.agentDecision : null;
   const decisionKey = decisionKeyForContext(microturn.decisionContext);
-  const isMatch = microturn.kind === probe.decisionBinding.contextKind
+  const isMatch = seatMatchesProbe(probe, microturn)
+    && microturn.kind === probe.decisionBinding.contextKind
     && (probe.decisionBinding.decisionKey === undefined || probe.decisionBinding.decisionKey === decisionKey)
     && (probe.stateBinding.decisionFilter?.phase === undefined
       || String(state.currentPhase) === probe.stateBinding.decisionFilter.phase);
@@ -217,6 +276,7 @@ const selectDecisionForProbe = (
           stateHash: formatStateHash(state),
           selectedDecision: selected.decision,
           selectedActionTags: actionTagsForDecision(context.def, selected.decision),
+          ...(selected.selectedByReason === undefined ? {} : { selectedByReason: selected.selectedByReason }),
           trace,
           ...(probeNeedsPublishedFrontierConstructibility(probe)
             ? {
@@ -235,6 +295,32 @@ const selectDecisionForProbe = (
       : null,
   };
 };
+
+const agentForProbeSeat = (
+  probe: Probe,
+  microturn: MicroturnState,
+  agents: {
+    readonly targetSeatAgent: PolicyAgent;
+    readonly defaultAgentsBySeat: Map<string, PolicyAgent>;
+  },
+): PolicyAgent => {
+  if (seatMatchesProbe(probe, microturn)) {
+    return agents.targetSeatAgent;
+  }
+  const seatId = normalizedSeatId(microturn);
+  const existing = agents.defaultAgentsBySeat.get(seatId);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const created = new PolicyAgent({ traceLevel: 'none' });
+  agents.defaultAgentsBySeat.set(seatId, created);
+  return created;
+};
+
+const seatMatchesProbe = (probe: Probe, microturn: MicroturnState): boolean =>
+  normalizedSeatId(microturn) === probe.seat.toLowerCase();
+
+const normalizedSeatId = (microturn: MicroturnState): string => String(microturn.seatId).toLowerCase();
 
 const decisionKeyForContext = (context: DecisionContext): string | null => {
   switch (context.kind) {
@@ -260,19 +346,29 @@ const isOccurrenceSatisfied = (probe: Probe, matchCount: number): boolean => {
   return matchCount >= occurrence.n;
 };
 
-const seedsForProbe = (probe: Probe): readonly number[] => {
+const runBindingsForProbe = (probe: Probe): readonly {
+  readonly seed: number;
+  readonly sample?: ProbeStateSample;
+}[] => {
+  const samples = probe.stateBinding.stateSamples;
+  if (samples !== undefined) {
+    return samples.map((sample) => ({ seed: sample.seed, sample }));
+  }
   if (probe.stateBinding.seed !== undefined) {
-    return [probe.stateBinding.seed];
+    return [{ seed: probe.stateBinding.seed }];
   }
   const range = probe.stateBinding.seedRange;
   if (range === undefined) {
     return [];
   }
-  return Array.from({ length: range.end - range.start + 1 }, (_, index) => range.start + index);
+  return Array.from({ length: range.end - range.start + 1 }, (_, index) => ({ seed: range.start + index }));
 };
 
 const aggregateWindowSize = (probe: Probe): number | null => {
-  if (probe.decisionBinding.occurrence !== 'every' || probe.stateBinding.seedRange === undefined) {
+  if (
+    probe.decisionBinding.occurrence !== 'every'
+    || (probe.stateBinding.seedRange === undefined && probe.stateBinding.stateSamples === undefined)
+  ) {
     return null;
   }
   const windows = probe.assertions.flatMap((assertion) => (
@@ -280,6 +376,30 @@ const aggregateWindowSize = (probe: Probe): number | null => {
   ));
   return windows.length === 0 ? null : Math.max(...windows);
 };
+
+const maxMatchesForSeed = (probe: Probe, remainingAggregateMatches: number | undefined): number | undefined => {
+  const perSeedCap = probe.stateBinding.maxMatchesPerSeed;
+  if (remainingAggregateMatches === undefined) {
+    return perSeedCap;
+  }
+  return perSeedCap === undefined
+    ? remainingAggregateMatches
+    : Math.min(remainingAggregateMatches, perSeedCap);
+};
+
+const traceLevelForProbe = (probe: Probe, options: ProbeRunOptions): PolicyDecisionTraceLevel => {
+  if (options.traceLevel !== undefined) {
+    return options.traceLevel;
+  }
+  return probeNeedsFullTrace(probe) ? 'summary' : 'none';
+};
+
+const probeNeedsFullTrace = (probe: Probe): boolean =>
+  probe.assertions.some((assertion) => ![
+    'actionFamilyDistributionBelow',
+    'selectedNotByReason',
+    'publishedFrontierConstructible',
+  ].includes(assertion.kind));
 
 const probeNeedsPublishedFrontierConstructibility = (probe: Probe): boolean => (
   probe.assertions.some((assertion) => assertion.kind === 'publishedFrontierConstructible')

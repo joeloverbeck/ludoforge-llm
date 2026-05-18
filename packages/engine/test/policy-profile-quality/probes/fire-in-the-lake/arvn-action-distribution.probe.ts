@@ -1,4 +1,10 @@
 import { defineProbe } from '../define-probe.js';
+import { readFixtureJson } from '../../../helpers/fixture-reader.js';
+import type { ProbeStateSample } from '../probe-types.js';
+
+const arvnReplayWindows = readFixtureJson<readonly ProbeStateSample[]>(
+  'policy-profile-quality/fitl-arvn-action-distribution-windows.json',
+);
 
 export const arvnActionDistributionNotDominated = defineProbe({
   id: 'arvn-action-distribution-not-dominated',
@@ -7,7 +13,8 @@ export const arvnActionDistributionNotDominated = defineProbe({
   seat: 'ARVN',
   stateBinding: {
     scenario: 'fitl-default',
-    seedRange: { start: 1000, end: 1014 },
+    stateSamples: arvnReplayWindows,
+    maxMatchesPerSeed: 1,
     decisionFilter: { phase: 'main' },
   },
   decisionBinding: {

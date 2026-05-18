@@ -15,12 +15,12 @@ Spec 181 §8 Phase 0 acceptance (a) and (e) require the runner to be invoked aut
 1. The per-game `<game>.probes.test.ts` wrappers from 001 are picked up by `pnpm -F @ludoforge/engine test:policy-profile-quality` automatically because the policy-profile-quality manifest includes every `*.test.ts` under `packages/engine/test/policy-profile-quality/`.
 2. `pnpm turbo test` invokes the engine default lane, which intentionally excludes profile-quality tests per the lane taxonomy policy and `docs/FOUNDATIONS.md` Appendix. The default lane is still part of final verification because it proves this boundary stays intact.
 3. Probes from 003 and 004 are landed; the budget gate measures real probes, not just the runner scaffold.
-4. **Approved boundary reset (2026-05-18)**: the first focused budget run measured `arvn-action-distribution-not-dominated` at about 747 ms per inspected decision, above the 200 ms soft budget but below the 10x hard-fail threshold. Per user-confirmed Option 2 after a `docs/FOUNDATIONS.md` reassessment, this ticket owns deterministic CI/budget reporting and explicit soft-regression surfacing; follow-up `tickets/181STRSTRPOL-013.md` owns reducing the ARVN probe below the 200 ms/decision target. This preserves Foundation #9/#16 auditability and the Appendix distinction between profile-quality warnings and architectural-invariant gates without silently claiming the performance target is met.
+4. **Approved boundary reset (2026-05-18)**: the first focused budget run measured `arvn-action-distribution-not-dominated` at about 747 ms per inspected decision, above the 200 ms soft budget but below the 10x hard-fail threshold. Per user-confirmed Option 2 after a `docs/FOUNDATIONS.md` reassessment, this ticket owns deterministic CI/budget reporting and explicit soft-regression surfacing; follow-up `archive/tickets/181STRSTRPOL-013.md` owns reducing the ARVN probe below the 200 ms/decision target. This preserves Foundation #9/#16 auditability and the Appendix distinction between profile-quality warnings and architectural-invariant gates without silently claiming the performance target is met.
 
 ## Architecture Check
 
 1. CI integration is mechanical wiring — Turbo task graph, test runner config, possibly a small budget assertion. No engine src change (Foundation #1).
-2. Budget gate is a runner-side test: `runProbe(p).durationMs ≤ 200 * decisionsScored` (or per-probe scalar if `occurrence: 'first'`). Profile-quality severity for soft overhead regressions (probe runs but slower than budget); architectural-invariant for hard regressions (probe exceeds 10× budget). The current ARVN soft overrun is intentionally surfaced as `POLICY_PROFILE_QUALITY_REGRESSION` and handed to `tickets/181STRSTRPOL-013.md`, not hidden or converted into a blocking engine invariant.
+2. Budget gate is a runner-side test: `runProbe(p).durationMs ≤ 200 * decisionsScored` (or per-probe scalar if `occurrence: 'first'`). Profile-quality severity for soft overhead regressions (probe runs but slower than budget); architectural-invariant for hard regressions (probe exceeds 10× budget). The current ARVN soft overrun is intentionally surfaced as `POLICY_PROFILE_QUALITY_REGRESSION` and handed to `archive/tickets/181STRSTRPOL-013.md`, not hidden or converted into a blocking engine invariant.
 3. Trace-level default: probes run with `traceLevel: 'summary'` per Spec 181 §10 / §13.6. Verbose-on-failure stays opt-in for debugging, not the budget-gate default.
 
 ## What to Change
@@ -65,7 +65,7 @@ Append a `## CI Integration` section to `probes/README.md` (created in 001) expl
 ### Tests That Must Pass
 
 1. `pnpm -F @ludoforge/engine test:policy-profile-quality` invokes every `*.probes.test.ts` wrapper without explicit per-file invocation.
-2. `probe-budget.test.ts` runs all registered probes. The constructibility probe (004) satisfies the hard gate; the ARVN distribution probe (003) currently emits `POLICY_PROFILE_QUALITY_REGRESSION` at 797.43 ms per inspected decision and remains below the 10× hard gate. Reducing it below the 200 ms soft budget is split to `tickets/181STRSTRPOL-013.md`.
+2. `probe-budget.test.ts` runs all registered probes. The constructibility probe (004) satisfies the hard gate; the ARVN distribution probe (003) currently emits `POLICY_PROFILE_QUALITY_REGRESSION` at 797.43 ms per inspected decision and remains below the 10× hard gate. Reducing it below the 200 ms soft budget is split to `archive/tickets/181STRSTRPOL-013.md`.
 3. Verbose-on-failure: a synthetic probe with a guaranteed-failing assertion produces a failed `ProbeOutcome` with `trace` populated from the verbose rerun (not the summary trace).
 4. Existing suite: `pnpm turbo test`
 
@@ -99,7 +99,7 @@ What landed:
 - Updated the probe README with CI integration, budget, verbose-on-failure, and new-probe registration guidance.
 
 Boundary correction:
-- The originally drafted acceptance bullet requiring the ARVN probe to already satisfy `≤ 200 ms/decision` was corrected after live focused runs showed a soft overrun, with the final rerun at 797.43 ms/decision. User-approved Option 2 keeps this ticket scoped to deterministic budget reporting and warning surfacing; `tickets/181STRSTRPOL-013.md` owns the remaining ARVN budget reduction.
+- The originally drafted acceptance bullet requiring the ARVN probe to already satisfy `≤ 200 ms/decision` was corrected after live focused runs showed a soft overrun, with the final rerun at 797.43 ms/decision. User-approved Option 2 keeps this ticket scoped to deterministic budget reporting and warning surfacing; `archive/tickets/181STRSTRPOL-013.md` owns the remaining ARVN budget reduction.
 
 Verification:
 - `pnpm -F @ludoforge/engine build` — passed.

@@ -9,7 +9,9 @@ The runner drives the normal kernel and policy-agent path:
 1. create initial state for the probe seed,
 2. apply any `stateBinding.replayPrefix` with public kernel decision application,
 3. publish microturns and let `PolicyAgent` choose through the configured profile,
-4. collect the selected decision plus `PolicyAgentDecisionTrace`,
+4. collect the selected decision plus lightweight selected-reason metadata, and
+   collect `PolicyAgentDecisionTrace` only when the probe assertions require it
+   or the caller requests it,
 5. return deterministic per-seed and aggregate outcomes.
 
 Minimal wrapper shape:
@@ -55,11 +57,20 @@ run. The soft budget is 200 ms per budget unit and emits
 `POLICY_PROFILE_QUALITY_REGRESSION` when exceeded. A hard overrun above 10x the
 budget fails the test.
 
-`runProbe()` defaults policy-agent traces to `traceLevel: 'summary'`. When an
-assertion fails, the runner replays the probe once with `traceLevel: 'verbose'`
-and attaches the first matched verbose `PolicyAgentDecisionTrace` to the failure
-outcome. Callers may pass `traceLevel: 'verbose'` for direct debugging or
-`verboseOnFailure: false` for tests that need to inspect the raw summary result.
+`runProbe()` keeps lightweight probes trace-free by default and preserves
+selected-reason metadata for assertions that need it. Probes with assertions
+that require full policy traces still use `traceLevel: 'summary'`. When an
+assertion fails without a trace, the runner replays the probe once with
+`traceLevel: 'verbose'` and attaches the first matched verbose
+`PolicyAgentDecisionTrace` to the failure outcome. Callers may pass
+`traceLevel: 'summary'` or `traceLevel: 'verbose'` for direct debugging, or
+`verboseOnFailure: false` for tests that need to inspect the raw lightweight
+result.
+
+For expensive aggregate probes, `stateBinding.stateSamples` can pin serialized
+canonical states captured from the public kernel path. Pair it with
+`maxMatchesPerSeed` when each sample should contribute only its bound decision
+to the aggregate assertion window.
 
 To add a new probe, create a module that exports `defineProbe()` objects, import
 those probes from a per-game `*.probes.test.ts` wrapper, and register them in

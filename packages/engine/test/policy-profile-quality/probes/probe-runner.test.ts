@@ -27,7 +27,7 @@ const noAssertionProbe = defineProbe({
   id: 'texas-first-action-selection',
   game: TEXAS_GAME,
   profile: 'default',
-  seat: '0',
+  seat: 'neutral',
   stateBinding: {
     scenario: TEXAS_SCENARIO,
     seed: SEED,
@@ -49,11 +49,17 @@ describe('policy probe runner scaffold', () => {
     assert.ok(match, 'expected one matched decision');
     assert.equal(match.contextKind, 'actionSelection');
     assert.equal(match.selectedDecision.kind, 'actionSelection');
-    assert.ok(match.trace, 'expected policy trace');
+    assert.equal(match.trace, null);
   });
 
-  it('uses summary trace by default', () => {
+  it('keeps lightweight probes trace-free by default', () => {
     const result = runProbe(noAssertionProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
+    const trace = result.perSeedOutcomes[0]?.matches[0]?.trace;
+    assert.equal(trace, null);
+  });
+
+  it('uses summary trace when explicitly requested', () => {
+    const result = runProbe(noAssertionProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8, traceLevel: 'summary' });
     const trace = result.perSeedOutcomes[0]?.matches[0]?.trace;
     assert.ok(trace, 'expected policy trace');
     assert.equal(trace.candidates, undefined);
@@ -98,6 +104,18 @@ describe('policy probe runner scaffold', () => {
     assert.notEqual(result.perSeedOutcomes[0]?.matches[0]?.stateHash, `0x${initial.stateHash.toString(16)}`);
   });
 
+  it('matches only the probe-bound seat', () => {
+    const wrongSeatProbe = defineProbe({
+      ...noAssertionProbe,
+      id: 'texas-wrong-seat-filter',
+      seat: '__not_the_current_seat__',
+    });
+
+    const result = runProbe(wrongSeatProbe, { loadGame: loadTexasGame, maxDecisionSteps: 1 });
+    assert.equal(result.aggregateOutcome.kind, 'error');
+    assert.equal(result.perSeedOutcomes[0]?.matches.length, 0);
+  });
+
   it('produces deterministic aggregate outcome and trace byte count', () => {
     const first = runProbe(noAssertionProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
     const second = runProbe(noAssertionProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
@@ -133,6 +151,37 @@ describe('policy probe runner scaffold', () => {
     assert.equal(result.perSeedOutcomes.reduce((count, outcome) => count + outcome.matches.length, 0), 2);
   });
 
+  it('caps aggregate probes to a bounded number of matches per seed', () => {
+    const aggregateProbe = defineProbe({
+      id: 'texas-aggregate-per-seed-cap',
+      game: 'texas-holdem',
+      profile: 'texas-baseline',
+      seat: 'neutral',
+      stateBinding: {
+        scenario: 'texas-default',
+        seedRange: { start: 1000, end: 1002 },
+        maxMatchesPerSeed: 1,
+      },
+      decisionBinding: {
+        contextKind: 'actionSelection',
+        occurrence: 'every',
+      },
+      assertions: [{
+        kind: 'actionFamilyDistributionBelow',
+        family: 'any',
+        threshold: 1.01,
+        windowMinDecisions: 2,
+      }],
+      severity: 'profileQuality',
+      tags: ['test'],
+    });
+
+    const result = runProbe(aggregateProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
+
+    assert.equal(result.aggregateOutcome.kind, 'pass');
+    assert.deepEqual(result.perSeedOutcomes.map((outcome) => outcome.matches.length), [1, 1]);
+  });
+
   it('reports state hash drift instead of hanging or silently passing', () => {
     const driftProbe = defineProbe({
       ...noAssertionProbe,
@@ -147,5 +196,20 @@ describe('policy probe runner scaffold', () => {
     const result = runProbe(driftProbe, { loadGame: loadTexasGame, maxDecisionSteps: 8 });
     assert.equal(result.aggregateOutcome.kind, 'error');
     assert.match(result.perSeedOutcomes[0]?.outcome.kind === 'error' ? result.perSeedOutcomes[0].outcome.message : '', /state hash drift/u);
+  });
+
+  it('reports terminal before match instead of publishing past the end of the game', () => {
+    const terminalBeforeMatchProbe = defineProbe({
+      ...noAssertionProbe,
+      id: 'texas-terminal-before-match',
+      decisionBinding: {
+        contextKind: 'actionSelection',
+        occurrence: { kind: 'nth', n: 999 },
+      },
+    });
+
+    const result = runProbe(terminalBeforeMatchProbe, { loadGame: loadTexasGame, maxDecisionSteps: 256 });
+    assert.equal(result.aggregateOutcome.kind, 'error');
+    assert.match(result.perSeedOutcomes[0]?.outcome.kind === 'error' ? result.perSeedOutcomes[0].outcome.message : '', /terminal state/u);
   });
 });

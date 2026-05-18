@@ -111,6 +111,8 @@ $implement-ticket <ticket> . Rely on <originating-spec>
 
 Use the live `implement-ticket` skill exactly. It owns reassessment, implementation, proof, closeout wording, terminal-status decisions, and any follow-up ticket needed for honest closeout.
 
+If any user-approved `1-3-1`, `docs/FOUNDATIONS.md` reassessment, or other explicit boundary reset changes the active ticket's deliverable, proof lane, dependency story, or ownership boundary, patch the affected active ticket/spec/sibling artifacts before source or test edits resume. Then re-emit a compact working checkpoint that names the approved option, invalidated proof lanes, replacement proof plan, and next terminal-status boundary. This applies whether or not the ticket entered a durable blocked state.
+
 If implementation blocks:
 
 - if a concrete follow-up or prerequisite ticket is created or named as next owner, put it at the front of the queue
@@ -217,6 +219,8 @@ Required-visible-block checkpoint:
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
+If a required-visible block was missed at its intended point, emit a `late harness recovery checkpoint` before committing or finalizing. Name the missed block, classify why it was late, provide the current truthful contents, and do not describe the recovered block as timely in the commit or handoff.
+
 When user-approved extra paths are included in the iteration commit even though they are not ticket-owned, list them in the checkpoint and final handoff. The commit message must either mention the extra skill/process hardening if it is material, or the final handoff must explicitly state that the extra path was included by user approval and was not part of the ticket deliverable. Do not let approved unrelated paths appear as silent ticket-owned work.
 
 If a ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then confirm the source deletion/rename appears in `git diff --cached --name-status`.
@@ -309,7 +313,7 @@ Do not create or push a branch if the loop stopped blocked or if the worktree st
 
 ## Final Report
 
-End with:
+After each ticket iteration, include the `Harness handoff` block from `Persist State And Prepare Reset` verbatim unless the final spec archive or branch/push path supersedes it. End with:
 
 - originating spec path and archived path, if archived
 - tickets implemented, blocked, archived, or left active

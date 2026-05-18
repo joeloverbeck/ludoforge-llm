@@ -1,6 +1,6 @@
 # 182STRSTRPOL-002: Phase 2 — Strategic modules runtime evaluator + activation caching + dispatch insertion
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`
@@ -106,3 +106,38 @@ Add a test asserting state-scope module activation evaluates exactly once per de
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/strategy-module-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-18
+
+What changed:
+
+1. Added strategy-module runtime dispatch in `packages/engine/src/agents/policy-eval.ts` between selector evaluation and pruning-rule evaluation, with state-scoped modules evaluated once at decision scope and non-state modules evaluated per active candidate.
+2. Added `PolicyEvaluationContext.evaluatePlannedStrategyModule(...)`, activation/result caches, and `module.<id>.*` ref resolution in `packages/engine/src/agents/policy-evaluation-core.ts`.
+3. Extracted the bulk module evaluator into `packages/engine/src/agents/policy-strategy-module-eval.ts` so the already-large policy evaluation core only owns dispatch/ref glue.
+4. Added runtime tests for state-scoped activation caching, downstream module refs, dispatch readability before pruning/considerations, and replay determinism for a module-using profile.
+
+Deviations from original plan:
+
+1. The activation-caching test asserts the state-scoped activation cache has one entry across 100+ candidate contribution reads rather than injecting an ad hoc call counter into runtime internals. This proves the same invariant without adding a test-only hook.
+2. A shared fixture helper was added at `packages/engine/test/unit/agents/strategy-module-test-fixtures.ts` to keep the two ticket-named test files DRY.
+3. The evaluator implementation was extracted into `policy-strategy-module-eval.ts` because `policy-evaluation-core.ts` and `policy-eval.ts` are pre-existing oversized files. Source-size ledger:
+   - `packages/engine/src/agents/policy-evaluation-core.ts` | 2524 lines after | +54 active lines | pre-existing over 800 | bulky evaluator extracted; retained glue is the public context/ref boundary.
+   - `packages/engine/src/agents/policy-eval.ts` | 1647 lines after | +13 active lines | pre-existing over 800 | retained change is the required dispatch insertion site.
+   - `packages/engine/src/agents/policy-strategy-module-eval.ts` | 190 lines | new extracted helper | under guidance.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` - passed.
+2. `node --test packages/engine/dist/test/unit/agents/strategy-module-*.test.js` - passed, 4 tests.
+3. `pnpm turbo build` - passed.
+4. `pnpm turbo test` - passed.
+5. `pnpm turbo lint` - passed.
+6. `pnpm turbo typecheck` - passed.
+
+Post-ticket review:
+
+1. Archived to `archive/tickets/182STRSTRPOL-002.md`.
+2. Updated dependent active ticket `tickets/182STRSTRPOL-003.md` to reference the archived dependency path.
+3. No follow-up tickets were created.

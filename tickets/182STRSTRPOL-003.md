@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/agents/policy-eval.ts` (or trace builder module), trace formatting / mode handling
-**Deps**: `tickets/182STRSTRPOL-002.md`
+**Deps**: `archive/tickets/182STRSTRPOL-002.md`
 
 ## Problem
 

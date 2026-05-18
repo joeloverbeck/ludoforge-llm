@@ -674,6 +674,19 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           evaluation.evaluatePlannedSelector(selectorId, candidate);
         }
       }
+      for (const moduleId of profile.plan.strategyModules ?? []) {
+        const module = catalog.compiled.strategyModules?.[moduleId];
+        if (module === undefined || module.costClass === 'auditOnly') {
+          continue;
+        }
+        if (module.costClass === 'state') {
+          evaluation.evaluatePlannedStrategyModule(moduleId);
+          continue;
+        }
+        for (const candidate of activeCandidates) {
+          evaluation.evaluatePlannedStrategyModule(moduleId, candidate);
+        }
+      }
 
       for (const pruningRuleId of profile.use.pruningRules) {
         const pruningRule = catalog.compiled.pruningRules[pruningRuleId];

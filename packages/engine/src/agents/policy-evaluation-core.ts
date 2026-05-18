@@ -60,6 +60,12 @@ import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } fro
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 import { evaluateSelector, type SelectedSelectorView, type SelectorEvalMicroturnOption } from './policy-selector-eval.js';
+import {
+  evaluateStrategyModule,
+  resolveStrategyModuleRef,
+  type StrategyModuleActivationView,
+  type StrategyModuleEvaluationView,
+} from './policy-strategy-module-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -359,6 +365,8 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly selectorCache = new Map<string, SelectedSelectorView>();
+  private readonly strategyModuleActivationCache = new Map<string, StrategyModuleActivationView>();
+  private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -412,6 +420,8 @@ export class PolicyEvaluationContext {
     this.candidateFeatureCache.clear();
     this.aggregateCache.clear();
     this.selectorCache.clear();
+    this.strategyModuleActivationCache.clear();
+    this.strategyModuleEvaluationCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -426,6 +436,7 @@ export class PolicyEvaluationContext {
   invalidateAggregates(): void {
     this.aggregateCache.clear();
     this.selectorCache.clear();
+    this.strategyModuleEvaluationCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
@@ -435,6 +446,10 @@ export class PolicyEvaluationContext {
 
   evaluatePlannedSelector(selectorId: string, candidate?: PolicyEvaluationCandidate): void {
     this.evaluateSelectorView(selectorId, candidate);
+  }
+
+  evaluatePlannedStrategyModule(moduleId: string, candidate?: PolicyEvaluationCandidate): void {
+    this.evaluateStrategyModuleView(moduleId, candidate);
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
@@ -449,6 +464,10 @@ export class PolicyEvaluationContext {
 
   getEvaluatedSelectorCacheSize(): number {
     return this.selectorCache.size;
+  }
+
+  getEvaluatedStrategyModuleActivationCacheSize(): number {
+    return this.strategyModuleActivationCache.size;
   }
 
   getEvaluatedSelectorTraces(traceLevel: 'summary' | 'verbose' = 'summary'): readonly PolicySelectorTraceEntry[] {
@@ -1703,7 +1722,7 @@ export class PolicyEvaluationContext {
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
       case 'strategyModule':
-        return undefined;
+        return this.resolveStrategyModuleRef(ref, candidate);
       case 'selector':
         return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {
@@ -1718,6 +1737,40 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveStrategyModuleRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'strategyModule' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const module = this.input.catalog.compiled.strategyModules?.[ref.moduleId];
+    if (module === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown strategy module "${ref.moduleId}".`, { moduleId: ref.moduleId });
+    }
+    return resolveStrategyModuleRef(ref, this.evaluateStrategyModuleView(ref.moduleId, candidate), module);
+  }
+
+  private evaluateStrategyModuleView(
+    moduleId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): StrategyModuleEvaluationView {
+    const module = this.input.catalog.compiled.strategyModules?.[moduleId];
+    if (module === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown strategy module "${moduleId}".`, { moduleId });
+    }
+    return evaluateStrategyModule({
+      moduleId,
+      module,
+      candidate,
+      stateHash: this.activeState.stateHash,
+      ...(this.input.completion === undefined ? {} : { completionRequestType: this.input.completion.request.type }),
+      actionTagIndex: this.input.def.actionTagIndex,
+      ...(this.input.previewOption === undefined ? {} : { previewResolvedRefs: this.input.previewOption.resolvedRefs }),
+      activationCache: this.strategyModuleActivationCache,
+      evaluationCache: this.strategyModuleEvaluationCache,
+      evaluateExpr: (expr, exprCandidate) => this.evaluateCompiledExpr(expr, exprCandidate),
+      evaluateSelector: (selectorId, selectorCandidate) => this.evaluateSelectorView(selectorId, selectorCandidate),
+    });
   }
 
   private resolveSelectorRef(

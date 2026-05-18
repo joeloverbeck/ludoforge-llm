@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (add minimal conformance module), `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/` (new probe)
-**Deps**: `tickets/182STRSTRPOL-003.md`
+**Deps**: `archive/tickets/182STRSTRPOL-003.md`
 
 ## Problem
 

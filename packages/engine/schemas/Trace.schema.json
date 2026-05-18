@@ -2541,6 +2541,88 @@
                   "additionalProperties": false
                 }
               },
+              "modules": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "traceLabel": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "priorityTier": {
+                          "$ref": "#/definitions/anon_e7c99bd4"
+                        },
+                        "activationValue": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/definitions/anon_c0e4ebfe"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "contribution": {
+                          "$ref": "#/definitions/anon_c0e4ebfe"
+                        },
+                        "scoreGroups": {
+                          "type": "object",
+                          "propertyNames": {
+                            "$ref": "#/definitions/anon_4682db72"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/definitions/anon_c0e4ebfe"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "traceLabel",
+                        "priorityTier",
+                        "activationValue",
+                        "contribution",
+                        "scoreGroups"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "inactiveTopReasons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "conditionFalse",
+                            "scopeFiltered",
+                            "fallbackInactive"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "active",
+                  "inactiveTopReasons"
+                ],
+                "additionalProperties": false
+              },
               "selection": {
                 "type": "object",
                 "properties": {

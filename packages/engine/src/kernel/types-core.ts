@@ -2199,6 +2199,25 @@ export interface PolicySelectorTraceEntry {
   readonly truncated?: boolean;
 }
 
+export interface PolicyModuleTrace {
+  readonly active: readonly PolicyModuleActiveTraceEntry[];
+  readonly inactiveTopReasons: readonly PolicyModuleInactiveTraceEntry[];
+}
+
+export interface PolicyModuleActiveTraceEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly priorityTier: number;
+  readonly activationValue: number | null;
+  readonly contribution: number;
+  readonly scoreGroups: Readonly<Record<string, number>>;
+}
+
+export interface PolicyModuleInactiveTraceEntry {
+  readonly id: string;
+  readonly reason: 'conditionFalse' | 'scopeFiltered' | 'fallbackInactive';
+}
+
 export type PolicyPreviewSeatMatrixStatusTrace =
   | 'ready'
   | 'stochastic'
@@ -2333,6 +2352,7 @@ export interface PolicyAgentDecisionTrace {
   readonly previewUsage: PolicyPreviewUsageTrace;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisoryTrace[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
+  readonly modules?: PolicyModuleTrace;
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

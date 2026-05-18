@@ -2643,6 +2643,31 @@ const PolicyPreviewSignalUnavailableAdvisoryTraceSchema = z
   })
   .strict();
 
+const PolicyModuleActiveTraceEntrySchema = z
+  .object({
+    id: StringSchema,
+    traceLabel: StringSchema,
+    priorityTier: IntegerSchema,
+    activationValue: NumberSchema.nullable(),
+    contribution: NumberSchema,
+    scoreGroups: z.record(StringSchema, NumberSchema),
+  })
+  .strict();
+
+const PolicyModuleInactiveTraceEntrySchema = z
+  .object({
+    id: StringSchema,
+    reason: z.enum(['conditionFalse', 'scopeFiltered', 'fallbackInactive']),
+  })
+  .strict();
+
+const PolicyModuleTraceSchema = z
+  .object({
+    active: z.array(PolicyModuleActiveTraceEntrySchema),
+    inactiveTopReasons: z.array(PolicyModuleInactiveTraceEntrySchema),
+  })
+  .strict();
+
 const PolicySelectionTraceSchema = z
   .object({
     mode: z.enum(['argmax', 'softmaxSample', 'weightedSample']),
@@ -2674,6 +2699,7 @@ const AgentDecisionTraceSchema = z
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,
     advisories: z.array(PolicyPreviewSignalUnavailableAdvisoryTraceSchema).optional(),
+    modules: PolicyModuleTraceSchema.optional(),
     selection: PolicySelectionTraceSchema.optional(),
     emergencyFallback: BooleanSchema,
     failure: AgentDecisionFailureSummarySchema.nullable(),

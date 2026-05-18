@@ -115,6 +115,7 @@ const traceCandidatesForFrontier = (
   previewUsage: PolicyEvaluationMetadata['previewUsage'],
   scoreContributionsByOption?: ReadonlyMap<string, readonly CompletionScoreContribution[]>,
 ): PolicyEvaluationMetadata['candidates'] => traceLevel === 'verbose'
+  || traceLevel === 'debug'
   ? frontier.map((candidate) => ({
       actionId: candidate.decision.kind === 'actionSelection' ? String(candidate.decision.actionId) : candidate.decision.kind,
       stableMoveKey: candidate.stableMoveKey,
@@ -738,7 +739,7 @@ export class PolicyAgent implements Agent {
       };
     }
 
-    const frontierScoring = this.traceLevel === 'verbose'
+    const frontierScoring = this.traceLevel === 'verbose' || this.traceLevel === 'debug'
       ? scoreFrontierForTrace(input, resolvedProfile, innerPreview?.refsByOptionKey, innerPreview?.projectedStateByOptionKey)
       : undefined;
     return chooseStructuralFrontierDecision(

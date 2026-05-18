@@ -1,6 +1,7 @@
 import {
   asActionId,
   asPhaseId,
+  asPlayerId,
   initialState,
   type AgentPolicyCatalog,
   type CompiledAgentProfile,
@@ -8,7 +9,7 @@ import {
   type GameDef,
   type StrategyModuleDef,
 } from '../../../src/kernel/index.js';
-import type { PolicyEvaluationCandidate } from '../../../src/agents/policy-evaluation-core.js';
+import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../../src/agents/policy-evaluation-core.js';
 import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
@@ -49,6 +50,30 @@ export function createStrategyModuleDef(overrides: Partial<StrategyModuleDef> = 
     dependencies: emptyDependencies,
     ...overrides,
   };
+}
+
+export function createTraceStrategyModuleDef(
+  id: string,
+  priorityTier: number,
+  active: boolean,
+  contribution: number,
+  overrides: Partial<StrategyModuleDef> = {},
+): StrategyModuleDef {
+  return createStrategyModuleDef({
+    id: id as StrategyModuleDef['id'],
+    traceLabel: `${id} label`,
+    when: literal(active),
+    applies: { scopes: ['move'] },
+    priority: { tier: priorityTier },
+    selectors: [],
+    scoreGroups: [{
+      id: 'standing' as never,
+      summary: 'sum',
+      terms: [{ id: 'base', value: literal(contribution), weight: 1 }],
+    }],
+    dependencies: emptyDependencies,
+    ...overrides,
+  });
 }
 
 export function createStrategyModuleGameDef(module: StrategyModuleDef = createStrategyModuleDef()): GameDef {
@@ -209,4 +234,39 @@ export function createCandidate(actionId: string, index: number): PolicyEvaluati
 
 export function createInitialStrategyModuleState(def: GameDef) {
   return initialState(def, 7, 2).state;
+}
+
+export function createStrategyModuleTraceContext(modules: readonly StrategyModuleDef[]): PolicyEvaluationContext {
+  const base = createStrategyModuleGameDef(modules[0]);
+  const catalog = base.agents!;
+  const def = {
+    ...base,
+    agents: {
+      ...catalog,
+      compiled: {
+        ...catalog.compiled,
+        strategyModules: Object.fromEntries(modules.map((module) => [module.id, module])),
+      },
+      profiles: {
+        ...catalog.profiles,
+        baseline: {
+          ...catalog.profiles.baseline!,
+          plan: {
+            ...catalog.profiles.baseline!.plan,
+            strategyModules: modules.map((module) => String(module.id)),
+          },
+        },
+      },
+    },
+  };
+  const state = createInitialStrategyModuleState(def);
+  return new PolicyEvaluationContext({
+    def,
+    state,
+    playerId: asPlayerId(0),
+    seatId: 'alpha',
+    catalog: def.agents,
+    parameterValues: {},
+    trustedMoveIndex: new Map(),
+  }, []);
 }

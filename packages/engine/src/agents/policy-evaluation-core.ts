@@ -66,6 +66,7 @@ import {
   type StrategyModuleActivationView,
   type StrategyModuleEvaluationView,
 } from './policy-strategy-module-eval.js';
+import { buildStrategyModuleTrace } from './policy-strategy-module-trace.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -182,7 +183,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly runtime?: GameDefRuntime;
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
-  readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -481,6 +482,18 @@ export class PolicyEvaluationContext {
       entries.push(selectorTraceEntry(view, traceLevel));
     }
     return entries.sort((left, right) => left.selectorId.localeCompare(right.selectorId));
+  }
+
+  getEvaluatedStrategyModuleTrace(
+    traceLevel: 'summary' | 'verbose' | 'debug' = 'summary',
+    selectedCandidate?: PolicyEvaluationCandidate,
+  ): ReturnType<typeof buildStrategyModuleTrace> {
+    return buildStrategyModuleTrace(
+      this.strategyModuleEvaluationCache.values(),
+      this.input.catalog,
+      traceLevel,
+      selectedCandidate?.stableMoveKey,
+    );
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {

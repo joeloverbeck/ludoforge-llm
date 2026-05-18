@@ -17,6 +17,7 @@ import type {
   CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
   Move,
+  PolicyModuleTrace,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
@@ -289,6 +290,7 @@ export interface PolicyEvaluationMetadata {
   readonly selectedReason?: SelectionReason;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
+  readonly modules?: PolicyModuleTrace;
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -324,7 +326,7 @@ export interface EvaluatePolicyMoveInput {
   readonly selectionGrouping?: 'none' | 'actionId';
   readonly encodedStateMode?: 'enabled' | 'disabled';
   readonly diagnosticsMode?: 'enabled' | 'disabled';
-  readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly previewWideningState?: PreviewWideningState;
   readonly previewDecisionContext?: PreviewWideningDecisionContext;
 }
@@ -912,8 +914,14 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
 
       const stateFeatures = collectDiagnostics ? evaluation.getEvaluatedStateFeatures() : {};
       const selectorTraces = collectDiagnostics && input.traceLevel !== 'none'
-        ? evaluation.getEvaluatedSelectorTraces(input.traceLevel === 'verbose' ? 'verbose' : 'summary')
+        ? evaluation.getEvaluatedSelectorTraces(input.traceLevel === 'summary' ? 'summary' : 'verbose')
         : [];
+      const moduleTrace = collectDiagnostics && input.traceLevel !== 'none'
+        ? evaluation.getEvaluatedStrategyModuleTrace(
+            input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
+            selected,
+          )
+        : undefined;
       logPolicyEvalOomTrace(
         'success',
         currentDepth,
@@ -959,6 +967,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           previewGatedCount,
           candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
           ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
+          ...(moduleTrace === undefined ? {} : { modules: moduleTrace }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),

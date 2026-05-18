@@ -15,6 +15,9 @@ export interface StrategyModuleActivationView {
 }
 
 export interface StrategyModuleEvaluationView extends StrategyModuleActivationView {
+  readonly moduleId: string;
+  readonly candidateStableMoveKey?: string;
+  readonly inactiveReason?: 'conditionFalse' | 'scopeFiltered' | 'fallbackInactive';
   readonly contribution: number;
   readonly scoreGroups: ReadonlyMap<string, number>;
 }
@@ -59,9 +62,17 @@ export function evaluateStrategyModule(input: StrategyModuleEvaluationInput): St
   }
 
   const activation = evaluateStrategyModuleActivation(input);
-  if (!activation.active || !strategyModuleApplies(input)) {
+  const applies = strategyModuleApplies(input);
+  if (!activation.active || !applies) {
     const inactiveView: StrategyModuleEvaluationView = {
       ...activation,
+      moduleId: input.moduleId,
+      ...(input.candidate === undefined ? {} : { candidateStableMoveKey: input.candidate.stableMoveKey }),
+      inactiveReason: activation.active
+        ? 'scopeFiltered'
+        : input.module.fallback.ifInactive === 'traceOnly'
+          ? 'fallbackInactive'
+          : 'conditionFalse',
       contribution: 0,
       scoreGroups: new Map(),
     };
@@ -83,6 +94,8 @@ export function evaluateStrategyModule(input: StrategyModuleEvaluationInput): St
 
   const view: StrategyModuleEvaluationView = {
     ...activation,
+    moduleId: input.moduleId,
+    ...(input.candidate === undefined ? {} : { candidateStableMoveKey: input.candidate.stableMoveKey }),
     contribution,
     scoreGroups,
   };

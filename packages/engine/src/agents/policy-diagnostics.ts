@@ -10,7 +10,7 @@ import type {
 } from '../kernel/types.js';
 import type { PolicyEvaluationMetadata } from './policy-eval.js';
 
-export type PolicyDecisionTraceLevel = 'none' | 'summary' | 'verbose';
+export type PolicyDecisionTraceLevel = 'none' | 'summary' | 'verbose' | 'debug';
 
 export interface PolicyDiagnosticsSnapshot {
   readonly seatId: string | null;
@@ -141,11 +141,12 @@ export function buildPolicyAgentDecisionTrace(
     previewUsage: metadata.previewUsage,
     ...(metadata.advisories === undefined ? {} : { advisories: metadata.advisories }),
     ...(metadata.selectors === undefined || metadata.selectors.length === 0 ? {} : { selectors: metadata.selectors }),
+    ...(metadata.modules === undefined ? {} : { modules: metadata.modules }),
     ...(metadata.selection === undefined ? {} : { selection: metadata.selection }),
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },
     ...(metadata.stateFeatures !== undefined ? { stateFeatures: metadata.stateFeatures } : {}),
-    ...(traceLevel === 'verbose'
+    ...(traceLevel === 'verbose' || traceLevel === 'debug'
       ? {
           candidates: verboseCandidates,
         }

@@ -214,7 +214,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly catalog: AgentPolicyCatalog;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
-  readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
   readonly completion?: {
@@ -453,7 +453,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(activeProfile?.preview.outcomeGrantContinuation === undefined
       ? {}
       : { outcomeGrantContinuation: activeProfile.preview.outcomeGrantContinuation }),
-    captureSyntheticDecisions: input.traceLevel === 'verbose',
+    captureSyntheticDecisions: input.traceLevel === 'verbose' || input.traceLevel === 'debug',
     ...(profileHasMicroturnConsiderations
       ? { policyGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),

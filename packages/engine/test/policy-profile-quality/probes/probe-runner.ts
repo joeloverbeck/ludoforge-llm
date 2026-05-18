@@ -39,6 +39,7 @@ export const runProbe = (probe: Probe, options: ProbeRunOptions): ProbeResult =>
     result.aggregateOutcome.kind === 'fail'
     && result.aggregateOutcome.trace === undefined
     && options.traceLevel !== 'verbose'
+    && options.traceLevel !== 'debug'
     && options.verboseOnFailure !== false
   ) {
     const verboseResult = runProbeOnce(probe, {

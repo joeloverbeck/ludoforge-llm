@@ -1,6 +1,6 @@
 # 182STRSTRPOL-003: Phase 2 — Strategic modules trace contract extension
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/agents/policy-eval.ts` (or trace builder module), trace formatting / mode handling
@@ -112,3 +112,42 @@ Tests assert:
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/strategy-module-trace-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-18
+
+What changed:
+
+1. Added the `PolicyAgentDecisionTrace.modules` public trace block, with `active` and `inactiveTopReasons` entries, plus generated `Trace.schema.json` coverage for the new trace contract.
+2. Populated module traces from the same strategy-module evaluator cache that backs `module.<id>.*` refs, preserving a single source of truth between scoring refs and trace output.
+3. Added `debug` as a policy decision trace level so the ticket/spec's full-matrix trace mode has an actual runtime path; `debug` behaves as verbose-plus-full-module-matrix for this ticket's surface.
+4. Extracted module trace shaping into `packages/engine/src/agents/policy-strategy-module-trace.ts`, keeping the over-guidance evaluation core limited to cache delegation.
+5. Added focused ordering, cap, and byte-identical trace tests in `strategy-module-trace-ordering.test.ts` and `strategy-module-trace-caps.test.ts`.
+
+Deviations from original plan:
+
+1. The implementation uses `packages/engine/src/agents/policy-strategy-module-trace.ts` as the trace builder module named by the ticket instead of keeping sorting/capping inside `policy-eval.ts`.
+2. The verbose top-K cap follows the existing selector trace budget of 5. Summary remains 3+3, and debug emits the full evaluated module matrix.
+3. Source-size decision: user approved Option 1 on 2026-05-18. New formatting logic was extracted to a 76-line helper. Remaining growth in pre-existing over-800-line files is narrow public contract/dispatch glue:
+   - `packages/engine/src/agents/policy-evaluation-core.ts` | 2537 lines after | +13 active lines | pre-existing over 800 | extracted formatting; retained cache delegation only.
+   - `packages/engine/src/agents/policy-eval.ts` | 1656 lines after | +9 active lines | pre-existing over 800 | retained metadata plumbing only.
+   - `packages/engine/src/kernel/types-core.ts` | 2590 lines after | +20 active lines | pre-existing over 800 | public trace types belong with existing trace contracts.
+   - `packages/engine/src/kernel/schemas-core.ts` | 2993 lines after | +26 active lines | pre-existing over 800 | schema source mirrors the public trace contract.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` - passed.
+2. `node --test packages/engine/dist/test/unit/agents/strategy-module-trace-*.test.js` - passed, 4 tests.
+3. `pnpm -F @ludoforge/engine run schema:artifacts:check` - passed.
+4. `pnpm turbo build` - passed.
+5. `pnpm turbo test` - passed after the final extraction; engine default lane reported 92/92 files passed and runner reported 205 files / 2019 tests passed.
+6. `pnpm turbo lint` - passed.
+7. `pnpm turbo typecheck` - passed.
+8. `pnpm run check:ticket-deps` - passed before terminal status.
+
+Post-ticket review:
+
+1. Archived to `archive/tickets/182STRSTRPOL-003.md`.
+2. Updated active dependents `tickets/182STRSTRPOL-004.md` and `tickets/182STRSTRPOL-005.md` to depend on the archived ticket path.
+3. No follow-up tickets were created.

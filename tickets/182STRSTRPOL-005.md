@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (new module + supporting selector binding), `docs/agent-dsl-cookbook.md` (new cookbook entry)
-**Deps**: `tickets/182STRSTRPOL-003.md`
+**Deps**: `archive/tickets/182STRSTRPOL-003.md`
 
 ## Problem
 

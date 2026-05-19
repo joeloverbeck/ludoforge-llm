@@ -1,7 +1,7 @@
 # Spec 183 — Evolution-Loop Overhaul: Composite Acceptance, Weight-Soup Lint, and Quality-Diversity Archive
 
 **Status**: PROPOSED
-**Priority**: Medium-High — turns the engine-layer surfaces shipped in Specs 181 and (forthcoming) 182 into evolution-pipeline signal, closes the proposal-documented "tournament margin too sparse and too terminal" failure mode in `reports/ai-agent-overhaul-proposal.md` §2 and §11, and prevents the "Govern with a slightly different patronage coefficient" convergence the May-17 ARVN report (`reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md`) exposed.
+**Priority**: Medium-High — turns the engine-layer surfaces shipped in Specs 181 and (forthcoming) 182 into evolution-pipeline signal, closes the proposal-documented "tournament margin too sparse and too terminal" failure mode in `reports/ai-agent-overhaul-proposal.md` §2 and §11, and prevents the "Govern with a slightly different patronage coefficient" convergence the May-17 ARVN report (`archive/reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md`) exposed.
 **Complexity**: M–L — three independently mergeable phases. Phase A (composite acceptance) is M and lands first because Phases B and C consume the per-decision metric surface it standardizes. Phase B (weight-soup lint diagnostics + per-mutation rationale tracking) is S–M. Phase C (MAP-Elites-style quality-diversity archive over behavior descriptors) is M–L.
 **Date**: 2026-05-18
 **Dependencies**:
@@ -12,7 +12,7 @@
 
 **Trigger reports**:
 - `reports/ai-agent-overhaul-proposal.md` (external ChatGPT-Pro deep-research proposal — §11 Evolution-loop changes, §11.1 Acceptance criteria composite, §11.2 Weight-soup lint, §11.3 Quality-diversity archive, §13 Performance model and benchmark gates, §17 Stage 8 evolution-loop overhaul)
-- `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (original witness that triggered the structured-strategy work — uniform preview without acceptance penalty for low-information signal is exactly the gap composite acceptance must close)
+- `archive/reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (original witness that triggered the structured-strategy work — uniform preview without acceptance penalty for low-information signal is exactly the gap composite acceptance must close)
 
 **Ticket namespace**: `183EVOLOOP` (proposed; finalize during ticket decomposition)
 
@@ -65,7 +65,7 @@ The acceptance composite and behavior descriptors are computed from already-exis
 
 ### 3.3 What the May-17 witness demonstrated
 
-`reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` showed ARVN selecting Govern 75% of decisions across 15 seeds with NVA projected margin 100% uniform. Tournament margin barely shifted across candidates because the policy could not discriminate. Under the current acceptance check, a mutation that produces uniform low-information preview is indistinguishable from a mutation that produces honest differentiating preview — both pass if tournament margin holds. The composite acceptance metric closes this gap by adding `no-signal selected count` and `preview uniformity rate` as explicit penalties, both available from existing trace fields.
+`archive/reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` showed ARVN selecting Govern 75% of decisions across 15 seeds with NVA projected margin 100% uniform. Tournament margin barely shifted across candidates because the policy could not discriminate. Under the current acceptance check, a mutation that produces uniform low-information preview is indistinguishable from a mutation that produces honest differentiating preview — both pass if tournament margin holds. The composite acceptance metric closes this gap by adding `no-signal selected count` and `preview uniformity rate` as explicit penalties, both available from existing trace fields.
 
 ## 4. Architecture — Phase A: Composite Acceptance Metric
 

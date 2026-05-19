@@ -129,7 +129,15 @@ export interface PreviewDriveRowOracle {
   readonly rowDigest: string;
 }
 
-export const previewStateSlots = definePolicyWasmProductionPreviewStateSlots(['global.score']);
+const previewScoreSlot = 'global.score';
+const previewVictoryMarginSlot = 'surface.victoryCurrentMargin.self';
+const previewOpponentVictoryMarginSlot = 'surface.victoryCurrentMargin.1';
+
+export const previewStateSlots = definePolicyWasmProductionPreviewStateSlots([
+  previewScoreSlot,
+  previewVictoryMarginSlot,
+  previewOpponentVictoryMarginSlot,
+]);
 
 export interface UnsupportedPreviewDriveReasonFixture {
   readonly ownerSlug: string;
@@ -208,11 +216,16 @@ export const createSupportedPreviewDriveParityFixtures = (): readonly PreviewDri
     if (previewState === undefined || typeof previewState.globalVars.score !== 'number') {
       throw new Error('supported preview-drive fixture did not produce a numeric preview state');
     }
+    const projectedSelfMargin = previewState.globalVars.score;
     const expected = {
       stableMoveKey,
       outcome: 'completed',
       value: previewState.globalVars.score,
-      previewStateValues: { 'global.score': previewState.globalVars.score },
+      previewStateValues: {
+        [previewScoreSlot]: previewState.globalVars.score,
+        [previewVictoryMarginSlot]: projectedSelfMargin,
+        [previewOpponentVictoryMarginSlot]: 0,
+      },
       previewSignalCarrier: readyContinuedDeepeningCarrier,
       candidateGroup,
       decisionStackPublication,
@@ -748,7 +761,13 @@ const createSupportedPreviewDriveDef = (): GameDef => assertValidatedGameDef({
     atomicity: 'partial',
   }],
   triggers: [],
-  terminal: { conditions: [] },
+  terminal: {
+    conditions: [],
+    margins: [
+      { seat: '0', value: { _t: 2 as const, ref: 'gvar', var: 'score' } },
+      { seat: '1', value: 0 },
+    ],
+  },
 });
 
 const trustedMoveFor = (

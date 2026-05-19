@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (delete `previewFeatureRowsExerciseAggregate` and inline its call site)
-**Deps**: `tickets/184WASMPREDRI-002.md`, `tickets/184WASMPREDRI-003.md`
+**Deps**: `archive/tickets/184WASMPREDRI-002.md`, `tickets/184WASMPREDRI-003.md`
 
 ## Problem
 

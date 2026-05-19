@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/184-wasm-preview-drive-aggregate-coverage.md",
   "archived_spec": null,
-  "last_ticket": "tickets/184WASMPREDRI-004.md",
-  "last_result": "blocked_retargeted_to_prerequisite",
-  "last_work_commit": "ff32d1078470e38b859dd46d59426ba08e77caca",
+  "last_ticket": "archive/tickets/184WASMPREDRI-005.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "a52ce376783e84b95ad5f3527531e0016557a891",
   "last_state_commit": "self",
-  "next_target": "tickets/184WASMPREDRI-005.md",
+  "next_target": "tickets/184WASMPREDRI-004.md",
   "queue": [
-    "tickets/184WASMPREDRI-005.md",
     "tickets/184WASMPREDRI-004.md"
   ],
   "phase": "ready_for_next_ticket",
@@ -15,6 +14,6 @@
   "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean after boundary-reset work commit and state commit",
+  "dirty_state": "clean after work commit and state-only commit",
   "updated_at": "2026-05-19"
 }

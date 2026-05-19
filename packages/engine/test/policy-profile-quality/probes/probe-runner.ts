@@ -1,6 +1,7 @@
 import { performance } from 'node:perf_hooks';
 
 import { PolicyAgent, type PolicyDecisionTraceLevel } from '../../../src/agents/index.js';
+import { PolicyRuntimeError } from '../../../src/agents/policy-evaluation-core.js';
 import {
   advanceAutoresolvable,
   applyDecision,
@@ -24,6 +25,7 @@ import type {
   ProbeMatch,
   ProbeOutcome,
   ProbeResult,
+  ProbeRuntimeFailure,
   ProbeRunOptions,
   ProbeSeedOutcome,
   ProbeStateSample,
@@ -150,22 +152,36 @@ const runProbeForSeed = (
     }
 
     const microturn = publishMicroturn(loaded.def, state, loaded.runtime);
-    const selection = selectDecisionForProbe(
-      probe,
-      seed,
-      microturn,
-      state,
-      agentRng,
-      agentForProbeSeat(probe, microturn, {
-        targetSeatAgent,
-        defaultAgentsBySeat,
-      }),
-      {
-        def: loaded.def,
-        runtime: loaded.runtime,
-        ...(options.traceLevel === undefined ? {} : { traceLevel: options.traceLevel }),
-      },
-    );
+    let selection: ReturnType<typeof selectDecisionForProbe>;
+    try {
+      selection = selectDecisionForProbe(
+        probe,
+        seed,
+        microturn,
+        state,
+        agentRng,
+        agentForProbeSeat(probe, microturn, {
+          targetSeatAgent,
+          defaultAgentsBySeat,
+        }),
+        {
+          def: loaded.def,
+          runtime: loaded.runtime,
+          ...(options.traceLevel === undefined ? {} : { traceLevel: options.traceLevel }),
+        },
+      );
+    } catch (error) {
+      const failure = runtimeFailureForProbe(error);
+      if (failure === null || !microturnMatchesProbe(probe, microturn, state)) {
+        throw error;
+      }
+      const match = runtimeFailureMatch(probe, seed, state, microturn, failure);
+      return {
+        seed,
+        outcome: evaluateProbeAssertions(probe, [match], { def: loaded.def, state }),
+        matches: [match],
+      };
+    }
     agentRng = selection.rng;
 
     if (selection.match !== null) {
@@ -262,11 +278,7 @@ const selectDecisionForProbe = (
   });
   const trace = selected.agentDecision?.kind === 'policy' ? selected.agentDecision : null;
   const decisionKey = decisionKeyForContext(microturn.decisionContext);
-  const isMatch = seatMatchesProbe(probe, microturn)
-    && microturn.kind === probe.decisionBinding.contextKind
-    && (probe.decisionBinding.decisionKey === undefined || probe.decisionBinding.decisionKey === decisionKey)
-    && (probe.stateBinding.decisionFilter?.phase === undefined
-      || String(state.currentPhase) === probe.stateBinding.decisionFilter.phase);
+  const isMatch = microturnMatchesProbe(probe, microturn, state, decisionKey);
 
   return {
     decision: selected.decision,
@@ -297,6 +309,38 @@ const selectDecisionForProbe = (
   };
 };
 
+const runtimeFailureForProbe = (error: unknown): ProbeRuntimeFailure | null => {
+  if (!(error instanceof PolicyRuntimeError)) {
+    return null;
+  }
+  const signal = typeof error.failure.detail?.signal === 'string' ? error.failure.detail.signal : undefined;
+  return {
+    code: error.failure.code,
+    message: error.failure.message,
+    ...(signal === undefined ? {} : { signal }),
+  };
+};
+
+const runtimeFailureMatch = (
+  probe: Probe,
+  seed: number,
+  state: GameState,
+  microturn: MicroturnState,
+  runtimeFailure: NonNullable<ProbeMatch['runtimeFailure']>,
+): ProbeMatch => ({
+  seed,
+  stateHash: formatStateHash(state),
+  selectedDecision: microturn.legalActions[0] ?? {
+    kind: probe.decisionBinding.contextKind,
+  } as Decision,
+  selectedActionTags: [],
+  trace: null,
+  runtimeFailure,
+  contextKind: microturn.kind,
+  decisionKey: decisionKeyForContext(microturn.decisionContext),
+  phase: String(state.currentPhase),
+});
+
 const agentForProbeSeat = (
   probe: Probe,
   microturn: MicroturnState,
@@ -322,6 +366,17 @@ const seatMatchesProbe = (probe: Probe, microturn: MicroturnState): boolean =>
   normalizedSeatId(microturn) === probe.seat.toLowerCase();
 
 const normalizedSeatId = (microturn: MicroturnState): string => String(microturn.seatId).toLowerCase();
+
+const microturnMatchesProbe = (
+  probe: Probe,
+  microturn: MicroturnState,
+  state: GameState,
+  decisionKey = decisionKeyForContext(microturn.decisionContext),
+): boolean => seatMatchesProbe(probe, microturn)
+  && microturn.kind === probe.decisionBinding.contextKind
+  && (probe.decisionBinding.decisionKey === undefined || probe.decisionBinding.decisionKey === decisionKey)
+  && (probe.stateBinding.decisionFilter?.phase === undefined
+    || String(state.currentPhase) === probe.stateBinding.decisionFilter.phase);
 
 const decisionKeyForContext = (context: DecisionContext): string | null => {
   switch (context.kind) {
@@ -402,6 +457,7 @@ const probeNeedsFullTrace = (probe: Probe): boolean =>
     'actionFamilyDistributionBelow',
     'selectedNotByReason',
     'publishedFrontierConstructible',
+    'turnShapeNoAdditionalPreviewDrive',
   ].includes(assertion.kind));
 
 const probeNeedsPublishedFrontierConstructibility = (probe: Probe): boolean => (

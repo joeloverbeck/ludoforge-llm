@@ -76,7 +76,8 @@ export type ProbeAssertion =
       readonly guardrail: GuardrailId;
       readonly threshold: number;
       readonly windowMinDecisions: number;
-    };
+    }
+  | { readonly id?: string; readonly kind: 'turnShapeNoAdditionalPreviewDrive' };
 
 export interface Probe {
   readonly id: string;
@@ -151,10 +152,17 @@ export interface ProbeMatch {
   readonly selectedActionTags: readonly ActionTagId[];
   readonly selectedByReason?: SelectedByReason;
   readonly trace: PolicyAgentDecisionTrace | null;
+  readonly runtimeFailure?: ProbeRuntimeFailure;
   readonly publishedFrontierConstructibility?: ProbePublishedFrontierConstructibility;
   readonly contextKind: DecisionContextKind;
   readonly decisionKey: string | null;
   readonly phase: string;
+}
+
+export interface ProbeRuntimeFailure {
+  readonly code: string;
+  readonly message: string;
+  readonly signal?: string;
 }
 
 export interface ProbePublishedFrontierConstructibility {

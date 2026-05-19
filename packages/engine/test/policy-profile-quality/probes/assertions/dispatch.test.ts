@@ -24,6 +24,7 @@ describe('probe assertion dispatcher', () => {
       { kind: 'guardrailFired', guardrail: 'avoid-blunder' },
       { kind: 'guardrailNotFired', guardrail: 'avoid-blunder' },
       { kind: 'guardrailFiresUniformAcross', guardrail: 'avoid-blunder', threshold: 1, windowMinDecisions: 1 },
+      { kind: 'turnShapeNoAdditionalPreviewDrive' },
     ];
     for (const assertion of assertions) {
       const occurrence = (

@@ -329,6 +329,7 @@ Stop after the handoff for a non-follow-up ticket unless context remains small a
 - A follow-up ticket created by `implement-ticket` or `post-ticket-review` is the next target.
 - If multiple follow-ups are created, choose the one explicitly identified as next owner. If none is identified, choose the lowest lexical path and record the ordering.
 - Between non-follow-up tickets, keep active same-family prerequisites ahead of active dependents.
+- When a user-supplied target was retargeted only to satisfy active prerequisites, return that original target to the front once its active prerequisites are archived, unless a new follow-up or prerequisite takes priority.
 - Do not skip active originating-spec tickets unless their deps, status, or review result proves they are not current work.
 - If a sibling ticket is absorbed into the current ticket, update the sibling and queue truthfully before committing.
 - If a ticket is archived, remove its old active path from the queue and repair dependency references according to `post-ticket-review` and `docs/archival-workflow.md`.

@@ -790,6 +790,25 @@ export interface GameSpecGuardrailDef {
   readonly onUnavailable?: string;
 }
 
+export interface GameSpecTurnShapeEvaluatorDef {
+  readonly traceLabel?: string;
+  readonly source?: string;
+  readonly bounds?: {
+    readonly depthCapRef?: string;
+    readonly maxSyntheticDecisions?: number;
+  };
+  readonly objectives?: readonly {
+    readonly id?: string;
+    readonly value?: GameSpecPolicyExpr;
+    readonly delta?: GameSpecPolicyExpr;
+  }[];
+  readonly minimumImpact?: GameSpecPolicyExpr;
+  readonly fallback?: {
+    readonly onPreviewUnavailable?: string;
+    readonly demotePenalty?: GameSpecPolicyExpr;
+  };
+}
+
 export interface GameSpecAgentLibrary {
   readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
@@ -797,6 +816,7 @@ export interface GameSpecAgentLibrary {
   readonly selectors?: Readonly<Record<string, GameSpecSelectorDef>>;
   readonly strategyModules?: Readonly<Record<string, GameSpecStrategyModuleDef>>;
   readonly guardrails?: Readonly<Record<string, GameSpecGuardrailDef>>;
+  readonly turnShapeEvaluators?: Readonly<Record<string, GameSpecTurnShapeEvaluatorDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
@@ -806,6 +826,7 @@ export interface GameSpecAgentProfileUse {
   readonly considerations?: readonly string[];
   readonly guardrails?: readonly string[];
   readonly strategyModules?: readonly string[];
+  readonly turnShapeEvaluators?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }
 

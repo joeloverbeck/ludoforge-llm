@@ -1715,6 +1715,8 @@ export class PolicyEvaluationContext {
           return this.resolvePreviewStateFeatureRef(ref.id, candidate);
         }
         return this.evaluateStateFeature(ref.id);
+      case 'turnShape':
+        return undefined;
       case 'seatIntrinsic':
         return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':

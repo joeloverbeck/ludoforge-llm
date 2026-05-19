@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, new `packages/engine/src/agents/turn-shape-eval.ts` (or inline in policy-eval), `packages/engine/src/agents/policy-evaluation-core.ts`
-**Deps**: `tickets/182STRSTRPOL-013.md`
+**Deps**: `archive/tickets/182STRSTRPOL-013.md`
 
 ## Problem
 

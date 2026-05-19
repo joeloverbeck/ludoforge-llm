@@ -5,6 +5,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'selectors',
   'strategyModules',
   'guardrails',
+  'turnShapeEvaluators',
   'considerations',
   'tieBreakers',
   'strategicConditions',
@@ -15,6 +16,7 @@ export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[numbe
 export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
   'guardrails',
   'strategyModules',
+  'turnShapeEvaluators',
   'considerations',
   'tieBreakers',
 ] as const;
@@ -24,6 +26,7 @@ export type AgentPolicyProfileUseBucket = typeof AGENT_POLICY_PROFILE_USE_BUCKET
 export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
   guardrails: 'guardrails',
   strategyModules: 'strategyModules',
+  turnShapeEvaluators: 'turnShapeEvaluators',
   considerations: 'considerations',
   tieBreakers: 'tieBreakers',
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;

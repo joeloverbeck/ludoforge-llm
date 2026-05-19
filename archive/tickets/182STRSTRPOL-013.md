@@ -1,6 +1,6 @@
 # 182STRSTRPOL-013: Phase 4 — Turn-shape evaluators library bucket + compiled IR + compiler diagnostics
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/contracts/policy-contract.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/cnl/compile-agents.ts`, compiler diagnostic codes module
@@ -134,3 +134,27 @@ Create `packages/engine/test/unit/cnl/agent-turnshape-diagnostics.test.ts` (sibl
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/agent-turnshape-diagnostics.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Implementation Outcome (2026-05-19)
+
+Implemented the Phase 4 compile-time surface for `turnShapeEvaluators`:
+
+- Added the `turnShapeEvaluators` policy-library/profile-use bucket and profile-plan dependency plumbing.
+- Added authorable GameSpecDoc types, compiled catalog/index/profile-plan IR, branded ids, objective/fallback/bounds shapes, turn-shape refs, and dependency references.
+- Added the eight `CNL_COMPILER_AGENT_TURNSHAPE_*` diagnostics to the live diagnostics module, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`. The ticket's original `diagnostic-codes.ts` path was stale.
+- Added `packages/engine/src/cnl/compile-agent-turn-shape.ts` for evaluator parsing/lowering, objective validation, fallback validation, preview-ref registration checks, and turn-shape ref parsing.
+- Wired compiler orchestration through `compile-agents.ts`, lowerers, dependency merges, and expression dependency handling.
+- Added `packages/engine/test/unit/cnl/agent-turnshape-diagnostics.test.ts` with positive coverage for all eight diagnostics plus the accepted compile surface.
+
+Boundary kept: runtime evaluator semantics, bounded chain consumption behavior, trace population, no-new-preview-drive architectural probe, and FITL authoring remain owned by tickets 014-017. `policy-evaluation-core.ts` only gained an exhaustiveness placeholder for the new compile-time ref kind; runtime value production is not claimed here.
+
+Source-size ledger: `packages/engine/src/cnl/compile-agents.ts` is a pre-existing oversized compiler orchestrator and grew by about 224 net lines for turn-shape orchestration hooks, dependency planning, and diagnostics. The substantive turn-shape parsing/lowering logic was extracted to the new 360-line `compile-agent-turn-shape.ts`; the remaining growth was approved as a narrow deferral by the user on 2026-05-19 rather than widening this ticket into a compiler-class refactor.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/cnl/agent-turnshape-diagnostics.test.js` — passed after build.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed; 5/5 Turbo tasks successful, including engine summary 98/98 files passed.
+- `pnpm turbo lint` — initially failed on an unused helper in the new test, then passed after removing it.
+- `pnpm turbo typecheck` — passed.

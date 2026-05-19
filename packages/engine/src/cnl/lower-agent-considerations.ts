@@ -19,6 +19,7 @@ import type {
   CompiledPolicyZoneSource,
   GuardrailDef,
   StrategyModuleDef,
+  TurnShapeEvaluatorDef,
 } from '../kernel/types.js';
 import {
   computeDependenciesReadFootprint,
@@ -50,6 +51,7 @@ export interface AgentPolicyLibraryWithExpr {
   readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
   readonly strategyModules: Readonly<Record<string, StrategyModuleDef>>;
   readonly guardrails: Readonly<Record<string, GuardrailDef>>;
+  readonly turnShapeEvaluators: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly considerations: Readonly<Record<string, {
     readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
@@ -94,6 +96,7 @@ export function lowerAgentConsiderations(
   const selectors: Record<string, CompiledPolicySelector> = {};
   const strategyModules: Record<string, StrategyModuleDef> = {};
   const guardrails: Record<string, GuardrailDef> = {};
+  const turnShapeEvaluators: Record<string, TurnShapeEvaluatorDef> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
   const strategicConditions: Record<string, CompiledPolicyStrategicCondition> = {};
@@ -189,6 +192,40 @@ export function lowerAgentConsiderations(
     };
   }
 
+  for (const [evaluatorId, evaluator] of Object.entries(library.turnShapeEvaluators)) {
+    const objectives = evaluator.objectives.map((objective) => {
+      const value = objective.value === undefined ? null : lowerAgentPolicyExpr(objective.value);
+      const delta = objective.delta === undefined ? null : lowerAgentPolicyExpr(objective.delta);
+      return (objective.value !== undefined && value === null) || (objective.delta !== undefined && delta === null)
+        ? null
+        : {
+          ...objective,
+          ...(value === null ? {} : { value }),
+          ...(delta === null ? {} : { delta }),
+        };
+    });
+    const minimumImpact = lowerAgentPolicyExpr(evaluator.minimumImpact);
+    const demotePenalty = evaluator.fallback.demotePenalty === undefined
+      ? null
+      : lowerAgentPolicyExpr(evaluator.fallback.demotePenalty);
+    if (
+      objectives.some((objective) => objective === null)
+      || minimumImpact === null
+      || (evaluator.fallback.demotePenalty !== undefined && demotePenalty === null)
+    ) {
+      continue;
+    }
+    turnShapeEvaluators[evaluatorId] = {
+      ...evaluator,
+      objectives: objectives as TurnShapeEvaluatorDef['objectives'],
+      minimumImpact,
+      fallback: {
+        ...evaluator.fallback,
+        ...(demotePenalty === null ? {} : { demotePenalty }),
+      },
+    };
+  }
+
   for (const [considerationId, consideration] of Object.entries(library.considerations)) {
     const weight = lowerAgentPolicyExpr(consideration.weight);
     const value = lowerAgentPolicyExpr(consideration.value);
@@ -253,6 +290,7 @@ export function lowerAgentConsiderations(
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
+    ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
     tieBreakers,
     strategicConditions,

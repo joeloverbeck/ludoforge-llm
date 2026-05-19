@@ -28,13 +28,17 @@ Read context (reference file + state inspection)
 [If reference has verification criteria OR system state needs grounding] Pre-interview verification
          |
          v
-Classify: design | decision/triage | operational
+Classify: design | decision/triage | operational | diagnostic | decision-requiring-design
          |
          +--> DECISION MODE: short interview -> verify claims -> write specs/tickets directly
          |         +--> [If artifact needs design] transition to DESIGN Steps 3-4
          |         \--> [If no artifact warranted] confirm dismissal rationale -> end
          |
          +--> OPERATIONAL MODE: brief interview -> verify state -> write executable plan w/ verification
+         |
+         +--> DIAGNOSTIC MODE: brief interview -> Step 1.5 verification (bulk of work)
+         |     -> follow DESIGN MODE flow with diagnostic-mode section grammar
+         |     -> output reports/<topic>-<descriptor>.md naming a follow-up artifact
          |
          +--> DESIGN MODE (default; includes Decision-requiring-design when
          |     evaluation requires producing the design):
@@ -86,6 +90,8 @@ Classify: design | decision/triage | operational
 If the user requests follow-up deliverables after the design is written (e.g., migration guides, cross-repo reference documents, documentation), these are outside the brainstorm's scope — fulfill them directly without re-entering the brainstorm flow. The hard gate only applies to the design phase, not to post-design work.
 
 If the design has cross-repo implications (e.g., the same pattern needs to be applied in another codebase), the user may request a migration guide. Write it to `reports/` as a reference document — it's not a spec or ticket, but a structured handoff for another brainstorm session.
+
+When the post-design follow-on is itself a structured artifact (a ticket the diagnostic report named as the follow-up, a spec post-`/spec-to-tickets` rework, a scaffolding file), reuse Step 6's auto-mode/inline-recommendation shape with the menu form matching the *new* artifact's type — e.g., a follow-up ticket gets the "If triage produced tickets directly" inline recommendation even when the brainstorm itself ran in diagnostic mode. This is menu-shape reuse, not re-entry into the brainstorm flow; the hard gate is not re-armed and the interview is not restarted.
 
 ## Guardrails
 

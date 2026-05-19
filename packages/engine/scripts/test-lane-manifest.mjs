@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ENGINE_ROOT = resolve(SCRIPT_DIR, '..');
+const ARCHITECTURE_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'architecture');
 const INTEGRATION_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'integration');
 const E2E_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'e2e');
 const DETERMINISM_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'determinism');
@@ -30,6 +31,15 @@ export const GAME_PACKAGE_SMOKE_TESTS = [
 export const E2E_SLOW_EXACT_TESTS = [
   'texas-holdem-card-lifecycle.test.ts',
   'texas-holdem-tournament.test.ts',
+];
+
+// Heavy parametric architectural witnesses. Each iterates a seed corpus and
+// runs full bounded ARVN simulations with verbose policy traces against JSON
+// fixtures, so individually they cost minutes. Excluded from the default lane
+// to keep local `pnpm turbo test` fast; covered by a dedicated shard in
+// engine-tests.yml.
+export const SLOW_ARCHITECTURE_TESTS = [
+  'policy-preview-inner-outcome-parity.test.ts',
 ];
 
 // Heavy parametric runGame parity tests. Each iterates a seed × profile-variant
@@ -106,12 +116,30 @@ function collectTestFiles(dir) {
   return files.sort((left, right) => left.localeCompare(right));
 }
 
+export const ALL_ARCHITECTURE_TESTS = collectTestFiles(ARCHITECTURE_TEST_ROOT);
 export const ALL_INTEGRATION_TESTS = collectTestFiles(INTEGRATION_TEST_ROOT);
 export const ALL_E2E_TESTS = collectTestFiles(E2E_TEST_ROOT);
 export const ALL_DETERMINISM_TESTS = collectTestFiles(DETERMINISM_TEST_ROOT);
 export const ALL_POLICY_PROFILE_QUALITY_TESTS = collectTestFiles(POLICY_PROFILE_QUALITY_TEST_ROOT);
 
 const gamePackageSmokeTests = new Set(GAME_PACKAGE_SMOKE_TESTS.map((testPath) => `test/integration/${testPath}`));
+
+export function isSlowArchitectureTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return SLOW_ARCHITECTURE_TESTS.includes(baseName);
+}
+
+export function listArchitectureTestsForLane(lane) {
+  switch (lane) {
+    case 'architecture:default':
+      return ALL_ARCHITECTURE_TESTS.filter((sourcePath) => !isSlowArchitectureTest(sourcePath));
+    case 'architecture:policy-preview-parity':
+      return ALL_ARCHITECTURE_TESTS.filter((sourcePath) => isSlowArchitectureTest(sourcePath));
+    default:
+      throw new Error(`Unknown architecture test lane: ${lane}`);
+  }
+}
 
 export function isSlowIntegrationTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');

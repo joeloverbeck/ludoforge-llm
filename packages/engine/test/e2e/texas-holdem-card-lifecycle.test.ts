@@ -64,10 +64,10 @@ describe('texas hold\'em card lifecycle e2e', () => {
    * elapse for the running deck draw count to require recycling at least once
    * (4 hands × ~12 cards/hand ≈ 48 cards drawn). The trajectory length is
    * sensitive to profile-fingerprint-derived softmax seeding; the witness was
-   * retargeted from `>= 5` to `>= 4` when Spec 182's `pruningRules` →
-   * `guardrails` schema migration shifted the seed-42 fingerprint and the
-   * resulting tournament ended one hand earlier. The architectural property
-   * (deck recycling actually fires) is asserted by `muckSize < 52` below.
+   * retargeted from `>= 5` to `>= 4` when Spec 182's guardrails schema
+   * migration shifted the seed-42 fingerprint and the resulting tournament
+   * ended one hand earlier. The architectural property (deck recycling
+   * actually fires) is asserted by `muckSize < 52` below.
    */
   it('recycles cards from muck to deck between hands (deck never depletes)', () => {
     const def = compileTexasDef();

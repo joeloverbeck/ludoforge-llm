@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — trace formatting / mode handling for guardrails block
-**Deps**: `tickets/182STRSTRPOL-007.md`
+**Deps**: `archive/tickets/182STRSTRPOL-007.md`
 
 ## Problem
 

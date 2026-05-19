@@ -374,6 +374,7 @@ export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
 export type SelectorCostClass = 'state' | 'candidate' | 'microturn' | 'preview' | 'auditOnly';
 export type GuardrailCostClass = SelectorCostClass;
 export type GuardrailSeverity = 'prune' | 'demote' | 'warn' | 'auditOnly';
+export type GuardrailOnUnavailable = 'warnUnknown' | 'noFire' | 'fire';
 export type SelectorId = string & { readonly __brand: 'SelectorId' };
 export type ModuleId = string & { readonly __brand: 'ModuleId' };
 export type GuardrailId = string & { readonly __brand: 'GuardrailId' };
@@ -820,7 +821,7 @@ export interface GuardrailDef {
   readonly penalty?: CompiledPolicyExpr;
   readonly safe?: true;
   readonly onAllPruned?: PassFallbackSpec;
-  readonly onUnavailable: 'warnUnknown' | 'noFire' | 'fire';
+  readonly onUnavailable: GuardrailOnUnavailable;
   readonly costClass: GuardrailCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
@@ -1101,7 +1102,7 @@ export interface CompiledAgentGuardrail {
   readonly costClass: GuardrailCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
   readonly safe?: true;
-  readonly onUnavailable: 'warnUnknown' | 'noFire' | 'fire';
+  readonly onUnavailable: GuardrailOnUnavailable;
   readonly onAllPruned?: PassFallbackSpec;
 }
 
@@ -1227,6 +1228,7 @@ export interface CompiledAgentProfile {
     readonly considerations: readonly string[];
     readonly pruningRules: readonly string[];
     readonly strategyModules?: readonly string[];
+    readonly guardrails?: readonly string[];
     readonly tieBreakers: readonly string[];
   };
   readonly preview: CompiledAgentPreviewConfig;
@@ -2258,6 +2260,26 @@ export interface PolicyModuleInactiveTraceEntry {
   readonly reason: 'conditionFalse' | 'scopeFiltered' | 'fallbackInactive';
 }
 
+export interface PolicyGuardrailTrace {
+  readonly fired: readonly PolicyGuardrailFiredEntry[];
+  readonly notFiredTop: readonly PolicyGuardrailNotFiredEntry[];
+}
+
+export interface PolicyGuardrailFiredEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly severity: GuardrailSeverity;
+  readonly penalty?: number;
+  readonly status: 'ready' | 'partial' | 'unavailable';
+  readonly onUnavailable?: GuardrailOnUnavailable;
+}
+
+export interface PolicyGuardrailNotFiredEntry {
+  readonly id: string;
+  readonly reason: 'whenFalse' | 'scopeFiltered' | 'previewUnavailable';
+  readonly onUnavailable?: GuardrailOnUnavailable;
+}
+
 export type PolicyPreviewSeatMatrixStatusTrace =
   | 'ready'
   | 'stochastic'
@@ -2393,6 +2415,7 @@ export interface PolicyAgentDecisionTrace {
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisoryTrace[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly modules?: PolicyModuleTrace;
+  readonly guardrails?: PolicyGuardrailTrace;
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

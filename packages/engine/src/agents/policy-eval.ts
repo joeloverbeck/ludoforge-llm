@@ -17,6 +17,7 @@ import type {
   CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
   Move,
+  PolicyGuardrailTrace,
   PolicyModuleTrace,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicySelectorTraceEntry,
@@ -58,6 +59,7 @@ import {
 } from './preview-budget-allocator.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+import { dispatchGuardrails } from './policy-guardrail-eval.js';
 
 export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
@@ -312,6 +314,7 @@ export interface PolicyEvaluationMetadata {
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly modules?: PolicyModuleTrace;
+  readonly guardrails?: PolicyGuardrailTrace;
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -698,6 +701,14 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         }
       }
       evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
+      const guardrailDispatch = dispatchGuardrails({
+        profile,
+        catalog,
+        evaluation,
+        activeCandidates,
+        collectDiagnostics,
+      });
+      activeCandidates = [...guardrailDispatch.activeCandidates];
 
       for (const pruningRuleId of profile.use.pruningRules) {
         const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
@@ -822,6 +833,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
               } : undefined,
             )
           ), 0);
+          candidate.score -= guardrailDispatch.penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
           evaluation.finalizePreviewOutcome(candidate);
         }
       }
@@ -978,6 +990,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
           ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
           ...(moduleTrace === undefined ? {} : { modules: moduleTrace }),
+          ...(guardrailDispatch.trace === undefined ? {} : { guardrails: guardrailDispatch.trace }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/kernel/legal-moves.ts` (or pass-fallback publishing path), `packages/engine/src/kernel/types-core.ts` (extend guardrails trace)
-**Deps**: `tickets/182STRSTRPOL-007.md`
+**Deps**: `archive/tickets/182STRSTRPOL-007.md`
 
 ## Problem
 

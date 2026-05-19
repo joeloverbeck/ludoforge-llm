@@ -501,12 +501,13 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`archive/tickets/182STRSTRPOL-004.md`](../archive/tickets/182STRSTRPOL-004.md) — Phase 2 — FITL strategic module conformance test
 - [`archive/tickets/182STRSTRPOL-005.md`](../archive/tickets/182STRSTRPOL-005.md) — Phase 2 — ARVN `build-political-engine` module authoring + cookbook entry
 - [`archive/tickets/182STRSTRPOL-006.md`](../archive/tickets/182STRSTRPOL-006.md) — Phase 3 — Guardrails library bucket + compiled IR + compiler diagnostics
-- [`tickets/182STRSTRPOL-007.md`](../tickets/182STRSTRPOL-007.md) — Phase 3 — Guardrails runtime evaluator + severity dispatch + basic trace population
+- [`archive/tickets/182STRSTRPOL-007.md`](../archive/tickets/182STRSTRPOL-007.md) — Phase 3 — Guardrails runtime evaluator + severity dispatch + basic trace population
 - [`tickets/182STRSTRPOL-008.md`](../tickets/182STRSTRPOL-008.md) — Phase 3 — Pass-fallback runtime integration (`onAllPruned`) + `allPrunedFallback` trace
 - [`tickets/182STRSTRPOL-009.md`](../tickets/182STRSTRPOL-009.md) — Phase 3 — Guardrail trace formatting (top-K caps + deterministic ordering)
 - [`tickets/182STRSTRPOL-010.md`](../tickets/182STRSTRPOL-010.md) — Phase 3 — Migration atomic: `pruningRules` → `guardrails` (data + tests + bucket removal)
 - [`tickets/182STRSTRPOL-011.md`](../tickets/182STRSTRPOL-011.md) — Phase 3 — Guardrail conformance tests (4 severity tiers)
 - [`tickets/182STRSTRPOL-012.md`](../tickets/182STRSTRPOL-012.md) — Phase 3 — Guardrail profile-quality lint warnings (`RARELY_SAFE` + `FIRES_UNIFORM`)
+- [`tickets/182STRSTRPOL-018.md`](../tickets/182STRSTRPOL-018.md) — Phase 3 — Define and implement guardrail ref contract
 - [`tickets/182STRSTRPOL-013.md`](../tickets/182STRSTRPOL-013.md) — Phase 4 — Turn-shape evaluators library bucket + compiled IR + compiler diagnostics
 - [`tickets/182STRSTRPOL-014.md`](../tickets/182STRSTRPOL-014.md) — Phase 4 — Turn-shape evaluator runtime + bounded chain consumption
 - [`tickets/182STRSTRPOL-015.md`](../tickets/182STRSTRPOL-015.md) — Phase 4 — Turn-shape evaluator trace contract extension

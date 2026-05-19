@@ -368,6 +368,7 @@ export class PolicyEvaluationContext {
   private readonly selectorCache = new Map<string, SelectedSelectorView>();
   private readonly strategyModuleActivationCache = new Map<string, StrategyModuleActivationView>();
   private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
+  private readonly guardrailWhenCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -423,6 +424,7 @@ export class PolicyEvaluationContext {
     this.selectorCache.clear();
     this.strategyModuleActivationCache.clear();
     this.strategyModuleEvaluationCache.clear();
+    this.guardrailWhenCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -438,6 +440,7 @@ export class PolicyEvaluationContext {
     this.aggregateCache.clear();
     this.selectorCache.clear();
     this.strategyModuleEvaluationCache.clear();
+    this.guardrailWhenCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
@@ -451,6 +454,25 @@ export class PolicyEvaluationContext {
 
   evaluatePlannedStrategyModule(moduleId: string, candidate?: PolicyEvaluationCandidate): void {
     this.evaluateStrategyModuleView(moduleId, candidate);
+  }
+
+  evaluateGuardrailWhen(guardrailId: string, candidate?: PolicyEvaluationCandidate): PolicyValue {
+    const guardrail = this.input.catalog.compiled.guardrails?.[guardrailId];
+    if (guardrail === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown guardrail "${guardrailId}".`, { guardrailId });
+    }
+    const cacheKey = `${guardrailId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.guardrailWhenCache.get(cacheKey);
+    if (cached !== undefined || this.guardrailWhenCache.has(cacheKey)) {
+      return cached;
+    }
+    const value = this.evaluateCompiledExpr(guardrail.when, candidate);
+    this.guardrailWhenCache.set(cacheKey, value);
+    return value;
+  }
+
+  getEvaluatedGuardrailWhenCacheSize(): number {
+    return this.guardrailWhenCache.size;
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {

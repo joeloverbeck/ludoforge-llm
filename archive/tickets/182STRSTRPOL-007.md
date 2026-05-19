@@ -1,6 +1,6 @@
 # 182STRSTRPOL-007: Phase 3 — Guardrails runtime evaluator + severity dispatch + basic trace population
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/kernel/types-core.ts` (basic guardrails trace field)
@@ -137,3 +137,37 @@ Extend `PolicyAgentDecisionTrace` (types-core.ts:2232) with `readonly guardrails
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/guardrail-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19.
+
+Implemented the Phase 3 guardrails runtime evaluator and basic trace surface.
+
+What changed:
+- Added `dispatchGuardrails` in `packages/engine/src/agents/policy-guardrail-eval.ts`, inserted it after planned module evaluation and before legacy `pruningRules`, and kept `pruningRules` operational for the ticket-010 migration window.
+- Added runtime severity handling: `prune` removes fired candidates and currently reports the existing empty-frontier error when every candidate is removed; `demote` subtracts the evaluated penalty from candidate scores; `warn` and `auditOnly` record trace only with zero score effect.
+- Added `PolicyEvaluationContext.evaluateGuardrailWhen()` with a per-decision/candidate cache and exposed the cache-size witness used by the state-scope caching test.
+- Added `PolicyGuardrailTrace` / fired / not-fired trace types, threaded `guardrails` through policy evaluation metadata, and included it in `PolicyAgentDecisionTrace`.
+- Added explicit `onUnavailable` trace markers for preview-unavailable guardrail conditions so `noFire`, `warnUnknown`, and `fire` fallback choices remain distinguishable in deterministic trace output.
+- Widened `CompiledAgentProfile.use` with optional `guardrails` so compiled profiles can execute the bucket introduced by ticket 006.
+- Added focused runtime tests for guardrail dispatch order, severity behavior, state-scope caching, and repeated guardrail-profile determinism.
+
+Deviations from the draft:
+- The severity dispatcher lives in the new focused `policy-guardrail-eval.ts` helper instead of being embedded directly in already-large `policy-eval.ts`.
+- `guardrail.<id>.*` downstream ref resolution is not implemented here because Spec 182 does not yet define a guardrail ref table or `CompiledAgentPolicyRef` variant; follow-up ticket `182STRSTRPOL-018` owns that spec/compiler/runtime contract.
+- `prune` all-candidates-empty still uses the existing `PRUNING_RULE_EMPTIED_CANDIDATES` failure shape as the documented transitional behavior; ticket 008 owns `onAllPruned` fallback publication and `allPrunedFallback` trace.
+
+Source-size ledger:
+- `packages/engine/src/agents/policy-guardrail-eval.ts` — new focused helper; under cap.
+- `packages/engine/src/agents/policy-eval.ts` — active growth +13 lines; final size 1679 lines; preexisting over cap. Guardrail-specific logic was extracted to avoid embedding the dispatcher in this oversized file.
+- `packages/engine/src/agents/policy-evaluation-core.ts` — active growth +22 lines; final size 2559 lines; preexisting over cap. Growth is the guardrail condition cache and public evaluation methods.
+- `packages/engine/src/kernel/types-core.ts` — active growth is shared trace/profile contract surface; preexisting over cap.
+- `packages/engine/src/agents/policy-diagnostics.ts` — active growth +1 line; final size 414 lines.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/guardrail-*.test.js` — passed, 7 tests.
+- `pnpm turbo test` — passed, 5 tasks successful including `@ludoforge/engine:test` and runner tests.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.

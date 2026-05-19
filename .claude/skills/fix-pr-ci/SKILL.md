@@ -124,14 +124,15 @@ Classify each failure and cluster lanes by suspected root cause. One root cause 
 - Same recently modified module (per `git log` on the PR branch) implicated by multiple lanes → likely cluster.
 - Lint/typecheck/build failures often cluster together as one cause.
 - Multiple determinism shards failing → almost always one cause (look at the recent commits touching `kernel/`, `sim/`, `agents/`).
-- If the failing lane has not run on main since a recent CI/workflow restructure (check `gh run list --branch main --workflow=<name> --limit 5 --json conclusion,createdAt,headSha` against the workflow file's git history), the regression may be pre-existing on main, surfaced by workflow changes rather than introduced by the PR — bisect against main commits, not just `<base>..HEAD`. **Special case**: if the lane has *never* run on main (zero results), bisect is impossible — see "Brand-new lane detection" below.
+- If the failing lane has not run on main since a recent CI/workflow restructure (check `gh run list --branch main --workflow=<name> --limit 5 --json conclusion,createdAt,headSha` against the workflow file's git history), the regression may be pre-existing on main, surfaced by workflow changes rather than introduced by the PR — bisect against main commits, not just `<base>..HEAD`. **Special case**: if the lane has *never* run on main (zero results), bisect is impossible — see the unified detection rule immediately below.
 
-**Brand-new lane detection**: For each failing lane, run `gh run list --workflow=<workflow-file> --branch main --limit 5 --json databaseId,conclusion,createdAt` *before* attempting pre-existing-failure detection. If zero results: the lane is brand new on this PR — its timeout/budget was never validated against main. Treat the cluster as `structural` (lane budget needs adjustment, e.g., shard or raise `timeout-minutes`) by default; surface as such at gate 1. Pre-existing-failure detection and bisect are meaningless for brand-new lanes — skip both. Confirm by inspecting the workflow's git history (`git log --oneline -- .github/workflows/<name>`) for a recent restructure that introduced the lane.
+**Brand-new lane + pre-existing-failure detection — one call answers both**: A single `gh run list --workflow=<workflow-file> --branch main --limit 5 --json databaseId,conclusion,headSha,createdAt` answers both. Run it once per failing workflow at the top of triage. Branch on results:
 
-**Pre-existing-failure detection**: After identifying clusters, check whether each failure reproduces on the **last-green main commit** — the most recent main SHA whose CI run for the relevant workflow concluded green (`gh run list --branch main --workflow=<name> --limit 5 --json conclusion,headSha`). Last-green-main is the right reference for both pre-existing-failure detection and as the bisect lower bound; merge-base (where the PR diverged) is only relevant when the PR has diverged significantly and you need to understand the inheritance window. Use a fresh `git worktree add /tmp/<worktree-name> <last-green-main-sha>`, build the engine, and run the failing test's local repro there.
-- If it FAILS on last-green main → cluster is `pre-existing`. Default scope: out-of-scope for this PR; flag in the gate 1 table as "pre-existing on main, not caused by this PR" so the user can decide whether to fix it in this PR or defer to a separate PR.
-- If it PASSES on last-green main → cluster is a real PR regression; proceed with the standard diagnosis path.
-- The user may opt in (at gate 1) to fixing pre-existing clusters in this PR. When they do: bisect to find the original breaking commit between last-green-main and current main HEAD, then propose a surgical fix at that origin point.
+- **Zero results**: the lane is brand-new on this PR — its timeout/budget was never validated against main. Treat the cluster as `structural` (lane budget needs adjustment, e.g., shard or raise `timeout-minutes`) by default; surface as such at gate 1. Pre-existing-failure detection and bisect are meaningless — skip both. Confirm by inspecting the workflow's git history (`git log --oneline -- .github/workflows/<name>`) for a recent restructure that introduced the lane.
+- **≥1 result**: pick the most-recent `success` SHA as the last-green-main reference. Use a fresh `git worktree add /tmp/<worktree-name> <last-green-main-sha>`, build the engine, and run the failing test's local repro there. Last-green-main is also the bisect lower bound; merge-base (where the PR diverged) is only relevant when the PR has diverged significantly and you need to understand the inheritance window.
+  - If it FAILS on last-green main → cluster is `pre-existing`. Default scope: out-of-scope for this PR; flag in the gate 1 table as "pre-existing on main, not caused by this PR" so the user can decide whether to fix it in this PR or defer to a separate PR.
+  - If it PASSES on last-green main → cluster is a real PR regression; proceed with the standard diagnosis path.
+  - The user may opt in (at gate 1) to fixing pre-existing clusters in this PR. When they do: bisect to find the original breaking commit between last-green-main and current main HEAD, then propose a surgical fix at that origin point.
 
 **Lighter-weight variant — did my just-applied edits cause this failure?** Use `git stash`, rebuild, run the repro, then `git stash pop`. Verifies the PR-HEAD baseline (without your edits) rather than the last-green-main baseline. Cheaper than worktree when you only need to attribute a failure to your own diff vs. the PR's pre-fix state — common when iterating gate 1 rounds where verification surfaces failures and you need to know whether you introduced them.
 
@@ -197,7 +198,7 @@ Status values: `PR regression` (lane was green on main, broken by this PR) | `pr
 2. ...
 ```
 
-**Wait for user approval.** The user may:
+**Wait for user approval.** (`AskUserQuestion` is a natural fit when the menu has ≥2 independent decisions — e.g., one question per cluster, one for advisory-lane opt-in, one for fix-scope. Batch them in a single structured prompt rather than asking sequentially.) The user may:
 - Approve all proposed fixes.
 - Reject or revise specific clusters.
 - Opt in to fixing advisory lanes.
@@ -205,6 +206,7 @@ Status values: `PR regression` (lane was green on main, broken by this PR) | `pr
 - Decide flakes / network timeouts are not worth fixing this round.
 - Override priorities.
 - Choose fix scope when a cluster admits multiple shapes (e.g., minimal correctness fix vs. minimal fix + dead-code cleanup vs. broader refactor). Surface these alternatives explicitly in the gate 1 message when removing the broken path leaves unreachable code, when the fix surface naturally extends to adjacent dead exports, when a more invasive redesign exists, or when a failing test's `@test-class` classification is questioned by the failure (e.g., an `architectural-invariant`-marked test whose assertion empirically depends on a corpus shape that has just shifted — distill / retarget / reclassify are distinct fix shapes).
+- Opt in to follow-up spec authorship — when the cluster's root cause matches a Step 10 architectural-gap pattern, the spec can be drafted at gate 1 instead of post-push. Default shape: separate commit, same push as the fix, so the spec ships alongside the fix it documents. The user may instead defer to Step 10's standard post-push flow if the gap is uncertain or wants iteration before the spec is committed.
 
 Gate 1 may iterate. If the user rejects the diagnosis or asks for deeper investigation (e.g., a profile, a bisect, a source-modification experiment to confirm the root cause), return to Step 3 with the additional evidence and re-present at Step 4. The gate is closed only when the user explicitly approves the cluster table — first-round approval is the happy path, not the contract.
 
@@ -241,11 +243,13 @@ For each non-advisory lane that was failing:
 
 If the user opted in to fixing an advisory lane at gate 1, verify it too.
 
+Also run `pnpm turbo lint typecheck` once after the fix edits land, per CLAUDE.md Pre-Completion Verification — these are cheap, catch unused-import / type-drift fallout from the edits, and are mandatory before commit per the project-global rule.
+
 Run any directly relevant supersets the project provides (e.g., when several `engine-tests` lanes are in scope, also run `pnpm -F @ludoforge/engine test:all` once at the end as a wider sanity check), **subject to the same environment-constrained verification rule above** — if the superset's resource profile risks a repeat env crash, defer it to CI and note that explicitly at gate 2. Do not run unrelated full suites that would balloon runtime — verification is scoped to the lanes that were failing.
 
 ### Step 7: Commit & Present Diff — GATE 2
 
-1. Stage the edits explicitly by file path (avoid `git add -A` / `git add .` per security rule).
+1. Stage the edits explicitly by file path (avoid `git add -A` / `git add .` per security rule). After staging, run a sentinel grep across the staged diff for common instrumentation patterns: `git diff --cached -- packages/ | grep -nE 'process\.stderr\.write|console\.log|DIAG_|@diag-' | head -20`. Any hits other than pre-existing call sites should be removed before continuing to gate 2 — this backstops the Step 4 hypothesis-prototype cleanup rule programmatically. If the prototype involved ad-hoc `.mjs` scripts, also run `git status --short | grep -E '\.mjs$'` and confirm they are not in the staged set.
 2. Build commit subjects, one per cluster:
    - Default: `fix: <short cluster description>`.
    - If the cluster maps to an existing ticket: `Implemented <NS>-<NNN>` per repo convention.
@@ -257,7 +261,7 @@ Run any directly relevant supersets the project provides (e.g., when several `en
    - The full diff (`git diff --staged`).
    - The proposed commit subjects.
    - The number of commits to be created.
-4. **Wait for explicit push approval.** The user may:
+4. **Wait for explicit push approval.** (`AskUserQuestion` is appropriate here too — a single-question structured prompt with approve / amend / split / cancel options surfaces the menu cleanly when the diff is non-trivial.) The user may:
    - Approve the push.
    - Ask to amend a commit before pushing.
    - Ask to split / squash differently.
@@ -295,6 +299,8 @@ Do not commit additional artifacts. The skill is conversational — diagnostic o
 ### Step 10: Architectural-Gap Scan (post-push)
 
 Hot-fixes for CI failures often paper over an architectural gap rather than close it. After the push lands, scan the staged diff for any of these patterns; each is a candidate architectural gap that warrants a follow-up spec in `specs/<NNN>-<slug>.md`:
+
+**If a Step 10 pattern was already surfaced and approved at gate 1** (via the follow-up-spec fix-scope option in Step 4), the spec was authored before push and Step 10 is a confirmation step only — verify the gap is captured by the existing draft, and skip the new-draft offer for that pattern. The post-push offer below still applies for any *additional* patterns that surface only after the fix is shipped.
 
 - **Opt-in flags on `ExecutionOptions` or similar config bags** that gate alternative behavior between callers (e.g., simulator vs. test helpers). Often signals that the kernel needs a structural state field every caller observes uniformly, rather than a flag that splits the behavior tree.
 - **New typed errors caught at >1 call site and translated to a different signal**. Often signals that the condition should be a queryable, deterministic state-shape property rather than an exception thrown at one boundary and caught at another.

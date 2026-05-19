@@ -126,6 +126,15 @@ If implementation blocks:
 - if the current ticket is blocked by active same-family prerequisites, truth the dependency or queue notes as needed, move prerequisites ahead of it, commit that retarget/state update when files changed, print a handoff, and resume at the prerequisite after a reset boundary
 - if no next owner exists, stop and report the blocker, current ticket, proof gap, and required user decision
 
+When an approved `1-3-1` or Foundations reassessment turns the current implementation attempt into `blocked by new prerequisite`, use this compact retarget path before committing:
+
+1. Restore or isolate any abandoned source/test/schema probe so the repo no longer contains a half-applied implementation path, unless the user explicitly approved retaining it as evidence.
+2. Patch the blocked active ticket to record the approved option, failed proof lane, restored/retained probe state, new prerequisite owner, archive status, and next workflow.
+3. Patch the originating spec and directly affected sibling tickets so phase order, dependency lists, and ticket-list prose point at the new prerequisite before returning to the blocked ticket.
+4. Create or update the prerequisite ticket with a narrow problem statement, dependency edge, out-of-scope note that leaves the blocked ticket's remaining cleanup with the blocked ticket, and proof lane that reproduces or isolates the red gate.
+5. Rerun the smallest proof that proves the restored safe path plus the ticket graph/integrity lanes, emit `post-ticket-review: not_applicable` in the required checkpoint, and commit the retarget as a blocked handoff rather than as implementation completion.
+6. Persist state with the new prerequisite at the front of the queue and the blocked ticket immediately after it.
+
 If the blocker is resolved by a user-approved 1-3-1 option or other explicit boundary reset, do this before resuming implementation:
 
 1. Record the approved option and the user's confirmation in the active ticket, state file, or next visible checkpoint.
@@ -295,7 +304,7 @@ No-commit finalization is still a terminal handoff state. Before any final respo
 4. Emit the full `Harness handoff` block below with `Work commit: none` and `State commit: none` unless a state-only commit was actually created.
 5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
 
-If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
+If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` should normally describe the final clean state after the state-only commit. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
 

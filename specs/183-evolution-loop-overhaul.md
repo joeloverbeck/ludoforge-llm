@@ -6,7 +6,7 @@
 **Date**: 2026-05-18
 **Dependencies**:
 - `archive/specs/181-structured-strategy-policy-layer-probes-and-selectors.md` (audit probe harness as the validation surface for new acceptance metrics; selector trace surface as one input to behavior descriptors)
-- `specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md` (module trace, guardrail fired-counts, and turn-shape `minimumImpactSatisfied` surfaces feed multiple acceptance penalties and behavior descriptors; lint warnings extend Spec 182's profile-quality warning set)
+- `archive/specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md` (module trace, guardrail fired-counts, and turn-shape `minimumImpactSatisfied` surfaces feed multiple acceptance penalties and behavior descriptors; lint warnings extend Spec 182's profile-quality warning set)
 - `archive/specs/180-standing-vector-observability-and-outer-preview-signal-integrity.md` (per-seat trace matrix feeds leader-denial-rate and self-improvement-rate behavior descriptors)
 - `archive/specs/164-continued-inner-preview-deepening.md` (cap-class registry — performance-penalty acceptance term inspects which cap class was active)
 

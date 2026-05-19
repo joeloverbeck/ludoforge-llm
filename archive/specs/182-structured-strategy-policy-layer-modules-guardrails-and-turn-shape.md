@@ -1,6 +1,6 @@
 # Spec 182 — Structured Strategy Policy Layer Phase 2/3/4: Modules, Guardrails, and Turn-Shape Evaluators
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — closes the remaining engine-layer authoring gaps documented in `reports/ai-agent-overhaul-proposal.md` after Spec 181 shipped the audit probe harness and first-class selectors. The cookbook migration that Spec 181 declared out-of-scope cannot proceed until profiles have a place to express named strategic intent (modules), tiered negative evidence (guardrails), and bounded chain-summary objectives (turn-shape evaluators).
 **Complexity**: L — three phases, each independently mergeable. Phase 2 (modules) is M and unblocks Phases 3 and 4. Phase 3 (guardrails) is M and consumes module activations. Phase 4 (turn-shape evaluators) is M–L and consumes module-declared objectives plus Spec 181's probe harness for validation.
 **Date**: 2026-05-18
@@ -525,3 +525,27 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`archive/tickets/182STRSTRPOL-015.md`](../archive/tickets/182STRSTRPOL-015.md) — Phase 4 — Turn-shape evaluator trace contract extension
 - [`archive/tickets/182STRSTRPOL-016.md`](../archive/tickets/182STRSTRPOL-016.md) — Phase 4 — Architectural-invariant probe (no additional preview drive)
 - [`archive/tickets/182STRSTRPOL-017.md`](../archive/tickets/182STRSTRPOL-017.md) — Phase 4 — FITL turn-shape evaluator authoring + `minimumImpactSatisfied` conformance probe
+
+## Outcome
+
+Completed: 2026-05-19
+
+Spec 182 landed through the archived `182STRSTRPOL` ticket family:
+
+- Phase 2 added strategic modules, module diagnostics, runtime dispatch, trace integration, FITL conformance, and ARVN `buildPoliticalEngine` authoring.
+- Phase 3 added guardrails, severity dispatch, pass-fallback integration, trace formatting, profile-quality warnings, guardrail refs, and the atomic `pruningRules` to `guardrails` migration.
+- Phase 4 added turn-shape evaluators, bounded chain consumption, trace integration, no-additional-preview-drive probe coverage, FITL `currentTurnImpact` authoring, the `turnShapeMinimumImpactObservedBoth` probe assertion, and replay determinism for the evaluator-using profile.
+- No `docs/FOUNDATIONS.md` amendment was needed; the implementation remained within the existing engine-agnostic, bounded, deterministic, preview-signal-integrity, and testing-as-proof constraints.
+
+Final verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js` — passed; 3 probes.
+- `node --test packages/engine/dist/test/determinism/turn-shape-replay-determinism.test.js` — passed; 1 test.
+- `node --test packages/engine/dist/test/policy-profile-quality/probes/probe-budget.test.js` — passed; 3 probes.
+- `pnpm run check:ticket-deps` — passed for 0 active tickets and 2446 archived tickets.
+- `git diff --check` — passed.
+- `pnpm turbo build` — passed; 3/3 tasks successful.
+- `pnpm turbo test` — passed; 5/5 tasks successful; engine default lane reported 98/98 files passed.
+- `pnpm turbo lint` — passed; 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed; 3/3 tasks successful.

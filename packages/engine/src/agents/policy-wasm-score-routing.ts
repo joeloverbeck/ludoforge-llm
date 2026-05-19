@@ -415,18 +415,17 @@ const previewValueFromWasmRow = (
 /**
  * Spec 175 fallback contract: the WASM production preview drive can return
  * undefined for preview refs on actions whose state-mutation shape the drive
- * does not yet model (e.g. FITL `tax`). Downstream `coalesce(preview, fallback)`
- * then resolves to the state-feature fallback instead of the projected value,
- * and the WASM-precomputed candidate-feature row diverges from the TS oracle.
- * When that candidate feature is read by an aggregate the profile's
- * considerations consume, the divergence propagates into the WASM score-row
- * stream.
+ * does not yet model. Downstream `coalesce(preview, fallback)` then resolves to
+ * the state-feature fallback instead of the projected value, and the
+ * WASM-precomputed candidate-feature row diverges from the TS oracle. When that
+ * candidate feature is read by an aggregate the profile's considerations
+ * consume, the divergence propagates into the WASM score-row stream.
  *
- * Until the production preview drive is extended to cover every supported
- * action (tracked separately), evaluate preview-classed candidate features
- * through the TS path whenever they feed an aggregate in the profile's plan,
- * so the candidate-feature cache the WASM score rows read from carries
- * TS-equivalent values.
+ * Until the production preview drive is extended to cover every aggregate-fed
+ * preview shape, evaluate preview-classed candidate features through the TS path
+ * whenever they feed an aggregate in the profile's plan. Spec 184 Phase 3.6 owns
+ * the remaining ARVN decision-47 parity gap that still reproduces after the
+ * seat-context dynamic-row work.
  */
 const previewFeatureRowsExerciseAggregate = (
   profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,

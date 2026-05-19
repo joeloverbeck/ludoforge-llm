@@ -118,6 +118,7 @@ In the trace builder that consumes ticket 014's evaluator results, populate `tur
 ## Outcome
 
 Completed: 2026-05-19
+Outcome amended: 2026-05-19
 
 Implemented the Phase 4 turn-shape trace contract extension:
 
@@ -126,7 +127,7 @@ Implemented the Phase 4 turn-shape trace contract extension:
 - Wired policy evaluation metadata and diagnostics output so selected-candidate turn-shape evaluator results appear under `agentDecision.turnShape`.
 - Added `packages/engine/test/unit/agents/turn-shape-trace-ordering.test.ts` and `packages/engine/test/unit/agents/turn-shape-trace-caps.test.ts`.
 
-No game-specific identifiers were added to trace code. FITL evaluator authoring, the no-additional-preview-drive architectural probe, and full evaluator-using profile determinism remain with `tickets/182STRSTRPOL-016.md` and `tickets/182STRSTRPOL-017.md`.
+No game-specific identifiers were added to trace code. The FITL evaluator authoring, no-additional-preview-drive architectural probe, and full evaluator-using profile determinism were completed and archived in `archive/tickets/182STRSTRPOL-016.md` and `archive/tickets/182STRSTRPOL-017.md`.
 
 Source-size ledger:
 

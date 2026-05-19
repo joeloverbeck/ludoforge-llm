@@ -7,6 +7,7 @@ import { createGameDefRuntime } from '../../../src/kernel/index.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
 import { probes as arvnActionDistributionProbes } from './fire-in-the-lake/arvn-action-distribution.probe.js';
 import { probes as arvnModuleActivationProbes } from './fire-in-the-lake/arvn-module-activation.probe.js';
+import { probes as turnShapeMinimumImpactProbes } from './fire-in-the-lake/turn-shape-minimum-impact.probe.js';
 import { runProbe } from './probe-runner.js';
 import type { ProbeLoadedGame, ScenarioId } from './probe-types.js';
 
@@ -23,7 +24,7 @@ const loadFitlGame = (): ProbeLoadedGame => {
 };
 
 describe('fire-in-the-lake policy probes', () => {
-  for (const probe of [...arvnActionDistributionProbes, ...arvnModuleActivationProbes]) {
+  for (const probe of [...arvnActionDistributionProbes, ...arvnModuleActivationProbes, ...turnShapeMinimumImpactProbes]) {
     it(probe.id, () => {
       const result = runProbe(probe, { loadGame: loadFitlGame });
       if (probe.severity === 'architecturalInvariant') {

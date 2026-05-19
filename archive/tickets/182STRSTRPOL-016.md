@@ -102,6 +102,7 @@ Create `packages/engine/test/policy-profile-quality/probes/architectural/turn-sh
 ## Outcome
 
 Completed: 2026-05-19
+Outcome amended: 2026-05-19
 
 Implemented the Phase 4 no-additional-preview-drive architectural probe:
 
@@ -109,7 +110,7 @@ Implemented the Phase 4 no-additional-preview-drive architectural probe:
 - Added `runtimeFailure` capture to the probe runner for matching `PolicyRuntimeError` failures, preserving the structured `POLICY_TURNSHAPE_UNREGISTERED_PREVIEW_DRIVE` signal for assertions.
 - Added `packages/engine/test/policy-profile-quality/probes/assertions/turn-shape-no-additional-preview-drive.ts` and focused assertion tests proving both pass and fail behavior.
 - Added `packages/engine/test/policy-profile-quality/probes/architectural/turn-shape-no-additional-preview-drive.probe.ts`.
-- Wired `architectural.probes.test.ts` to run the new probe against a synthetic turn-shape profile fixture, because FITL evaluator authoring remains owned by `tickets/182STRSTRPOL-017.md`.
+- Wired `architectural.probes.test.ts` to run the new probe against a synthetic turn-shape profile fixture. FITL evaluator authoring was completed and archived in `archive/tickets/182STRSTRPOL-017.md`.
 
 Verification substitution:
 

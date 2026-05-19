@@ -428,7 +428,9 @@ const aggregateWindowSize = (probe: Probe): number | null => {
     return null;
   }
   const windows = probe.assertions.flatMap((assertion) => (
-    assertion.kind === 'actionFamilyDistributionBelow' || assertion.kind === 'moduleActiveContributionRateAtLeast'
+    assertion.kind === 'actionFamilyDistributionBelow'
+      || assertion.kind === 'moduleActiveContributionRateAtLeast'
+      || assertion.kind === 'turnShapeMinimumImpactObservedBoth'
       ? [assertion.windowMinDecisions]
       : []
   ));

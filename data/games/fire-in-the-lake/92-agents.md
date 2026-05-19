@@ -346,6 +346,31 @@ agents:
           traceLabel: "fallback: pass action when no other moves"
         onUnavailable: noFire
 
+    turnShapeEvaluators:
+      currentTurnImpact:
+        traceLabel: "current turn impact"
+        source: currentPreviewDrive
+        bounds:
+          depthCapRef: profile.preview.inner.depthCap
+          maxSyntheticDecisions: 8
+        objectives:
+          - id: self-standing
+            delta:
+              ref: victory.currentMargin.self
+          - id: leader-denial
+            delta:
+              ref: victory.currentMargin.role:currentLeader
+        minimumImpact:
+          or:
+            - gt:
+                - { ref: turnShape.currentTurnImpact.objective.self-standing.delta }
+                - 0
+            - lt:
+                - { ref: turnShape.currentTurnImpact.objective.leader-denial.delta }
+                - 0
+        fallback:
+          onPreviewUnavailable: traceOnly
+
     considerations:
       preferProjectedSelfMargin:
         scopes: [move]
@@ -695,6 +720,8 @@ agents:
           - dropPassWhenOtherMovesExist
         strategyModules:
           - buildPoliticalEngine
+        turnShapeEvaluators:
+          - currentTurnImpact
         considerations:
           - preferProjectedSelfMargin
           - preferProjectedRank

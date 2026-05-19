@@ -7,6 +7,7 @@ import { createGameDefRuntime } from '../../../src/kernel/index.js';
 import { getFitlProductionFixture, getTexasProductionFixture } from '../../helpers/production-spec-helpers.js';
 import { probes as architecturalProbes } from './architectural/constructibility-published.probe.js';
 import { probes as fitlProbes } from './fire-in-the-lake/arvn-action-distribution.probe.js';
+import { probes as turnShapeMinimumImpactProbes } from './fire-in-the-lake/turn-shape-minimum-impact.probe.js';
 import { runProbe } from './probe-runner.js';
 import type { Probe, ProbeLoadedGame, ProbeLoadGameRequest } from './probe-types.js';
 
@@ -15,6 +16,7 @@ const HARD_BUDGET_MULTIPLIER = 10;
 
 const registeredProbes = [
   ...fitlProbes,
+  ...turnShapeMinimumImpactProbes,
   ...architecturalProbes,
 ] as readonly Probe[];
 

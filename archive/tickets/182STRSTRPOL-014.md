@@ -126,6 +126,8 @@ Instrument the inner-preview chain to track whether any new drive fires during t
 
 ## Implementation Outcome (2026-05-19)
 
+Outcome amended: 2026-05-19
+
 Implemented the Phase 4 runtime evaluator slice for `turnShapeEvaluators`:
 
 - Added `packages/engine/src/agents/turn-shape-eval.ts` for preview-status classification, objective value/delta evaluation against the already-driven projected state, and `maxSyntheticDecisions` enforcement.
@@ -137,7 +139,7 @@ Implemented the Phase 4 runtime evaluator slice for `turnShapeEvaluators`:
   - `packages/engine/test/unit/agents/turn-shape-preview-fallback.test.ts`
   - `packages/engine/test/unit/agents/turn-shape-bounded-execution.test.ts`
 
-Out-of-scope work remains with the named siblings: trace formatting in `archive/tickets/182STRSTRPOL-015.md`, architectural probe coverage in `tickets/182STRSTRPOL-016.md`, and FITL authored conformance in `tickets/182STRSTRPOL-017.md`.
+Out-of-scope sibling work was completed and archived in `archive/tickets/182STRSTRPOL-015.md`, `archive/tickets/182STRSTRPOL-016.md`, and `archive/tickets/182STRSTRPOL-017.md`.
 
 Source-size ledger:
 

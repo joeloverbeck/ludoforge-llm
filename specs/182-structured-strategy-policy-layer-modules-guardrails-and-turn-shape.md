@@ -524,4 +524,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`archive/tickets/182STRSTRPOL-014.md`](../archive/tickets/182STRSTRPOL-014.md) — Phase 4 — Turn-shape evaluator runtime + bounded chain consumption
 - [`archive/tickets/182STRSTRPOL-015.md`](../archive/tickets/182STRSTRPOL-015.md) — Phase 4 — Turn-shape evaluator trace contract extension
 - [`archive/tickets/182STRSTRPOL-016.md`](../archive/tickets/182STRSTRPOL-016.md) — Phase 4 — Architectural-invariant probe (no additional preview drive)
-- [`tickets/182STRSTRPOL-017.md`](../tickets/182STRSTRPOL-017.md) — Phase 4 — FITL turn-shape evaluator authoring + `minimumImpactSatisfied` conformance probe
+- [`archive/tickets/182STRSTRPOL-017.md`](../archive/tickets/182STRSTRPOL-017.md) — Phase 4 — FITL turn-shape evaluator authoring + `minimumImpactSatisfied` conformance probe

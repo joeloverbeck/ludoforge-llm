@@ -17,6 +17,7 @@ import { evaluateSelectedTargetSatisfiesSelector } from './selected-target-satis
 import { evaluateTraceContainsField } from './trace-contains-field.js';
 import { evaluateTraceHasAdvisory } from './trace-has-advisory.js';
 import { evaluateTraceLacksAdvisory } from './trace-lacks-advisory.js';
+import { evaluateTurnShapeMinimumImpactObserved } from './turn-shape-minimum-impact-observed.js';
 import { evaluateTurnShapeNoAdditionalPreviewDrive } from './turn-shape-no-additional-preview-drive.js';
 
 export const dispatchAssertion = (
@@ -61,6 +62,8 @@ export const dispatchAssertion = (
       return evaluateGuardrailNotFired({ ...context, assertion });
     case 'guardrailFiresUniformAcross':
       return evaluateGuardrailFiresUniformAcross({ ...context, assertion });
+    case 'turnShapeMinimumImpactObservedBoth':
+      return evaluateTurnShapeMinimumImpactObserved({ ...context, assertion });
     case 'turnShapeNoAdditionalPreviewDrive':
       return evaluateTurnShapeNoAdditionalPreviewDrive({ ...context, assertion });
     default:

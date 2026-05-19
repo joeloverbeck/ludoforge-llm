@@ -77,6 +77,12 @@ export type ProbeAssertion =
       readonly threshold: number;
       readonly windowMinDecisions: number;
     }
+  | {
+      readonly id?: string;
+      readonly kind: 'turnShapeMinimumImpactObservedBoth';
+      readonly evaluatorId: string;
+      readonly windowMinDecisions: number;
+    }
   | { readonly id?: string; readonly kind: 'turnShapeNoAdditionalPreviewDrive' };
 
 export interface Probe {

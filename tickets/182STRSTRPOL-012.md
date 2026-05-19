@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — compiler-side lint + audit-harness-side lint
-**Deps**: `tickets/182STRSTRPOL-011.md`
+**Deps**: `archive/tickets/182STRSTRPOL-011.md`
 
 ## Problem
 

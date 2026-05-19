@@ -1,6 +1,6 @@
 # 182STRSTRPOL-011: Phase 3 — Guardrail conformance tests (4 severity tiers)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new conformance test files under `packages/engine/test/integration/agents/`
@@ -101,3 +101,36 @@ Test that a guardrail-using profile (post-migration FITL works) produces bit-ide
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/agents/guardrail-conformance-*.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/determinism/guardrail-replay-determinism.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19
+
+What changed:
+- Added the four requested guardrail conformance files under `packages/engine/test/integration/agents/`, plus a shared synthetic guardrail fixture.
+- `guardrail-conformance-prune.test.ts` covers both the migrated production FITL `dropPassWhenOtherMovesExist` guardrail and a synthetic `onAllPruned` pass-fallback frame.
+- `guardrail-conformance-demote.test.ts`, `guardrail-conformance-warn.test.ts`, and `guardrail-conformance-audit-only.test.ts` cover the declared score/trace effects for each severity tier.
+- Added `packages/engine/test/determinism/guardrail-replay-determinism.test.ts` to assert byte-identical guardrail decisions/traces across two same-seed evaluations.
+- Replaced the stale probe-harness guardrail assertion stubs with real `guardrailFired` / `guardrailNotFired` trace checks; the auditOnly conformance test proves the marker is probe-visible.
+
+Deviations from original plan:
+- The fallback-frame proof uses a small synthetic guardrail fixture, while the production FITL assertion covers the migrated prune behavior on a real FITL frontier. This keeps the fallback edge deterministic without forcing a fragile production state shape where FITL naturally has only `pass`.
+- The existing `guardrail-pass-fallback.test.ts` remains as a sibling integration test; this ticket adds the named conformance file rather than replacing that earlier proof.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/integration/agents/guardrail-conformance-*.test.js packages/engine/dist/test/determinism/guardrail-replay-determinism.test.js packages/engine/dist/test/policy-profile-quality/probes/assertions/guardrail-fired.test.js packages/engine/dist/test/policy-profile-quality/probes/assertions/guardrail-not-fired.test.js` — passed, 11 tests.
+- `pnpm -F @ludoforge/engine test` — passed, default package lane summary `98/98 files passed`.
+- `pnpm turbo lint` — passed, 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed, 3/3 tasks successful.
+- `pnpm turbo build` — passed, 3/3 tasks successful.
+- `pnpm turbo test` — passed, 5/5 tasks successful; engine default lane summary `98/98 files passed`.
+- `pnpm run check:ticket-deps` — passed for 7 active tickets and 2439 archived tickets.
+
+Terminal closeout:
+- `post-review handoff`: post-ticket review run by the spec-ticket harness; archived after no must-fix-now cleanup was required.
+- `ticket graph/status integrity`: `pnpm run check:ticket-deps` passed after terminal status edit.
+- `source-size decision`: not triggered; new/modified source test files are below repo guidance and no production source file grew.
+- `untracked/touched-file hygiene`: `git status --short`, tracked `git diff --check`, and untracked trailing-whitespace scan were clean before archival.
+- `proof lane classification`: focused conformance/replay/probe assertions, package engine suite, and root turbo build/test/lint/typecheck are green.
+- `terminal status allowed`: every named deliverable is implemented or explicitly covered by the synthetic/production split above.

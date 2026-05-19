@@ -3,6 +3,7 @@ import type { Probe, ProbeAssertion, ProbeMatch, ProbeOutcome } from '../probe-t
 import { evaluateActionFamilyDistributionBelow } from './action-family-distribution-below.js';
 import { assertNever } from './common.js';
 import { evaluateGuardrailFired } from './guardrail-fired.js';
+import { evaluateGuardrailFiresUniformAcross } from './guardrail-fires-uniform-across.js';
 import { evaluateGuardrailNotFired } from './guardrail-not-fired.js';
 import { evaluateModuleActiveContributionRateAtLeast } from './module-active-contribution-rate-at-least.js';
 import { evaluatePreviewRefStatusIn } from './preview-ref-status-in.js';
@@ -57,6 +58,8 @@ export const dispatchAssertion = (
       return evaluateGuardrailFired({ ...context, assertion });
     case 'guardrailNotFired':
       return evaluateGuardrailNotFired({ ...context, assertion });
+    case 'guardrailFiresUniformAcross':
+      return evaluateGuardrailFiresUniformAcross({ ...context, assertion });
     default:
       return assertNever(assertion);
   }

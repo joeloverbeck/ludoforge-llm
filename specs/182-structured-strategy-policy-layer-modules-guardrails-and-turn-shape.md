@@ -518,7 +518,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`archive/tickets/182STRSTRPOL-009.md`](../archive/tickets/182STRSTRPOL-009.md) — Phase 3 — Guardrail trace formatting (top-K caps + deterministic ordering)
 - [`archive/tickets/182STRSTRPOL-010.md`](../archive/tickets/182STRSTRPOL-010.md) — Phase 3 — Migration atomic: `pruningRules` → `guardrails` (data + tests + bucket removal)
 - [`archive/tickets/182STRSTRPOL-011.md`](../archive/tickets/182STRSTRPOL-011.md) — Phase 3 — Guardrail conformance tests (4 severity tiers)
-- [`tickets/182STRSTRPOL-012.md`](../tickets/182STRSTRPOL-012.md) — Phase 3 — Guardrail profile-quality lint warnings (`RARELY_SAFE` + `FIRES_UNIFORM`)
+- [`archive/tickets/182STRSTRPOL-012.md`](../archive/tickets/182STRSTRPOL-012.md) — Phase 3 — Guardrail profile-quality lint warnings (`RARELY_SAFE` + `FIRES_UNIFORM`)
 - [`archive/tickets/182STRSTRPOL-018.md`](../archive/tickets/182STRSTRPOL-018.md) — Phase 3 — Define and implement guardrail ref contract
 - [`tickets/182STRSTRPOL-013.md`](../tickets/182STRSTRPOL-013.md) — Phase 4 — Turn-shape evaluators library bucket + compiled IR + compiler diagnostics
 - [`tickets/182STRSTRPOL-014.md`](../tickets/182STRSTRPOL-014.md) — Phase 4 — Turn-shape evaluator runtime + bounded chain consumption

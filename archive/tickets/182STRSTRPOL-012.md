@@ -1,6 +1,6 @@
 # 182STRSTRPOL-012: Phase 3 — Guardrail profile-quality lint warnings (`RARELY_SAFE` + `FIRES_UNIFORM`)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — compiler-side lint + audit-harness-side lint
@@ -88,3 +88,36 @@ Integrate into the existing probe-runner so any guardrail-using profile observes
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/guardrail-rarely-safe-lint.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/guardrail-fires-uniform-lint.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19
+
+What changed:
+- Added `POLICY_PROFILE_QUALITY_GUARDRAIL_RARELY_SAFE` as a non-blocking compiler warning for `severity: prune` guardrails whose compiled dependency metadata has no state feature, candidate feature, aggregate, or selector dependency.
+- Kept the compile-time warning in `compile-agent-guardrails.ts`, the guardrail compiler sibling, instead of growing the oversized `compile-agents.ts` orchestration file.
+- Added the probe assertion kind `guardrailFiresUniformAcross`, which fails with `POLICY_PROFILE_QUALITY_GUARDRAIL_FIRES_UNIFORM` when a guardrail fires at or above the configured rate over an `occurrence: every` decision window.
+- Added focused positive/negative tests for both lint surfaces and dispatcher coverage for the new assertion kind.
+
+Deviations from original plan:
+- The `RARELY_SAFE` check uses the already-compiled direct dependency metadata for the guardrail expression: state features, candidate features, aggregates, and selectors count as selective. It does not add a new recursive strategic-condition expansion pass because no current compiler dependency object exposes that contract directly.
+- `FIRES_UNIFORM` is represented as an audit-harness assertion outcome, matching the existing profile-quality probe pattern, rather than a compiler diagnostic.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed after the final source/test shape.
+- `node --test packages/engine/dist/test/unit/cnl/guardrail-rarely-safe-lint.test.js` — passed, 2 tests.
+- `node --test packages/engine/dist/test/policy-profile-quality/guardrail-fires-uniform-lint.test.js` — passed, 2 tests.
+- `node --test packages/engine/dist/test/policy-profile-quality/probes/assertions/dispatch.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine test` — passed, default package lane summary `98/98 files passed`.
+- `pnpm turbo build` — passed, 3/3 tasks successful.
+- `pnpm turbo lint` — passed, 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed, 3/3 tasks successful.
+- `pnpm turbo test` — passed, 5/5 tasks successful; engine default lane summary `98/98 files passed`; runner lane passed `205` files and `2019` tests.
+
+Terminal closeout:
+- `post-review handoff`: ready for post-ticket review and archival by the spec-ticket harness.
+- `ticket graph/status integrity`: to be rechecked after archival because this ticket still has an active-path spec reference until the archive move occurs.
+- `source-size decision`: production files remain below guidance in the touched seam: `compile-agent-guardrails.ts` is 279 lines and `compiler-diagnostic-codes.ts` is 438 lines. New files are 89, 62, and 29 lines.
+- `untracked/touched-file hygiene`: tracked `git diff --check`, ticket dependency checks, and stale active-path sweeps are part of the post-review archival step.
+- `proof lane classification`: focused lint tests, package engine suite, and root turbo build/test/lint/typecheck are green.
+- `terminal status allowed`: every named deliverable is implemented or explicitly classified above.

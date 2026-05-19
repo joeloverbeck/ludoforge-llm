@@ -116,6 +116,7 @@ export function compileGuardrailDefinition(options: GuardrailCompileOptions): Ag
     when.dependencies,
     ...(penalty === null ? [] : [penalty.dependencies]),
   ]);
+  warnIfPruneGuardrailHasNoSelectiveDependency(guardrailId, severity, dependencies, basePath, diagnostics);
   return {
     id: guardrailId as AgentGuardrailWithExpr['id'],
     traceLabel: def.traceLabel ?? guardrailId,
@@ -129,6 +130,32 @@ export function compileGuardrailDefinition(options: GuardrailCompileOptions): Ag
     costClass: deriveGuardrailCostClass(when.costClass),
     dependencies,
   };
+}
+
+function warnIfPruneGuardrailHasNoSelectiveDependency(
+  guardrailId: string,
+  severity: GuardrailDef['severity'],
+  dependencies: CompiledAgentDependencyRefs,
+  basePath: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (severity !== 'prune' || hasSelectiveGuardrailDependency(dependencies)) {
+    return;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.POLICY_PROFILE_QUALITY_GUARDRAIL_RARELY_SAFE,
+    path: `${basePath}.when`,
+    severity: 'warning',
+    message: `Prune guardrail "${guardrailId}" does not depend on state- or candidate-varying evidence.`,
+    suggestion: 'Prefer demote or warn unless the prune condition is proven selective across the published frontier.',
+  });
+}
+
+function hasSelectiveGuardrailDependency(dependencies: CompiledAgentDependencyRefs): boolean {
+  return dependencies.stateFeatures.length > 0
+    || dependencies.candidateFeatures.length > 0
+    || dependencies.aggregates.length > 0
+    || (dependencies.selectors?.length ?? 0) > 0;
 }
 
 export function parseGuardrailRef(refPath: string): {

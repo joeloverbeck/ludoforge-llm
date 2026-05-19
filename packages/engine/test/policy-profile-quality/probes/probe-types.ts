@@ -69,7 +69,14 @@ export type ProbeAssertion =
   | { readonly id?: string; readonly kind: 'traceLacksAdvisory'; readonly code: AdvisoryCode }
   | { readonly id?: string; readonly kind: 'publishedFrontierConstructible' }
   | { readonly id?: string; readonly kind: 'guardrailFired'; readonly guardrail: GuardrailId }
-  | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId };
+  | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId }
+  | {
+      readonly id?: string;
+      readonly kind: 'guardrailFiresUniformAcross';
+      readonly guardrail: GuardrailId;
+      readonly threshold: number;
+      readonly windowMinDecisions: number;
+    };
 
 export interface Probe {
   readonly id: string;

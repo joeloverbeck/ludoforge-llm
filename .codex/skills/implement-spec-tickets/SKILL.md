@@ -116,6 +116,8 @@ Use the live `implement-ticket` skill exactly. It owns reassessment, implementat
 
 If any user-approved `1-3-1`, `docs/FOUNDATIONS.md` reassessment, or other explicit boundary reset changes the active ticket's deliverable, proof lane, dependency story, or ownership boundary, patch the affected active ticket/spec/sibling artifacts before source or test edits resume. Then re-emit a compact working checkpoint that names the approved option, invalidated proof lanes, replacement proof plan, and next terminal-status boundary. This applies whether or not the ticket entered a durable blocked state.
 
+If a user-approved `1-3-1` resolves only a process gate, such as a source-size deferral, commit-shape choice, or proof sequencing decision, and does not change the ticket's behavior, deliverables, acceptance criteria, proof lanes, dependency story, or ownership boundary, record that narrower authorization in the active ticket outcome or state/checkpoint and continue under the existing ticket boundary. Do not force a broad boundary-reset rewrite or rerun proof solely because of the process approval. Still rerun proof when the approval leads to code, acceptance wording, or proof-story edits that invalidate earlier evidence.
+
 If a red proof lane or repo invariant exposes a contradiction between the active ticket/spec wording and `docs/FOUNDATIONS.md`, `AGENTS.md`, or a current repo policy test, stop before proposing implementation choices as neutral alternatives. Present the problem with three options already ranked by Foundations/repo-rule alignment, explicitly reject or demote any option that would weaken the rule, recommend the compliant option, and wait for user confirmation before patching the boundary or resuming implementation. After confirmation, record the approved option in the affected active ticket/spec/sibling artifacts and rerun the affected proof lanes before terminal status or archival.
 
 If implementation blocks:
@@ -255,6 +257,8 @@ Required-visible-block checkpoint:
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, final state-file validation, and the full `Harness handoff`. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+
 Manual review is not a substitute for a child-skill workflow unless it is explicitly classified in this checkpoint. If you manually perform any `post-ticket-review` step, still emit the `Post-ticket review:` block and classify it as `child-skill invocation`, `manual late recovery`, or `not_applicable`.
 
 If a required-visible block was missed at its intended point, emit a `late harness recovery checkpoint` before committing or finalizing. Name the missed block, classify why it was late, provide the current truthful contents, and do not describe the recovered block as timely in the commit or handoff.
@@ -303,7 +307,8 @@ After committing state separately, revalidate the final handoff state before res
 
 1. Refresh `git status --short`; `dirty_state` in the state file must match the final worktree classification.
 2. Re-read `.codex/run-state/implement-spec-tickets.json` and confirm the paths, queue, `last_work_commit`, `last_state_commit`, `phase`, `in_progress_ticket`, and `dirty_state` describe the post-state-commit repo state.
-3. If the state-only commit was amended, rerun the same checks against the amended commit before finalizing.
+3. Verify the recorded `last_work_commit` exactly matches the finalized work commit SHA. A compact recipe is: `git show --no-patch --format=%H <work-commit>` for the work commit you intend to record, then compare that full SHA to the state file. If the value is not `"none"`, also verify it is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git check.
+4. If the state-only commit was amended, rerun the same checks against the amended commit before finalizing.
 
 Print:
 

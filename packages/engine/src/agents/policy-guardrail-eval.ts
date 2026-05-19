@@ -10,7 +10,7 @@ import {
   PolicyRuntimeError,
 } from './policy-evaluation-core.js';
 
-interface GuardrailEvaluationCandidate extends PolicyEvaluationCandidate {
+export interface GuardrailEvaluationCandidate extends PolicyEvaluationCandidate {
   readonly prunedBy: string[];
 }
 
@@ -22,6 +22,7 @@ interface GuardrailDispatchTraceBuilder {
 export interface GuardrailDispatchResult<TCandidate extends GuardrailEvaluationCandidate> {
   readonly activeCandidates: TCandidate[];
   readonly penaltiesByStableMoveKey: ReadonlyMap<string, number>;
+  readonly allPrunedGuardrailId?: string;
   readonly trace?: PolicyGuardrailTrace;
 }
 
@@ -110,8 +111,12 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
   let activeCandidates = [...input.activeCandidates];
   const penaltiesByStableMoveKey = new Map<string, number>();
   const traceBuilder = createGuardrailTraceBuilder();
+  let allPrunedGuardrailId: string | undefined;
 
   for (const guardrailId of input.profile.use.guardrails ?? []) {
+    if (activeCandidates.length === 0) {
+      break;
+    }
     const guardrail = input.catalog.compiled.guardrails?.[guardrailId];
     if (guardrail === undefined) {
       throw new PolicyRuntimeError({
@@ -189,11 +194,8 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
 
     if (prunedAny) {
       if (activeCandidates.length === 0) {
-        throw new PolicyRuntimeError({
-          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
-          message: `Guardrail "${guardrailId}" removed every candidate.`,
-          detail: { guardrailId },
-        });
+        allPrunedGuardrailId = guardrailId;
+        break;
       }
       input.evaluation.setCurrentCandidates(activeCandidates);
     }
@@ -203,6 +205,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
   return {
     activeCandidates,
     penaltiesByStableMoveKey,
+    ...(allPrunedGuardrailId === undefined ? {} : { allPrunedGuardrailId }),
     ...(trace === undefined ? {} : { trace }),
   };
 }

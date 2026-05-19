@@ -2263,6 +2263,14 @@ export interface PolicyModuleInactiveTraceEntry {
 export interface PolicyGuardrailTrace {
   readonly fired: readonly PolicyGuardrailFiredEntry[];
   readonly notFiredTop: readonly PolicyGuardrailNotFiredEntry[];
+  readonly allPrunedFallback?: PolicyGuardrailAllPrunedFallback;
+}
+
+export interface PolicyGuardrailAllPrunedFallback {
+  readonly guardrailId: string;
+  readonly actionId: string;
+  readonly traceLabel: string;
+  readonly constructibilityFailure?: true;
 }
 
 export interface PolicyGuardrailFiredEntry {

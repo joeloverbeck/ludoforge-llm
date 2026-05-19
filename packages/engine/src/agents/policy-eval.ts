@@ -59,6 +59,7 @@ import {
 } from './preview-budget-allocator.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+import { resolveAllPrunedGuardrailFallback } from './policy-guardrail-fallback.js';
 import { dispatchGuardrails } from './policy-guardrail-eval.js';
 
 export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
@@ -708,7 +709,41 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         activeCandidates,
         collectDiagnostics,
       });
-      activeCandidates = [...guardrailDispatch.activeCandidates];
+      const guardrailFallback = resolveAllPrunedGuardrailFallback({
+        def: input.def,
+        catalog,
+        allCandidates: candidates,
+        dispatch: guardrailDispatch,
+        collectDiagnostics,
+      });
+      const guardrailTrace = guardrailFallback.trace;
+      if (guardrailFallback.kind === 'constructible') {
+        activeCandidates = [...guardrailFallback.activeCandidates];
+        activeCandidates[0]!.selectionReason = 'fallbackExplicit';
+        evaluation.setCurrentCandidates(activeCandidates);
+      } else if (guardrailFallback.kind === 'notConstructible') {
+        return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, {
+          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
+          message: `Guardrail "${guardrailFallback.guardrailId}" removed every candidate and fallback action "${guardrailFallback.actionId}" was not constructible.`,
+          detail: {
+            guardrailId: guardrailFallback.guardrailId,
+            actionId: guardrailFallback.actionId,
+            signal: 'POLICY_GUARDRAIL_FALLBACK_NOT_CONSTRUCTIBLE',
+          },
+        }, profile.fingerprint, collectDiagnostics, evaluation, guardrailTrace === undefined ? {} : { guardrails: guardrailTrace });
+      } else {
+        activeCandidates = [...guardrailFallback.activeCandidates];
+      }
+      if (activeCandidates.length === 0) {
+        const guardrailId = guardrailDispatch.allPrunedGuardrailId;
+        throw new PolicyRuntimeError({
+          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
+          message: guardrailId === undefined
+            ? 'Guardrails removed every candidate.'
+            : `Guardrail "${guardrailId}" removed every candidate.`,
+          detail: guardrailId === undefined ? {} : { guardrailId },
+        });
+      }
 
       for (const pruningRuleId of profile.use.pruningRules) {
         const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
@@ -787,7 +822,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           );
       const previewAllowedKeys = allocatorOutput.allowedKeys;
       for (const candidate of activeCandidates) {
-        candidate.selectionReason = allocatorOutput.selectionReason.get(candidate.stableMoveKey) ?? 'gated';
+        candidate.selectionReason = candidate.selectionReason === 'fallbackExplicit'
+          ? 'fallbackExplicit'
+          : allocatorOutput.selectionReason.get(candidate.stableMoveKey) ?? 'gated';
       }
       let previewGatedCount = 0;
       let maxCachedGatedPreviewScore = Number.NEGATIVE_INFINITY;
@@ -990,7 +1027,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
           ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
           ...(moduleTrace === undefined ? {} : { modules: moduleTrace }),
-          ...(guardrailDispatch.trace === undefined ? {} : { guardrails: guardrailDispatch.trace }),
+          ...(guardrailTrace === undefined ? {} : { guardrails: guardrailTrace }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),
@@ -1120,6 +1157,7 @@ function failureWithMetadata(
   profileFingerprint: string | null = null,
   collectDiagnostics = true,
   evaluation?: PolicyEvaluationContext,
+  extraMetadata: Partial<Pick<PolicyEvaluationMetadata, 'guardrails'>> = {},
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -1138,6 +1176,7 @@ function failureWithMetadata(
       previewUsage: collectDiagnostics && evaluation !== undefined
         ? summarizePreviewUsage(candidates, 'exactWorld', evaluation)
         : emptyPreviewUsage('exactWorld'),
+      ...extraMetadata,
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,

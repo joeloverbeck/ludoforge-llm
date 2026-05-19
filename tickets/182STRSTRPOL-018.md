@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — Spec 182 ref table, `CompiledAgentPolicyRef`, compiler lowering/diagnostics, runtime resolution, tests
-**Deps**: `archive/tickets/182STRSTRPOL-007.md`, `tickets/182STRSTRPOL-009.md`
+**Deps**: `archive/tickets/182STRSTRPOL-007.md`, `archive/tickets/182STRSTRPOL-009.md`
 
 ## Problem
 

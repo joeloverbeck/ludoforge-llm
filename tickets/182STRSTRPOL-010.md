@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — atomic cut spanning ~9 source files, ~20+ test files, 1 data file (per Foundation #14)
-**Deps**: `archive/tickets/182STRSTRPOL-008.md`, `tickets/182STRSTRPOL-009.md`
+**Deps**: `archive/tickets/182STRSTRPOL-008.md`, `archive/tickets/182STRSTRPOL-009.md`
 
 ## Problem
 

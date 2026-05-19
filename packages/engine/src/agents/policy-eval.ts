@@ -707,7 +707,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         catalog,
         evaluation,
         activeCandidates,
-        collectDiagnostics,
+        collectDiagnostics, traceLevel: input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
       });
       const guardrailFallback = resolveAllPrunedGuardrailFallback({
         def: input.def,

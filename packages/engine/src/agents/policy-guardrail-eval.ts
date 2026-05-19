@@ -9,6 +9,11 @@ import {
   type PolicyEvaluationCandidate,
   PolicyRuntimeError,
 } from './policy-evaluation-core.js';
+import {
+  buildGuardrailTrace,
+  type GuardrailNotFiredTraceInput,
+  type GuardrailTraceLevel,
+} from './policy-guardrail-trace.js';
 
 export interface GuardrailEvaluationCandidate extends PolicyEvaluationCandidate {
   readonly prunedBy: string[];
@@ -16,7 +21,7 @@ export interface GuardrailEvaluationCandidate extends PolicyEvaluationCandidate 
 
 interface GuardrailDispatchTraceBuilder {
   readonly fired: Map<string, PolicyGuardrailTrace['fired'][number]>;
-  readonly notFired: Map<string, PolicyGuardrailTrace['notFiredTop'][number]>;
+  readonly notFired: Map<string, GuardrailNotFiredTraceInput>;
 }
 
 export interface GuardrailDispatchResult<TCandidate extends GuardrailEvaluationCandidate> {
@@ -30,16 +35,6 @@ const createGuardrailTraceBuilder = (): GuardrailDispatchTraceBuilder => ({
   fired: new Map(),
   notFired: new Map(),
 });
-
-const guardrailTrace = (builder: GuardrailDispatchTraceBuilder): PolicyGuardrailTrace | undefined => {
-  if (builder.fired.size === 0 && builder.notFired.size === 0) {
-    return undefined;
-  }
-  return {
-    fired: [...builder.fired.values()].sort((left, right) => left.id.localeCompare(right.id)),
-    notFiredTop: [...builder.notFired.values()].sort((left, right) => left.id.localeCompare(right.id)),
-  };
-};
 
 const recordGuardrailFired = (
   builder: GuardrailDispatchTraceBuilder,
@@ -66,6 +61,7 @@ const recordGuardrailFired = (
 const recordGuardrailNotFired = (
   builder: GuardrailDispatchTraceBuilder,
   guardrailId: string,
+  guardrail: GuardrailDef,
   reason: PolicyGuardrailTrace['notFiredTop'][number]['reason'],
   onUnavailable?: GuardrailOnUnavailable,
 ): void => {
@@ -74,6 +70,7 @@ const recordGuardrailNotFired = (
   }
   builder.notFired.set(guardrailId, {
     id: guardrailId,
+    severity: guardrail.severity,
     reason,
     ...(onUnavailable === undefined ? {} : { onUnavailable }),
   });
@@ -107,6 +104,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
   readonly evaluation: PolicyEvaluationContext;
   readonly activeCandidates: readonly TCandidate[];
   readonly collectDiagnostics: boolean;
+  readonly traceLevel?: GuardrailTraceLevel;
 }): GuardrailDispatchResult<TCandidate> {
   let activeCandidates = [...input.activeCandidates];
   const penaltiesByStableMoveKey = new Map<string, number>();
@@ -127,7 +125,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
     }
     if (!guardrailScopesCurrentDecision(guardrail)) {
       if (input.collectDiagnostics) {
-        recordGuardrailNotFired(traceBuilder, guardrailId, 'scopeFiltered');
+        recordGuardrailNotFired(traceBuilder, guardrailId, guardrail, 'scopeFiltered');
       }
       continue;
     }
@@ -150,6 +148,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
           recordGuardrailNotFired(
             traceBuilder,
             guardrailId,
+            guardrail,
             unavailable ? 'previewUnavailable' : 'whenFalse',
             onUnavailable,
           );
@@ -201,7 +200,13 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
     }
   }
 
-  const trace = input.collectDiagnostics ? guardrailTrace(traceBuilder) : undefined;
+  const trace = input.collectDiagnostics
+    ? buildGuardrailTrace({
+        fired: traceBuilder.fired.values(),
+        notFired: traceBuilder.notFired.values(),
+        ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
+      })
+    : undefined;
   return {
     activeCandidates,
     penaltiesByStableMoveKey,

@@ -1,6 +1,6 @@
 # 182STRSTRPOL-009: Phase 3 — Guardrail trace formatting (top-K caps + deterministic ordering)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — trace formatting / mode handling for guardrails block
@@ -83,3 +83,39 @@ Sort `notFiredTop` by `(severity, id asc)` for consistency with `fired`. Verify 
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/guardrail-trace-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19
+Outcome amended: 2026-05-19
+
+What changed:
+- Added `packages/engine/src/agents/policy-guardrail-trace.ts` as the generic guardrail trace formatter.
+- Wired guardrail dispatch to pass trace mode through the formatter before policy metadata emission.
+- Added `packages/engine/test/unit/agents/guardrail-trace-ordering.test.ts` and `packages/engine/test/unit/agents/guardrail-trace-caps.test.ts`.
+
+Behavior:
+- `fired` entries sort deterministically by severity order `prune`, `demote`, `warn`, `auditOnly`, then id.
+- `notFiredTop` entries sort by the same internal severity/id order while keeping the public trace shape unchanged.
+- `summary` emits at most 3 fired and 3 not-fired entries; `verbose` emits up to the existing top-K budget of 5; `debug` emits the full matrix.
+- `allPrunedFallback` is preserved whenever present, including when fired/not-fired lists are empty.
+
+Deviations:
+- The trace formatter source landed as `packages/engine/src/agents/policy-guardrail-trace.ts`; there was no pre-existing `policy-trace-formatter.ts` file to extend.
+- The deterministic replay acceptance is covered by byte-identical guardrail trace output and the existing guardrail severity dispatch determinism test in the broad suite.
+
+Source-size ledger:
+- `packages/engine/src/agents/policy-eval.ts`: 1718 lines before and after; no active growth.
+- `packages/engine/src/agents/policy-guardrail-eval.ts`: 211 -> 216 lines; under guidance.
+- `packages/engine/src/agents/policy-guardrail-trace.ts`: new 77-line helper; under guidance.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/guardrail-trace-*.test.js packages/engine/dist/test/integration/agents/guardrail-pass-fallback.test.js packages/engine/dist/test/integration/agents/guardrail-fallback-not-constructible.test.js` — passed, 7 tests.
+- `pnpm turbo build` — passed, 3 tasks.
+- `pnpm turbo test` — passed, 5 tasks; engine default lane reported 94/94 files passed.
+- `pnpm turbo lint` — passed, 2 tasks.
+- `pnpm turbo typecheck` — passed, 3 tasks.
+
+Post-review:
+- Archived after review; active dependencies were rewritten to `archive/tickets/182STRSTRPOL-009.md`.

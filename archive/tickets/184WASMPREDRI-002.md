@@ -102,7 +102,7 @@ The synthetic fixture definition now declares terminal margins for seats `0` and
 
 No Rust/WASM source change was required. The live generic Rust path already round-trips arbitrary preview-state slots, and the TypeScript production compiler already evaluates non-seat-matrix `surface.victoryCurrentMargin.<role-or-seat>` slots. Adding a forced Rust no-op would have made the proof weaker and less aligned with `docs/FOUNDATIONS.md` #15/#16.
 
-The 15-seed decomposition still reports 264 `unsupported preview surface "victoryCurrentMargin"` rows. Those rows are the approved out-of-scope `$seat` seat-matrix shape from FITL `seatAgg` candidate features, where the current dynamic-row ABI lacks a candidate/ref/seat-context dimension. `tickets/184WASMPREDRI-003.md` now owns documenting and parity-covering that unsupported reason before ticket 004 removes the defensive aggregate fallback.
+The 15-seed decomposition still reports 264 `unsupported preview surface "victoryCurrentMargin"` rows. Those rows are the approved out-of-scope `$seat` seat-matrix shape from FITL `seatAgg` candidate features, where the current dynamic-row ABI lacks a candidate/ref/seat-context dimension. `archive/tickets/184WASMPREDRI-003.md` now owns documenting and parity-covering that unsupported reason before ticket 004 removes the defensive aggregate fallback.
 
 ### Verification
 

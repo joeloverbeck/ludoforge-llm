@@ -171,6 +171,9 @@ const compileProductionPreviewDrive = (
   });
   const rootBindings = buildPolicyWasmPreviewRootBindings(input.candidates, pipeline);
   if (rootBindings === undefined) {
+    // The drive lowers one deterministic action program per batch. Candidate-local
+    // scalar bindings need a per-candidate binding dimension, so they intentionally
+    // return null to the Spec 175 TypeScript fallback path.
     return unsupported('unsupported-effect', 'production-preview-drive.actionBatch', 'production preview-drive requires deterministic shared scalar runtime bindings');
   }
 
@@ -217,6 +220,9 @@ const compileProductionPreviewDrive = (
   for (const surfaceSlot of surfaceSlots) {
     const value = evalPolicyWasmPreviewSurfaceSlot(surfaceSlot, input, slotIndexByGlobalVar, state);
     if (value === undefined) {
+      // Role-based surfaces such as seatAgg's $seat matrix need a candidate/ref/seat
+      // context dimension. A single preview-state slot would collapse seat-specific
+      // evidence, so unsupported surfaces fall back to the TypeScript oracle.
       return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview surface "${surfaceSlot.family}"`);
     }
     state.ops.push({ kind: 'setPreviewSlot', slotIndex: surfaceSlot.slotIndex, value });
@@ -499,6 +505,9 @@ const compileEffects = (
     if ('chooseN' in effect) {
       const chooser = effect.chooseN.chooser;
       if (chooser !== undefined && chooser !== 'active' && chooser !== 'actor') {
+        // Non-origin-seat chooseN completion is agent-guided and can depend on another
+        // seat's policy; the bounded production drive only models origin-seat greedy
+        // publication, so TS fallback preserves the one-rules-protocol result.
         return unsupported('agent-guided-completion', 'production-preview-drive.chooseN', 'only origin-seat greedy chooseN publication is supported');
       }
       const optionValues = evalQueryPreviewValues(effect.chooseN.options, input, state);
@@ -607,6 +616,8 @@ const compileEffects = (
       continue;
     }
 
+    // Any effect without a state-patch lowering is explicitly unsupported rather
+    // than approximated; popInterruptPhase is the Phase 3 covered instance.
     return unsupported(
       'unsupported-effect',
       `production-preview-drive.effect.${policyWasmPreviewEffectKind(effect)}`,

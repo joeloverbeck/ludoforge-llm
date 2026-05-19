@@ -262,6 +262,8 @@ const materializePreviewDynamicRowsWithWasm = (
     return [];
   }
   if (hasCardEventActionCandidate(input.def, input.candidates)) {
+    // Card-event candidates require event-card runtime context outside the bounded
+    // production preview-drive action route, so Spec 175 TS fallback remains the oracle.
     recordProductionPolicyWasmPreviewDrive('unsupported', {
       unsupportedDriveClass: 'unsupported-effect',
       unsupportedOwner: 'production-preview-drive.cardEventAction',

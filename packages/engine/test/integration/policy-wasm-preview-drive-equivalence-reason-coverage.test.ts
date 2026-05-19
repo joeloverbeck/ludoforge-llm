@@ -12,6 +12,7 @@ const expectedEnumeration = [
   'unsupported-effect\u0000production-preview-drive.actionBatch\u0000production preview-drive requires deterministic shared scalar runtime bindings',
   'agent-guided-completion\u0000production-preview-drive.chooseN\u0000only origin-seat greedy chooseN publication is supported',
   'unsupported-effect\u0000production-preview-drive.effect.popInterruptPhase\u0000unsupported production preview-drive effect popInterruptPhase',
+  'unsupported-effect\u0000production-preview-drive.previewStateSlots\u0000unsupported preview surface "victoryCurrentMargin"',
 ] as const;
 
 describe('policy WASM preview-drive unsupported reason coverage', () => {
@@ -23,7 +24,7 @@ describe('policy WASM preview-drive unsupported reason coverage', () => {
     assert.equal(fixtureEnumeration.length, expectedEnumeration.length);
     assert.deepEqual(
       unsupportedPreviewDriveReasonFixtures.map((fixture) => fixture.ownerSlug).sort(),
-      ['actionBatch', 'cardEventAction', 'chooseN', 'popInterruptPhase', 'projectedState'],
+      ['actionBatch', 'cardEventAction', 'chooseN', 'popInterruptPhase', 'projectedState', 'victoryCurrentMarginSeatMatrix'],
     );
   });
 });

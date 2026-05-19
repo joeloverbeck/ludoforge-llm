@@ -1,16 +1,16 @@
 # 184WASMPREDRI-004: Phase 4 — Remove defensive aggregate-coverage fallback
 
-**Status**: PENDING
+**Status**: BLOCKED by prerequisite
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (delete `previewFeatureRowsExerciseAggregate` and inline its call site)
-**Deps**: `archive/tickets/184WASMPREDRI-002.md`, `archive/tickets/184WASMPREDRI-003.md`
+**Deps**: `archive/tickets/184WASMPREDRI-002.md`, `archive/tickets/184WASMPREDRI-003.md`, `tickets/184WASMPREDRI-005.md`
 
 ## Problem
 
 Spec 184 §4 Phase 4 requires removing the defensive `previewFeatureRowsExerciseAggregate` fallback introduced in commit `a651c3a41` ("fix: route preview-classed candidate features through TS when feeding plan aggregates", 2026-05-19). The fallback was a documented temporary workaround pending Spec 184: it forces `materializePreviewDynamicRowsWithWasm` to return `null` for any preview-classed candidate feature that feeds a plan aggregate, routing those features to the Spec 175 TS evaluator instead of letting the WASM preview drive produce a (potentially divergent) projected value.
 
-After tickets 002 and 003 land, every action × profile shape the FITL production tournament exercises is either supported by the WASM drive (a — proven via parity fixture) or formally documented as unsupported with parity coverage (b — proven via reason-coverage fixture). The defensive fallback's reason for existing — silent WASM divergence on preview-aggregate features for unmodeled shapes — no longer applies. Removing it restores Foundation #15 architectural completeness: the WASM drive is engaged on the previously-divergent paths, and Foundation #20 Preview Signal Integrity holds via the documented contract chain.
+After tickets 002 and 003 landed, live proof showed one prerequisite is still missing: `$seat` seat-matrix `victoryCurrentMargin` refs inside aggregate-fed preview candidate features are intentionally documented as unsupported by ticket 003 and covered by TS fallback parity, but removing this aggregate fallback makes `arvn-tournament-wasm-equivalence.test.ts` red at decision 47. This ticket is therefore blocked until `tickets/184WASMPREDRI-005.md` adds the missing dynamic-row ABI support or another Foundations-aligned replacement that preserves the byte-equivalence oracle.
 
 ## Assumption Reassessment (2026-05-19)
 
@@ -20,12 +20,28 @@ After tickets 002 and 003 land, every action × profile shape the FITL productio
 4. `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` is the trigger test. It currently passes because the defensive fallback diverts the divergent path; after removal it must still pass with the WASM drive engaged on the previously-divergent paths.
 5. The defensive-fallback commit (`a651c3a41`) lands on the same branch as the spec; this ticket's diff is the inverse cleanup.
 
+## Boundary Reset (2026-05-19)
+
+User approved option 1 after the removal probe failed: keep the aggregate fallback until `$seat` dynamic-row ABI support exists, and create a successor ticket for the real prerequisite instead of weakening the oracle or widening this cleanup ticket.
+
+Evidence:
+
+1. `pnpm -F @ludoforge/engine build` — passed after the temporary source deletion.
+2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — failed at decision 47 with the original aggregate score divergence: WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower for the non-`tax` candidates that depend on the aggregate-fed preview margin.
+3. The deletion probe was restored; no source change is retained by this ticket.
+
+Corrected boundary:
+
+1. This ticket remains the owner for deleting `previewFeatureRowsExerciseAggregate` only after the missing prerequisite lands.
+2. `tickets/184WASMPREDRI-005.md` owns the prerequisite `$seat` dynamic-row ABI support for aggregate-fed preview refs.
+3. The defensive fallback remains in place to preserve Foundation #20 Preview Signal Integrity and the existing byte-equivalence oracle while that prerequisite is active.
+
 ## Architecture Check
 
-1. Removal restores root-cause architectural completeness (Foundation #15) — the defensive workaround was a documented temporary measure pending Spec 184; tickets 002 and 003 supply the architectural fix.
-2. Determinism preserved (Foundation #8) — WASM/TS equivalence is now guaranteed by tickets 002 and 003 for every shape the FITL production tournament exercises.
+1. Removal restores root-cause architectural completeness (Foundation #15) only after ticket 005 lands. Until then, retaining the fallback is the architectural boundary that preserves the TS oracle.
+2. Determinism preserved (Foundation #8) — WASM/TS equivalence must remain the acceptance gate; the failed removal probe proves the prerequisite is not satisfied yet.
 3. Foundation #14 (No Backwards Compatibility) — the fallback function is deleted, not deprecated; no shim retained.
-4. Foundation #20 (Preview Signal Integrity) — preview refs now resolve via the documented contract chain: WASM drive `ready` → projected value; WASM drive `unsupported` → null-return → TS evaluator (Spec 175). No silent coercion paths remain.
+4. Foundation #20 (Preview Signal Integrity) — preview refs must resolve via a contract chain that preserves byte-equivalent candidate scores. The current chain still requires the aggregate fallback for `$seat` seat-matrix refs until ticket 005 supplies per-seat dynamic rows.
 
 ## What to Change
 
@@ -53,7 +69,7 @@ Run `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs
 
 ## Out of Scope
 
-- Any further drive extension or reason-coverage authoring (tickets 002, 003 are prerequisites that must already cover the surface).
+- Any further drive extension or reason-coverage authoring. Ticket 005 now owns the missing `$seat` dynamic-row prerequisite; tickets 002 and 003 cover the already-landed supported/unsupported proof surface.
 - Spec 175 contract changes — the null-return → TS-fallback architecture stays unchanged; this ticket relies on it.
 - Texas profile-fingerprint stability under schema-empty renames — explicitly out-of-scope per spec §8 and the spec's Non-Goals.
 - Defensive WASM-vs-TS spot-check at preview-drive boundaries — explicitly out-of-scope per spec §8 (future watchdog if drive coverage stays partial).
@@ -61,6 +77,8 @@ Run `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs
 ## Acceptance Criteria
 
 ### Tests That Must Pass
+
+Blocked pending `tickets/184WASMPREDRI-005.md`. Once that prerequisite lands, the following gates remain required:
 
 1. `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` — passes with the defensive fallback removed and the WASM drive engaged on the previously-divergent paths.
 2. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — passes.
@@ -82,7 +100,32 @@ None — this ticket relies on existing tests passing under the new code path. T
 
 ### Commands
 
+Blocked pending `tickets/184WASMPREDRI-005.md`. Once that prerequisite lands, run:
+
 1. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — primary regression gate
 2. `pnpm -F @ludoforge/engine test:integration` — broader equivalence sweep including bytecode and preview-drive equivalence tests
 3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — manual route-count and unsupported-count comparison against baseline
 4. `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck` — full repo quality gate
+
+## Outcome
+
+Blocked: 2026-05-19
+
+What landed:
+
+- No source change. The attempted deletion of `previewFeatureRowsExerciseAggregate` was restored after the trigger proof failed.
+- Ticket/spec ownership was corrected so this deletion waits on `tickets/184WASMPREDRI-005.md`.
+
+Why blocked:
+
+- Removing the fallback before `$seat` dynamic-row ABI support exists makes `arvn-tournament-wasm-equivalence.test.ts` fail at decision 47 with the original aggregate score divergence.
+- Archived ticket 003 intentionally documents the residual `$seat` `victoryCurrentMargin` shape as unsupported with TS fallback parity. That is not enough for this ticket's acceptance criterion, because this ticket removes the aggregate-level fallback that makes the score row byte-equivalent.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed before the deletion probe.
+- `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — failed at decision 47 after fallback removal; source deletion restored.
+
+Next workflow:
+
+- `$implement-ticket tickets/184WASMPREDRI-005.md . Rely on specs/184-wasm-preview-drive-aggregate-coverage.md`

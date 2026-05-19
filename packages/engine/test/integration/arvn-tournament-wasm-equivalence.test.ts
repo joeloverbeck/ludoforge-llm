@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/index.js';
 import { __internal_for_tests as policyWasmRuntimeInternals } from '../../src/agents/policy-wasm-runtime.js';
 import { initializePolicyWasmRuntimeSync } from '../../src/agents/policy-wasm-runtime-node-loader.js';
+import { __internal_for_tests as policyWasmScoreRoutingInternals } from '../../src/agents/policy-wasm-score-routing.js';
 import { createGameDefRuntime, type AgentDecisionTrace, type Decision } from '../../src/kernel/index.js';
 import { runGameSteps } from '../../src/sim/index.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
@@ -50,6 +51,7 @@ const decisionSummary = (decision: Decision | undefined): string => {
 const captureDecisionStream = (wasmEnabled: boolean): {
   readonly decisions: readonly NormalizedDecision[];
   readonly wasmRouteCount: number;
+  readonly wasmPreviewCandidateFeatureRowRouteCount: number;
 } => {
   policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
@@ -86,11 +88,22 @@ const captureDecisionStream = (wasmEnabled: boolean): {
     return {
       decisions,
       wasmRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
+      wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     };
   } finally {
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    policyWasmScoreRoutingInternals.setForceAggregatePreviewRowsThroughWasm(false);
   }
+};
+
+const captureDecisionStreamWithAggregatePreviewRowsThroughWasm = (): {
+  readonly decisions: readonly NormalizedDecision[];
+  readonly wasmRouteCount: number;
+  readonly wasmPreviewCandidateFeatureRowRouteCount: number;
+} => {
+  policyWasmScoreRoutingInternals.setForceAggregatePreviewRowsThroughWasm(true);
+  return captureDecisionStream(true);
 };
 
 describe('ARVN tournament WASM equivalence', () => {
@@ -116,5 +129,21 @@ describe('ARVN tournament WASM equivalence', () => {
         `decision ${index} diverged: WASM ${decisionSummary(wasmOn.decisions[index]?.decision)} vs TypeScript ${decisionSummary(wasmOff.decisions[index]?.decision)}`,
       );
     }
+  });
+
+  it('preserves decision 47 candidate scores when aggregate-fed preview rows use WASM materialization', { timeout: 60_000 }, () => {
+    const wasmOff = captureDecisionStream(false);
+    const wasmOn = captureDecisionStreamWithAggregatePreviewRowsThroughWasm();
+
+    assert.ok(wasmOn.wasmRouteCount > 0, 'WASM-enabled run must exercise the production WASM score-row route');
+    assert.ok(
+      wasmOn.wasmPreviewCandidateFeatureRowRouteCount > 0,
+      'WASM-enabled run must exercise preview candidate-feature row materialization',
+    );
+    assert.deepEqual(
+      wasmOn.decisions[47],
+      wasmOff.decisions[47],
+      `decision 47 diverged: WASM ${decisionSummary(wasmOn.decisions[47]?.decision)} vs TypeScript ${decisionSummary(wasmOff.decisions[47]?.decision)}`,
+    );
   });
 });

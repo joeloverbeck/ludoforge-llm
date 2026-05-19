@@ -59,6 +59,8 @@ interface EncodedPolicyView {
   readonly encoded: EncodedState;
 }
 
+let forceAggregatePreviewRowsThroughWasmForTests = false;
+
 export interface PolicyWasmScoreRoutingCandidate extends PolicyEvaluationCandidate {
   readonly move: Move;
   readonly stableMoveKey: string;
@@ -427,7 +429,7 @@ const previewValueFromWasmRow = (
  * the remaining ARVN decision-47 parity gap that still reproduces after the
  * seat-context dynamic-row work.
  */
-const previewFeatureRowsExerciseAggregate = (
+const candidateFeatureFeedsPlanAggregate = (
   profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
   catalog: AgentPolicyCatalog,
   featureId: string,
@@ -443,6 +445,36 @@ const previewFeatureRowsExerciseAggregate = (
   }
   return false;
 };
+
+const previewFeatureRowsExerciseAggregate = (
+  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
+  catalog: AgentPolicyCatalog,
+  featureId: string,
+): boolean => candidateFeatureFeedsPlanAggregate(profile, catalog, featureId);
+
+const shouldUseTsOracleForPreviewCandidateFeatureRow = (
+  candidate: PolicyWasmScoreRoutingCandidate,
+  value: PolicyValue,
+): boolean =>
+  value === undefined
+  || (candidate.previewOutcome !== undefined
+    && candidate.previewOutcome !== 'ready'
+    && candidate.previewOutcome !== 'stochastic');
+
+const applyAggregatePreviewCandidateFeatureRowOracle = (
+  input: {
+    readonly evaluation: PolicyEvaluationContext;
+    readonly candidates: readonly PolicyWasmScoreRoutingCandidate[];
+  },
+  featureId: string,
+  values: readonly PolicyValue[],
+): readonly PolicyValue[] =>
+  values.map((value, index) => {
+    const candidate = input.candidates[index]!;
+    return shouldUseTsOracleForPreviewCandidateFeatureRow(candidate, value)
+      ? input.evaluation.evaluateCandidateFeature(candidate, featureId)
+      : value;
+  });
 
 export function tryScoreMoveConsiderationsWithWasm(input: {
   readonly runtime: PolicyWasmRuntime;
@@ -508,7 +540,9 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
+    const aggregateFedPreviewFeature = candidateFeatureFeedsPlanAggregate(input.profile, input.catalog, id);
     const precomputedDynamicCandidateFeatures = previewFeatureRowsExerciseAggregate(input.profile, input.catalog, id)
+      && !forceAggregatePreviewRowsThroughWasmForTests
       ? null
       : materializePreviewDynamicRowsWithWasm(
           input,
@@ -530,7 +564,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
-    const values = evaluateDynamicCandidateFeatureRows({
+    const rawValues = evaluateDynamicCandidateFeatureRows({
       def: input.def,
       state: input.state,
       seatId: input.seatId,
@@ -568,11 +602,14 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
         })),
       precomputedDynamicCandidateFeatures,
     });
-    if (values === null) {
+    if (rawValues === null) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       // @policy-wasm-unsupported: null-return
       return false;
     }
+    const values = aggregateFedPreviewFeature
+      ? applyAggregatePreviewCandidateFeatureRowOracle(input, id, rawValues)
+      : rawValues;
     for (const [index, candidate] of input.candidates.entries()) {
       input.evaluation.setCandidateFeatureValue(candidate, id, values[index]);
       if (candidate.previewOutcome === undefined) {
@@ -658,3 +695,9 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   }
   return true;
 }
+
+export const __internal_for_tests = {
+  setForceAggregatePreviewRowsThroughWasm(value: boolean): void {
+    forceAggregatePreviewRowsThroughWasmForTests = value;
+  },
+};

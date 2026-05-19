@@ -1,9 +1,9 @@
 # 184WASMPREDRI-006: Phase 3.6 — Fix remaining decision-47 preview-drive parity gap
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — likely `packages/engine/src/agents/policy-wasm-score-routing.ts`, `packages/engine/src/agents/policy-wasm-production-preview-drive.ts`, `packages/engine-wasm/policy-vm/src/preview_drive.rs`, and focused integration fixtures/tests
+**Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` and `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts`
 **Deps**: `archive/tickets/184WASMPREDRI-005.md`
 
 ## Problem
@@ -19,6 +19,23 @@ Ticket 005's seat-context dynamic-row support was necessary but not sufficient. 
 3. The failure is architecture-relevant, not a harmless score display difference: the candidate-score rows are part of the byte-equivalence oracle required by Spec 184 and Foundations #8, #16, and #20.
 4. `tickets/184WASMPREDRI-004.md` remains the cleanup owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket owns the prerequisite parity fix.
 
+## Boundary Reset (2026-05-20)
+
+User approved option 1 after a live probe confirmed that the remaining decision-47 gap is deeper than the seat-matrix row support from ticket 005 and is not fixed by a generic `chooseN` max-prefix binding model.
+
+Evidence:
+
+1. With the aggregate fallback temporarily bypassed, `pnpm -F @ludoforge/engine build` passed.
+2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` still failed at decision 47: WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower for aggregate-fed margin candidates.
+3. Diagnostic row probes showed the first decisive row mismatch remained `tax|{}|false|operationPlusSpecialActivity`: TypeScript fallback computed `projectedSelfMargin = -3`, while the WASM preview-drive row computed `-1`.
+4. A temporary generic `chooseN` max-prefix binding probe did not make the fallback-bypassed tournament witness pass, so full gated continuation modeling is not a safe same-ticket shortcut.
+
+Corrected boundary:
+
+1. This ticket owns a generic row-level Spec 175 TS-oracle fallback for non-ready aggregate-fed preview candidate-feature rows, so the byte-equivalence oracle stays authoritative when the broad aggregate fallback is bypassed.
+2. This ticket does not own full agent-guided gated continuation modeling in the WASM preview drive.
+3. `tickets/184WASMPREDRI-004.md` remains the only owner for deleting `previewFeatureRowsExerciseAggregate` after this row-level fallback is proven.
+
 ## Architecture Check
 
 1. The TypeScript preview evaluator remains the oracle; this ticket must make the WASM preview-drive path match it rather than weakening the oracle.
@@ -32,9 +49,9 @@ Ticket 005's seat-context dynamic-row support was necessary but not sufficient. 
 
 Reproduce the decision-47 failure with the fallback temporarily disabled and identify the first non-equivalent preview-drive value, status, slot, or candidate row after ticket 005's seat-context support.
 
-### 2. Fix the supported preview-drive path
+### 2. Fix the aggregate-fed row fallback path
 
-Patch the smallest generic production preview-drive, WASM ABI, or score-routing seam that makes the aggregate-fed margin candidate rows byte-equivalent to the TypeScript oracle.
+Patch the smallest generic score-routing seam that makes aggregate-fed preview candidate-feature rows byte-equivalent to the TypeScript oracle when a WASM preview-drive row is unavailable or non-ready. The fallback must be row-local, not a broad aggregate-feature bypass, so supported rows still exercise the WASM preview-drive path.
 
 ### 3. Add focused regression coverage
 
@@ -72,7 +89,8 @@ Do not remove `previewFeatureRowsExerciseAggregate` in this ticket except as a t
 
 1. No game-specific action or profile branching is introduced into engine or WASM production code.
 2. Unsupported preview-drive shapes still return through the Spec 175 null-return fallback path.
-3. Ticket 004 remains the only owner for the durable fallback deletion.
+3. Ticket 004 remains the only owner for the durable `previewFeatureRowsExerciseAggregate` deletion.
+4. Full gated continuation modeling remains out of scope for this ticket unless a later user-approved boundary reset widens the ticket again.
 
 ## Test Plan
 
@@ -86,3 +104,22 @@ Do not remove `previewFeatureRowsExerciseAggregate` in this ticket except as a t
 2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js`
 3. `pnpm -F @ludoforge/engine test:integration:policy-canaries`
 4. `pnpm -F @ludoforge/engine test:integration`
+
+## Outcome (2026-05-20)
+
+Implemented the approved row-level Spec 175 oracle fallback for aggregate-fed preview candidate-feature rows:
+
+1. `policy-wasm-score-routing.ts` now distinguishes candidate features that feed plan aggregates from other preview candidate-feature rows.
+2. Aggregate-fed rows still attempt WASM materialization when the broad aggregate fallback is bypassed, but non-ready or unavailable preview values are replaced row-locally with the TypeScript oracle value instead of poisoning the aggregate with a fallback state value.
+3. A test-only routing hook forces aggregate-fed preview rows through WASM materialization so the regression witness can prove the row-local fallback while ticket 004 still owns durable deletion of `previewFeatureRowsExerciseAggregate`.
+4. `arvn-tournament-wasm-equivalence.test.ts` now includes a focused decision-47 regression test that confirms both the production score-row route and preview candidate-feature WASM materialization path were exercised.
+
+Proof:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — passed, including the new forced-aggregate-preview-row decision-47 witness.
+3. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — passed.
+4. `pnpm -F @ludoforge/engine test:integration` — passed, `311/311` integration files.
+5. `wc -l packages/engine/src/agents/policy-wasm-score-routing.ts packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` — `policy-wasm-score-routing.ts` is 703 lines and the test file is 149 lines; both are under the 800-line cap.
+
+Ticket 004 remains the cleanup owner for removing `previewFeatureRowsExerciseAggregate` and proving the final 15-seed route-count witness.

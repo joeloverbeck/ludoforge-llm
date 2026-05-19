@@ -1,6 +1,6 @@
 # 182STRSTRPOL-014: Phase 4 — Turn-shape evaluator runtime + bounded chain consumption
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, new `packages/engine/src/agents/turn-shape-eval.ts` (or inline in policy-eval), `packages/engine/src/agents/policy-evaluation-core.ts`
@@ -123,3 +123,39 @@ Instrument the inner-preview chain to track whether any new drive fires during t
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/turn-shape-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Implementation Outcome (2026-05-19)
+
+Implemented the Phase 4 runtime evaluator slice for `turnShapeEvaluators`:
+
+- Added `packages/engine/src/agents/turn-shape-eval.ts` for preview-status classification, objective value/delta evaluation against the already-driven projected state, and `maxSyntheticDecisions` enforcement.
+- Extended `PolicyEvaluationContext` so `turnShape.<id>.objective.<objId>.value`, `.delta`, `.minimumImpactSatisfied`, and `.previewStatus` resolve from cached evaluator results.
+- Wired move-scope dispatch in `policy-eval.ts` and microturn option scoring in `policy-agent.ts` / `microturn-option-eval.ts` so planned turn-shape evaluators run before consideration scoring reads their refs.
+- Implemented non-ready preview fallback semantics: unavailable or partial preview marks `minimumImpactSatisfied: false`, preserves explicit `previewStatus`, skips objective evaluation, and applies `fallback.onPreviewUnavailable: demote` penalties when declared.
+- Added runtime tests:
+  - `packages/engine/test/unit/agents/turn-shape-evaluator-basic.test.ts`
+  - `packages/engine/test/unit/agents/turn-shape-preview-fallback.test.ts`
+  - `packages/engine/test/unit/agents/turn-shape-bounded-execution.test.ts`
+
+Out-of-scope work remains with the named siblings: trace formatting in `tickets/182STRSTRPOL-015.md`, architectural probe coverage in `tickets/182STRSTRPOL-016.md`, and FITL authored conformance in `tickets/182STRSTRPOL-017.md`.
+
+Source-size ledger:
+
+| path | before lines | after lines | active growth | crossed cap? | ledger status |
+| --- | ---: | ---: | ---: | --- | --- |
+| `packages/engine/src/agents/policy-eval.ts` | 1670 | 1697 | +27 | no — pre-existing over cap | Narrow dispatch hook only; substantive evaluator logic extracted to new helper. |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2604 | 2737 | +133 | no — pre-existing over cap | Ref-resolution/cache hook retained in context; objective evaluation extracted to new helper. |
+| `packages/engine/src/agents/microturn-option-eval.ts` | 212 | 219 | +7 | no | Under guidance. |
+| `packages/engine/src/agents/turn-shape-eval.ts` | 0 | 97 | +97 | no | New extracted helper. |
+
+The two existing over-guidance source files were already above the repo guidance before this ticket. This implementation kept the evaluator algorithm in the new helper and limited the over-guidance files to integration hooks; a broader split of `policy-eval.ts` / `policy-evaluation-core.ts` would be a separate refactor beyond this runtime ticket.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/turn-shape-*.test.js` — passed; 5 tests / 3 suites.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — initially failed because the three new test files were missing repo-required `@test-class` markers; after adding `// @test-class: architectural-invariant`, passed with 5/5 Turbo tasks successful and engine summary `98/98 files passed`.
+- `pnpm turbo lint` — initially failed on the wrapper `turnShapeEvaluatorIds` argument ordering; after preserving existing positional runtime arguments and forwarding the new evaluator list at the end, passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — final rerun after the wrapper fix passed with 5/5 Turbo tasks successful and engine summary `98/98 files passed`.

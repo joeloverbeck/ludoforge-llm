@@ -378,6 +378,7 @@ const scoreFrontierForTrace = (
         input.runtime,
         previewOptionResolvedRefsByOptionKey?.get(stableMoveKey),
         previewOptionProjectedStateByOptionKey?.get(stableMoveKey),
+        resolvedProfile.profile.plan.turnShapeEvaluators,
       ));
     }
     return {
@@ -432,6 +433,7 @@ const scoreFrontierForTrace = (
       input.runtime,
       previewOptionResolvedRefsByOptionKey?.get(stableMoveKey),
       previewOptionProjectedStateByOptionKey?.get(stableMoveKey),
+      resolvedProfile.profile.plan.turnShapeEvaluators,
     ));
   }
   return {

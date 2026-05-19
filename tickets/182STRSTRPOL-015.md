@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, trace formatting / mode handling for `turnShape` block
-**Deps**: `tickets/182STRSTRPOL-014.md`
+**Deps**: `archive/tickets/182STRSTRPOL-014.md`
 
 ## Problem
 

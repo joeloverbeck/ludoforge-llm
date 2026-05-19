@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new probe assertion under `packages/engine/test/policy-profile-quality/probes/assertions/` (sibling to `selected-not-by-reason.ts`)
-**Deps**: `tickets/182STRSTRPOL-014.md`
+**Deps**: `archive/tickets/182STRSTRPOL-014.md`
 
 ## Problem
 

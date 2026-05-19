@@ -38,6 +38,7 @@ import type {
   PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
+  TurnShapeEvaluatorDef,
   ZoneDef,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
@@ -69,6 +70,11 @@ import {
 } from './policy-strategy-module-eval.js';
 import { buildStrategyModuleTrace } from './policy-strategy-module-trace.js';
 import type { GuardrailRefResult, GuardrailRefView } from './policy-guardrail-eval.js';
+import {
+  evaluateTurnShapeObjectives,
+  type TurnShapeEvaluatorResult,
+  type TurnShapeProjection,
+} from './turn-shape-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -380,6 +386,7 @@ export class PolicyEvaluationContext {
   private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
   private readonly guardrailWhenCache = new Map<string, PolicyValue>();
   private currentGuardrailRefView: GuardrailRefView | undefined;
+  private readonly turnShapeEvaluationCache = new Map<string, TurnShapeEvaluatorResult>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -437,6 +444,7 @@ export class PolicyEvaluationContext {
     this.strategyModuleEvaluationCache.clear();
     this.guardrailWhenCache.clear();
     this.currentGuardrailRefView = undefined;
+    this.turnShapeEvaluationCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -453,6 +461,7 @@ export class PolicyEvaluationContext {
     this.selectorCache.clear();
     this.strategyModuleEvaluationCache.clear();
     this.guardrailWhenCache.clear();
+    this.turnShapeEvaluationCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
@@ -485,6 +494,13 @@ export class PolicyEvaluationContext {
     const value = this.evaluateCompiledExpr(guardrail.when, candidate);
     this.guardrailWhenCache.set(cacheKey, value);
     return value;
+  }
+
+  evaluatePlannedTurnShapeEvaluator(
+    evaluatorId: string,
+    candidate?: PolicyEvaluationCandidate,
+  ): TurnShapeEvaluatorResult {
+    return this.evaluateTurnShapeView(evaluatorId, candidate);
   }
 
   getEvaluatedGuardrailWhenCacheSize(): number {
@@ -1716,7 +1732,7 @@ export class PolicyEvaluationContext {
         }
         return this.evaluateStateFeature(ref.id);
       case 'turnShape':
-        return undefined;
+        return this.resolveTurnShapeRef(ref, candidate);
       case 'seatIntrinsic':
         return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':
@@ -2048,6 +2064,123 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return status.value;
+  }
+
+  private resolveTurnShapeRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'turnShape' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const view = this.evaluateTurnShapeView(ref.evaluatorId, candidate);
+    const { field } = ref;
+    if (field === 'minimumImpactSatisfied') {
+      return view.minimumImpactSatisfied;
+    }
+    if (field === 'previewStatus') {
+      return view.previewStatus;
+    }
+    const objective = view.objectives.find((entry) => entry.id === field.objectiveId);
+    if (field.kind === 'objective.value') {
+      return objective?.value;
+    }
+    return objective?.delta;
+  }
+
+  private evaluateTurnShapeView(
+    evaluatorId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): TurnShapeEvaluatorResult {
+    const cacheKey = `${evaluatorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.turnShapeEvaluationCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const evaluator = this.input.catalog.compiled.turnShapeEvaluators?.[evaluatorId];
+    if (evaluator === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown turn-shape evaluator "${evaluatorId}".`, { evaluatorId });
+    }
+    const hadPreviewOutcome = candidate === undefined || this.input.previewOption !== undefined
+      ? true
+      : this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
+    const projectedState = this.resolveTurnShapeProjection(candidate);
+    const objectiveResult = evaluateTurnShapeObjectives({
+      evaluatorId,
+      evaluator,
+      currentState: this.input.state,
+      evaluateObjectiveExpr: (expr, state) => this.withEvaluationState(state, () => this.evaluateCompiledExpr(expr, candidate)),
+      ...(projectedState === undefined ? {} : { projectedState }),
+    });
+    const provisional: TurnShapeEvaluatorResult = {
+      evaluatorId,
+      objectives: objectiveResult.objectives,
+      minimumImpactSatisfied: false,
+      previewStatus: objectiveResult.previewStatus,
+      ...this.evaluateTurnShapeDemotePenalty(evaluatorId, evaluator, objectiveResult.previewStatus, candidate),
+    };
+    this.turnShapeEvaluationCache.set(cacheKey, provisional);
+    const minimumImpactSatisfied = objectiveResult.previewStatus === 'ready'
+      && this.evaluateCompiledExpr(evaluator.minimumImpact, candidate) === true;
+    const finalResult = { ...provisional, minimumImpactSatisfied };
+    this.turnShapeEvaluationCache.set(cacheKey, finalResult);
+    const hasPreviewOutcome = candidate === undefined || this.input.previewOption !== undefined
+      ? hadPreviewOutcome
+      : this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
+    if (!hadPreviewOutcome && hasPreviewOutcome) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" triggered an unregistered preview drive.`,
+        { evaluatorId, signal: 'POLICY_TURNSHAPE_UNREGISTERED_PREVIEW_DRIVE' },
+      );
+    }
+    return finalResult;
+  }
+
+  private evaluateTurnShapeDemotePenalty(
+    evaluatorId: string,
+    evaluator: TurnShapeEvaluatorDef,
+    previewStatus: TurnShapeEvaluatorResult['previewStatus'],
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): { readonly demotePenalty?: number } {
+    if (previewStatus === 'ready' || evaluator.fallback.onPreviewUnavailable !== 'demote') {
+      return {};
+    }
+    if (evaluator.fallback.demotePenalty === undefined) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" fallback demote requires demotePenalty.`,
+        { evaluatorId },
+      );
+    }
+    const value = this.evaluateCompiledExpr(evaluator.fallback.demotePenalty, candidate);
+    if (typeof value !== 'number' || value < 0) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" demotePenalty did not evaluate to a non-negative number.`,
+        { evaluatorId },
+      );
+    }
+    return { demotePenalty: value };
+  }
+
+  private resolveTurnShapeProjection(
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): TurnShapeProjection | undefined {
+    const projected = this.input.previewOption?.projectedState;
+    if (projected !== undefined) {
+      return projected;
+    }
+    if (candidate === undefined || !this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate)) {
+      return undefined;
+    }
+    const outcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
+    const previewDrive = this.runtimeProviders.previewSurface.getPreviewDrive(candidate);
+    const previewState = outcome === 'ready' || outcome === 'stochastic'
+      ? this.runtimeProviders.previewSurface.getPreviewState(candidate)
+      : undefined;
+    return {
+      outcome,
+      driveDepth: previewDrive?.depth ?? 0,
+      ...(previewState === undefined ? {} : { state: previewState }),
+    };
   }
 
   private resolveLookupRef(

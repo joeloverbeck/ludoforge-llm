@@ -128,6 +128,30 @@ const evaluatePlannedStrategyModules = (input: {
   }
 };
 
+const evaluatePlannedTurnShapeEvaluators = (input: {
+  readonly profile: AgentPolicyCatalog['profiles'][string];
+  readonly catalog: AgentPolicyCatalog;
+  readonly evaluation: PolicyEvaluationContext;
+  readonly candidates: readonly PolicyEvaluationCandidate[];
+}): ReadonlyMap<string, number> => {
+  const penaltiesByStableMoveKey = new Map<string, number>();
+  for (const evaluatorId of input.profile.plan.turnShapeEvaluators ?? []) {
+    if (input.catalog.compiled.turnShapeEvaluators?.[evaluatorId] === undefined) {
+      continue;
+    }
+    for (const candidate of input.candidates) {
+      const result = input.evaluation.evaluatePlannedTurnShapeEvaluator(evaluatorId, candidate);
+      if (result.demotePenalty !== undefined) {
+        penaltiesByStableMoveKey.set(
+          candidate.stableMoveKey,
+          (penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0) + result.demotePenalty,
+        );
+      }
+    }
+  }
+  return penaltiesByStableMoveKey;
+};
+
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
   readonly reason: PolicyPreviewUnavailabilityReason;
@@ -747,6 +771,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       }
 
       evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
+      const turnShapePenaltiesByStableMoveKey =
+        evaluatePlannedTurnShapeEvaluators({ profile, catalog, evaluation, candidates: activeCandidates });
 
       const considerations = catalog.compiled.considerations;
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(
@@ -823,6 +849,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             )
           ), 0);
           candidate.score -= guardrailDispatch.penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
+          candidate.score -= turnShapePenaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
           evaluation.finalizePreviewOutcome(candidate);
         }
       }

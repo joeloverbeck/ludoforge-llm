@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/182STRSTRPOL-010.md",
+  "last_ticket": "archive/tickets/182STRSTRPOL-011.md",
   "last_result": "completed_archived",
-  "last_work_commit": "4b3e708938cc05a714a3622ecbb4372b02c5c8eb",
+  "last_work_commit": "a0492a543f39439643261b13c0219f8fc11db37d",
   "last_state_commit": "self",
-  "next_target": "tickets/182STRSTRPOL-011.md",
+  "next_target": "tickets/182STRSTRPOL-012.md",
   "queue": [
-    "tickets/182STRSTRPOL-011.md",
     "tickets/182STRSTRPOL-012.md",
     "tickets/182STRSTRPOL-013.md",
     "tickets/182STRSTRPOL-014.md",

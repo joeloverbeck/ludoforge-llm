@@ -91,7 +91,7 @@ If an in-flight proof command or terminal session may still be running after int
    - unrelated noise
 4. If staged unrelated entries exist, either leave them staged and do not commit, or unstage them only with explicit user approval while preserving working-tree content.
 5. If `.codex/run-state/implement-spec-tickets.json` already exists, validate it even on a first invocation. Trust live repo state over stale JSON.
-6. If unrelated dirty paths exist and this harness would need to commit, stop and ask whether those paths should be included. Do not silently commit unrelated work.
+6. If unrelated dirty paths exist and this harness would need to commit, classify whether they can be safely excluded. Proceed without asking only when every unrelated path is unstaged, can remain unstaged, and has been explicitly recorded as out of scope for the harness commit. Stop and ask whether unrelated paths should be included only when ownership is ambiguous, an unrelated path is already staged, exclusion is not possible, or the user explicitly asks for a whole-worktree commit. Do not silently commit unrelated work.
 7. Resolve the first ticket:
    - if `ticket_path` is supplied, resolve it to exactly one active file under `tickets/`
    - otherwise inspect active `tickets/*.md` and choose the first ticket in lexical order whose filename, `Deps`, problem statement, or explicit spec reference ties it to the originating spec
@@ -265,7 +265,9 @@ If a required-visible block was missed at its intended point, emit a `late harne
 
 When user-approved extra paths are included in the iteration commit even though they are not ticket-owned, list them in the checkpoint and final handoff. The commit message must either mention the extra skill/process hardening if it is material, or the final handoff must explicitly state that the extra path was included by user approval and was not part of the ticket deliverable. Do not let approved unrelated paths appear as silent ticket-owned work.
 
-If a ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then stage the source-parent deletion with `git add -A <source-parent-dir>` when the old source path no longer exists. A typical move staging shape is `git add <archive-destination>` plus `git add -A tickets` or `git add -A specs`, followed by `git diff --cached --name-status` to confirm the source deletion/rename appears.
+If a tracked ticket or spec was archived with `node scripts/archive-ticket.mjs` or `git mv`, stage the archive destination and other edited owned paths, then stage the source-parent deletion with `git add -A <source-parent-dir>` when the old source path no longer exists. A typical tracked move staging shape is `git add <archive-destination>` plus `git add -A tickets` or `git add -A specs`, followed by `git diff --cached --name-status` to confirm the source deletion/rename appears.
+
+If the archived ticket was an untracked active draft, no tracked source deletion or rename entry is expected. Stage the archive destination and other edited owned paths, confirm the old active path is absent with a source-gone check, sweep active/spec references for the old `tickets/<id>.md` path, and use `git diff --cached --name-status` to confirm the staged shape is an added archive file plus any intended reference repairs.
 
 If non-destructive git index commands fail because Codex cannot write the index or reports sandbox/read-only errors, rerun the same failed command with required approval/escalation and record the retry in the handoff.
 

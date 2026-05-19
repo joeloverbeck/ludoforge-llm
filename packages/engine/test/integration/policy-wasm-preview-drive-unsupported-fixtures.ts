@@ -93,16 +93,12 @@ export const unsupportedPreviewDriveReasonFixtures = [
     unsupportedOwner: 'production-preview-drive.effect.popInterruptPhase',
     reason: 'unsupported production preview-drive effect popInterruptPhase',
   },
-  {
-    ownerSlug: 'victoryCurrentMarginSeatMatrix',
-    unsupportedDriveClass: 'unsupported-effect',
-    unsupportedOwner: 'production-preview-drive.previewStateSlots',
-    reason: 'unsupported preview surface "victoryCurrentMargin"',
-  },
 ] as const satisfies readonly UnsupportedPreviewDriveReasonFixture[];
 
 export type UnsupportedPreviewDriveOwnerSlug = typeof unsupportedPreviewDriveReasonFixtures[number]['ownerSlug'];
 type ScoreParityUnsupportedOwnerSlug = Exclude<UnsupportedPreviewDriveOwnerSlug, 'projectedState'>;
+type SupportedOwnerSlug = 'victoryCurrentMarginSeatMatrix';
+type ScoreParityOwnerSlug = ScoreParityUnsupportedOwnerSlug | SupportedOwnerSlug;
 
 export const unsupportedPreviewDriveReasonFor = (
   ownerSlug: UnsupportedPreviewDriveOwnerSlug,
@@ -128,6 +124,34 @@ export const assertProductionUnsupportedReasonScoreParity = (
     assert.ok(
       wasmResult.metadata.candidates.every((candidate) => Number.isFinite(candidate.score)),
       `${ownerSlug}: TS fallback should assign finite candidate scores after WASM preview-drive returns unsupported`,
+    );
+
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    const tsResult = evaluateUnsupportedReasonPolicy(ownerSlug);
+    assert.deepEqual(projectPolicyResultForParity(wasmResult), projectPolicyResultForParity(tsResult));
+  } finally {
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  }
+};
+
+export const assertProductionSupportedReasonScoreParity = (
+  ownerSlug: SupportedOwnerSlug,
+): void => {
+  policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(initializePolicyWasmRuntimeSync());
+  policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  try {
+    const wasmResult = evaluateUnsupportedReasonPolicy(ownerSlug);
+    const reasonCounts = getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts();
+    assert.equal(reasonCounts.length, 0, `${ownerSlug}: preview drive should not record unsupported reasons`);
+    assert.equal(policyWasmRuntimeInternals.getProductionPreviewDriveRouteCount(), 1);
+    assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(), 1);
+    assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
+    assert.equal(wasmResult.kind, 'success');
+    assert.ok(
+      wasmResult.metadata.candidates.every((candidate) => Number.isFinite(candidate.score)),
+      `${ownerSlug}: supported seat-context dynamic rows should assign finite candidate scores`,
     );
 
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
@@ -271,7 +295,7 @@ const reasonCount = (
     && row.reason === expected.reason)?.count ?? 0;
 
 const evaluateUnsupportedReasonPolicy = (
-  ownerSlug: ScoreParityUnsupportedOwnerSlug,
+  ownerSlug: ScoreParityUnsupportedOwnerSlug | SupportedOwnerSlug,
 ): PolicyEvaluationCoreResult => {
   const def = createUnsupportedReasonDef(ownerSlug);
   const runtime = createGameDefRuntime(def);
@@ -328,7 +352,7 @@ const projectPolicyResultForParity = (
 });
 
 const createUnsupportedReasonMoves = (
-  ownerSlug: ScoreParityUnsupportedOwnerSlug,
+  ownerSlug: ScoreParityOwnerSlug,
 ): readonly Move[] => ownerSlug === 'actionBatch'
   ? [
       { actionId: asActionId('score'), params: { rank: 1 } },
@@ -337,7 +361,7 @@ const createUnsupportedReasonMoves = (
   : [{ actionId: asActionId('score'), params: { rank: 1 } }];
 
 const createUnsupportedReasonDef = (
-  ownerSlug: ScoreParityUnsupportedOwnerSlug,
+  ownerSlug: ScoreParityOwnerSlug,
 ): GameDef => {
   const catalog = createScoreParityCatalog(ownerSlug);
   const phase = ownerSlug === 'popInterruptPhase' ? interruptPhaseId : phaseId;
@@ -391,7 +415,7 @@ const createUnsupportedReasonDef = (
 };
 
 const createUnsupportedReasonEffects = (
-  ownerSlug: ScoreParityUnsupportedOwnerSlug,
+  ownerSlug: ScoreParityOwnerSlug,
 ): readonly EffectAST[] => {
   switch (ownerSlug) {
     case 'chooseN':
@@ -418,7 +442,7 @@ const createUnsupportedReasonEffects = (
 };
 
 const createScoreParityCatalog = (
-  ownerSlug: ScoreParityUnsupportedOwnerSlug,
+  ownerSlug: ScoreParityOwnerSlug,
 ): AgentPolicyCatalog => withCompiledPolicyCatalog({
   schemaVersion: 2,
   catalogFingerprint: `policy-wasm-preview-drive-equivalence-${ownerSlug}`,

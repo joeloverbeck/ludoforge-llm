@@ -112,5 +112,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-19:
 - [`archive/tickets/184WASMPREDRI-001.md`](../archive/tickets/184WASMPREDRI-001.md) — Phase 0+1 — Inventory and classify WASM preview-drive divergences (covers §4 Phases 0 and 1)
 - [`archive/tickets/184WASMPREDRI-002.md`](../archive/tickets/184WASMPREDRI-002.md) — Phase 2 — Extend WASM preview drive for (a)-classified action shapes (covers §4 Phase 2)
 - [`archive/tickets/184WASMPREDRI-003.md`](../archive/tickets/184WASMPREDRI-003.md) — Phase 3 — Document (b)-classified unsupported reasons + extend reason-coverage (covers §4 Phase 3)
-- [`tickets/184WASMPREDRI-005.md`](../tickets/184WASMPREDRI-005.md) — Phase 3.5 — Add seat-matrix dynamic rows for aggregate-fed preview refs (covers §4 Phase 3.5)
+- [`archive/tickets/184WASMPREDRI-005.md`](../archive/tickets/184WASMPREDRI-005.md) — Phase 3.5 — Add seat-matrix dynamic rows for aggregate-fed preview refs (covers §4 Phase 3.5)
 - [`tickets/184WASMPREDRI-004.md`](../tickets/184WASMPREDRI-004.md) — Phase 4 — Remove defensive aggregate-coverage fallback after ticket 005 (covers §4 Phase 4)

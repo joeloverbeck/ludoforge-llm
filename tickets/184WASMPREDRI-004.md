@@ -1,16 +1,16 @@
 # 184WASMPREDRI-004: Phase 4 — Remove defensive aggregate-coverage fallback
 
-**Status**: BLOCKED by prerequisite
+**Status**: PENDING
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (delete `previewFeatureRowsExerciseAggregate` and inline its call site)
-**Deps**: `archive/tickets/184WASMPREDRI-002.md`, `archive/tickets/184WASMPREDRI-003.md`, `tickets/184WASMPREDRI-005.md`
+**Deps**: `archive/tickets/184WASMPREDRI-002.md`, `archive/tickets/184WASMPREDRI-003.md`, `archive/tickets/184WASMPREDRI-005.md`
 
 ## Problem
 
 Spec 184 §4 Phase 4 requires removing the defensive `previewFeatureRowsExerciseAggregate` fallback introduced in commit `a651c3a41` ("fix: route preview-classed candidate features through TS when feeding plan aggregates", 2026-05-19). The fallback was a documented temporary workaround pending Spec 184: it forces `materializePreviewDynamicRowsWithWasm` to return `null` for any preview-classed candidate feature that feeds a plan aggregate, routing those features to the Spec 175 TS evaluator instead of letting the WASM preview drive produce a (potentially divergent) projected value.
 
-After tickets 002 and 003 landed, live proof showed one prerequisite is still missing: `$seat` seat-matrix `victoryCurrentMargin` refs inside aggregate-fed preview candidate features are intentionally documented as unsupported by ticket 003 and covered by TS fallback parity, but removing this aggregate fallback makes `arvn-tournament-wasm-equivalence.test.ts` red at decision 47. This ticket is therefore blocked until `tickets/184WASMPREDRI-005.md` adds the missing dynamic-row ABI support or another Foundations-aligned replacement that preserves the byte-equivalence oracle.
+After tickets 002 and 003 landed, live proof showed one prerequisite was still missing: `$seat` seat-matrix `victoryCurrentMargin` refs inside aggregate-fed preview candidate features were intentionally documented as unsupported by ticket 003 and covered by TS fallback parity, but removing this aggregate fallback made `arvn-tournament-wasm-equivalence.test.ts` red at decision 47. `archive/tickets/184WASMPREDRI-005.md` has now added the missing seat-context dynamic-row support, so this ticket is ready to retry and complete the fallback deletion.
 
 ## Assumption Reassessment (2026-05-19)
 
@@ -32,16 +32,16 @@ Evidence:
 
 Corrected boundary:
 
-1. This ticket remains the owner for deleting `previewFeatureRowsExerciseAggregate` only after the missing prerequisite lands.
-2. `tickets/184WASMPREDRI-005.md` owns the prerequisite `$seat` dynamic-row ABI support for aggregate-fed preview refs.
-3. The defensive fallback remains in place to preserve Foundation #20 Preview Signal Integrity and the existing byte-equivalence oracle while that prerequisite is active.
+1. This ticket remains the owner for deleting `previewFeatureRowsExerciseAggregate`.
+2. `archive/tickets/184WASMPREDRI-005.md` owns and has landed the prerequisite `$seat` dynamic-row ABI support for aggregate-fed preview refs.
+3. The defensive fallback remains in place only until this ticket deletes it and revalidates the byte-equivalence oracle.
 
 ## Architecture Check
 
-1. Removal restores root-cause architectural completeness (Foundation #15) only after ticket 005 lands. Until then, retaining the fallback is the architectural boundary that preserves the TS oracle.
-2. Determinism preserved (Foundation #8) — WASM/TS equivalence must remain the acceptance gate; the failed removal probe proves the prerequisite is not satisfied yet.
+1. Removal now restores root-cause architectural completeness (Foundation #15) because ticket 005 landed the missing seat-context dynamic-row support.
+2. Determinism preserved (Foundation #8) — WASM/TS equivalence must remain the acceptance gate; the prior failed removal probe is the trigger proof this ticket must now turn green.
 3. Foundation #14 (No Backwards Compatibility) — the fallback function is deleted, not deprecated; no shim retained.
-4. Foundation #20 (Preview Signal Integrity) — preview refs must resolve via a contract chain that preserves byte-equivalent candidate scores. The current chain still requires the aggregate fallback for `$seat` seat-matrix refs until ticket 005 supplies per-seat dynamic rows.
+4. Foundation #20 (Preview Signal Integrity) — preview refs must resolve via a contract chain that preserves byte-equivalent candidate scores. Ticket 005 supplies per-seat dynamic rows; this ticket must prove the fallback can now be removed without score divergence.
 
 ## What to Change
 
@@ -78,7 +78,7 @@ Run `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs
 
 ### Tests That Must Pass
 
-Blocked pending `tickets/184WASMPREDRI-005.md`. Once that prerequisite lands, the following gates remain required:
+The prerequisite is landed in `archive/tickets/184WASMPREDRI-005.md`. The following gates are required:
 
 1. `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` — passes with the defensive fallback removed and the WASM drive engaged on the previously-divergent paths.
 2. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — passes.
@@ -100,21 +100,21 @@ None — this ticket relies on existing tests passing under the new code path. T
 
 ### Commands
 
-Blocked pending `tickets/184WASMPREDRI-005.md`. Once that prerequisite lands, run:
+Run:
 
 1. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — primary regression gate
 2. `pnpm -F @ludoforge/engine test:integration` — broader equivalence sweep including bytecode and preview-drive equivalence tests
 3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — manual route-count and unsupported-count comparison against baseline
 4. `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck` — full repo quality gate
 
-## Outcome
+## Prior Blocked Probe
 
 Blocked: 2026-05-19
 
 What landed:
 
 - No source change. The attempted deletion of `previewFeatureRowsExerciseAggregate` was restored after the trigger proof failed.
-- Ticket/spec ownership was corrected so this deletion waits on `tickets/184WASMPREDRI-005.md`.
+- Ticket/spec ownership was corrected so this deletion waits on `archive/tickets/184WASMPREDRI-005.md`.
 
 Why blocked:
 
@@ -128,4 +128,8 @@ Verification:
 
 Next workflow:
 
-- `$implement-ticket tickets/184WASMPREDRI-005.md . Rely on specs/184-wasm-preview-drive-aggregate-coverage.md`
+- `$implement-ticket tickets/184WASMPREDRI-004.md . Rely on specs/184-wasm-preview-drive-aggregate-coverage.md`
+
+Readiness update: 2026-05-19
+
+- `archive/tickets/184WASMPREDRI-005.md` has landed the prerequisite seat-context dynamic-row support. This ticket is no longer blocked and should now retry the fallback deletion.

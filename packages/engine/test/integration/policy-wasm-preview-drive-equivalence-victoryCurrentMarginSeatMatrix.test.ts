@@ -2,11 +2,11 @@
 import { describe, it } from 'node:test';
 
 import {
-  assertProductionUnsupportedReasonScoreParity,
+  assertProductionSupportedReasonScoreParity,
 } from './policy-wasm-preview-drive-equivalence-fixtures.js';
 
-describe('policy WASM preview-drive victoryCurrentMargin seat-matrix unsupported parity', () => {
-  it('falls back to byte-equivalent TypeScript scores for seatAgg $seat victory-margin refs', () => {
-    assertProductionUnsupportedReasonScoreParity('victoryCurrentMarginSeatMatrix');
+describe('policy WASM preview-drive victoryCurrentMargin seat-matrix supported parity', () => {
+  it('routes seatAgg $seat victory-margin refs through supported seat-context dynamic rows', () => {
+    assertProductionSupportedReasonScoreParity('victoryCurrentMarginSeatMatrix');
   });
 });

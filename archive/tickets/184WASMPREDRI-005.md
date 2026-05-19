@@ -1,6 +1,6 @@
 # 184WASMPREDRI-005: Add seat-matrix dynamic rows for aggregate-fed preview refs
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — production preview-drive dynamic-row ABI, JS marshaling, and parity tests
@@ -47,6 +47,8 @@ If the `unsupported preview surface "victoryCurrentMargin"` reason no longer app
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-wasm-score-routing.ts` (modify — dynamic-row materialization/marshaling)
+- `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts` (new — supported-path seat-context dynamic-row aggregation helper)
+- `packages/engine/src/agents/policy-wasm-runtime-types.ts` (modify — dynamic candidate feature row shape)
 - `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` (modify if slot classification or rationale changes)
 - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-fixtures.ts` (modify or add fixture coverage)
 - `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-victoryCurrentMarginSeatMatrix.test.ts` (modify or replace with supported-path coverage)
@@ -91,3 +93,41 @@ If the `unsupported preview surface "victoryCurrentMargin"` reason no longer app
 4. `pnpm -F @ludoforge/engine test:integration`
 5. `pnpm turbo lint`
 6. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-19.
+
+Outcome amended: 2026-05-19 during post-ticket review after archival.
+
+What changed:
+
+- Added a generic seat-context dynamic-row surface for preview refs whose selector is `$seat`. `materializePreviewDynamicRowsWithWasm` now expands those refs into deterministic per-seat preview-state slots and records `seatContextValues` alongside the existing per-candidate scalar row.
+- Added `policy-wasm-dynamic-candidate-feature-rows.ts` so `seatAgg` preview candidate features can be evaluated from the supported precomputed dynamic rows before downstream WASM score rows consume the candidate-feature cache.
+- Converted `policy-wasm-preview-drive-equivalence-victoryCurrentMarginSeatMatrix.test.ts` from unsupported-fallback parity to supported-path parity. The test now asserts no unsupported preview-drive reason is recorded, the preview-drive route count increments, and WASM-on score output remains byte-equivalent to the TypeScript oracle.
+- Removed `unsupported preview surface "victoryCurrentMargin"` from unsupported-reason coverage because the residual `$seat` seat-matrix fixture is now supported.
+
+Deviations from original plan:
+
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` did not need a source edit. The existing production preview drive already evaluates concrete role-seat slots; the missing piece was JS-side slot expansion plus the candidate-feature row evaluator for `seatAgg`.
+- No Rust ABI bump was needed. The dynamic-row contract changed in the JS precomputed-row shape consumed before score-row evaluation, not in the Rust preview-drive input/output words.
+- `tickets/184WASMPREDRI-004.md` remains the owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket only proves the missing `$seat` evidence can be carried by the supported dynamic-row path.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after implementation.
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-equivalence-victoryCurrentMarginSeatMatrix.test.js` — passed after implementation and again after helper extraction.
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-equivalence-reason-coverage.test.js` — passed after implementation and again after helper extraction.
+- `node --test packages/engine/dist/test/integration/policy-wasm-preview-drive-equivalence.test.js` — passed after implementation.
+- `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — passed after implementation and again after helper extraction, with the aggregate fallback still present.
+- `pnpm -F @ludoforge/engine test:integration` — passed before helper extraction, 311/311 files. The extraction was source-only and was rechecked by build plus the focused seat-matrix, reason-coverage, and ARVN lanes above.
+- `pnpm turbo lint` — passed after the final helper extraction lint fix.
+- `pnpm turbo typecheck` — passed after the final helper extraction lint fix.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2450 archived tickets.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-wasm-score-routing.ts` grew during the first implementation attempt and crossed the 800-line guidance, so the new evaluator was extracted before closeout. Final size: 663 lines.
+- `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts` is 192 lines.
+
+Post-review: archived on 2026-05-19. Active successor `tickets/184WASMPREDRI-004.md` was unblocked for the fallback-removal pass.

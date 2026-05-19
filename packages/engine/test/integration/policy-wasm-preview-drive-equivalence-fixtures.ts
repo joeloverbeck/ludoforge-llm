@@ -31,6 +31,7 @@ import {
 import { eff } from '../helpers/effect-tag-helper.js';
 export {
   assertDeepProjectedStateUnsupportedParity,
+  assertProductionSupportedReasonScoreParity,
   assertProductionUnsupportedReasonScoreParity,
   unsupportedPreviewDriveReasonFixtures,
   unsupportedPreviewDriveReasonFor,

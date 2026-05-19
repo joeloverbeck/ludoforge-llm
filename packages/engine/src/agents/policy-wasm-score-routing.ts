@@ -4,16 +4,19 @@ import type {
   AgentPolicyCatalog,
   CompiledAgentPolicyRef,
   CompiledPolicyExpr,
-  CompiledSurfaceRef,
   GameDef,
   GameState,
   Move,
 } from '../kernel/types.js';
-import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import {
+  evaluateDynamicCandidateFeatureRows,
+  previewDynamicRefCode,
+  seatContextIdsForPreviewDynamicRefs,
+} from './policy-wasm-dynamic-candidate-feature-rows.js';
 import {
   definePolicyWasmProductionPreviewStateSlots,
   evaluateProductionPreviewDriveBatchWithWasm,
@@ -90,16 +93,6 @@ const encodeWasmPreviewOutcome = (candidate: PolicyWasmScoreRoutingCandidate): P
   }
 };
 
-const previewSurfaceCode = (ref: CompiledSurfaceRef): number =>
-  stablePayloadCode({ family: ref.family, id: ref.id, selector: ref.selector });
-
-const previewDynamicRefCode = (ref: CompiledAgentPolicyRef): number => {
-  if (ref.kind === 'previewSurface') {
-    return previewSurfaceCode(ref);
-  }
-  return stablePayloadCode(ref);
-};
-
 const previewTraceOutcomeFromWasmStatus = (
   status: PolicyWasmPreviewStatus,
 ): PolicyPreviewTraceOutcome => status === 'ready' ? 'ready' : status;
@@ -158,15 +151,23 @@ const previewGlobalSlotsForRef = (
   catalog: AgentPolicyCatalog,
   def: GameDef,
   ref: CompiledAgentPolicyRef,
+  seatContextIds: readonly string[] = [],
 ): readonly string[] | undefined => {
   if (ref.kind === 'previewSurface') {
     if (ref.family === 'globalVar' && ref.selector === undefined) {
       return [`global.${ref.id}`];
     }
     if (ref.family === 'victoryCurrentMargin' || ref.family === 'victoryCurrentRank') {
-      return ref.selector?.kind === 'role'
-        ? [`surface.${ref.family}.${ref.selector.seatToken}`, ...def.globalVars.map((variable) => `global.${variable.name}`)]
-        : undefined;
+      if (ref.selector?.kind !== 'role') {
+        return undefined;
+      }
+      const seatTokens = ref.selector.seatToken === '$seat'
+        ? seatContextIds
+        : [ref.selector.seatToken];
+      return [
+        ...seatTokens.map((seatToken) => `surface.${ref.family}.${seatToken}`),
+        ...def.globalVars.map((variable) => `global.${variable.name}`),
+      ];
     }
     return undefined;
   }
@@ -272,9 +273,10 @@ const materializePreviewDynamicRowsWithWasm = (
     // @policy-wasm-unsupported: null-return
     return null;
   }
+  const seatContextIds = seatContextIdsForPreviewDynamicRefs(input.def, refs, compareOrdinalStrings);
   const slotsByCode = new Map<number, readonly string[]>();
   for (const ref of refs) {
-    const slots = previewGlobalSlotsForRef(input.catalog, input.def, ref);
+    const slots = previewGlobalSlotsForRef(input.catalog, input.def, ref, seatContextIds);
     if (slots === undefined || slots.length === 0) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       // @policy-wasm-unsupported: null-return
@@ -366,6 +368,17 @@ const materializePreviewDynamicRowsWithWasm = (
         input.evaluation.recordResolvedPreviewRefValue(candidate, refId, value);
         return value;
       }),
+      ...(seatContextIds.length === 0 ? {} : {
+        seatContextValues: Object.fromEntries(seatContextIds.map((seatContext) => [
+          seatContext,
+          input.candidates.map((candidate) => {
+            const row = rowsByKey.get(candidate.stableMoveKey);
+            return row === undefined
+              ? undefined
+              : previewValueFromWasmRow(input, ref, row.previewStateValues, slots, seatContext);
+          }),
+        ])),
+      }),
     };
   });
 };
@@ -379,6 +392,7 @@ const previewValueFromWasmRow = (
   ref: CompiledAgentPolicyRef,
   previewStateValues: Readonly<Record<string, number>> | undefined,
   slots: readonly string[],
+  seatContext?: string,
 ): PolicyValue => {
   if (previewStateValues === undefined) {
     return undefined;
@@ -387,7 +401,10 @@ const previewValueFromWasmRow = (
     return previewStateValues[slots[0]!];
   }
   if (ref.kind === 'previewSurface' && (ref.family === 'victoryCurrentMargin' || ref.family === 'victoryCurrentRank')) {
-    return previewStateValues[slots[0]!];
+    const slot = ref.selector?.kind === 'role' && ref.selector.seatToken === '$seat' && seatContext !== undefined
+      ? `surface.${ref.family}.${seatContext}`
+      : slots[0]!;
+    return previewStateValues[slot];
   }
   if (ref.kind === 'library' && ref.refKind === 'previewStateFeature') {
     return previewStateValues[slots[0]!];
@@ -514,7 +531,13 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
-    const values = evaluateWasmCandidateFeatureRow(input.runtime, {
+    const values = evaluateDynamicCandidateFeatureRows({
+      def: input.def,
+      state: input.state,
+      seatId: input.seatId,
+      candidateCount: input.candidates.length,
+    }, feature.expr, precomputedDynamicCandidateFeatures)
+      ?? evaluateWasmCandidateFeatureRow(input.runtime, {
       def: input.def,
       encoded: input.encodedView.encoded,
       context: {

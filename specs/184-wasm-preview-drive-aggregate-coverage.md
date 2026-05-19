@@ -17,7 +17,7 @@
 
 ## 1. Goal
 
-Extend the WASM production preview drive so it returns TS-equivalent values for every action whose result is observable through a candidate-feature that an aggregate in the profile's plan reads. Remove the defensive TS fallback added in commit `<TBD-after-merge>` once equivalence is proven across the failing-case corpus.
+Extend the WASM production preview drive so it returns TS-equivalent values for every action whose result is observable through a candidate-feature that an aggregate in the profile's plan reads. Remove the defensive TS fallback added in commit `a651c3a41` once equivalence is proven across the failing-case corpus.
 
 ## 2. Non-Goals
 
@@ -74,17 +74,17 @@ The full taxonomy of action shapes the drive does and does not model is the inve
 
 | Phase | Scope | Acceptance |
 |---|---|---|
-| 0 | Inventory every action × profile pair where the production preview drive's outcome diverges from the TS preview evaluator's outcome. Use the FITL production tournament fixture (seed 1000, 4 seats, 80 decisions) as the seed corpus; extend to additional seeds if needed to surface more divergences. For each divergence, record action-id, profile-id, preview-ref, drive outcome, TS outcome, and the underlying state-mutation shape the drive fails to model. | Inventory report under `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`. Counts must match a determ-witness run at that commit. |
+| 0 | Inventory every action × profile pair where the production preview drive's outcome diverges from the TS preview evaluator's outcome. Use the FITL production tournament fixture (seed 1000, 4 seats, 80 decisions) as the minimum-required seed corpus; consume the multi-seed rollup produced by `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` (which already surfaces `wasmProductionPreviewDriveUnsupportedCount` and per-reason breakdowns) for broader shape coverage. For each divergence, record action-id, profile-id, preview-ref, drive outcome, TS outcome, and the underlying state-mutation shape the drive fails to model. | Inventory report under `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`. Counts must match the 15-seed report output at the chosen commit. |
 | 1 | For each inventory entry, classify the divergence as (a) extend the drive to model this action's state mutation, (b) document as legitimately-unsupported and rely on the existing Spec 175 null-return fallback, or (c) drive should already model this — fix the bug. | Classification table appended to the phase-0 report. Each entry has a one-line rationale and a target phase (2 or 3). |
-| 2 | Implement (a)-classified extensions in `packages/engine-wasm/policy-vm/src/preview_drive.rs` and supporting JS marshaling. Each extension lands with a parity-oracle fixture proving WASM-on equals WASM-off for the action × profile pair. | Every (a)-classified entry has a parity test fixture; `pnpm turbo test` passes including the new fixtures; the 15-seed witness records lower unsupported-reason counts for the newly-supported shapes. |
-| 3 | For (b)-classified entries, document the rationale in `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` near the relevant `recordProductionPolicyWasmPreviewDrive('unsupported', ...)` call and add a parity-oracle fixture asserting the null-return → TS-fallback path runs and produces the canonical answer. | Header comment present; parity fixture covers each (b)-classified entry; `pnpm turbo test` passes. |
-| 4 | Remove the defensive `previewFeatureRowsExerciseAggregate` fallback added by PR #268. The arvn-tournament-wasm-equivalence test must still pass with the WASM preview drive engaged on the previously-divergent paths. | Function removed from `packages/engine/src/agents/policy-wasm-score-routing.ts`; `pnpm -F @ludoforge/engine test:integration:policy-canaries` passes; the 15-seed witness records same or higher preview-drive route counts (proving the drive is engaged) and zero new unsupported reasons. |
+| 2 | Implement (a)-classified extensions in `packages/engine-wasm/policy-vm/src/preview_drive.rs` and supporting JS marshaling. Each extension lands with a parity-oracle fixture proving WASM-on equals WASM-off for the action × profile pair. | Every (a)-classified entry has a parity fixture entry in `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-fixtures.ts`; `pnpm turbo test` passes including the new fixtures; the 15-seed report (`profile-fitl-arvn-15-seed-decomposition.mjs`) records lower `wasmProductionPreviewDriveUnsupportedCount` for the newly-supported reasons. |
+| 3 | For (b)-classified entries, document the rationale in `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` near the relevant `recordProductionPolicyWasmPreviewDrive('unsupported', ...)` call AND extend the Spec 174 reason-coverage enforcement: add a fixture entry to `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-fixtures.ts` and the matching enumeration row to `packages/engine/test/integration/policy-wasm-preview-drive-equivalence-reason-coverage.test.ts` so each new unsupported reason has a parity fixture asserting the null-return → TS-fallback path runs and produces the canonical answer. | Header comment present; reason-coverage enumeration extended; parity fixture covers each (b)-classified entry; `pnpm turbo test` passes. |
+| 4 | Remove the defensive `previewFeatureRowsExerciseAggregate` fallback added by commit `a651c3a41`. The arvn-tournament-wasm-equivalence test must still pass with the WASM preview drive engaged on the previously-divergent paths. | Function removed from `packages/engine/src/agents/policy-wasm-score-routing.ts`; `pnpm -F @ludoforge/engine test:integration:policy-canaries` passes; the 15-seed report (`profile-fitl-arvn-15-seed-decomposition.mjs`) records same or higher `wasmProductionPreviewDriveRouteCount` (proving the drive is engaged) and zero new unsupported reasons. |
 
 ## 5. Acceptance criteria
 
 - `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` passes with the defensive fallback removed.
 - Every action × profile shape the FITL production tournament exercises in the seed-1000 corpus has either: (i) drive support and a parity fixture, or (ii) documented null-return rationale and a parity fixture asserting the TS fallback path.
-- The 15-seed witness shows ≥ baseline WASM preview-drive route counts and ≤ baseline unsupported-reason counts.
+- The 15-seed report (`packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs`) shows ≥ baseline `wasmProductionPreviewDriveRouteCount` and ≤ baseline `wasmProductionPreviewDriveUnsupportedCount`.
 - No regression in `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or `packages/engine/test/integration/policy-wasm-preview-drive-equivalence.test.ts`.
 
 ## 6. Risks
@@ -103,3 +103,12 @@ No new trace fields. Existing telemetry surfaces are sufficient:
 
 - Profile-fingerprint stability under schema-empty renames (`pruningRules: {}` → no field) is a separate question. The fingerprint is currently a hash of the compiled profile shape, including empty fields; removing an empty field changes the hash, which changes the policy-eval selection RNG seed, which can shift softmax-sample trajectories by one or more decisions. PR #268 retargeted the affected Texas convergence witness; whether the fingerprint should be stable under schema migrations is a design question outside this spec's scope.
 - Defensive WASM-vs-TS spot-check at preview-drive boundaries. The cost is high (effectively running both paths), but a sampling-based check could surface future regressions of this shape before they reach CI. Out of scope here; consider as a `validate-preview-inner-warning-parity`-style watchdog if drive coverage stays partial after phase 4.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-19:
+
+- [`archive/tickets/184WASMPREDRI-001.md`](../archive/tickets/184WASMPREDRI-001.md) — Phase 0+1 — Inventory and classify WASM preview-drive divergences (covers §4 Phases 0 and 1)
+- [`tickets/184WASMPREDRI-002.md`](../tickets/184WASMPREDRI-002.md) — Phase 2 — Extend WASM preview drive for (a)-classified action shapes (covers §4 Phase 2)
+- [`tickets/184WASMPREDRI-003.md`](../tickets/184WASMPREDRI-003.md) — Phase 3 — Document (b)-classified unsupported reasons + extend reason-coverage (covers §4 Phase 3)
+- [`tickets/184WASMPREDRI-004.md`](../tickets/184WASMPREDRI-004.md) — Phase 4 — Remove defensive aggregate-coverage fallback (covers §4 Phase 4)

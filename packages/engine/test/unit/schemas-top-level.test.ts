@@ -176,7 +176,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           },
         },
         candidateAggregates: {},
-        pruningRules: {},
+        guardrails: {},
         considerations: {},
         tieBreakers: {},
         strategicConditions: {},
@@ -198,7 +198,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           },
         },
         candidateAggregates: {},
-        pruningRules: {},
+        guardrails: {},
         considerations: {},
         tieBreakers: {},
         strategicConditions: {},
@@ -210,7 +210,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           preview: { mode: 'exactWorld' },
           selection: { mode: 'argmax' },
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: [],
             tieBreakers: [],
           },
@@ -401,7 +401,7 @@ describe('top-level runtime schemas', () => {
           stateFeatures: {},
           candidateFeatures: {},
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {
             preferNamedOption: {
               scopes: ['microturn'],
@@ -434,7 +434,7 @@ describe('top-level runtime schemas', () => {
           stateFeatures: {},
           candidateFeatures: {},
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {
             preferNamedOption: {
               scopes: ['microturn'],
@@ -499,7 +499,7 @@ describe('top-level runtime schemas', () => {
             preview: { mode: 'exactWorld' },
             selection: { mode: 'argmax' },
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -592,7 +592,7 @@ describe('top-level runtime schemas', () => {
             },
           },
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {},
           tieBreakers: {},
           strategicConditions: {},
@@ -604,7 +604,7 @@ describe('top-level runtime schemas', () => {
             preview: { mode: 'exactWorld' },
             selection: { mode: 'argmax' },
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: [],
             },
@@ -847,7 +847,7 @@ describe('top-level runtime schemas', () => {
           },
           candidateFeatures: {},
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {},
           tieBreakers: {},
           strategicConditions: {},
@@ -903,7 +903,7 @@ describe('top-level runtime schemas', () => {
           stateFeatures: {},
           candidateFeatures: {},
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {},
           tieBreakers: {},
           strategicConditions: {},
@@ -914,7 +914,7 @@ describe('top-level runtime schemas', () => {
             preview: { mode: 'exactWorld' },
             selection: { mode: 'argmax' },
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },

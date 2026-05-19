@@ -105,7 +105,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
       },
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: moveConsiderations({
         metricScore: {
           costClass: 'candidate',
@@ -130,7 +130,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
         preview: { mode: 'exactWorld' },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['metricScore'],
           tieBreakers: ['stableMoveKey'],
         },

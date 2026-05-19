@@ -173,7 +173,7 @@ function makePartialVisibilityCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         useLowerBound: consideration('useLowerBound'),
         noContribution: consideration('noContribution'),
@@ -191,7 +191,7 @@ function makePartialVisibilityCatalog(): AgentPolicyCatalog {
         preview: { mode: 'disabled' },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['useLowerBound'],
           tieBreakers: [],
         },

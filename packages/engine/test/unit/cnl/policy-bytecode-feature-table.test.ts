@@ -70,7 +70,7 @@ function collectExpectedKeys(def: GameDef): readonly string[] {
       for (const ref of collectFeatureRefsFromCompiledPolicyExpr(aggregate.where, layout)) keys.add(canonicalKey(ref));
     }
   }
-  for (const rule of Object.values(compiled.pruningRules)) {
+  for (const rule of Object.values(compiled.guardrails ?? {})) {
     for (const ref of collectFeatureRefsFromCompiledPolicyExpr(rule.when, layout)) keys.add(canonicalKey(ref));
   }
   for (const consideration of Object.values(compiled.considerations)) {

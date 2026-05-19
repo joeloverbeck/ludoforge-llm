@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new conformance test files under `packages/engine/test/integration/agents/`
-**Deps**: `tickets/182STRSTRPOL-010.md`
+**Deps**: `archive/tickets/182STRSTRPOL-010.md`
 
 ## Problem
 

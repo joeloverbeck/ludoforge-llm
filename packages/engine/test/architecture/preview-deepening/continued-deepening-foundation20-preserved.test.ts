@@ -79,7 +79,7 @@ describe('continued deepening preserves Foundation 20', () => {
           baseline: {
             observer: 'currentPlayer',
             params: {},
-            use: { pruningRules: [], considerations: ['projectedMargin'], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: ['projectedMargin'], tieBreakers: ['stableMoveKey'] },
             preview: {
               mode: 'exactWorld',
               inner: {

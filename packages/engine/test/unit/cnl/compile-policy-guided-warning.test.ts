@@ -75,7 +75,7 @@ function createDoc(
           observer: 'currentPlayer',
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations,
             tieBreakers: ['stableMoveKey'],
           },

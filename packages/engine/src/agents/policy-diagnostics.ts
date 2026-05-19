@@ -23,7 +23,7 @@ export interface PolicyDiagnosticsSnapshot {
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
     readonly selectors: readonly string[];
-    readonly pruningRules: readonly string[];
+    readonly guardrails: readonly string[];
     readonly considerations: readonly string[];
     readonly tieBreakers: readonly string[];
   };
@@ -60,7 +60,7 @@ export function buildPolicyDiagnosticsSnapshot(
         candidateFeatures: [],
         candidateAggregates: [],
         selectors: [],
-        pruningRules: [],
+        guardrails: [],
         considerations: [],
         tieBreakers: [],
       },
@@ -91,7 +91,7 @@ export function buildPolicyDiagnosticsSnapshot(
       candidateFeatures: profile.plan.candidateFeatures,
       candidateAggregates: profile.plan.candidateAggregates,
       selectors: profile.plan.selectors ?? [],
-      pruningRules: profile.use.pruningRules,
+      guardrails: profile.use.guardrails ?? [],
       considerations: profile.use.considerations,
       tieBreakers: profile.use.tieBreakers,
     },
@@ -212,10 +212,15 @@ function collectCostTiers(
       push(costClass, `selector:${selectorId}`);
     }
   }
-  for (const ruleId of profile.use.pruningRules) {
-    const rule = catalog.library.pruningRules[ruleId];
-    if (rule !== undefined) {
-      push(rule.costClass, `pruningRule:${ruleId}`);
+  for (const guardrailId of profile.use.guardrails ?? []) {
+    const guardrail = catalog.library.guardrails?.[guardrailId];
+    if (guardrail !== undefined) {
+      const costClass = guardrail.costClass === 'preview'
+        ? 'preview'
+        : guardrail.costClass === 'state'
+          ? 'state'
+          : 'candidate';
+      push(costClass, `guardrail:${guardrailId}`);
     }
   }
   const considerations = catalog.library.considerations ?? {};
@@ -333,10 +338,13 @@ function collectSurfaceRefs(
       }
     }
   }
-  for (const ruleId of profile.use.pruningRules) {
-    const rule = catalog.compiled.pruningRules[ruleId];
-    if (rule !== undefined) {
-      walkExpr(rule.when, visitRef);
+  for (const guardrailId of profile.use.guardrails ?? []) {
+    const guardrail = catalog.compiled.guardrails?.[guardrailId];
+    if (guardrail !== undefined) {
+      walkExpr(guardrail.when, visitRef);
+      if (guardrail.penalty !== undefined) {
+        walkExpr(guardrail.penalty, visitRef);
+      }
     }
   }
   const considerations = catalog.compiled.considerations;

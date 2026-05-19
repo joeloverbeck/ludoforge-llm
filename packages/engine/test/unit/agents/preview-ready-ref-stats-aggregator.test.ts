@@ -66,7 +66,7 @@ const createDef = (fullCandidateCap: number): GameDef => {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         moveRank: {
           scopes: ['move'],
@@ -105,7 +105,7 @@ const createDef = (fullCandidateCap: number): GameDef => {
         },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['moveRank', 'projectedScore', 'constantProbe'],
           tieBreakers: ['stable'],
         },

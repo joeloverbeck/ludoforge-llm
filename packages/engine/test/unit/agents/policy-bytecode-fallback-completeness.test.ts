@@ -139,7 +139,7 @@ function createCatalog(): AgentPolicyCatalog {
       candidateAggregates: {
         pressure: { type: 'number', costClass: 'candidate', op: 'count', of: literal(1), dependencies: emptyDeps },
       },
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -150,7 +150,7 @@ function createCatalog(): AgentPolicyCatalog {
         params: {},
         preview: { mode: 'disabled' },
         selection: { mode: 'argmax' },
-        use: { pruningRules: [], considerations: [], tieBreakers: [] },
+        use: { guardrails: [], considerations: [], tieBreakers: [] },
         plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
       },
     },

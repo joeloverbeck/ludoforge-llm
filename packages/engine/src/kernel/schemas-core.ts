@@ -1164,14 +1164,6 @@ const CompiledAgentAggregateSchema = z
   })
   .strict();
 
-const CompiledAgentPruningRuleSchema = z
-  .object({
-    costClass: AgentPolicyCostClassSchema,
-    dependencies: CompiledAgentDependencyRefsSchema,
-    onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
-  })
-  .strict();
-
 const AgentPreviewFallbackSchema = z
   .object({
     onUnavailable: z.union([
@@ -1420,15 +1412,6 @@ const CompiledAgentGuardrailSchema = z.object({
   onAllPruned: PassFallbackSpecSchema.optional(),
 }).strict();
 
-const CompiledPolicyPruningRuleSchema = z
-  .object({
-    costClass: AgentPolicyCostClassSchema,
-    when: CompiledPolicyExprSchema,
-    dependencies: CompiledAgentDependencyRefsSchema,
-    onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
-  })
-  .strict();
-
 const CompiledPolicyTieBreakerSchema = z
   .object({
     kind: StringSchema,
@@ -1460,7 +1443,6 @@ const CompiledPolicyCatalogSchema = z
     selectors: z.record(StringSchema, CompiledPolicySelectorSchema).optional(),
     strategyModules: z.record(StringSchema, StrategyModuleSchema).optional(),
     guardrails: z.record(StringSchema, GuardrailSchema).optional(),
-    pruningRules: z.record(StringSchema, CompiledPolicyPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledPolicyStrategicConditionSchema),
@@ -1495,7 +1477,6 @@ const CompiledAgentLibraryIndexSchema = z
     selectors: z.record(StringSchema, CompiledAgentSelectorSchema).optional(),
     strategyModules: z.record(StringSchema, CompiledAgentStrategyModuleSchema).optional(),
     guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
-    pruningRules: z.record(StringSchema, CompiledAgentPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),
@@ -1510,7 +1491,7 @@ const CompiledAgentProfileSchema = z
     use: z
       .object({
         considerations: z.array(StringSchema),
-        pruningRules: z.array(StringSchema),
+        guardrails: z.array(StringSchema).optional(),
         strategyModules: z.array(StringSchema).optional(),
         tieBreakers: z.array(StringSchema),
       })

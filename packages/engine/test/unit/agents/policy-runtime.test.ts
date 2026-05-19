@@ -45,7 +45,7 @@ function createMinimalCatalog(overrides?: {
     fingerprint: 'test-profile',
     params: {},
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: [],
       tieBreakers: [],
     },
@@ -81,7 +81,7 @@ function createMinimalCatalog(overrides?: {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

@@ -189,7 +189,7 @@ function createBaseDef(overrides?: {
         stateFeatures: {},
         candidateFeatures: {},
         candidateAggregates: {},
-        pruningRules: {},
+        guardrails: {},
         considerations: {},
         tieBreakers: {
           rng: { kind: 'rng', costClass: 'state', dependencies: emptyDeps },
@@ -202,7 +202,7 @@ function createBaseDef(overrides?: {
           params: {},
           preview: { mode: 'exactWorld' },
           selection: { mode: 'argmax' },
-          use: { pruningRules: [], considerations: [], tieBreakers: ['rng'] },
+          use: { guardrails: [], considerations: [], tieBreakers: ['rng'] },
           plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: [] },
         },
       },

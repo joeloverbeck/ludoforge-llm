@@ -57,7 +57,7 @@ function compileConsideration(scopes: readonly string[], valueRef: string) {
           observer: 'testObserver',
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: ['invalid'],
             tieBreakers: ['stableMoveKey'],
           },

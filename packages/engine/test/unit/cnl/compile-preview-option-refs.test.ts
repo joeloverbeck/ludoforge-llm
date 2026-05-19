@@ -102,7 +102,7 @@ describe('preview.option policy refs', () => {
             observer: 'testObserver',
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['margin', 'rank', 'delta', 'globalVar', 'playerVar', 'metric', 'outcome', 'driveDepth'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -154,7 +154,7 @@ describe('preview.option policy refs', () => {
           baseline: {
             observer: 'testObserver',
             params: {},
-            use: { pruningRules: [], considerations: ['invalid'], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: ['invalid'], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline', arvn: 'baseline' },

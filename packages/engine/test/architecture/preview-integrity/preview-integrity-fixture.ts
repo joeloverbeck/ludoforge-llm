@@ -70,7 +70,7 @@ function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackM
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -114,7 +114,7 @@ function createCatalog(previewAvailable: boolean, fallbackMode: PreviewFallbackM
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

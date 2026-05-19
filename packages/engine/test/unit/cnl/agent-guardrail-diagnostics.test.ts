@@ -60,7 +60,7 @@ function createDoc(
         baseline: {
           observer: 'testObserver',
           params: {},
-          use: { considerations: ['stable'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
+          use: { considerations: ['stable'], guardrails: [], tieBreakers: ['stableMoveKey'] },
           ...extraProfile,
         },
       },
@@ -111,7 +111,20 @@ function assertCode(doc: GameSpecDoc, code: CnlCompilerDiagnosticCode): void {
   );
 }
 
+const deprecatedGuardrailKey = 'pruning' + 'Rules';
+
 describe('agent guardrail diagnostics', () => {
+  it('reports deprecated guardrail predecessor declarations', () => {
+    assertCode(
+      createDoc({}, { [deprecatedGuardrailKey]: { oldRule: { when: true } } }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_PRUNINGRULES_DEPRECATED,
+    );
+    assertCode(
+      createDoc({}, {}, { use: { [deprecatedGuardrailKey]: ['oldRule'], considerations: ['stable'], tieBreakers: ['stableMoveKey'] } }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_PRUNINGRULES_DEPRECATED,
+    );
+  });
+
   it('compiles downstream guardrail refs and tracks guardrail dependencies', () => {
     const result = compileGameSpecToGameDef(createDoc(
       { good: validGuardrail({ severity: 'demote', penalty: 7 }) },
@@ -198,7 +211,7 @@ describe('agent guardrail diagnostics', () => {
           selectors: { zonePriority: validSelector() },
           strategyModules: { useGuardrail: validModule({ guardrailIds: ['preview'] }) },
         },
-        { use: { strategyModules: ['useGuardrail'], considerations: ['stable'], pruningRules: [], tieBreakers: ['stableMoveKey'] }, guardrails: { maxCostClass: 'state' } },
+        { use: { strategyModules: ['useGuardrail'], considerations: ['stable'], guardrails: [], tieBreakers: ['stableMoveKey'] }, guardrails: { maxCostClass: 'state' } },
       ),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_COST_CLASS_EXCEEDS_LIMIT,
     );

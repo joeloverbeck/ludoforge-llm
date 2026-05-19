@@ -12,7 +12,6 @@ import type {
   CompiledPolicyCandidateFeature,
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
-  CompiledPolicyPruningRule,
   CompiledPolicySelector,
   CompiledPolicyStateFeature,
   CompiledPolicyStrategicCondition,
@@ -51,12 +50,6 @@ export interface AgentPolicyLibraryWithExpr {
   readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
   readonly strategyModules: Readonly<Record<string, StrategyModuleDef>>;
   readonly guardrails: Readonly<Record<string, GuardrailDef>>;
-  readonly pruningRules: Readonly<Record<string, {
-    readonly costClass: AgentPolicyCostClass;
-    readonly when: AgentPolicyExpr;
-    readonly dependencies: CompiledAgentDependencyRefs;
-    readonly onEmpty: 'skipRule' | 'error';
-  }>>;
   readonly considerations: Readonly<Record<string, {
     readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
@@ -101,7 +94,6 @@ export function lowerAgentConsiderations(
   const selectors: Record<string, CompiledPolicySelector> = {};
   const strategyModules: Record<string, StrategyModuleDef> = {};
   const guardrails: Record<string, GuardrailDef> = {};
-  const pruningRules: Record<string, CompiledPolicyPruningRule> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
   const strategicConditions: Record<string, CompiledPolicyStrategicCondition> = {};
@@ -197,12 +189,6 @@ export function lowerAgentConsiderations(
     };
   }
 
-  for (const [ruleId, rule] of Object.entries(library.pruningRules)) {
-    const when = lowerAgentPolicyExpr(rule.when);
-    if (when === null) continue;
-    pruningRules[ruleId] = { ...rule, when };
-  }
-
   for (const [considerationId, consideration] of Object.entries(library.considerations)) {
     const weight = lowerAgentPolicyExpr(consideration.weight);
     const value = lowerAgentPolicyExpr(consideration.value);
@@ -267,7 +253,6 @@ export function lowerAgentConsiderations(
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
-    pruningRules,
     considerations,
     tieBreakers,
     strategicConditions,

@@ -81,7 +81,7 @@ export function createStrategyModuleGameDef(module: StrategyModuleDef = createSt
     fingerprint: 'strategy-module-runtime-profile',
     params: {},
     use: {
-      pruningRules: ['dropInactive'],
+      guardrails: ['dropInactive'],
       considerations: ['moduleContribution'],
       tieBreakers: ['stableMoveKey'],
     },
@@ -91,6 +91,7 @@ export function createStrategyModuleGameDef(module: StrategyModuleDef = createSt
       candidateAggregates: [],
       selectors: [],
       strategyModules: ['buildEngine'],
+      guardrails: ['dropInactive'],
       considerations: ['moduleContribution'],
     },
     preview: { mode: 'disabled' },
@@ -131,16 +132,21 @@ export function createStrategyModuleGameDef(module: StrategyModuleDef = createSt
           dependencies: module.dependencies,
         },
       },
-      pruningRules: {
+      guardrails: {
         dropInactive: {
+          traceLabel: 'drop inactive module candidates',
+          scopes: ['move'],
           costClass: 'state',
           when: {
             kind: 'op',
             op: 'not',
             args: [moduleRef('buildEngine', { kind: 'strategyModule', moduleId: 'buildEngine', field: 'active' })],
           },
+          severity: 'prune',
+          safe: true,
+          onAllPruned: { actionId: asActionId('goodMove'), traceLabel: 'fallback good move' },
+          onUnavailable: 'noFire',
           dependencies: emptyDependencies,
-          onEmpty: 'skipRule',
         },
       },
       considerations: {

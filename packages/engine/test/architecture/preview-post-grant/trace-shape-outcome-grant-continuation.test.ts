@@ -46,7 +46,7 @@ function createProfile(outcomeGrantContinuation?: CompiledAgentProfile['preview'
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -84,7 +84,7 @@ function createCatalog(outcomeGrantContinuation?: CompiledAgentProfile['preview'
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         preferPreviewMargin: {
           scopes: ['move'],

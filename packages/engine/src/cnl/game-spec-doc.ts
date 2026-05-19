@@ -797,7 +797,6 @@ export interface GameSpecAgentLibrary {
   readonly selectors?: Readonly<Record<string, GameSpecSelectorDef>>;
   readonly strategyModules?: Readonly<Record<string, GameSpecStrategyModuleDef>>;
   readonly guardrails?: Readonly<Record<string, GameSpecGuardrailDef>>;
-  readonly pruningRules?: Readonly<Record<string, GameSpecPruningRuleDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;
@@ -805,7 +804,7 @@ export interface GameSpecAgentLibrary {
 
 export interface GameSpecAgentProfileUse {
   readonly considerations?: readonly string[];
-  readonly pruningRules?: readonly string[];
+  readonly guardrails?: readonly string[];
   readonly strategyModules?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }

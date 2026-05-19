@@ -39,7 +39,7 @@ const baseDoc = (): GameSpecDoc => ({
       baseline: {
         observer: 'currentPlayer',
         params: {},
-        use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+        use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
         preview: {
           mode: 'exactWorld',
           budget: { strategy: 'balancedCoverage', fullCandidateCap: 4, minPerGroup: 1 },
@@ -72,7 +72,7 @@ describe('compile preview.budget', () => {
           baseline: {
             observer: 'currentPlayer',
             params: {},
-            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
             preview: { mode: 'exactWorld', ['top' + 'K']: 4 } as never,
           },
         },
@@ -99,7 +99,7 @@ describe('compile preview.budget', () => {
           baseline: {
             observer: 'currentPlayer',
             params: {},
-            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
             preview: {
               mode: 'exactWorld',
               budget: {

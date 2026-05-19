@@ -746,55 +746,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         });
       }
 
-      for (const pruningRuleId of profile.use.pruningRules) {
-        const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
-        if (pruningRule === undefined) {
-          throw new PolicyRuntimeError({
-            code: 'RUNTIME_EVALUATION_ERROR',
-            message: `Unknown pruning rule "${pruningRuleId}".`,
-            detail: { pruningRuleId },
-          });
-        }
-        const survivors = activeCandidates.filter((candidate) => {
-          const shouldPrune = evaluation.evaluateCompiledExpr(pruningRule.when, candidate);
-          if (shouldPrune === true) {
-            candidate.prunedBy.push(pruningRuleId);
-            return false;
-          }
-          return true;
-        });
-
-        if (survivors.length === 0) {
-          if (pruningRule.onEmpty === 'skipRule') {
-            activeCandidates.forEach((candidate) => {
-              if (candidate.prunedBy.at(-1) === pruningRuleId) {
-                candidate.prunedBy.pop();
-              }
-            });
-            pruningSteps.push({
-              ruleId: pruningRuleId,
-              remainingCandidateCount: activeCandidates.length,
-              skippedBecauseEmpty: true,
-            });
-            continue;
-          }
-          throw new PolicyRuntimeError({
-            code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
-            message: `Pruning rule "${pruningRuleId}" removed every candidate.`,
-            detail: { pruningRuleId },
-          });
-        }
-
-        if (survivors.length !== activeCandidates.length) {
-          activeCandidates = survivors;
-          evaluation.setCurrentCandidates(activeCandidates);
-        }
-        pruningSteps.push({
-          ruleId: pruningRuleId,
-          remainingCandidateCount: activeCandidates.length,
-          skippedBecauseEmpty: false,
-        });
-      }
       evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
 
       const considerations = catalog.compiled.considerations;

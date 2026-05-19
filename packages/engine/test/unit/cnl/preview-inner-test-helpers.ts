@@ -42,7 +42,7 @@ export const compilePreviewInner = (
       baseline: {
         observer: 'currentPlayer',
         params: {},
-        use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+        use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
         preview: { mode: 'exactWorld', inner },
       },
     },

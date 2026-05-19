@@ -33,7 +33,7 @@ function docWithInner(inner: NonNullable<NonNullable<GameSpecAgentProfileDef['pr
         baseline: {
           observer: 'omniscient',
           params: {},
-          use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+          use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           preview: { mode: 'exactWorld', inner },
         },
       },

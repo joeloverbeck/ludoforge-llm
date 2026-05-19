@@ -67,6 +67,7 @@ function createCompileReadyDoc(seatIds: readonly string[] = ['us', 'arvn']) {
         cost: [],
         effects: [],
         limits: [],
+        tags: ['pass'],
       },
     ],
     terminal: {
@@ -153,15 +154,20 @@ describe('agents authoring surface', () => {
               where: { not: { ref: 'feature.isPass' } },
             },
           },
-          pruningRules: {
+          guardrails: {
             dropPassWhenStrongerMoveExists: {
+              traceLabel: 'drop pass when stronger move exists',
+              scopes: ['move'],
               when: {
                 and: [
                   { ref: 'feature.isPass' },
                   { gt: [{ ref: 'aggregate.bestProjectedMargin' }, { param: 'passFloor' }] },
                 ],
               },
-              onEmpty: 'skipRule',
+              severity: 'prune',
+              safe: true,
+              onAllPruned: { actionId: 'draw', traceLabel: 'fallback draw' },
+              onUnavailable: 'noFire',
             },
           },
           considerations: {
@@ -185,7 +191,7 @@ describe('agents authoring surface', () => {
               tieOrder: ['stable', 'projected'],
             },
             use: {
-              pruningRules: ['dropPassWhenStrongerMoveExists'],
+              guardrails: ['dropPassWhenStrongerMoveExists'],
               considerations: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -334,8 +340,11 @@ describe('agents authoring surface', () => {
           },
         },
       },
-      pruningRules: {
+      guardrails: {
         dropPassWhenStrongerMoveExists: {
+          id: 'dropPassWhenStrongerMoveExists',
+          traceLabel: 'drop pass when stronger move exists',
+          scopes: ['move'],
           costClass: 'candidate',
           when: opExpr(
             'and',
@@ -353,7 +362,10 @@ describe('agents authoring surface', () => {
             aggregates: ['bestProjectedMargin'],
             strategicConditions: [],
           },
-          onEmpty: 'skipRule',
+          severity: 'prune',
+          safe: true,
+          onAllPruned: { actionId: 'draw', traceLabel: 'fallback draw' },
+          onUnavailable: 'noFire',
         },
       },
       considerations: {
@@ -395,7 +407,7 @@ describe('agents authoring surface', () => {
       tieOrder: ['stable', 'projected'],
     });
     assert.deepEqual(baselineProfile.use, {
-      pruningRules: ['dropPassWhenStrongerMoveExists'],
+      guardrails: ['dropPassWhenStrongerMoveExists'],
       considerations: ['preferEvents'],
       tieBreakers: ['stableMoveKey'],
     });
@@ -403,6 +415,7 @@ describe('agents authoring surface', () => {
       stateFeatures: ['currentMargin'],
       candidateFeatures: ['isPass', 'projectedMargin'],
       candidateAggregates: ['bestProjectedMargin'],
+      guardrails: ['dropPassWhenStrongerMoveExists'],
       considerations: ['preferEvents'],
     });
     assert.deepEqual(agents.bindingsBySeat, {
@@ -474,7 +487,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -696,7 +709,7 @@ describe('agents authoring surface', () => {
               kind: 'stableMoveKey' as const,
             },
           },
-          pruningRules: {},
+          guardrails: {},
           candidateAggregates: {},
         },
         profiles: {
@@ -706,7 +719,7 @@ describe('agents authoring surface', () => {
               mode: 'bold',
             },
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['preferEvents'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -733,13 +746,13 @@ describe('agents authoring surface', () => {
             use: {
               tieBreakers: ['stableMoveKey'],
               considerations: ['preferEvents'],
-              pruningRules: [],
+              guardrails: [],
             },
           },
         },
         library: {
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           tieBreakers: {
             stableMoveKey: {
               kind: 'stableMoveKey' as const,
@@ -842,7 +855,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -920,7 +933,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['preferHigherPopulation'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -991,7 +1004,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['rewardLoadedMoves'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1037,7 +1050,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['badScope'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1070,7 +1083,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1118,7 +1131,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1174,7 +1187,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1212,7 +1225,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1258,7 +1271,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1305,7 +1318,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1345,7 +1358,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1383,7 +1396,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1418,7 +1431,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1454,7 +1467,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1492,7 +1505,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1530,7 +1543,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1568,7 +1581,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1607,7 +1620,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1644,7 +1657,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1682,7 +1695,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1720,7 +1733,7 @@ describe('agents authoring surface', () => {
           badCompletion: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1732,7 +1745,7 @@ describe('agents authoring surface', () => {
           badDepth: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1744,7 +1757,7 @@ describe('agents authoring surface', () => {
           badBudget: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1804,7 +1817,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1847,7 +1860,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1890,7 +1903,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1933,7 +1946,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -1976,7 +1989,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2023,7 +2036,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2062,7 +2075,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2105,7 +2118,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2149,10 +2162,15 @@ describe('agents authoring surface', () => {
       dataAssets: [createSeatCatalogAsset(['us'])],
       agents: withObserver({
         library: {
-          pruningRules: {
+          guardrails: {
             knownPrune: {
+              traceLabel: 'known prune',
+              scopes: ['move'],
               when: true,
-              onEmpty: 'skipRule',
+              severity: 'prune',
+              safe: true,
+              onAllPruned: { actionId: 'draw', traceLabel: 'fallback draw' },
+              onUnavailable: 'noFire',
             },
           },
           considerations: {
@@ -2172,7 +2190,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: ['missingPrune'],
+              guardrails: ['missingPrune'],
               considerations: ['missingConsideration'],
               tieBreakers: ['missingTieBreaker'],
             },
@@ -2188,7 +2206,7 @@ describe('agents authoring surface', () => {
       diagnostics.some(
         (diagnostic) =>
           diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_UNKNOWN_ID'
-          && diagnostic.path === 'doc.agents.profiles.baseline.use.pruningRules.0',
+          && diagnostic.path === 'doc.agents.profiles.baseline.use.guardrails.0',
       ),
     );
     assert.ok(
@@ -2230,7 +2248,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['invalid'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2281,7 +2299,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['preferNamedOption'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2326,7 +2344,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline', arvn: 'baseline' },
@@ -2361,7 +2379,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
@@ -2396,7 +2414,7 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+            use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { us: 'baseline' },
@@ -2448,7 +2466,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2491,7 +2509,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2554,7 +2572,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2584,13 +2602,13 @@ describe('agents authoring surface', () => {
         profiles: {
           baseline: {
             params: {},
-            pruningRules: [
+            guardrails: [
               {
                 when: { ref: 'candidate.isPass' },
               },
             ],
             use: {
-              pruningRules: [{ inline: true }],
+              guardrails: [{ inline: true }],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -2608,14 +2626,14 @@ describe('agents authoring surface', () => {
         diagnostics.some(
           (diagnostic) =>
             diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_INLINE_LOGIC_FORBIDDEN' &&
-            diagnostic.path === 'doc.agents.profiles.baseline.pruningRules',
+            diagnostic.path === 'doc.agents.profiles.baseline.guardrails',
         ),
       );
       assert.ok(
         diagnostics.some(
           (diagnostic) =>
             diagnostic.code === 'CNL_VALIDATOR_AGENTS_PROFILE_USE_ENTRY_INVALID' &&
-            diagnostic.path === 'doc.agents.profiles.baseline.use.pruningRules.0',
+            diagnostic.path === 'doc.agents.profiles.baseline.use.guardrails.0',
         ),
       );
       assert.ok(diagnostics.some((diagnostic) => diagnostic.code === 'CNL_VALIDATOR_AGENTS_MAP_REQUIRED' && diagnostic.path === 'doc.agents.bindings'));
@@ -2665,7 +2683,7 @@ describe('agents authoring surface', () => {
               tieOrder: ['stable', 'stable'],
             },
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2699,7 +2717,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2737,7 +2755,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2785,7 +2803,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2874,7 +2892,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: ['divideByZero'],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2917,7 +2935,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -2995,7 +3013,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -3088,7 +3106,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -3148,7 +3166,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -3207,7 +3225,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -3265,7 +3283,7 @@ describe('agents authoring surface', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },

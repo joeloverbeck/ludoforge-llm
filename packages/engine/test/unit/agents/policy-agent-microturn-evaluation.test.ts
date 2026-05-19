@@ -54,7 +54,7 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
     preview: { mode: 'exactWorld' },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -92,7 +92,7 @@ function createMicroturnGuidedCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferRight: {
           costClass: 'state',

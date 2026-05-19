@@ -48,7 +48,7 @@ function createDoc(
         baseline: {
           observer: 'testObserver',
           params: {},
-          use: { considerations: ['useModule'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
+          use: { considerations: ['useModule'], guardrails: [], tieBreakers: ['stableMoveKey'] },
           ...extraProfile,
         },
       },

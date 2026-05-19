@@ -24,7 +24,7 @@ const candidateTagRef = (tagName: string): CompiledPolicyExpr => ({
 });
 
 describe('guardrail dispatch order', () => {
-  it('runs guardrails after modules and before pruningRules', () => {
+  it('runs guardrails after modules in declared order', () => {
     const base = createStrategyModuleGameDef();
     const catalog = base.agents!;
     const guardrail: GuardrailDef = {
@@ -43,13 +43,22 @@ describe('guardrail dispatch order', () => {
       kind: 'ref',
       ref: { kind: 'library', refKind: 'aggregate', id: 'activeCandidateCount' },
     };
-    const pruneGoodOnlyAfterGuardrail: CompiledPolicyExpr = {
+    const dropGoodOnlyAfterFirstGuardrail: GuardrailDef = {
+      id: 'dropGoodAfterDropBad' as GuardrailDef['id'],
+      traceLabel: 'drop good after bad',
+      scopes: ['move'],
+      severity: 'prune',
+      onUnavailable: 'noFire',
+      costClass: 'candidate',
+      dependencies,
+      when: {
       kind: 'op',
       op: 'and',
       args: [
         candidateTagRef('good'),
         { kind: 'op', op: 'eq', args: [countActiveCandidates, literal(1)] },
       ],
+      },
     };
     const def = {
       ...base,
@@ -68,11 +77,18 @@ describe('guardrail dispatch order', () => {
               onUnavailable: guardrail.onUnavailable,
               ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
             },
+            dropGoodAfterDropBad: {
+              traceLabel: dropGoodOnlyAfterFirstGuardrail.traceLabel,
+              scopes: dropGoodOnlyAfterFirstGuardrail.scopes,
+              severity: dropGoodOnlyAfterFirstGuardrail.severity,
+              costClass: dropGoodOnlyAfterFirstGuardrail.costClass,
+              dependencies: dropGoodOnlyAfterFirstGuardrail.dependencies,
+              onUnavailable: dropGoodOnlyAfterFirstGuardrail.onUnavailable,
+            },
           },
         },
         compiled: {
           ...catalog.compiled,
-          guardrails: { dropBad: guardrail },
           candidateAggregates: {
             ...catalog.compiled.candidateAggregates,
             activeCandidateCount: {
@@ -83,13 +99,9 @@ describe('guardrail dispatch order', () => {
               dependencies,
             },
           },
-          pruningRules: {
-            afterGuardrail: {
-              costClass: 'candidate' as const,
-              when: pruneGoodOnlyAfterGuardrail,
-              dependencies,
-              onEmpty: 'error' as const,
-            },
+          guardrails: {
+            dropBad: guardrail,
+            dropGoodAfterDropBad: dropGoodOnlyAfterFirstGuardrail,
           },
         },
         profiles: {
@@ -98,12 +110,12 @@ describe('guardrail dispatch order', () => {
             ...catalog.profiles.baseline!,
             use: {
               ...catalog.profiles.baseline!.use,
-              guardrails: ['dropBad'],
-              pruningRules: ['afterGuardrail'],
+              guardrails: ['dropBad', 'dropGoodAfterDropBad'],
               considerations: [],
             },
             plan: {
               ...catalog.profiles.baseline!.plan,
+              guardrails: ['dropBad', 'dropGoodAfterDropBad'],
               considerations: [],
             },
           },

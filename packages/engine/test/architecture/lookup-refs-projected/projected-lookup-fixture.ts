@@ -147,7 +147,7 @@ function createProfile(kind: FixtureProfileKind): CompiledAgentProfile {
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -172,7 +172,7 @@ export function createProjectedLookupCatalog(kind: FixtureProfileKind = 'project
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         projectedTroopCount: {
           costClass: 'preview',

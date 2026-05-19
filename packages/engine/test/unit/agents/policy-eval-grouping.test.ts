@@ -22,7 +22,7 @@ function createCatalog(): AgentPolicyCatalog {
     fingerprint: 'grouping-test-profile',
     params: {},
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: [],
       tieBreakers: ['stableMoveKey'],
     },
@@ -59,7 +59,7 @@ function createCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {
         stableMoveKey: {

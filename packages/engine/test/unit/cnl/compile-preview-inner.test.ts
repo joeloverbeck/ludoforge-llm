@@ -48,7 +48,7 @@ const baseDoc = (): GameSpecDoc => ({
       baseline: {
         observer: 'currentPlayer',
         params: {},
-        use: { pruningRules: [], considerations: [], tieBreakers: ['stableMoveKey'] },
+        use: { guardrails: [], considerations: [], tieBreakers: ['stableMoveKey'] },
         preview: { mode: 'exactWorld' },
       },
     },
@@ -77,7 +77,7 @@ const withPreview = (
         baseline: {
           observer: 'currentPlayer',
           params: {},
-          use: { pruningRules: [], considerations: useConsiderations, tieBreakers: ['stableMoveKey'] },
+          use: { guardrails: [], considerations: useConsiderations, tieBreakers: ['stableMoveKey'] },
           preview,
         },
       },

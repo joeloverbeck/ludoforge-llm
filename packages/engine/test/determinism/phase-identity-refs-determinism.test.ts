@@ -41,7 +41,7 @@ const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
     stateFeatures: {},
     candidateFeatures: {},
     candidateAggregates: {},
-    pruningRules: {},
+    guardrails: {},
     considerations: {},
     tieBreakers: {},
     strategicConditions: {},

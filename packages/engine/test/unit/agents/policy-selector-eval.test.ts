@@ -71,7 +71,7 @@ function createSelectorCatalog(compiledSelector: CompiledPolicySelector): AgentP
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

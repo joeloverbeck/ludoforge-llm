@@ -69,7 +69,7 @@ function createCatalog(selectors: readonly CompiledPolicySelector[]): AgentPolic
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

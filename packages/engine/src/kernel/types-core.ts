@@ -760,13 +760,6 @@ export interface CompiledPolicyAggregate {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
-export interface CompiledPolicyPruningRule {
-  readonly costClass: AgentPolicyCostClass;
-  readonly when: CompiledPolicyExpr;
-  readonly dependencies: CompiledAgentDependencyRefs;
-  readonly onEmpty: 'skipRule' | 'error';
-}
-
 export type ModuleCostClass = SelectorCostClass;
 
 export interface ModuleAppliesSpec {
@@ -880,7 +873,6 @@ export interface CompiledPolicyCatalog {
   readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
   readonly strategyModules?: Readonly<Record<string, StrategyModuleDef>>;
   readonly guardrails?: Readonly<Record<string, GuardrailDef>>;
-  readonly pruningRules: Readonly<Record<string, CompiledPolicyPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledPolicyStrategicCondition>>;
@@ -1116,12 +1108,6 @@ export interface CompiledAgentGuardrail {
   readonly onAllPruned?: PassFallbackSpec;
 }
 
-export interface CompiledAgentPruningRule {
-  readonly costClass: AgentPolicyCostClass;
-  readonly dependencies: CompiledAgentDependencyRefs;
-  readonly onEmpty: 'skipRule' | 'error';
-}
-
 export interface CompiledAgentConsideration {
   readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
@@ -1158,7 +1144,6 @@ export interface CompiledAgentLibraryIndex {
   readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
   readonly strategyModules?: Readonly<Record<string, CompiledAgentStrategyModule>>;
   readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
-  readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
@@ -1236,7 +1221,6 @@ export interface CompiledAgentProfile {
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
     readonly considerations: readonly string[];
-    readonly pruningRules: readonly string[];
     readonly strategyModules?: readonly string[];
     readonly guardrails?: readonly string[];
     readonly tieBreakers: readonly string[];

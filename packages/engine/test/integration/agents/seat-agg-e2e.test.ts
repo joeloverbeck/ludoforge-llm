@@ -80,7 +80,7 @@ function compilePolicyOverlay(options: {
           ...baseProfile,
           params: { ...(baseProfile.params ?? {}) },
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: Object.keys(options.considerations),
             tieBreakers: [],
           },

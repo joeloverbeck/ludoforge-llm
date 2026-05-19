@@ -50,10 +50,11 @@ describe('strategy module dispatch order', () => {
         ...catalog,
         compiled: {
           ...catalog.compiled,
-          pruningRules: {
-            ...catalog.compiled.pruningRules,
+          guardrails: {
+            ...(catalog.compiled.guardrails ?? {}),
             dropInactive: {
-              ...catalog.compiled.pruningRules.dropInactive!,
+              ...catalog.compiled.guardrails!.dropInactive!,
+              costClass: 'candidate' as const,
               when: {
                 kind: 'op',
                 op: 'eq',
@@ -97,7 +98,10 @@ describe('strategy module dispatch order', () => {
 
     assert.equal(result.kind, 'success');
     assert.deepEqual(result.move, { actionId: asActionId('badMove'), params: {} });
-    assert.equal(result.metadata.pruningSteps[0]?.remainingCandidateCount, 1);
+    assert.deepEqual(
+      result.metadata.candidates.find((candidate) => candidate.actionId === 'goodMove')?.prunedBy,
+      ['dropInactive'],
+    );
     assert.deepEqual(result.metadata.modules?.active, [
       {
         id: 'buildEngine',

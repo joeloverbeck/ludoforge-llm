@@ -56,7 +56,6 @@ import type {
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
   CompiledAgentProfile,
-  CompiledAgentPruningRule,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
@@ -120,7 +119,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -131,7 +130,6 @@ type AgentAggregateWithExpr = CompiledAgentAggregate & {
 };
 type AgentSelectorWithExpr = CompiledPolicySelector;
 type AgentGuardrailWithExprInternal = AgentGuardrailWithExpr;
-type AgentPruningRuleWithExpr = CompiledAgentPruningRule & { readonly when: AgentPolicyExpr };
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
@@ -243,7 +241,6 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const selectors: Record<string, CompiledAgentSelector> = {};
   const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
   const guardrails: Record<string, CompiledAgentGuardrail> = {};
-  const pruningRules: Record<string, CompiledAgentPruningRule> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
   const strategicConditions: Record<string, CompiledStrategicCondition> = {};
@@ -306,13 +303,6 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
     };
   }
-  for (const [id, rule] of Object.entries(library.pruningRules)) {
-    pruningRules[id] = {
-      costClass: rule.costClass,
-      dependencies: rule.dependencies,
-      onEmpty: rule.onEmpty,
-    };
-  }
   for (const [id, consideration] of Object.entries(library.considerations)) {
     considerations[id] = {
       ...(consideration.scopes === undefined ? {} : { scopes: consideration.scopes }),
@@ -348,7 +338,6 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
-    pruningRules,
     considerations,
     tieBreakers,
     strategicConditions,
@@ -873,10 +862,10 @@ function lowerProfile(
         diagnostics,
       ),
     ]),
-  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'strategyModules' | 'tieBreakers'>;
+  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'guardrails' | 'strategyModules' | 'tieBreakers'>;
   const use: CompiledAgentProfile['use'] = {
     considerations: loweredUse.considerations,
-    pruningRules: loweredUse.pruningRules,
+    ...(loweredUse.guardrails?.length === 0 ? {} : { guardrails: loweredUse.guardrails }),
     ...(loweredUse.strategyModules?.length === 0 ? {} : { strategyModules: loweredUse.strategyModules }),
     tieBreakers: loweredUse.tieBreakers,
   };
@@ -2092,14 +2081,7 @@ function buildProfilePlan(
     }
   };
 
-  for (const ruleId of use.pruningRules) {
-    const rule = library.pruningRules[ruleId];
-    if (rule === undefined) {
-      hasError = true;
-      continue;
-    }
-    addDependencies(rule.dependencies);
-  }
+  for (const guardrailId of use.guardrails ?? []) visitGuardrail(guardrailId);
   for (const considerationId of use.considerations ?? []) {
     const consideration = library.considerations?.[considerationId];
     if (consideration === undefined) {
@@ -2202,7 +2184,6 @@ class AgentLibraryCompiler {
     readonly selectors: Record<string, AgentSelectorWithExpr>;
     readonly strategyModules: Record<string, AgentStrategyModuleWithExpr>;
     readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
-    readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
     readonly strategicConditions: Record<string, StrategicConditionWithExpr>;
@@ -2214,7 +2195,6 @@ class AgentLibraryCompiler {
   private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly strategyModuleStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
-  private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -2243,7 +2223,6 @@ class AgentLibraryCompiler {
       selectors: {},
       strategyModules: {},
       guardrails: {},
-      pruningRules: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -2273,9 +2252,6 @@ class AgentLibraryCompiler {
       this.compileStrategyModule(moduleId);
     }
     this.validateModuleTraceLabels();
-    for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
-      this.compilePruningRule(ruleId);
-    }
     for (const considerationId of Object.keys(this.authoredLibrary.considerations ?? {})) {
       this.compileConsideration(considerationId);
     }
@@ -2715,45 +2691,6 @@ class AgentLibraryCompiler {
     }
     this.compiled.guardrails[guardrailId] = compiled;
     this.guardrailStatus.set(guardrailId, 'done');
-    return compiled;
-  }
-
-  private compilePruningRule(ruleId: string): AgentPruningRuleWithExpr | null {
-    const status = this.pruningRuleStatus.get(ruleId);
-    if (status === 'done') {
-      return this.compiled.pruningRules[ruleId] ?? null;
-    }
-    if (status === 'failed') {
-      return null;
-    }
-    const def = this.authoredLibrary.pruningRules?.[ruleId];
-    if (def === undefined) {
-      this.pruningRuleStatus.set(ruleId, 'failed');
-      return null;
-    }
-    const context = this.createExprContext('rule');
-    const when = analyzePolicyExpr(def.when, context, this.diagnostics, `doc.agents.library.pruningRules.${ruleId}.when`);
-    if (when === null || when.valueType !== 'boolean') {
-      if (when !== null) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
-          path: `doc.agents.library.pruningRules.${ruleId}.when`,
-          severity: 'error',
-          message: `Pruning rule "${ruleId}" when clauses must compile to boolean.`,
-          suggestion: 'Use a boolean policy expression for pruningRule.when.',
-        });
-      }
-      this.pruningRuleStatus.set(ruleId, 'failed');
-      return null;
-    }
-    const compiled: AgentPruningRuleWithExpr = {
-      costClass: when.costClass,
-      when: when.expr,
-      dependencies: when.dependencies,
-      onEmpty: def.onEmpty ?? 'skipRule',
-    };
-    this.compiled.pruningRules[ruleId] = compiled;
-    this.pruningRuleStatus.set(ruleId, 'done');
     return compiled;
   }
 

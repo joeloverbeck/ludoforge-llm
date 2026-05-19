@@ -102,7 +102,6 @@ function withGuardrail(
           use: {
             ...baseProfile.use,
             guardrails: [String(guardrail.id)],
-            pruningRules: [],
             considerations: [],
           },
           plan: {

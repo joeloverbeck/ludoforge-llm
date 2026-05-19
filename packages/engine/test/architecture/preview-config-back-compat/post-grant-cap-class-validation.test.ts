@@ -59,7 +59,7 @@ function createDocWithPreview(preview: Record<string, unknown>) {
           observer: 'testObserver',
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: [],
             tieBreakers: ['stableMoveKey'],
           },

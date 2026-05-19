@@ -616,7 +616,10 @@ function forEachCompiledPolicyExpr(def: GameDef, visit: (expr: CompiledPolicyExp
       }
     }
   }
-  for (const rule of Object.values(compiled.pruningRules)) visit(rule.when);
+  for (const guardrail of Object.values(compiled.guardrails ?? {})) {
+    visit(guardrail.when);
+    if (guardrail.penalty !== undefined) visit(guardrail.penalty);
+  }
   for (const consideration of Object.values(compiled.considerations)) {
     if (consideration.when !== undefined) visit(consideration.when);
     visit(consideration.weight);

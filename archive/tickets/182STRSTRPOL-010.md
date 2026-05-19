@@ -1,6 +1,6 @@
 # 182STRSTRPOL-010: Phase 3 — Migration atomic: `pruningRules` → `guardrails` (data + tests + bucket removal)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — atomic cut spanning ~9 source files, ~20+ test files, 1 data file (per Foundation #14)
@@ -17,6 +17,13 @@ Spec 182 §5.1 + Foundation #14 require atomic removal of the `pruningRules` buc
 3. Data files: only `data/games/fire-in-the-lake/92-agents.md` declares a `pruningRules` entry (`dropPassWhenOtherMovesExist` at line 230, used 5× via `profile.use.pruningRules`). `data/games/texas-holdem/92-agents.md` declares an empty `pruningRules: {}` section that needs removal too.
 4. Campaign tooling: `campaigns/phase3-microturn/profile-migration-audit.md` references `pruningRules` in audit context; either update wording to reference `guardrails` (preferred) or note as historical context.
 5. The pass action that satisfies `dropPassWhenOtherMovesExist`'s migration target is the standard FITL pass action tagged `tags: [pass]` per `data/games/fire-in-the-lake/30-rules-actions.md:176`.
+
+## Assumption Reassessment (2026-05-19)
+
+1. The source migration was broader than the drafted 9-file list because `GameSpecDoc`, profile-use diagnostics, feature-table walking, and generated schema surfaces all participated in the same atomic contract cut.
+2. The diagnostic-code file in the live tree is `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, not `packages/engine/src/cnl/diagnostic-codes.ts`; the new `_PRUNINGRULES_DEPRECATED` code landed there.
+3. `packages/engine/schemas/GameDef.schema.json` is a generated artifact and was regenerated with `pnpm -F @ludoforge/engine run schema:artifacts` after the source schema changed.
+4. The no-survivors proof excludes active spec/ticket prose and archived material, but checks source, test, game data, campaign docs, and schema artifacts for the deprecated authored key.
 
 ## Architecture Check
 
@@ -150,3 +157,35 @@ Update `campaigns/phase3-microturn/profile-migration-audit.md` to reference `gua
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/no-pruning-rules-survivors.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-19)
+
+Implemented the atomic Phase 3 migration from `pruningRules` to `guardrails`.
+
+- Removed the deprecated bucket/profile-use/source/schema paths and switched profile diagnostics, feature-table walking, and policy evaluation to the guardrails-only contract.
+- Migrated FITL's `dropPassWhenOtherMovesExist` data to a `severity: prune`, `safe: true`, `onAllPruned` pass fallback guardrail, and removed Texas Hold'em's empty deprecated bucket.
+- Migrated repository-owned engine fixtures, golden policy-catalog fixtures, and campaign audit wording to `guardrails`.
+- Added `CNL_COMPILER_AGENT_GUARDRAIL_PRUNINGRULES_DEPRECATED` and a positive diagnostic test for future reintroduction.
+- Added `packages/engine/test/architecture/no-pruning-rules-survivors.test.ts` to enforce zero deprecated authored-key survivors outside spec/ticket/archive prose.
+
+Generated artifact provenance:
+
+- Ran `pnpm -F @ludoforge/engine run schema:artifacts`; this updated `packages/engine/schemas/GameDef.schema.json`.
+
+Source-size sweep:
+
+- New architecture test is 52 lines.
+- Existing large files touched by this migration (`compile-agents.ts`, `types-core.ts`, `schemas-core.ts`, `policy-eval.ts`, `compile-agents-authoring.test.ts`) were pre-existing shared surfaces; this ticket reduced or narrowly migrated their guardrail/pruning-rule seam and did not create a new oversized source module.
+
+Verification:
+
+- `rg -n "pruningRules|CompiledAgentPruningRule|CompiledPolicyPruningRule|materializePreviewInPruning|before guardrails" packages/engine/src packages/engine/test data/games campaigns packages/engine/schemas --glob '!archive/**' --glob '!**/.gamedef-cache/**'` — no matches.
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/compile-agents-authoring.test.js packages/engine/dist/test/unit/cnl/agent-guardrail-diagnostics.test.js packages/engine/dist/test/architecture/no-pruning-rules-survivors.test.js` — passed.
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/strategy-module-dispatch-order.test.js` — passed.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `git diff --check` — passed.

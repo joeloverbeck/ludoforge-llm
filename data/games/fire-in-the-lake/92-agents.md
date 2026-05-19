@@ -331,13 +331,20 @@ agents:
           ifInactive: noContribution
           ifSelectorEmpty: noContribution
 
-    pruningRules:
+    guardrails:
       dropPassWhenOtherMovesExist:
+        traceLabel: "drop pass when other moves exist"
+        scopes: [move]
         when:
           and:
             - { ref: candidate.tag.pass }
             - { ref: aggregate.hasNonPassAlternative }
-        onEmpty: skipRule
+        severity: prune
+        safe: true
+        onAllPruned:
+          actionId: pass
+          traceLabel: "fallback: pass action when no other moves"
+        onUnavailable: noFire
 
     considerations:
       preferProjectedSelfMargin:
@@ -615,7 +622,7 @@ agents:
         projectedMarginWeight: 100
         resourceWeight: 2
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         strategyModules:
           - arvnPursueProjectedMargin
@@ -642,7 +649,7 @@ agents:
         projectedMarginWeight: 800
         governWeight: 500
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
@@ -684,7 +691,7 @@ agents:
         governWeight: 700
         trainWeight: 300
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         strategyModules:
           - buildPoliticalEngine
@@ -709,7 +716,7 @@ agents:
         projectedMarginWeight: 100
         resourceWeight: 3
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
@@ -732,7 +739,7 @@ agents:
         projectedMarginWeight: 500
         rallyWeight: 500
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferNormalizedMargin

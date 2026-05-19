@@ -47,7 +47,6 @@ export function createGuardrailFallbackDef(): GameDef {
     fingerprint: 'guardrail-fallback-profile',
     params: {},
     use: {
-      pruningRules: [],
       guardrails: ['dropEverything'],
       considerations: [],
       tieBreakers: [],
@@ -97,7 +96,6 @@ export function createGuardrailFallbackDef(): GameDef {
           onAllPruned: guardrail.onAllPruned!,
         },
       },
-      pruningRules: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

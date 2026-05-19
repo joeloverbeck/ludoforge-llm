@@ -734,6 +734,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       } else {
         activeCandidates = [...guardrailFallback.activeCandidates];
       }
+      evaluation.setCurrentGuardrailRefView(guardrailDispatch.refView);
       if (activeCandidates.length === 0) {
         const guardrailId = guardrailDispatch.allPrunedGuardrailId;
         throw new PolicyRuntimeError({

@@ -515,6 +515,16 @@ export type CompiledAgentPolicyRef =
         | { readonly kind: 'scoreGroup.value'; readonly scoreGroupId: string }
         | { readonly kind: 'selector.id'; readonly role: string };
     }
+  | {
+      readonly kind: 'guardrail';
+      readonly guardrailId: string;
+      readonly field:
+        | 'fired'
+        | 'severity'
+        | 'status'
+        | 'penalty'
+        | 'onUnavailable';
+    }
   | CompiledSurfaceRef
   | {
       readonly kind: 'candidateIntrinsic';

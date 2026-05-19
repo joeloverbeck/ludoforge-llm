@@ -765,6 +765,17 @@ const CompiledAgentPolicyRefSchema = z.union([
       z.object({ kind: z.literal('selector.id'), role: StringSchema }).strict(),
     ]),
   }).strict(),
+  z.object({
+    kind: z.literal('guardrail'),
+    guardrailId: StringSchema,
+    field: z.union([
+      z.literal('fired'),
+      z.literal('severity'),
+      z.literal('status'),
+      z.literal('penalty'),
+      z.literal('onUnavailable'),
+    ]),
+  }).strict(),
   // Spec 166 §4.1: candidate-param refs carry explicit missing-value policy.
   z.object({
     kind: z.literal('candidateParam'),

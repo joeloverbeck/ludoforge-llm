@@ -34,6 +34,17 @@ const previewDriveDepthRef = (): CompiledPolicyExpr => ({
   ref: { kind: 'previewOptionRef', refKind: 'driveDepth' },
 });
 
+const guardrailRef = (field: Extract<CompiledPolicyExpr, { readonly kind: 'ref' }>['ref']): CompiledPolicyExpr => ({
+  kind: 'ref',
+  ref: field,
+});
+
+const boolToNumber = (expr: CompiledPolicyExpr): CompiledPolicyExpr => ({
+  kind: 'op',
+  op: 'boolToNumber',
+  args: [expr],
+});
+
 function createGuardrail(overrides: Partial<GuardrailDef> = {}): GuardrailDef {
   return {
     id: 'badGuardrail' as GuardrailDef['id'],
@@ -105,6 +116,56 @@ function withGuardrail(
   };
 }
 
+function withGuardrailRefConsideration(base: GameDef, value: CompiledPolicyExpr): GameDef {
+  const catalog = base.agents!;
+  const baseProfile = catalog.profiles.baseline!;
+  return {
+    ...base,
+    agents: {
+      ...catalog,
+      library: {
+        ...catalog.library,
+        considerations: {
+          ...catalog.library.considerations,
+          guardrailRefScore: {
+            scopes: ['move'],
+            costClass: 'state',
+            dependencies: { ...emptyDependencies, guardrails: ['badGuardrail'] },
+          },
+        },
+      },
+      compiled: {
+        ...catalog.compiled,
+        considerations: {
+          ...catalog.compiled.considerations,
+          guardrailRefScore: {
+            scopes: ['move'],
+            costClass: 'state',
+            weight: literal(1),
+            value,
+            dependencies: { ...emptyDependencies, guardrails: ['badGuardrail'] },
+          },
+        },
+      },
+      profiles: {
+        ...catalog.profiles,
+        baseline: {
+          ...baseProfile,
+          use: {
+            ...baseProfile.use,
+            considerations: ['guardrailRefScore'],
+          },
+          plan: {
+            ...baseProfile.plan,
+            considerations: ['guardrailRefScore'],
+            guardrails: ['badGuardrail'],
+          },
+        },
+      },
+    },
+  };
+}
+
 function evaluate(def: GameDef) {
   const state = createInitialStrategyModuleState(def);
   return evaluatePolicyMoveCore({
@@ -160,6 +221,79 @@ describe('guardrail severity dispatch', () => {
       penalty: 20,
       status: 'ready',
     }]);
+  });
+
+  it('resolves downstream guardrail refs from dispatch results', () => {
+    const def = withGuardrailRefConsideration(
+      withGuardrail(createStrategyModuleGameDef(), createGuardrail({
+        severity: 'demote',
+        penalty: literal(20),
+      })),
+      {
+        kind: 'op',
+        op: 'add',
+        args: [
+          boolToNumber(guardrailRef({ kind: 'guardrail', guardrailId: 'badGuardrail', field: 'fired' })),
+          guardrailRef({ kind: 'guardrail', guardrailId: 'badGuardrail', field: 'penalty' }),
+        ],
+      },
+    );
+
+    const result = evaluate(def);
+
+    assert.equal(result.kind, 'success');
+    assert.equal(result.metadata.candidates.find((candidate) => candidate.actionId === 'badMove')?.score, 1);
+    assert.equal(result.metadata.candidates.find((candidate) => candidate.actionId === 'goodMove')?.score, 0);
+  });
+
+  it('resolves guardrail ref fallback provenance without re-running predicates', () => {
+    const guardrail = createGuardrail({
+      when: previewDriveDepthRef(),
+      severity: 'warn',
+      onUnavailable: 'warnUnknown',
+    });
+    const def = withGuardrail(createStrategyModuleGameDef(), guardrail);
+    const state = createInitialStrategyModuleState(def);
+    const candidate = { ...createCandidate('badMove', 0), prunedBy: [] };
+    const context = new PolicyEvaluationContext({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'alpha',
+      catalog: def.agents!,
+      parameterValues: {},
+      trustedMoveIndex: new Map(),
+      previewOption: {
+        resolvedRefs: new Map([['preview.option.driveDepth', { kind: 'unavailable', reason: 'hidden' }]]),
+      },
+    }, [candidate]);
+
+    try {
+      const dispatch = dispatchGuardrails({
+        profile: def.agents!.profiles.baseline!,
+        catalog: def.agents!,
+        evaluation: context,
+        activeCandidates: [candidate],
+        collectDiagnostics: true,
+      });
+      context.setCurrentGuardrailRefView(dispatch.refView);
+      const onUnavailableRef = guardrailRef({ kind: 'guardrail', guardrailId: 'badGuardrail', field: 'onUnavailable' });
+      const statusRef = guardrailRef({ kind: 'guardrail', guardrailId: 'badGuardrail', field: 'status' });
+
+      assert.equal(context.evaluateCompiledExpr({
+        kind: 'op',
+        op: 'eq',
+        args: [onUnavailableRef, literal('warnUnknown')],
+      }, candidate), true);
+      assert.equal(context.evaluateCompiledExpr({
+        kind: 'op',
+        op: 'eq',
+        args: [statusRef, literal('unavailable')],
+      }, candidate), true);
+      assert.equal(context.getEvaluatedGuardrailWhenCacheSize(), 1);
+    } finally {
+      context.dispose();
+    }
   });
 
   it('warn and auditOnly record trace markers without changing scores', () => {

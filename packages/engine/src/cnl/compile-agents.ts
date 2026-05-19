@@ -103,6 +103,7 @@ import {
 } from './compile-agent-strategy-modules.js';
 import {
   compileGuardrailDefinition,
+  parseGuardrailRef,
   type AgentGuardrailWithExpr,
 } from './compile-agent-guardrails.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
@@ -3609,6 +3610,24 @@ class AgentLibraryCompiler {
         costClass: moduleCostToPolicyCostClass(module.costClass),
         ref: { kind: 'strategyModule', moduleId: parsed.moduleId, field: parsed.field },
         dependency: { kind: 'strategyModules', id: parsed.moduleId },
+      };
+    }
+
+    if (refPath.startsWith('guardrail.')) {
+      const parsed = parseGuardrailRef(refPath);
+      if (parsed === null) {
+        this.reportGuardrailRefUnknown(refPath, path);
+        return null;
+      }
+      const guardrail = this.compileGuardrail(parsed.guardrailId);
+      if (guardrail === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: selectorCostToPolicyCostClass(guardrail.costClass),
+        ref: { kind: 'guardrail', guardrailId: parsed.guardrailId, field: parsed.field },
+        dependency: { kind: 'guardrails', id: parsed.guardrailId },
       };
     }
 

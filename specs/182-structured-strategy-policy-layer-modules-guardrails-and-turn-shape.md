@@ -286,6 +286,18 @@ guardrails:
 
 `summary` mode caps fired at top-3 and notFiredTop at top-3 (by deterministic ordering); `allPrunedFallback` is always present when invoked. `verbose` mode lifts the caps; `debug` mode emits the full fired/not-fired matrix.
 
+### 5.8 Generic refs exposed by guardrails
+
+Guardrail refs become available after guardrail dispatch completes and before downstream consideration and tie-breaker scoring. Runtime resolution MUST read the cached dispatch result for the current decision/candidate; it MUST NOT re-evaluate the guardrail predicate.
+
+| Ref | Type | Available in scope |
+| --- | --- | --- |
+| `guardrail.<id>.fired` | boolean | downstream considerations / tie-breakers / turn-shape predicates after guardrail dispatch |
+| `guardrail.<id>.severity` | id/string (`prune` / `demote` / `warn` / `auditOnly`) | downstream trace-facing consumers |
+| `guardrail.<id>.status` | id/string (`ready` / `partial` / `unavailable`) | downstream trace-facing consumers |
+| `guardrail.<id>.penalty` | number | downstream consumers; zero when unset/not applicable |
+| `guardrail.<id>.onUnavailable` | id/string (`warnUnknown` / `noFire` / `fire`) | downstream consumers that need fallback provenance |
+
 ## 6. Architecture — Phase 4: Turn-Shape Evaluators
 
 ### 6.1 New library bucket
@@ -507,7 +519,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-18 (namespace `182STRSTRPOL` — us
 - [`tickets/182STRSTRPOL-010.md`](../tickets/182STRSTRPOL-010.md) — Phase 3 — Migration atomic: `pruningRules` → `guardrails` (data + tests + bucket removal)
 - [`tickets/182STRSTRPOL-011.md`](../tickets/182STRSTRPOL-011.md) — Phase 3 — Guardrail conformance tests (4 severity tiers)
 - [`tickets/182STRSTRPOL-012.md`](../tickets/182STRSTRPOL-012.md) — Phase 3 — Guardrail profile-quality lint warnings (`RARELY_SAFE` + `FIRES_UNIFORM`)
-- [`tickets/182STRSTRPOL-018.md`](../tickets/182STRSTRPOL-018.md) — Phase 3 — Define and implement guardrail ref contract
+- [`archive/tickets/182STRSTRPOL-018.md`](../archive/tickets/182STRSTRPOL-018.md) — Phase 3 — Define and implement guardrail ref contract
 - [`tickets/182STRSTRPOL-013.md`](../tickets/182STRSTRPOL-013.md) — Phase 4 — Turn-shape evaluators library bucket + compiled IR + compiler diagnostics
 - [`tickets/182STRSTRPOL-014.md`](../tickets/182STRSTRPOL-014.md) — Phase 4 — Turn-shape evaluator runtime + bounded chain consumption
 - [`tickets/182STRSTRPOL-015.md`](../tickets/182STRSTRPOL-015.md) — Phase 4 — Turn-shape evaluator trace contract extension

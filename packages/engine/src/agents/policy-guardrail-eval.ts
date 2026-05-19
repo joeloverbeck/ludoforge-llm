@@ -27,14 +27,61 @@ interface GuardrailDispatchTraceBuilder {
 export interface GuardrailDispatchResult<TCandidate extends GuardrailEvaluationCandidate> {
   readonly activeCandidates: TCandidate[];
   readonly penaltiesByStableMoveKey: ReadonlyMap<string, number>;
+  readonly refView: GuardrailRefView;
   readonly allPrunedGuardrailId?: string;
   readonly trace?: PolicyGuardrailTrace;
+}
+
+export interface GuardrailRefResult {
+  readonly fired: boolean;
+  readonly severity: GuardrailDef['severity'];
+  readonly status: PolicyGuardrailTrace['fired'][number]['status'];
+  readonly penalty: number;
+  readonly onUnavailable: GuardrailOnUnavailable;
+}
+
+export interface GuardrailRefView {
+  readonly byGuardrailId: ReadonlyMap<string, {
+    readonly state?: GuardrailRefResult;
+    readonly byStableMoveKey: ReadonlyMap<string, GuardrailRefResult>;
+  }>;
 }
 
 const createGuardrailTraceBuilder = (): GuardrailDispatchTraceBuilder => ({
   fired: new Map(),
   notFired: new Map(),
 });
+
+const createGuardrailRefResult = (
+  guardrail: GuardrailDef,
+  fired: boolean,
+  status: GuardrailRefResult['status'],
+  penalty = 0,
+): GuardrailRefResult => ({
+  fired,
+  severity: guardrail.severity,
+  status,
+  penalty,
+  onUnavailable: guardrail.onUnavailable,
+});
+
+const recordGuardrailRefResult = (
+  results: Map<string, {
+    state?: GuardrailRefResult;
+    byStableMoveKey: Map<string, GuardrailRefResult>;
+  }>,
+  guardrailId: string,
+  candidate: PolicyEvaluationCandidate | undefined,
+  result: GuardrailRefResult,
+): void => {
+  const prior = results.get(guardrailId) ?? { byStableMoveKey: new Map() };
+  if (candidate === undefined) {
+    results.set(guardrailId, { ...prior, state: result });
+    return;
+  }
+  prior.byStableMoveKey.set(candidate.stableMoveKey, result);
+  results.set(guardrailId, prior);
+};
 
 const recordGuardrailFired = (
   builder: GuardrailDispatchTraceBuilder,
@@ -108,6 +155,10 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
 }): GuardrailDispatchResult<TCandidate> {
   let activeCandidates = [...input.activeCandidates];
   const penaltiesByStableMoveKey = new Map<string, number>();
+  const refResults = new Map<string, {
+    state?: GuardrailRefResult;
+    byStableMoveKey: Map<string, GuardrailRefResult>;
+  }>();
   const traceBuilder = createGuardrailTraceBuilder();
   let allPrunedGuardrailId: string | undefined;
 
@@ -124,6 +175,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
       });
     }
     if (!guardrailScopesCurrentDecision(guardrail)) {
+      recordGuardrailRefResult(refResults, guardrailId, undefined, createGuardrailRefResult(guardrail, false, 'ready'));
       if (input.collectDiagnostics) {
         recordGuardrailNotFired(traceBuilder, guardrailId, guardrail, 'scopeFiltered');
       }
@@ -144,6 +196,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
       const status = unavailable ? 'unavailable' : 'ready';
       const onUnavailable = unavailable ? guardrail.onUnavailable : undefined;
       if (!shouldFire) {
+        recordGuardrailRefResult(refResults, guardrailId, candidate, createGuardrailRefResult(guardrail, false, status));
         if (input.collectDiagnostics) {
           recordGuardrailNotFired(
             traceBuilder,
@@ -158,6 +211,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
 
       switch (guardrail.severity) {
         case 'prune': {
+          recordGuardrailRefResult(refResults, guardrailId, candidate, createGuardrailRefResult(guardrail, true, status));
           if (candidate === undefined) {
             activeCandidates.forEach((entry) => entry.prunedBy.push(guardrailId));
             activeCandidates = [];
@@ -173,6 +227,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
         }
         case 'demote': {
           const penalty = coerceGuardrailPenalty(guardrailId, guardrail, input.evaluation, candidate);
+          recordGuardrailRefResult(refResults, guardrailId, candidate, createGuardrailRefResult(guardrail, true, status, penalty));
           const penalized = candidate === undefined ? activeCandidates : [candidate];
           for (const entry of penalized) {
             penaltiesByStableMoveKey.set(entry.stableMoveKey, (penaltiesByStableMoveKey.get(entry.stableMoveKey) ?? 0) + penalty);
@@ -184,6 +239,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
         }
         case 'warn':
         case 'auditOnly':
+          recordGuardrailRefResult(refResults, guardrailId, candidate, createGuardrailRefResult(guardrail, true, status));
           if (input.collectDiagnostics) {
             recordGuardrailFired(traceBuilder, guardrailId, guardrail, status, undefined, onUnavailable);
           }
@@ -210,6 +266,7 @@ export function dispatchGuardrails<TCandidate extends GuardrailEvaluationCandida
   return {
     activeCandidates,
     penaltiesByStableMoveKey,
+    refView: { byGuardrailId: refResults },
     ...(allPrunedGuardrailId === undefined ? {} : { allPrunedGuardrailId }),
     ...(trace === undefined ? {} : { trace }),
   };

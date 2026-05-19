@@ -112,9 +112,53 @@ function assertCode(doc: GameSpecDoc, code: CnlCompilerDiagnosticCode): void {
 }
 
 describe('agent guardrail diagnostics', () => {
+  it('compiles downstream guardrail refs and tracks guardrail dependencies', () => {
+    const result = compileGameSpecToGameDef(createDoc(
+      { good: validGuardrail({ severity: 'demote', penalty: 7 }) },
+      {
+        considerations: {
+          stable: {
+            scopes: ['move'],
+            weight: 1,
+            value: { add: [{ boolToNumber: { ref: 'guardrail.good.fired' } }, { ref: 'guardrail.good.penalty' }] },
+          },
+        },
+      },
+    ));
+
+    assert.deepEqual(result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'), []);
+    assert.deepEqual(result.gameDef?.agents?.library.considerations?.stable?.dependencies.guardrails, ['good']);
+    assert.deepEqual(result.gameDef?.agents?.compiled.considerations.stable?.value, {
+      kind: 'op',
+      op: 'add',
+      args: [
+        {
+          kind: 'op',
+          op: 'boolToNumber',
+          args: [{ kind: 'ref', ref: { kind: 'guardrail', guardrailId: 'good', field: 'fired' } }],
+        },
+        { kind: 'ref', ref: { kind: 'guardrail', guardrailId: 'good', field: 'penalty' } },
+      ],
+    });
+  });
+
   it('reports unknown refs and demote penalty requirements', () => {
     assertCode(
       createDoc({ bad: validGuardrail({ when: { ref: 'module.missing.active' } }) }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_REF_UNKNOWN,
+    );
+    assertCode(
+      createDoc(
+        { good: validGuardrail() },
+        { considerations: { stable: { scopes: ['move'], weight: 1, value: { ref: 'guardrail.missing.fired' } } } },
+      ),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_REF_UNKNOWN,
+    );
+    assertCode(
+      createDoc(
+        { good: validGuardrail() },
+        { considerations: { stable: { scopes: ['move'], weight: 1, value: { ref: 'guardrail.good.unknown' } } } },
+      ),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_REF_UNKNOWN,
     );
     assertCode(

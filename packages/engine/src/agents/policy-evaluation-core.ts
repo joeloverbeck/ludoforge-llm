@@ -31,6 +31,7 @@ import type {
   CompiledSurfaceRef,
   GameDef,
   GameState,
+  GuardrailDef,
   LookupUnavailabilityReason,
   MoveParamValue,
   PolicySelectorTraceEntry,
@@ -67,9 +68,18 @@ import {
   type StrategyModuleEvaluationView,
 } from './policy-strategy-module-eval.js';
 import { buildStrategyModuleTrace } from './policy-strategy-module-trace.js';
+import type { GuardrailRefResult, GuardrailRefView } from './policy-guardrail-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
+
+const inactiveGuardrailRefResult = (guardrail: GuardrailDef): GuardrailRefResult => ({
+  fired: false,
+  severity: guardrail.severity,
+  status: 'ready',
+  penalty: 0,
+  onUnavailable: guardrail.onUnavailable,
+});
 
 const tryBuildEncodedState = (state: GameState, layout: EncodedStateLayout): EncodedState | undefined => {
   try {
@@ -369,6 +379,7 @@ export class PolicyEvaluationContext {
   private readonly strategyModuleActivationCache = new Map<string, StrategyModuleActivationView>();
   private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
   private readonly guardrailWhenCache = new Map<string, PolicyValue>();
+  private currentGuardrailRefView: GuardrailRefView | undefined;
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -425,6 +436,7 @@ export class PolicyEvaluationContext {
     this.strategyModuleActivationCache.clear();
     this.strategyModuleEvaluationCache.clear();
     this.guardrailWhenCache.clear();
+    this.currentGuardrailRefView = undefined;
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -446,6 +458,10 @@ export class PolicyEvaluationContext {
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
     this.currentCandidates = candidates;
     this.invalidateAggregates();
+  }
+
+  setCurrentGuardrailRefView(view: GuardrailRefView): void {
+    this.currentGuardrailRefView = view;
   }
 
   evaluatePlannedSelector(selectorId: string, candidate?: PolicyEvaluationCandidate): void {
@@ -1758,6 +1774,8 @@ export class PolicyEvaluationContext {
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
       case 'strategyModule':
         return this.resolveStrategyModuleRef(ref, candidate);
+      case 'guardrail':
+        return this.resolveGuardrailRef(ref, candidate);
       case 'selector':
         return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {
@@ -1783,6 +1801,31 @@ export class PolicyEvaluationContext {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown strategy module "${ref.moduleId}".`, { moduleId: ref.moduleId });
     }
     return resolveStrategyModuleRef(ref, this.evaluateStrategyModuleView(ref.moduleId, candidate), module);
+  }
+
+  private resolveGuardrailRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'guardrail' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const guardrail = this.input.catalog.compiled.guardrails?.[ref.guardrailId];
+    if (guardrail === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown guardrail "${ref.guardrailId}".`, { guardrailId: ref.guardrailId });
+    }
+    const result = this.currentGuardrailRefView?.byGuardrailId.get(ref.guardrailId);
+    const candidateResult = candidate === undefined ? undefined : result?.byStableMoveKey.get(candidate.stableMoveKey);
+    const resolved = candidateResult ?? result?.state ?? inactiveGuardrailRefResult(guardrail);
+    switch (ref.field) {
+      case 'fired':
+        return resolved.fired;
+      case 'severity':
+        return resolved.severity;
+      case 'status':
+        return resolved.status;
+      case 'penalty':
+        return resolved.penalty;
+      case 'onUnavailable':
+        return resolved.onUnavailable;
+    }
   }
 
   private evaluateStrategyModuleView(

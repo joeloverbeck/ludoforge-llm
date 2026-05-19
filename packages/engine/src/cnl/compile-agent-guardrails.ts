@@ -2,8 +2,10 @@ import { analyzePolicyExpr, type AnalyzePolicyExprContext } from '../agents/poli
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import type {
   ActionDef,
+  AgentPolicyValueType,
   AgentPolicyExpr,
   CompiledAgentDependencyRefs,
+  CompiledAgentPolicyRef,
   GuardrailCostClass,
   GuardrailDef,
 } from '../kernel/types.js';
@@ -127,6 +129,30 @@ export function compileGuardrailDefinition(options: GuardrailCompileOptions): Ag
     costClass: deriveGuardrailCostClass(when.costClass),
     dependencies,
   };
+}
+
+export function parseGuardrailRef(refPath: string): {
+  readonly guardrailId: string;
+  readonly field: Extract<CompiledAgentPolicyRef, { readonly kind: 'guardrail' }>['field'];
+  readonly type: AgentPolicyValueType;
+} | null {
+  const rest = refPath.slice('guardrail.'.length);
+  const dotIndex = rest.indexOf('.');
+  if (dotIndex <= 0) return null;
+  const guardrailId = rest.slice(0, dotIndex);
+  const field = rest.slice(dotIndex + 1);
+  switch (field) {
+    case 'fired':
+      return { guardrailId, field, type: 'boolean' };
+    case 'penalty':
+      return { guardrailId, field, type: 'number' };
+    case 'severity':
+    case 'status':
+    case 'onUnavailable':
+      return { guardrailId, field, type: 'id' };
+    default:
+      return null;
+  }
 }
 
 function lowerGuardrailSeverity(

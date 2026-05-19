@@ -48,7 +48,7 @@ Mode-specific behavior:
 - Adjust confidence and approach based on what the checks reveal
 - Verification artifacts created during this step (diagnostic scripts, probe fixtures, measurement logs) fall into one of four disposition categories. State which category applies in the Step 6 summary so the user knows what was left behind:
   - **promoted to repo** — the artifact covers a failure mode no existing tool reproduces; add it under `campaigns/`, `packages/*/test/fixtures/`, or equivalent so future sessions can reuse it.
-  - **ephemeral (/tmp or equivalent)** — the artifact was a convenience wrapper around existing tooling and does not add coverage. Left in `/tmp` where the OS will clean it up; no repo footprint.
+  - **ephemeral (/tmp or equivalent)** — the artifact was a convenience wrapper around existing tooling, or captured tool output left in `/tmp` by deliberate redirect (e.g., stdout from an existing test runner piped to a `/tmp/*.log` file for later inspection), and does not add coverage. Left in `/tmp` where the OS will clean it up; no repo footprint.
   - **deleted** — the artifact was exploratory, did not produce usable coverage, and was not even a useful convenience wrapper. Removed explicitly.
   - **none — verification used only read/grep/agent calls** — no filesystem artifacts produced; state "no verification artifacts created" in the Step 6 summary to make the absence explicit rather than implicit.
 

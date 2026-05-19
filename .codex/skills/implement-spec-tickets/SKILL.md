@@ -116,6 +116,8 @@ Use the live `implement-ticket` skill exactly. It owns reassessment, implementat
 
 If any user-approved `1-3-1`, `docs/FOUNDATIONS.md` reassessment, or other explicit boundary reset changes the active ticket's deliverable, proof lane, dependency story, or ownership boundary, patch the affected active ticket/spec/sibling artifacts before source or test edits resume. Then re-emit a compact working checkpoint that names the approved option, invalidated proof lanes, replacement proof plan, and next terminal-status boundary. This applies whether or not the ticket entered a durable blocked state.
 
+If a user-approved `1-3-1` resolves only a process gate, such as a source-size deferral, commit-shape choice, or proof sequencing decision, and does not change the ticket's behavior, deliverables, acceptance criteria, proof lanes, dependency story, or ownership boundary, record that narrower authorization in the active ticket outcome or state/checkpoint and continue under the existing ticket boundary. Do not force a broad boundary-reset rewrite or rerun proof solely because of the process approval. Still rerun proof when the approval leads to code, acceptance wording, or proof-story edits that invalidate earlier evidence.
+
 If a red proof lane or repo invariant exposes a contradiction between the active ticket/spec wording and `docs/FOUNDATIONS.md`, `AGENTS.md`, or a current repo policy test, stop before proposing implementation choices as neutral alternatives. Present the problem with three options already ranked by Foundations/repo-rule alignment, explicitly reject or demote any option that would weaken the rule, recommend the compliant option, and wait for user confirmation before patching the boundary or resuming implementation. After confirmation, record the approved option in the affected active ticket/spec/sibling artifacts and rerun the affected proof lanes before terminal status or archival.
 
 If implementation blocks:
@@ -166,6 +168,15 @@ $post-ticket-review <completed-ticket>
 ```
 
 Before invoking `post-ticket-review`, re-open the completed ticket's `Acceptance Criteria`, `Test Plan`, `Commands`, and `Outcome`/proof ledger and confirm every ticket-named broad lane that could affect status, acceptance wording, dependency ownership, or archive eligibility has either run after the final boundary text, been explicitly substituted by a repo-valid lane, or been classified as intentionally post-archive-safe. If a remaining broad lane could expose a Foundations/repo-policy contradiction or force ticket/spec/follow-up truthing, run or classify that lane before archival rather than archiving first and amending after the fact. If running the lane is infeasible in the current turn, keep the ticket active with an implemented-not-archived handoff instead of invoking review.
+
+Before invoking review, also map each acceptance criterion and invariant to current proof:
+
+```text
+Acceptance-to-command map:
+- <criterion/invariant>: <direct command | covered by broader command | substituted with rationale | not exercised/blocking>
+```
+
+Use this map to catch semantic gates that are not named as exact commands, such as budget harnesses, policy-profile-quality lanes, generated-artifact checks, or repo integrity scripts. If any entry is `not exercised/blocking`, do not archive yet.
 
 Use the live `post-ticket-review` skill exactly. It owns closeout truthing, archival, dependency/path repairs, and warranted follow-up creation.
 
@@ -220,11 +231,18 @@ Before committing:
      - `why checked in instead of generated on demand`
      - `hygiene proof`
      If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
+   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
+     - `artifact path`
+     - `generation command or retained script`
+     - `canonical inputs`
+     - `why the refresh is expected`
+     Record this in the ticket outcome, a report, or the final handoff before staging. If the generator was ad hoc, preserve the exact command text in that durable location.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
-8. Emit the checkpoint below.
-9. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
+8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
+9. Emit the checkpoint below.
+10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
 Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 
@@ -238,6 +256,8 @@ Required-visible-block checkpoint:
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
+
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, final state-file validation, and the full `Harness handoff`. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
 
 Manual review is not a substitute for a child-skill workflow unless it is explicitly classified in this checkpoint. If you manually perform any `post-ticket-review` step, still emit the `Post-ticket review:` block and classify it as `child-skill invocation`, `manual late recovery`, or `not_applicable`.
 
@@ -265,6 +285,14 @@ After each iteration work commit or no-commit checkpoint, update the state file 
 - normalized dirty-state classification
 - `updated_at`
 
+No-commit finalization is still a terminal handoff state. Before any final response that does not create a work commit:
+
+1. Refresh `git status --short`.
+2. Update `.codex/run-state/implement-spec-tickets.json` so `last_work_commit: "none"` unless a prior reachable commit genuinely represents the just-completed iteration, `last_state_commit` is `"none"` or `"self"` as appropriate, and `dirty_state` truthfully records owned/unrelated dirty paths instead of `clean`.
+3. Re-read the state file and confirm queued paths, `next_target`, `phase`, `in_progress_ticket`, `owned_dirty_summary`, and `dirty_state` match the live repo.
+4. Emit the full `Harness handoff` block below with `Work commit: none` and `State commit: none` unless a state-only commit was actually created.
+5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
+
 If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
@@ -274,6 +302,13 @@ Do not write `"self"` into `last_work_commit`. When the state file is included i
 1. Commit the work without the final SHA, then immediately make a state-file-only commit that records `last_work_commit` as the full work commit SHA and `last_state_commit: "self"`.
 2. If no work commit was created, record `last_work_commit: "none"` and `last_state_commit: "none"` or `"self"` depending on whether the state file itself was committed.
 3. If the state file must be included in the work commit for a non-SHA reason, set `last_work_commit` to the previous reachable work SHA only when that is still the truthful last completed work commit; otherwise use the state-file-only follow-up commit pattern.
+
+After committing state separately, revalidate the final handoff state before responding:
+
+1. Refresh `git status --short`; `dirty_state` in the state file must match the final worktree classification.
+2. Re-read `.codex/run-state/implement-spec-tickets.json` and confirm the paths, queue, `last_work_commit`, `last_state_commit`, `phase`, `in_progress_ticket`, and `dirty_state` describe the post-state-commit repo state.
+3. Verify the recorded `last_work_commit` exactly matches the finalized work commit SHA. A compact recipe is: `git show --no-patch --format=%H <work-commit>` for the work commit you intend to record, then compare that full SHA to the state file. If the value is not `"none"`, also verify it is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git check.
+4. If the state-only commit was amended, rerun the same checks against the amended commit before finalizing.
 
 Print:
 
@@ -289,6 +324,7 @@ Harness handoff:
 - State file: .codex/run-state/implement-spec-tickets.json
 - Required next invocation: $implement-spec-tickets <spec> <next-target-if-any>
 - Reset boundary: <fresh context recommended | continuing same-seam follow-up/direct dependent with reason | not_applicable: final/blocked>
+- Approved boundary resets: <none | user-approved decision + artifact where recorded>
 ```
 
 Stop after the handoff for a non-follow-up ticket unless context remains small and the next target is an immediate follow-up or explicit direct dependent. The next session must reload this skill, child skills, live active tickets, and `git status --short`.
@@ -298,6 +334,7 @@ Stop after the handoff for a non-follow-up ticket unless context remains small a
 - A follow-up ticket created by `implement-ticket` or `post-ticket-review` is the next target.
 - If multiple follow-ups are created, choose the one explicitly identified as next owner. If none is identified, choose the lowest lexical path and record the ordering.
 - Between non-follow-up tickets, keep active same-family prerequisites ahead of active dependents.
+- When a user-supplied target was retargeted only to satisfy active prerequisites, return that original target to the front once its active prerequisites are archived, unless a new follow-up or prerequisite takes priority.
 - Do not skip active originating-spec tickets unless their deps, status, or review result proves they are not current work.
 - If a sibling ticket is absorbed into the current ticket, update the sibling and queue truthfully before committing.
 - If a ticket is archived, remove its old active path from the queue and repair dependency references according to `post-ticket-review` and `docs/archival-workflow.md`.
@@ -343,6 +380,8 @@ Do not create or push a branch if the loop stopped blocked or if the worktree st
 ## Final Report
 
 After each ticket iteration, include the `Harness handoff` block from `Persist State And Prepare Reset` verbatim unless the final spec archive or branch/push path supersedes it. End with:
+
+Before the final response, perform a handoff preflight: confirm the response includes every `Harness handoff` row when applicable, including originating spec, last ticket processed, work commit, state commit, next target, queue, dirty state, state file, required next invocation, reset boundary, and approved boundary resets. If the final spec archive or blocked path supersedes the normal block, explicitly state why the normal row is not applicable.
 
 - originating spec path and archived path, if archived
 - tickets implemented, blocked, archived, or left active

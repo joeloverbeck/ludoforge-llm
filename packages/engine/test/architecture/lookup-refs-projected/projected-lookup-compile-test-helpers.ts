@@ -72,7 +72,7 @@ export function baseProjectedLookupDoc(
           observer: 'currentPlayer',
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: Object.keys(considerations),
             tieBreakers: ['stableMoveKey'],
           },

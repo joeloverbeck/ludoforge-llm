@@ -162,7 +162,7 @@ function withSandboxProfile(def: GameDef): GameDef {
         preview: { mode: 'disabled' },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: [CONSIDERATION_ID],
           tieBreakers: ['stableMoveKey'],
         },

@@ -3,7 +3,9 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'candidateFeatures',
   'candidateAggregates',
   'selectors',
-  'pruningRules',
+  'strategyModules',
+  'guardrails',
+  'turnShapeEvaluators',
   'considerations',
   'tieBreakers',
   'strategicConditions',
@@ -12,7 +14,9 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
 export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[number];
 
 export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
-  'pruningRules',
+  'guardrails',
+  'strategyModules',
+  'turnShapeEvaluators',
   'considerations',
   'tieBreakers',
 ] as const;
@@ -20,7 +24,9 @@ export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
 export type AgentPolicyProfileUseBucket = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 
 export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
-  pruningRules: 'pruningRules',
+  guardrails: 'guardrails',
+  strategyModules: 'strategyModules',
+  turnShapeEvaluators: 'turnShapeEvaluators',
   considerations: 'considerations',
   tieBreakers: 'tieBreakers',
 } as const satisfies Record<AgentPolicyProfileUseBucket, AgentPolicyLibraryBucket>;

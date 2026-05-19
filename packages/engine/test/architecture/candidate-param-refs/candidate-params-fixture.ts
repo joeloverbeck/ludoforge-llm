@@ -90,7 +90,7 @@ export function baselineAgents(considerations: Record<string, unknown>): Record<
       baseline: {
         params: {},
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: Object.keys(considerations),
           tieBreakers: ['stableMoveKey'],
         },

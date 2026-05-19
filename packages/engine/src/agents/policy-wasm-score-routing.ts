@@ -393,6 +393,39 @@ const previewValueFromWasmRow = (
   return undefined;
 };
 
+/**
+ * Spec 175 fallback contract: the WASM production preview drive can return
+ * undefined for preview refs on actions whose state-mutation shape the drive
+ * does not yet model (e.g. FITL `tax`). Downstream `coalesce(preview, fallback)`
+ * then resolves to the state-feature fallback instead of the projected value,
+ * and the WASM-precomputed candidate-feature row diverges from the TS oracle.
+ * When that candidate feature is read by an aggregate the profile's
+ * considerations consume, the divergence propagates into the WASM score-row
+ * stream.
+ *
+ * Until the production preview drive is extended to cover every supported
+ * action (tracked separately), evaluate preview-classed candidate features
+ * through the TS path whenever they feed an aggregate in the profile's plan,
+ * so the candidate-feature cache the WASM score rows read from carries
+ * TS-equivalent values.
+ */
+const previewFeatureRowsExerciseAggregate = (
+  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
+  catalog: AgentPolicyCatalog,
+  featureId: string,
+): boolean => {
+  for (const aggregateId of profile.plan.candidateAggregates) {
+    const aggregate = catalog.compiled.candidateAggregates[aggregateId];
+    if (aggregate === undefined) {
+      continue;
+    }
+    if (aggregate.dependencies.candidateFeatures.includes(featureId)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export function tryScoreMoveConsiderationsWithWasm(input: {
   readonly runtime: PolicyWasmRuntime;
   readonly gameDefRuntime?: GameDefRuntime;
@@ -457,10 +490,12 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
-    const precomputedDynamicCandidateFeatures = materializePreviewDynamicRowsWithWasm(
-      input,
-      collectPreviewDynamicRefs(feature.expr),
-    );
+    const precomputedDynamicCandidateFeatures = previewFeatureRowsExerciseAggregate(input.profile, input.catalog, id)
+      ? null
+      : materializePreviewDynamicRowsWithWasm(
+          input,
+          collectPreviewDynamicRefs(feature.expr),
+        );
     if (precomputedDynamicCandidateFeatures === null) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       const values = input.candidates.map((candidate) => {

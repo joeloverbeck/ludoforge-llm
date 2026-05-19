@@ -62,6 +62,7 @@ export function scoreMicroturnOption(
   runtime?: GameDefRuntime,
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
   previewOptionProjectedState?: PreviewOptionProjectedState,
+  turnShapeEvaluatorIds: readonly string[] = [],
 ): number {
   return scoreMicroturnOptionWithContributions(
     state,
@@ -77,6 +78,7 @@ export function scoreMicroturnOption(
     runtime,
     previewOptionResolvedRefs,
     previewOptionProjectedState,
+    turnShapeEvaluatorIds,
   ).score;
 }
 
@@ -94,6 +96,7 @@ export function scoreMicroturnOptionWithContributions(
   runtime?: GameDefRuntime,
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
   previewOptionProjectedState?: PreviewOptionProjectedState,
+  turnShapeEvaluatorIds: readonly string[] = [],
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
     return {
@@ -141,6 +144,10 @@ export function scoreMicroturnOptionWithContributions(
   }, []);
 
   try {
+    let turnShapePenalty = 0;
+    for (const evaluatorId of turnShapeEvaluatorIds) {
+      turnShapePenalty += evaluation.evaluatePlannedTurnShapeEvaluator(evaluatorId).demotePenalty ?? 0;
+    }
     const score = considerationIds.reduce(
       (total, considerationId) => (
         total + evaluation.evaluateConsideration(
@@ -155,7 +162,7 @@ export function scoreMicroturnOptionWithContributions(
       0,
     );
     return {
-      score,
+      score: score - turnShapePenalty,
       scoreContributions,
       unknownPreviewRefs,
       unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),

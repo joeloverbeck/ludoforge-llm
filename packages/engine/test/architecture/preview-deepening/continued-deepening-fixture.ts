@@ -81,7 +81,7 @@ export const createProfile = (
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -121,7 +121,7 @@ export const createCatalog = (
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

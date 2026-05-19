@@ -3,7 +3,9 @@ import type { Probe, ProbeAssertion, ProbeMatch, ProbeOutcome } from '../probe-t
 import { evaluateActionFamilyDistributionBelow } from './action-family-distribution-below.js';
 import { assertNever } from './common.js';
 import { evaluateGuardrailFired } from './guardrail-fired.js';
+import { evaluateGuardrailFiresUniformAcross } from './guardrail-fires-uniform-across.js';
 import { evaluateGuardrailNotFired } from './guardrail-not-fired.js';
+import { evaluateModuleActiveContributionRateAtLeast } from './module-active-contribution-rate-at-least.js';
 import { evaluatePreviewRefStatusIn } from './preview-ref-status-in.js';
 import { evaluatePublishedFrontierConstructible } from './published-frontier-constructible.js';
 import { evaluateSelectedCandidateHasTag } from './selected-candidate-has-tag.js';
@@ -15,6 +17,8 @@ import { evaluateSelectedTargetSatisfiesSelector } from './selected-target-satis
 import { evaluateTraceContainsField } from './trace-contains-field.js';
 import { evaluateTraceHasAdvisory } from './trace-has-advisory.js';
 import { evaluateTraceLacksAdvisory } from './trace-lacks-advisory.js';
+import { evaluateTurnShapeMinimumImpactObserved } from './turn-shape-minimum-impact-observed.js';
+import { evaluateTurnShapeNoAdditionalPreviewDrive } from './turn-shape-no-additional-preview-drive.js';
 
 export const dispatchAssertion = (
   assertion: ProbeAssertion,
@@ -42,6 +46,8 @@ export const dispatchAssertion = (
       return evaluateSelectedNotByReason({ ...context, assertion });
     case 'actionFamilyDistributionBelow':
       return evaluateActionFamilyDistributionBelow({ ...context, assertion });
+    case 'moduleActiveContributionRateAtLeast':
+      return evaluateModuleActiveContributionRateAtLeast({ ...context, assertion });
     case 'traceContainsField':
       return evaluateTraceContainsField({ ...context, assertion });
     case 'traceHasAdvisory':
@@ -54,6 +60,12 @@ export const dispatchAssertion = (
       return evaluateGuardrailFired({ ...context, assertion });
     case 'guardrailNotFired':
       return evaluateGuardrailNotFired({ ...context, assertion });
+    case 'guardrailFiresUniformAcross':
+      return evaluateGuardrailFiresUniformAcross({ ...context, assertion });
+    case 'turnShapeMinimumImpactObservedBoth':
+      return evaluateTurnShapeMinimumImpactObserved({ ...context, assertion });
+    case 'turnShapeNoAdditionalPreviewDrive':
+      return evaluateTurnShapeNoAdditionalPreviewDrive({ ...context, assertion });
     default:
       return assertNever(assertion);
   }

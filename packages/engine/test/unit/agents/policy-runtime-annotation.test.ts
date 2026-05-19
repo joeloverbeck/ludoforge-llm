@@ -76,7 +76,7 @@ function createMinimalCatalog(overrides?: {
     preview: { mode: 'exactWorld' as const },
     selection: { mode: 'argmax' as const },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: [],
       tieBreakers: [],
     },
@@ -110,7 +110,7 @@ function createMinimalCatalog(overrides?: {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

@@ -31,12 +31,14 @@ import type {
   CompiledSurfaceRef,
   GameDef,
   GameState,
+  GuardrailDef,
   LookupUnavailabilityReason,
   MoveParamValue,
   PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
   Token,
   TrustedExecutableMove,
+  TurnShapeEvaluatorDef,
   ZoneDef,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
@@ -60,9 +62,31 @@ import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } fro
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 import { evaluateSelector, type SelectedSelectorView, type SelectorEvalMicroturnOption } from './policy-selector-eval.js';
+import {
+  evaluateStrategyModule,
+  resolveStrategyModuleRef,
+  type StrategyModuleActivationView,
+  type StrategyModuleEvaluationView,
+} from './policy-strategy-module-eval.js';
+import { buildStrategyModuleTrace } from './policy-strategy-module-trace.js';
+import { buildTurnShapeTrace } from './policy-turn-shape-trace.js';
+import type { GuardrailRefResult, GuardrailRefView } from './policy-guardrail-eval.js';
+import {
+  evaluateTurnShapeObjectives,
+  type TurnShapeEvaluatorResult,
+  type TurnShapeProjection,
+} from './turn-shape-eval.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
+
+const inactiveGuardrailRefResult = (guardrail: GuardrailDef): GuardrailRefResult => ({
+  fired: false,
+  severity: guardrail.severity,
+  status: 'ready',
+  penalty: 0,
+  onUnavailable: guardrail.onUnavailable,
+});
 
 const tryBuildEncodedState = (state: GameState, layout: EncodedStateLayout): EncodedState | undefined => {
   try {
@@ -176,7 +200,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly runtime?: GameDefRuntime;
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
-  readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -359,6 +383,11 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly selectorCache = new Map<string, SelectedSelectorView>();
+  private readonly strategyModuleActivationCache = new Map<string, StrategyModuleActivationView>();
+  private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
+  private readonly guardrailWhenCache = new Map<string, PolicyValue>();
+  private currentGuardrailRefView: GuardrailRefView | undefined;
+  private readonly turnShapeEvaluationCache = new Map<string, TurnShapeEvaluatorResult>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
@@ -412,6 +441,11 @@ export class PolicyEvaluationContext {
     this.candidateFeatureCache.clear();
     this.aggregateCache.clear();
     this.selectorCache.clear();
+    this.strategyModuleActivationCache.clear();
+    this.strategyModuleEvaluationCache.clear();
+    this.guardrailWhenCache.clear();
+    this.currentGuardrailRefView = undefined;
+    this.turnShapeEvaluationCache.clear();
     this.strategicConditionCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
@@ -426,6 +460,9 @@ export class PolicyEvaluationContext {
   invalidateAggregates(): void {
     this.aggregateCache.clear();
     this.selectorCache.clear();
+    this.strategyModuleEvaluationCache.clear();
+    this.guardrailWhenCache.clear();
+    this.turnShapeEvaluationCache.clear();
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
@@ -433,8 +470,42 @@ export class PolicyEvaluationContext {
     this.invalidateAggregates();
   }
 
+  setCurrentGuardrailRefView(view: GuardrailRefView): void {
+    this.currentGuardrailRefView = view;
+  }
+
   evaluatePlannedSelector(selectorId: string, candidate?: PolicyEvaluationCandidate): void {
     this.evaluateSelectorView(selectorId, candidate);
+  }
+
+  evaluatePlannedStrategyModule(moduleId: string, candidate?: PolicyEvaluationCandidate): void {
+    this.evaluateStrategyModuleView(moduleId, candidate);
+  }
+
+  evaluateGuardrailWhen(guardrailId: string, candidate?: PolicyEvaluationCandidate): PolicyValue {
+    const guardrail = this.input.catalog.compiled.guardrails?.[guardrailId];
+    if (guardrail === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown guardrail "${guardrailId}".`, { guardrailId });
+    }
+    const cacheKey = `${guardrailId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.guardrailWhenCache.get(cacheKey);
+    if (cached !== undefined || this.guardrailWhenCache.has(cacheKey)) {
+      return cached;
+    }
+    const value = this.evaluateCompiledExpr(guardrail.when, candidate);
+    this.guardrailWhenCache.set(cacheKey, value);
+    return value;
+  }
+
+  evaluatePlannedTurnShapeEvaluator(
+    evaluatorId: string,
+    candidate?: PolicyEvaluationCandidate,
+  ): TurnShapeEvaluatorResult {
+    return this.evaluateTurnShapeView(evaluatorId, candidate);
+  }
+
+  getEvaluatedGuardrailWhenCacheSize(): number {
+    return this.guardrailWhenCache.size;
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
@@ -451,6 +522,10 @@ export class PolicyEvaluationContext {
     return this.selectorCache.size;
   }
 
+  getEvaluatedStrategyModuleActivationCacheSize(): number {
+    return this.strategyModuleActivationCache.size;
+  }
+
   getEvaluatedSelectorTraces(traceLevel: 'summary' | 'verbose' = 'summary'): readonly PolicySelectorTraceEntry[] {
     const seen = new Set<string>();
     const entries: PolicySelectorTraceEntry[] = [];
@@ -462,6 +537,47 @@ export class PolicyEvaluationContext {
       entries.push(selectorTraceEntry(view, traceLevel));
     }
     return entries.sort((left, right) => left.selectorId.localeCompare(right.selectorId));
+  }
+
+  getEvaluatedStrategyModuleTrace(
+    traceLevel: 'summary' | 'verbose' | 'debug' = 'summary',
+    selectedCandidate?: PolicyEvaluationCandidate,
+  ): ReturnType<typeof buildStrategyModuleTrace> {
+    return buildStrategyModuleTrace(
+      this.strategyModuleEvaluationCache.values(),
+      this.input.catalog,
+      traceLevel,
+      selectedCandidate?.stableMoveKey,
+    );
+  }
+
+  getEvaluatedTurnShapeTrace(
+    traceLevel: 'summary' | 'verbose' | 'debug' = 'summary',
+    selectedCandidate?: PolicyEvaluationCandidate,
+  ): ReturnType<typeof buildTurnShapeTrace> {
+    const selectedStableMoveKey = selectedCandidate?.stableMoveKey;
+    const results: TurnShapeEvaluatorResult[] = [];
+    const seen = new Set<string>();
+    for (const [cacheKey, result] of [...this.turnShapeEvaluationCache.entries()].sort(([left], [right]) => {
+      if (left < right) return -1;
+      if (left > right) return 1;
+      return 0;
+    })) {
+      const stableMoveKey = stableMoveKeyFromTurnShapeCacheKey(cacheKey, result.evaluatorId);
+      if (selectedStableMoveKey !== undefined && stableMoveKey !== selectedStableMoveKey) {
+        continue;
+      }
+      if (seen.has(result.evaluatorId)) {
+        continue;
+      }
+      seen.add(result.evaluatorId);
+      results.push(result);
+    }
+    return buildTurnShapeTrace({
+      results,
+      catalog: this.input.catalog,
+      traceLevel,
+    });
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
@@ -1645,6 +1761,8 @@ export class PolicyEvaluationContext {
           return this.resolvePreviewStateFeatureRef(ref.id, candidate);
         }
         return this.evaluateStateFeature(ref.id);
+      case 'turnShape':
+        return this.resolveTurnShapeRef(ref, candidate);
       case 'seatIntrinsic':
         return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':
@@ -1702,6 +1820,10 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'strategyModule':
+        return this.resolveStrategyModuleRef(ref, candidate);
+      case 'guardrail':
+        return this.resolveGuardrailRef(ref, candidate);
       case 'selector':
         return this.resolveSelectorRef(ref, candidate);
       case 'candidateTag': {
@@ -1716,6 +1838,65 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveStrategyModuleRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'strategyModule' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const module = this.input.catalog.compiled.strategyModules?.[ref.moduleId];
+    if (module === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown strategy module "${ref.moduleId}".`, { moduleId: ref.moduleId });
+    }
+    return resolveStrategyModuleRef(ref, this.evaluateStrategyModuleView(ref.moduleId, candidate), module);
+  }
+
+  private resolveGuardrailRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'guardrail' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const guardrail = this.input.catalog.compiled.guardrails?.[ref.guardrailId];
+    if (guardrail === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown guardrail "${ref.guardrailId}".`, { guardrailId: ref.guardrailId });
+    }
+    const result = this.currentGuardrailRefView?.byGuardrailId.get(ref.guardrailId);
+    const candidateResult = candidate === undefined ? undefined : result?.byStableMoveKey.get(candidate.stableMoveKey);
+    const resolved = candidateResult ?? result?.state ?? inactiveGuardrailRefResult(guardrail);
+    switch (ref.field) {
+      case 'fired':
+        return resolved.fired;
+      case 'severity':
+        return resolved.severity;
+      case 'status':
+        return resolved.status;
+      case 'penalty':
+        return resolved.penalty;
+      case 'onUnavailable':
+        return resolved.onUnavailable;
+    }
+  }
+
+  private evaluateStrategyModuleView(
+    moduleId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): StrategyModuleEvaluationView {
+    const module = this.input.catalog.compiled.strategyModules?.[moduleId];
+    if (module === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown strategy module "${moduleId}".`, { moduleId });
+    }
+    return evaluateStrategyModule({
+      moduleId,
+      module,
+      candidate,
+      stateHash: this.activeState.stateHash,
+      ...(this.input.completion === undefined ? {} : { completionRequestType: this.input.completion.request.type }),
+      actionTagIndex: this.input.def.actionTagIndex,
+      ...(this.input.previewOption === undefined ? {} : { previewResolvedRefs: this.input.previewOption.resolvedRefs }),
+      activationCache: this.strategyModuleActivationCache,
+      evaluationCache: this.strategyModuleEvaluationCache,
+      evaluateExpr: (expr, exprCandidate) => this.evaluateCompiledExpr(expr, exprCandidate),
+      evaluateSelector: (selectorId, selectorCandidate) => this.evaluateSelectorView(selectorId, selectorCandidate),
+    });
   }
 
   private resolveSelectorRef(
@@ -1913,6 +2094,123 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return status.value;
+  }
+
+  private resolveTurnShapeRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'turnShape' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const view = this.evaluateTurnShapeView(ref.evaluatorId, candidate);
+    const { field } = ref;
+    if (field === 'minimumImpactSatisfied') {
+      return view.minimumImpactSatisfied;
+    }
+    if (field === 'previewStatus') {
+      return view.previewStatus;
+    }
+    const objective = view.objectives.find((entry) => entry.id === field.objectiveId);
+    if (field.kind === 'objective.value') {
+      return objective?.value;
+    }
+    return objective?.delta;
+  }
+
+  private evaluateTurnShapeView(
+    evaluatorId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): TurnShapeEvaluatorResult {
+    const cacheKey = `${evaluatorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
+    const cached = this.turnShapeEvaluationCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const evaluator = this.input.catalog.compiled.turnShapeEvaluators?.[evaluatorId];
+    if (evaluator === undefined) {
+      throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown turn-shape evaluator "${evaluatorId}".`, { evaluatorId });
+    }
+    const hadPreviewOutcome = candidate === undefined || this.input.previewOption !== undefined
+      ? true
+      : this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
+    const projectedState = this.resolveTurnShapeProjection(candidate);
+    const objectiveResult = evaluateTurnShapeObjectives({
+      evaluatorId,
+      evaluator,
+      currentState: this.input.state,
+      evaluateObjectiveExpr: (expr, state) => this.withEvaluationState(state, () => this.evaluateCompiledExpr(expr, candidate)),
+      ...(projectedState === undefined ? {} : { projectedState }),
+    });
+    const provisional: TurnShapeEvaluatorResult = {
+      evaluatorId,
+      objectives: objectiveResult.objectives,
+      minimumImpactSatisfied: false,
+      previewStatus: objectiveResult.previewStatus,
+      ...this.evaluateTurnShapeDemotePenalty(evaluatorId, evaluator, objectiveResult.previewStatus, candidate),
+    };
+    this.turnShapeEvaluationCache.set(cacheKey, provisional);
+    const minimumImpactSatisfied = objectiveResult.previewStatus === 'ready'
+      && this.evaluateCompiledExpr(evaluator.minimumImpact, candidate) === true;
+    const finalResult = { ...provisional, minimumImpactSatisfied };
+    this.turnShapeEvaluationCache.set(cacheKey, finalResult);
+    const hasPreviewOutcome = candidate === undefined || this.input.previewOption !== undefined
+      ? hadPreviewOutcome
+      : this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
+    if (!hadPreviewOutcome && hasPreviewOutcome) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" triggered an unregistered preview drive.`,
+        { evaluatorId, signal: 'POLICY_TURNSHAPE_UNREGISTERED_PREVIEW_DRIVE' },
+      );
+    }
+    return finalResult;
+  }
+
+  private evaluateTurnShapeDemotePenalty(
+    evaluatorId: string,
+    evaluator: TurnShapeEvaluatorDef,
+    previewStatus: TurnShapeEvaluatorResult['previewStatus'],
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): { readonly demotePenalty?: number } {
+    if (previewStatus === 'ready' || evaluator.fallback.onPreviewUnavailable !== 'demote') {
+      return {};
+    }
+    if (evaluator.fallback.demotePenalty === undefined) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" fallback demote requires demotePenalty.`,
+        { evaluatorId },
+      );
+    }
+    const value = this.evaluateCompiledExpr(evaluator.fallback.demotePenalty, candidate);
+    if (typeof value !== 'number' || value < 0) {
+      throw this.runtimeError(
+        'RUNTIME_EVALUATION_ERROR',
+        `Turn-shape evaluator "${evaluatorId}" demotePenalty did not evaluate to a non-negative number.`,
+        { evaluatorId },
+      );
+    }
+    return { demotePenalty: value };
+  }
+
+  private resolveTurnShapeProjection(
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): TurnShapeProjection | undefined {
+    const projected = this.input.previewOption?.projectedState;
+    if (projected !== undefined) {
+      return projected;
+    }
+    if (candidate === undefined || !this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate)) {
+      return undefined;
+    }
+    const outcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
+    const previewDrive = this.runtimeProviders.previewSurface.getPreviewDrive(candidate);
+    const previewState = outcome === 'ready' || outcome === 'stochastic'
+      ? this.runtimeProviders.previewSurface.getPreviewState(candidate)
+      : undefined;
+    return {
+      outcome,
+      driveDepth: previewDrive?.depth ?? 0,
+      ...(previewState === undefined ? {} : { state: previewState }),
+    };
   }
 
   private resolveLookupRef(
@@ -2455,6 +2753,15 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
 
 function candidateParamTraceRefId(paramId: string): string {
   return `candidate.params.${paramId}`;
+}
+
+function stableMoveKeyFromTurnShapeCacheKey(cacheKey: string, evaluatorId: string): string {
+  const prefix = `${evaluatorId}:`;
+  const suffixStart = cacheKey.lastIndexOf(':');
+  if (!cacheKey.startsWith(prefix) || suffixStart < prefix.length) {
+    return '__state__';
+  }
+  return cacheKey.slice(prefix.length, suffixStart);
 }
 
 export function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {

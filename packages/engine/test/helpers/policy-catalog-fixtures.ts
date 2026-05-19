@@ -10,18 +10,19 @@ import type {
   CompiledAgentAggregate,
   CompiledAgentCandidateFeature,
   CompiledAgentConsideration,
+  CompiledAgentGuardrail,
   CompiledAgentLibraryIndex,
-  CompiledAgentPruningRule,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
   CompiledPolicyCatalog,
   CompiledPolicyExpr,
+  GuardrailDef,
 } from '../../src/kernel/index.js';
 
 export type AgentPolicyCatalogFixtureLibrary = Omit<
   CompiledAgentLibraryIndex,
-  'stateFeatures' | 'candidateFeatures' | 'candidateAggregates' | 'pruningRules' | 'considerations' | 'tieBreakers' | 'strategicConditions'
+  'stateFeatures' | 'candidateFeatures' | 'candidateAggregates' | 'guardrails' | 'considerations' | 'tieBreakers' | 'strategicConditions'
 > & {
   readonly stateFeatures: Readonly<Record<string, CompiledAgentStateFeature & { readonly expr?: AgentPolicyExpr }>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature & { readonly expr?: AgentPolicyExpr }>>;
@@ -29,7 +30,7 @@ export type AgentPolicyCatalogFixtureLibrary = Omit<
     readonly of?: AgentPolicyExpr;
     readonly where?: AgentPolicyExpr;
   }>>;
-  readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule & { readonly when?: AgentPolicyExpr }>>;
+  readonly guardrails?: Readonly<Record<string, (CompiledAgentGuardrail | Omit<GuardrailDef, 'when'>) & { readonly when?: AgentPolicyExpr }>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration & {
     readonly when?: AgentPolicyExpr;
     readonly weight?: AgentPolicyExpr;
@@ -62,7 +63,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     stateFeatures: CompiledPolicyCatalog['stateFeatures'];
     candidateFeatures: CompiledPolicyCatalog['candidateFeatures'];
     candidateAggregates: CompiledPolicyCatalog['candidateAggregates'];
-    pruningRules: CompiledPolicyCatalog['pruningRules'];
+    guardrails: NonNullable<CompiledPolicyCatalog['guardrails']>;
     considerations: CompiledPolicyCatalog['considerations'];
     tieBreakers: CompiledPolicyCatalog['tieBreakers'];
     strategicConditions: CompiledPolicyCatalog['strategicConditions'];
@@ -70,7 +71,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     stateFeatures: {},
     candidateFeatures: {},
     candidateAggregates: {},
-    pruningRules: {},
+    guardrails: {},
     considerations: {},
     tieBreakers: {},
     strategicConditions: {},
@@ -108,12 +109,12 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
       };
     }
   }
-  for (const [id, rule] of Object.entries(catalog.library.pruningRules)) {
-    const when = lowerExpr(rule.when);
+  for (const [id, guardrail] of Object.entries(catalog.library.guardrails ?? {})) {
+    const when = lowerExpr(guardrail.when);
     if (when !== undefined) {
-      compiled.pruningRules = {
-        ...compiled.pruningRules,
-        [id]: { ...rule, when },
+      compiled.guardrails = {
+        ...compiled.guardrails,
+        [id]: { id: id as GuardrailDef['id'], ...guardrail, when },
       };
     }
   }

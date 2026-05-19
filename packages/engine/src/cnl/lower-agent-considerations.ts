@@ -12,12 +12,14 @@ import type {
   CompiledPolicyCandidateFeature,
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
-  CompiledPolicyPruningRule,
   CompiledPolicySelector,
   CompiledPolicyStateFeature,
   CompiledPolicyStrategicCondition,
   CompiledPolicyTieBreaker,
   CompiledPolicyZoneSource,
+  GuardrailDef,
+  StrategyModuleDef,
+  TurnShapeEvaluatorDef,
 } from '../kernel/types.js';
 import {
   computeDependenciesReadFootprint,
@@ -47,12 +49,9 @@ export interface AgentPolicyLibraryWithExpr {
     readonly dependencies: CompiledAgentDependencyRefs;
   }>>;
   readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
-  readonly pruningRules: Readonly<Record<string, {
-    readonly costClass: AgentPolicyCostClass;
-    readonly when: AgentPolicyExpr;
-    readonly dependencies: CompiledAgentDependencyRefs;
-    readonly onEmpty: 'skipRule' | 'error';
-  }>>;
+  readonly strategyModules: Readonly<Record<string, StrategyModuleDef>>;
+  readonly guardrails: Readonly<Record<string, GuardrailDef>>;
+  readonly turnShapeEvaluators: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly considerations: Readonly<Record<string, {
     readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
@@ -95,7 +94,9 @@ export function lowerAgentConsiderations(
   const candidateFeatures: Record<string, CompiledPolicyCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledPolicyAggregate> = {};
   const selectors: Record<string, CompiledPolicySelector> = {};
-  const pruningRules: Record<string, CompiledPolicyPruningRule> = {};
+  const strategyModules: Record<string, StrategyModuleDef> = {};
+  const guardrails: Record<string, GuardrailDef> = {};
+  const turnShapeEvaluators: Record<string, TurnShapeEvaluatorDef> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
   const strategicConditions: Record<string, CompiledPolicyStrategicCondition> = {};
@@ -150,10 +151,79 @@ export function lowerAgentConsiderations(
     };
   }
 
-  for (const [ruleId, rule] of Object.entries(library.pruningRules)) {
-    const when = lowerAgentPolicyExpr(rule.when);
-    if (when === null) continue;
-    pruningRules[ruleId] = { ...rule, when };
+  for (const [moduleId, module] of Object.entries(library.strategyModules)) {
+    const when = lowerAgentPolicyExpr(module.when);
+    const priorityValue = module.priority.value === undefined ? null : lowerAgentPolicyExpr(module.priority.value);
+    const scoreGroups = module.scoreGroups.map((group) => {
+      const terms = group.terms.map((term) => {
+        const value = lowerAgentPolicyExpr(term.value);
+        return value === null ? null : { ...term, value };
+      });
+      return terms.some((term) => term === null) ? null : { ...group, terms };
+    });
+    if (
+      when === null
+      || (module.priority.value !== undefined && priorityValue === null)
+      || scoreGroups.some((group) => group === null)
+    ) {
+      continue;
+    }
+    strategyModules[moduleId] = {
+      ...module,
+      when,
+      priority: {
+        ...module.priority,
+        ...(priorityValue === null ? {} : { value: priorityValue }),
+      },
+      scoreGroups: scoreGroups as StrategyModuleDef['scoreGroups'],
+    };
+  }
+
+  for (const [guardrailId, guardrail] of Object.entries(library.guardrails)) {
+    const when = lowerAgentPolicyExpr(guardrail.when);
+    const penalty = guardrail.penalty === undefined ? null : lowerAgentPolicyExpr(guardrail.penalty);
+    if (when === null || (guardrail.penalty !== undefined && penalty === null)) {
+      continue;
+    }
+    guardrails[guardrailId] = {
+      ...guardrail,
+      when,
+      ...(penalty === null ? {} : { penalty }),
+    };
+  }
+
+  for (const [evaluatorId, evaluator] of Object.entries(library.turnShapeEvaluators)) {
+    const objectives = evaluator.objectives.map((objective) => {
+      const value = objective.value === undefined ? null : lowerAgentPolicyExpr(objective.value);
+      const delta = objective.delta === undefined ? null : lowerAgentPolicyExpr(objective.delta);
+      return (objective.value !== undefined && value === null) || (objective.delta !== undefined && delta === null)
+        ? null
+        : {
+          ...objective,
+          ...(value === null ? {} : { value }),
+          ...(delta === null ? {} : { delta }),
+        };
+    });
+    const minimumImpact = lowerAgentPolicyExpr(evaluator.minimumImpact);
+    const demotePenalty = evaluator.fallback.demotePenalty === undefined
+      ? null
+      : lowerAgentPolicyExpr(evaluator.fallback.demotePenalty);
+    if (
+      objectives.some((objective) => objective === null)
+      || minimumImpact === null
+      || (evaluator.fallback.demotePenalty !== undefined && demotePenalty === null)
+    ) {
+      continue;
+    }
+    turnShapeEvaluators[evaluatorId] = {
+      ...evaluator,
+      objectives: objectives as TurnShapeEvaluatorDef['objectives'],
+      minimumImpact,
+      fallback: {
+        ...evaluator.fallback,
+        ...(demotePenalty === null ? {} : { demotePenalty }),
+      },
+    };
   }
 
   for (const [considerationId, consideration] of Object.entries(library.considerations)) {
@@ -218,7 +288,9 @@ export function lowerAgentConsiderations(
     candidateFeatures,
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
-    pruningRules,
+    ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
+    ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
+    ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
     tieBreakers,
     strategicConditions,

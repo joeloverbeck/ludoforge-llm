@@ -87,7 +87,7 @@ const createBroadRouteDef = (): GameDef => {
         },
       },
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         moveRank: {
           scopes: ['move'],
@@ -119,7 +119,7 @@ const createBroadRouteDef = (): GameDef => {
         params: {},
         preview: { mode: 'exactWorld', budget: { strategy: 'balancedCoverage', fullCandidateCap: 3, minPerGroup: 1 } },
         selection: { mode: 'argmax' },
-        use: { pruningRules: [], considerations: ['moveRank', 'projectedScore'], tieBreakers: ['stable'] },
+        use: { guardrails: [], considerations: ['moveRank', 'projectedScore'], tieBreakers: ['stable'] },
         plan: {
           stateFeatures: [],
           candidateFeatures: ['projectedFromStateFeature'],

@@ -17,6 +17,9 @@ import type {
   CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
   Move,
+  PolicyGuardrailTrace,
+  PolicyModuleTrace,
+  PolicyTurnShapeTrace,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
@@ -57,6 +60,8 @@ import {
 } from './preview-budget-allocator.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+import { resolveAllPrunedGuardrailFallback } from './policy-guardrail-fallback.js';
+import { dispatchGuardrails } from './policy-guardrail-eval.js';
 
 export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
@@ -101,6 +106,51 @@ const logPolicyEvalOomTrace = (
   console.error(
     `[oom-trace] policy-eval:${label} depth=${depth} turn=${state.turnCount} legalMoves=${legalMoveCount} heapMb=${heapUsedMb()}${extras}`,
   );
+};
+
+const evaluatePlannedStrategyModules = (input: {
+  readonly profile: AgentPolicyCatalog['profiles'][string];
+  readonly catalog: AgentPolicyCatalog;
+  readonly evaluation: PolicyEvaluationContext;
+  readonly candidates: readonly PolicyEvaluationCandidate[];
+}): void => {
+  for (const moduleId of input.profile.plan.strategyModules ?? []) {
+    const module = input.catalog.compiled.strategyModules?.[moduleId];
+    if (module === undefined || module.costClass === 'auditOnly') {
+      continue;
+    }
+    if (module.costClass === 'state') {
+      input.evaluation.evaluatePlannedStrategyModule(moduleId);
+      continue;
+    }
+    for (const candidate of input.candidates) {
+      input.evaluation.evaluatePlannedStrategyModule(moduleId, candidate);
+    }
+  }
+};
+
+const evaluatePlannedTurnShapeEvaluators = (input: {
+  readonly profile: AgentPolicyCatalog['profiles'][string];
+  readonly catalog: AgentPolicyCatalog;
+  readonly evaluation: PolicyEvaluationContext;
+  readonly candidates: readonly PolicyEvaluationCandidate[];
+}): ReadonlyMap<string, number> => {
+  const penaltiesByStableMoveKey = new Map<string, number>();
+  for (const evaluatorId of input.profile.plan.turnShapeEvaluators ?? []) {
+    if (input.catalog.compiled.turnShapeEvaluators?.[evaluatorId] === undefined) {
+      continue;
+    }
+    for (const candidate of input.candidates) {
+      const result = input.evaluation.evaluatePlannedTurnShapeEvaluator(evaluatorId, candidate);
+      if (result.demotePenalty !== undefined) {
+        penaltiesByStableMoveKey.set(
+          candidate.stableMoveKey,
+          (penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0) + result.demotePenalty,
+        );
+      }
+    }
+  }
+  return penaltiesByStableMoveKey;
 };
 
 export interface PolicyPreviewUnknownRef {
@@ -289,6 +339,9 @@ export interface PolicyEvaluationMetadata {
   readonly selectedReason?: SelectionReason;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
+  readonly modules?: PolicyModuleTrace;
+  readonly guardrails?: PolicyGuardrailTrace;
+  readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -324,7 +377,7 @@ export interface EvaluatePolicyMoveInput {
   readonly selectionGrouping?: 'none' | 'actionId';
   readonly encodedStateMode?: 'enabled' | 'disabled';
   readonly diagnosticsMode?: 'enabled' | 'disabled';
-  readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly previewWideningState?: PreviewWideningState;
   readonly previewDecisionContext?: PreviewWideningDecisionContext;
 }
@@ -674,56 +727,54 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           evaluation.evaluatePlannedSelector(selectorId, candidate);
         }
       }
-
-      for (const pruningRuleId of profile.use.pruningRules) {
-        const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
-        if (pruningRule === undefined) {
-          throw new PolicyRuntimeError({
-            code: 'RUNTIME_EVALUATION_ERROR',
-            message: `Unknown pruning rule "${pruningRuleId}".`,
-            detail: { pruningRuleId },
-          });
-        }
-        const survivors = activeCandidates.filter((candidate) => {
-          const shouldPrune = evaluation.evaluateCompiledExpr(pruningRule.when, candidate);
-          if (shouldPrune === true) {
-            candidate.prunedBy.push(pruningRuleId);
-            return false;
-          }
-          return true;
-        });
-
-        if (survivors.length === 0) {
-          if (pruningRule.onEmpty === 'skipRule') {
-            activeCandidates.forEach((candidate) => {
-              if (candidate.prunedBy.at(-1) === pruningRuleId) {
-                candidate.prunedBy.pop();
-              }
-            });
-            pruningSteps.push({
-              ruleId: pruningRuleId,
-              remainingCandidateCount: activeCandidates.length,
-              skippedBecauseEmpty: true,
-            });
-            continue;
-          }
-          throw new PolicyRuntimeError({
-            code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
-            message: `Pruning rule "${pruningRuleId}" removed every candidate.`,
-            detail: { pruningRuleId },
-          });
-        }
-
-        if (survivors.length !== activeCandidates.length) {
-          activeCandidates = survivors;
-          evaluation.setCurrentCandidates(activeCandidates);
-        }
-        pruningSteps.push({
-          ruleId: pruningRuleId,
-          remainingCandidateCount: activeCandidates.length,
-          skippedBecauseEmpty: false,
+      evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
+      const guardrailDispatch = dispatchGuardrails({
+        profile,
+        catalog,
+        evaluation,
+        activeCandidates,
+        collectDiagnostics, traceLevel: input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
+      });
+      const guardrailFallback = resolveAllPrunedGuardrailFallback({
+        def: input.def,
+        catalog,
+        allCandidates: candidates,
+        dispatch: guardrailDispatch,
+        collectDiagnostics,
+      });
+      const guardrailTrace = guardrailFallback.trace;
+      if (guardrailFallback.kind === 'constructible') {
+        activeCandidates = [...guardrailFallback.activeCandidates];
+        activeCandidates[0]!.selectionReason = 'fallbackExplicit';
+        evaluation.setCurrentCandidates(activeCandidates);
+      } else if (guardrailFallback.kind === 'notConstructible') {
+        return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, {
+          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
+          message: `Guardrail "${guardrailFallback.guardrailId}" removed every candidate and fallback action "${guardrailFallback.actionId}" was not constructible.`,
+          detail: {
+            guardrailId: guardrailFallback.guardrailId,
+            actionId: guardrailFallback.actionId,
+            signal: 'POLICY_GUARDRAIL_FALLBACK_NOT_CONSTRUCTIBLE',
+          },
+        }, profile.fingerprint, collectDiagnostics, evaluation, guardrailTrace === undefined ? {} : { guardrails: guardrailTrace });
+      } else {
+        activeCandidates = [...guardrailFallback.activeCandidates];
+      }
+      evaluation.setCurrentGuardrailRefView(guardrailDispatch.refView);
+      if (activeCandidates.length === 0) {
+        const guardrailId = guardrailDispatch.allPrunedGuardrailId;
+        throw new PolicyRuntimeError({
+          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
+          message: guardrailId === undefined
+            ? 'Guardrails removed every candidate.'
+            : `Guardrail "${guardrailId}" removed every candidate.`,
+          detail: guardrailId === undefined ? {} : { guardrailId },
         });
       }
+
+      evaluatePlannedStrategyModules({ profile, catalog, evaluation, candidates: activeCandidates });
+      const turnShapePenaltiesByStableMoveKey =
+        evaluatePlannedTurnShapeEvaluators({ profile, catalog, evaluation, candidates: activeCandidates });
 
       const considerations = catalog.compiled.considerations;
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(
@@ -751,7 +802,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           );
       const previewAllowedKeys = allocatorOutput.allowedKeys;
       for (const candidate of activeCandidates) {
-        candidate.selectionReason = allocatorOutput.selectionReason.get(candidate.stableMoveKey) ?? 'gated';
+        candidate.selectionReason = candidate.selectionReason === 'fallbackExplicit'
+          ? 'fallbackExplicit'
+          : allocatorOutput.selectionReason.get(candidate.stableMoveKey) ?? 'gated';
       }
       let previewGatedCount = 0;
       let maxCachedGatedPreviewScore = Number.NEGATIVE_INFINITY;
@@ -797,6 +850,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
               } : undefined,
             )
           ), 0);
+          candidate.score -= guardrailDispatch.penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
+          candidate.score -= turnShapePenaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
           evaluation.finalizePreviewOutcome(candidate);
         }
       }
@@ -899,8 +954,20 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
 
       const stateFeatures = collectDiagnostics ? evaluation.getEvaluatedStateFeatures() : {};
       const selectorTraces = collectDiagnostics && input.traceLevel !== 'none'
-        ? evaluation.getEvaluatedSelectorTraces(input.traceLevel === 'verbose' ? 'verbose' : 'summary')
+        ? evaluation.getEvaluatedSelectorTraces(input.traceLevel === 'summary' ? 'summary' : 'verbose')
         : [];
+      const moduleTrace = collectDiagnostics && input.traceLevel !== 'none'
+        ? evaluation.getEvaluatedStrategyModuleTrace(
+            input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
+            selected,
+          )
+        : undefined;
+      const turnShapeTrace = collectDiagnostics && input.traceLevel !== 'none'
+        ? evaluation.getEvaluatedTurnShapeTrace(
+            input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
+            selected,
+          )
+        : undefined;
       logPolicyEvalOomTrace(
         'success',
         currentDepth,
@@ -946,6 +1013,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           previewGatedCount,
           candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
           ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
+          ...(moduleTrace === undefined ? {} : { modules: moduleTrace }),
+          ...(guardrailTrace === undefined ? {} : { guardrails: guardrailTrace }),
+          ...(turnShapeTrace === undefined ? {} : { turnShape: turnShapeTrace }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),
@@ -1075,6 +1145,7 @@ function failureWithMetadata(
   profileFingerprint: string | null = null,
   collectDiagnostics = true,
   evaluation?: PolicyEvaluationContext,
+  extraMetadata: Partial<Pick<PolicyEvaluationMetadata, 'guardrails'>> = {},
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -1093,6 +1164,7 @@ function failureWithMetadata(
       previewUsage: collectDiagnostics && evaluation !== undefined
         ? summarizePreviewUsage(candidates, 'exactWorld', evaluation)
         : emptyPreviewUsage('exactWorld'),
+      ...extraMetadata,
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,

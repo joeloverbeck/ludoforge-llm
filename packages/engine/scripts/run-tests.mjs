@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
+  listArchitectureTestsForLane,
   ALL_DETERMINISM_TESTS,
   ALL_POLICY_PROFILE_QUALITY_TESTS,
   listE2eTestsForLane,
@@ -21,9 +22,14 @@ const laneConfigs = {
     execution: 'sequential',
     patterns: [
       'dist/test/unit/**/*.test.js',
-      'dist/test/architecture/**/*.test.js',
+      ...listArchitectureTestsForLane('architecture:default').map(toDistTestPath),
       ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
     ],
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'architecture:policy-preview-parity': {
+    execution: 'sequential',
+    patterns: listArchitectureTestsForLane('architecture:policy-preview-parity').map(toDistTestPath),
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
   e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },

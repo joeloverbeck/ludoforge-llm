@@ -55,12 +55,35 @@ export type ProbeAssertion =
       readonly threshold: number;
       readonly windowMinDecisions: number;
     }
+  | {
+      readonly id?: string;
+      readonly kind: 'moduleActiveContributionRateAtLeast';
+      readonly module: string;
+      readonly traceLabel: string;
+      readonly minActiveRate: number;
+      readonly minNonZeroContributionRate: number;
+      readonly windowMinDecisions: number;
+    }
   | { readonly id?: string; readonly kind: 'traceContainsField'; readonly field: string }
   | { readonly id?: string; readonly kind: 'traceHasAdvisory'; readonly code: AdvisoryCode }
   | { readonly id?: string; readonly kind: 'traceLacksAdvisory'; readonly code: AdvisoryCode }
   | { readonly id?: string; readonly kind: 'publishedFrontierConstructible' }
   | { readonly id?: string; readonly kind: 'guardrailFired'; readonly guardrail: GuardrailId }
-  | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId };
+  | { readonly id?: string; readonly kind: 'guardrailNotFired'; readonly guardrail: GuardrailId }
+  | {
+      readonly id?: string;
+      readonly kind: 'guardrailFiresUniformAcross';
+      readonly guardrail: GuardrailId;
+      readonly threshold: number;
+      readonly windowMinDecisions: number;
+    }
+  | {
+      readonly id?: string;
+      readonly kind: 'turnShapeMinimumImpactObservedBoth';
+      readonly evaluatorId: string;
+      readonly windowMinDecisions: number;
+    }
+  | { readonly id?: string; readonly kind: 'turnShapeNoAdditionalPreviewDrive' };
 
 export interface Probe {
   readonly id: string;
@@ -135,10 +158,17 @@ export interface ProbeMatch {
   readonly selectedActionTags: readonly ActionTagId[];
   readonly selectedByReason?: SelectedByReason;
   readonly trace: PolicyAgentDecisionTrace | null;
+  readonly runtimeFailure?: ProbeRuntimeFailure;
   readonly publishedFrontierConstructibility?: ProbePublishedFrontierConstructibility;
   readonly contextKind: DecisionContextKind;
   readonly decisionKey: string | null;
   readonly phase: string;
+}
+
+export interface ProbeRuntimeFailure {
+  readonly code: string;
+  readonly message: string;
+  readonly signal?: string;
 }
 
 export interface ProbePublishedFrontierConstructibility {

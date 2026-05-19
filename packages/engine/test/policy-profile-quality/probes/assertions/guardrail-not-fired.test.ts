@@ -4,13 +4,36 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { dispatchAssertion } from './index.js';
-import { match, testProbe } from './assertion-test-helpers.js';
+import { match, policyTrace, testProbe } from './assertion-test-helpers.js';
 
 describe('guardrailNotFired assertion', () => {
-  it('returns the reserved guardrail error until Spec 183 lands', () => {
+  it('passes when the guardrail fired trace omits the requested id', () => {
     const assertion = { kind: 'guardrailNotFired', guardrail: 'avoid-blunder' } as const;
     const outcome = dispatchAssertion(assertion, { probe: testProbe(assertion), matches: [match()] });
-    assert.equal(outcome.kind, 'error');
-    assert.match(outcome.kind === 'error' ? outcome.message : '', /requires Spec 183 guardrails/u);
+
+    assert.deepEqual(outcome, { kind: 'pass' });
+  });
+
+  it('fails when the requested guardrail fired', () => {
+    const assertion = { kind: 'guardrailNotFired', guardrail: 'avoid-blunder' } as const;
+    const outcome = dispatchAssertion(assertion, {
+      probe: testProbe(assertion),
+      matches: [match({
+        trace: policyTrace({
+          guardrails: {
+            fired: [{
+              id: 'avoid-blunder',
+              traceLabel: 'avoid blunder',
+              severity: 'warn',
+              status: 'ready',
+            }],
+            notFiredTop: [],
+          },
+        }),
+      })],
+    });
+
+    assert.equal(outcome.kind, 'fail');
+    assert.match(outcome.kind === 'fail' ? outcome.reason : '', /fired/u);
   });
 });

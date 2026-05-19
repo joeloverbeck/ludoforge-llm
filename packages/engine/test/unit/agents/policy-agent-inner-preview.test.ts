@@ -77,7 +77,7 @@ function createProfile(chooseNStep: boolean, selectorDriven = false): CompiledAg
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -116,7 +116,7 @@ function createCatalog(chooseNStep: boolean, selectorDriven = false): AgentPolic
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

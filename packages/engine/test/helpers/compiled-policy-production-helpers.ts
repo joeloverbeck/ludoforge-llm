@@ -50,7 +50,7 @@ export type CompiledPolicyCarrier =
   | 'stateFeatures'
   | 'candidateFeatures'
   | 'candidateAggregates'
-  | 'pruningRules'
+  | 'guardrails'
   | 'considerations'
   | 'tieBreakers'
   | 'strategicConditions';
@@ -72,7 +72,7 @@ export const COMPILED_POLICY_CARRIERS: readonly CompiledPolicyCarrier[] = [
   'stateFeatures',
   'candidateFeatures',
   'candidateAggregates',
-  'pruningRules',
+  'guardrails',
   'considerations',
   'tieBreakers',
   'strategicConditions',
@@ -112,7 +112,7 @@ function recordCarrierTotals(
   compiledCarrierTotals: Record<CompiledPolicyCarrier, number>,
 ): void {
   for (const carrier of COMPILED_POLICY_CARRIERS) {
-    carrierTotals[carrier] += Object.keys(catalog.library[carrier]).length;
+    carrierTotals[carrier] += Object.keys(catalog.library[carrier] ?? {}).length;
     compiledCarrierTotals[carrier] += Object.keys(catalog.compiled?.[carrier] ?? {}).length;
   }
 }
@@ -134,7 +134,7 @@ function recordCompiledCatalogExprKinds(
     recordExprKinds(aggregate.of, expressionKinds);
     recordExprKinds(aggregate.where, expressionKinds);
   }
-  for (const rule of Object.values(compiled.pruningRules)) {
+  for (const rule of Object.values(compiled.guardrails ?? {})) {
     recordExprKinds(rule.when, expressionKinds);
   }
   for (const consideration of Object.values(compiled.considerations)) {
@@ -343,7 +343,7 @@ function emptyCarrierTotals(): Record<CompiledPolicyCarrier, number> {
     stateFeatures: 0,
     candidateFeatures: 0,
     candidateAggregates: 0,
-    pruningRules: 0,
+    guardrails: 0,
     considerations: 0,
     tieBreakers: 0,
     strategicConditions: 0,

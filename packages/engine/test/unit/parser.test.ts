@@ -462,7 +462,7 @@ describe('parseGameSpec API shape', () => {
       '    baseline:',
       '      params: {}',
       '      use:',
-      '        pruningRules: []',
+      '        guardrails: []',
       '        scoreTerms: []',
       '        tieBreakers: [stableMoveKey]',
       '  bindings:',

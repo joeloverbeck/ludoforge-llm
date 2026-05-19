@@ -41,7 +41,13 @@ import type {
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewOutcomeGrantContinuationConfig,
   CompiledAgentSelector,
+  CompiledAgentGuardrail,
+  CompiledAgentTurnShapeEvaluator,
+  CompiledAgentStrategyModule,
   CompiledPolicySelector,
+  GuardrailCostClass,
+  ModuleCostClass,
+  TurnShapeCostClass,
   ContinuedDeepeningConfig,
   QualitySpec,
   SelectorCostClass,
@@ -52,7 +58,6 @@ import type {
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
   CompiledAgentProfile,
-  CompiledAgentPruningRule,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
@@ -91,6 +96,23 @@ import {
   selectorCostClassLeq,
   selectorCostToPolicyCostClass,
 } from './compile-agent-selectors.js';
+import {
+  compileStrategyModuleDefinition,
+  moduleCostToPolicyCostClass,
+  parseModuleRef,
+  type AgentStrategyModuleWithExpr,
+} from './compile-agent-strategy-modules.js';
+import {
+  compileGuardrailDefinition,
+  parseGuardrailRef,
+  type AgentGuardrailWithExpr,
+} from './compile-agent-guardrails.js';
+import {
+  compileTurnShapeEvaluatorDefinition,
+  parseTurnShapeRef,
+  tagUnregisteredTurnShapePreviewRef,
+  type AgentTurnShapeEvaluatorWithExpr,
+} from './compile-agent-turn-shape.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -105,7 +127,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'turnShapeEvaluator' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -115,7 +137,8 @@ type AgentAggregateWithExpr = CompiledAgentAggregate & {
   readonly where?: AgentPolicyExpr;
 };
 type AgentSelectorWithExpr = CompiledPolicySelector;
-type AgentPruningRuleWithExpr = CompiledAgentPruningRule & { readonly when: AgentPolicyExpr };
+type AgentGuardrailWithExprInternal = AgentGuardrailWithExpr;
+type AgentTurnShapeEvaluatorWithExprInternal = AgentTurnShapeEvaluatorWithExpr;
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
@@ -193,8 +216,9 @@ export function lowerAgents(
     options,
   );
   const library = libraryCompiler.compile();
+  const strippedLibrary = stripAgentLibraryExpressions(library);
   const profiles = addProfileFingerprints(
-    lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
+    lowerProfiles(agents.profiles, agents.library, strippedLibrary, parameterDefs, diagnostics),
   );
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
   const compiled = lowerAgentConsiderations(library);
@@ -204,7 +228,7 @@ export function lowerAgents(
     surfaceVisibility,
     parameterDefs,
     candidateParamDefs,
-    library: stripAgentLibraryExpressions(library),
+    library: strippedLibrary,
     compiled,
     profiles,
     bindingsBySeat,
@@ -225,7 +249,9 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const candidateFeatures: Record<string, CompiledAgentCandidateFeature> = {};
   const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
   const selectors: Record<string, CompiledAgentSelector> = {};
-  const pruningRules: Record<string, CompiledAgentPruningRule> = {};
+  const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
+  const guardrails: Record<string, CompiledAgentGuardrail> = {};
+  const turnShapeEvaluators: Record<string, CompiledAgentTurnShapeEvaluator> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
   const strategicConditions: Record<string, CompiledStrategicCondition> = {};
@@ -261,11 +287,49 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       dependencies: selector.dependencies,
     };
   }
-  for (const [id, rule] of Object.entries(library.pruningRules)) {
-    pruningRules[id] = {
-      costClass: rule.costClass,
-      dependencies: rule.dependencies,
-      onEmpty: rule.onEmpty,
+  for (const [id, module] of Object.entries(library.strategyModules ?? {})) {
+    strategyModules[id] = {
+      traceLabel: module.traceLabel,
+      applies: module.applies,
+      selectors: module.selectors,
+      scoreGroups: module.scoreGroups.map((group) => ({
+        id: group.id,
+        summary: group.summary,
+      })),
+      guardrailIds: module.guardrailIds,
+      fallback: module.fallback,
+      costClass: module.costClass,
+      dependencies: module.dependencies,
+    };
+  }
+  for (const [id, guardrail] of Object.entries(library.guardrails ?? {})) {
+    guardrails[id] = {
+      traceLabel: guardrail.traceLabel,
+      scopes: guardrail.scopes,
+      severity: guardrail.severity,
+      costClass: guardrail.costClass,
+      dependencies: guardrail.dependencies,
+      ...(guardrail.safe === undefined ? {} : { safe: guardrail.safe }),
+      onUnavailable: guardrail.onUnavailable,
+      ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
+    };
+  }
+  for (const [id, evaluator] of Object.entries(library.turnShapeEvaluators ?? {})) {
+    turnShapeEvaluators[id] = {
+      traceLabel: evaluator.traceLabel,
+      source: evaluator.source,
+      bounds: evaluator.bounds,
+      objectives: evaluator.objectives.map((objective) => ({
+        id: objective.id,
+        hasValue: objective.value !== undefined,
+        hasDelta: objective.delta !== undefined,
+      })),
+      fallback: {
+        onPreviewUnavailable: evaluator.fallback.onPreviewUnavailable,
+        hasDemotePenalty: evaluator.fallback.demotePenalty !== undefined,
+      },
+      costClass: evaluator.costClass,
+      dependencies: evaluator.dependencies,
     };
   }
   for (const [id, consideration] of Object.entries(library.considerations)) {
@@ -301,7 +365,9 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     candidateFeatures,
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
-    pruningRules,
+    ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
+    ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
+    ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
     tieBreakers,
     strategicConditions,
@@ -826,17 +892,38 @@ function lowerProfile(
         diagnostics,
       ),
     ]),
-  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'pruningRules' | 'tieBreakers'>;
+  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'guardrails' | 'strategyModules' | 'turnShapeEvaluators' | 'tieBreakers'>;
   const use: CompiledAgentProfile['use'] = {
-    ...loweredUse,
+    considerations: loweredUse.considerations,
+    ...(loweredUse.guardrails?.length === 0 ? {} : { guardrails: loweredUse.guardrails }),
+    ...(loweredUse.strategyModules?.length === 0 ? {} : { strategyModules: loweredUse.strategyModules }),
+    ...(loweredUse.turnShapeEvaluators?.length === 0 ? {} : { turnShapeEvaluators: loweredUse.turnShapeEvaluators }),
+    tieBreakers: loweredUse.tieBreakers,
   };
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
   const selector = lowerSelectorProfileConfig(profileId, profileDef, diagnostics);
+  const strategyModules = lowerStrategyModulesProfileConfig(profileId, profileDef, diagnostics);
+  const guardrails = lowerGuardrailsProfileConfig(profileId, profileDef, diagnostics);
 
   const plan = buildProfilePlan(profileId, use, library, diagnostics);
   if (plan !== null && (plan.selectors?.length ?? 0) > 0) {
     validateProfileSelectorCostClass(profileId, selector?.maxCostClass ?? 'preview', plan.selectors ?? [], library, diagnostics);
+  }
+  if (plan !== null && (plan.strategyModules?.length ?? 0) > 0) {
+    validateProfileModuleCostClass(
+      profileId,
+      strategyModules?.maxCostClass ?? 'preview',
+      plan.strategyModules ?? [],
+      library,
+      diagnostics,
+    );
+  }
+  if (plan !== null && (plan.guardrails?.length ?? 0) > 0) {
+    validateProfileGuardrailCostClass(profileId, guardrails?.maxCostClass ?? 'preview', plan.guardrails ?? [], library, diagnostics);
+  }
+  if (plan !== null && (plan.turnShapeEvaluators?.length ?? 0) > 0) {
+    validateProfileTurnShapeCostClass(profileId, 'preview', plan.turnShapeEvaluators ?? [], library, diagnostics);
   }
 
   if (hasError || diagnosticsContainProfileUseErrors(profileId, diagnostics) || plan === null) {
@@ -853,6 +940,8 @@ function lowerProfile(
     preview: preview ?? { mode: 'exactWorld' },
     selection: selection ?? { mode: 'argmax' },
     ...(selector === undefined ? {} : { selector }),
+    ...(strategyModules === undefined ? {} : { strategyModules }),
+    ...(guardrails === undefined ? {} : { guardrails }),
     plan,
   };
 }
@@ -1750,6 +1839,120 @@ function validateProfileSelectorCostClass(
   }
 }
 
+function lowerStrategyModulesProfileConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): NonNullable<CompiledAgentProfile['strategyModules']> | undefined {
+  const authored = profileDef.strategyModules;
+  if (authored === undefined) {
+    return undefined;
+  }
+  const path = `doc.agents.profiles.${profileId}.strategyModules.maxCostClass`;
+  const maxCostClass = authored.maxCostClass ?? 'preview';
+  if (!isSelectorCostClass(maxCostClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_COST_CLASS_EXCEEDS_LIMIT,
+      path,
+      severity: 'error',
+      message: `Profile "${profileId}" strategyModules.maxCostClass must be state, candidate, microturn, preview, or auditOnly.`,
+      suggestion: 'Set strategyModules.maxCostClass to the highest module cost class this profile permits.',
+    });
+    return undefined;
+  }
+  return { maxCostClass };
+}
+
+function lowerGuardrailsProfileConfig(
+  profileId: string,
+  profileDef: GameSpecAgentProfileDef,
+  diagnostics: Diagnostic[],
+): NonNullable<CompiledAgentProfile['guardrails']> | undefined {
+  const authored = profileDef.guardrails;
+  if (authored === undefined) {
+    return undefined;
+  }
+  const path = `doc.agents.profiles.${profileId}.guardrails.maxCostClass`;
+  const maxCostClass = authored.maxCostClass ?? 'preview';
+  if (!isSelectorCostClass(maxCostClass)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_COST_CLASS_EXCEEDS_LIMIT,
+      path,
+      severity: 'error',
+      message: `Profile "${profileId}" guardrails.maxCostClass must be state, candidate, microturn, preview, or auditOnly.`,
+      suggestion: 'Set guardrails.maxCostClass to the highest guardrail cost class this profile permits.',
+    });
+    return undefined;
+  }
+  return { maxCostClass };
+}
+
+function validateProfileModuleCostClass(
+  profileId: string,
+  maxCostClass: ModuleCostClass,
+  moduleIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const moduleId of moduleIds) {
+    const module = library.strategyModules?.[moduleId];
+    if (module === undefined || selectorCostClassLeq(module.costClass, maxCostClass)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_COST_CLASS_EXCEEDS_LIMIT,
+      path: `doc.agents.profiles.${profileId}.strategyModules.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses strategy module "${moduleId}" with costClass "${module.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Raise strategyModules.maxCostClass or remove the higher-cost module dependency.',
+    });
+  }
+}
+
+function validateProfileGuardrailCostClass(
+  profileId: string,
+  maxCostClass: GuardrailCostClass,
+  guardrailIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const guardrailId of guardrailIds) {
+    const guardrail = library.guardrails?.[guardrailId];
+    if (guardrail === undefined || selectorCostClassLeq(guardrail.costClass, maxCostClass)) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_COST_CLASS_EXCEEDS_LIMIT,
+      path: `doc.agents.profiles.${profileId}.guardrails.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses guardrail "${guardrailId}" with costClass "${guardrail.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Raise guardrails.maxCostClass or remove the higher-cost guardrail dependency.',
+    });
+  }
+}
+
+function validateProfileTurnShapeCostClass(
+  profileId: string,
+  maxCostClass: TurnShapeCostClass,
+  evaluatorIds: readonly string[],
+  library: CompiledAgentLibraryIndex,
+  diagnostics: Diagnostic[],
+): void {
+  for (const evaluatorId of evaluatorIds) {
+    const evaluator = library.turnShapeEvaluators?.[evaluatorId];
+    if (evaluator === undefined || evaluator.costClass === maxCostClass) {
+      continue;
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TURNSHAPE_REF_UNKNOWN,
+      path: `doc.agents.profiles.${profileId}.turnShapeEvaluators.maxCostClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" uses turn-shape evaluator "${evaluatorId}" with costClass "${evaluator.costClass}", exceeding maxCostClass "${maxCostClass}".`,
+      suggestion: 'Remove the higher-cost turn-shape evaluator dependency.',
+    });
+  }
+}
+
 function buildProfilePlan(
   profileId: string,
   use: CompiledAgentProfile['use'],
@@ -1760,10 +1963,16 @@ function buildProfilePlan(
   const candidateFeatures: string[] = [];
   const candidateAggregates: string[] = [];
   const selectors: string[] = [];
+  const strategyModules: string[] = [];
+  const guardrails: string[] = [];
+  const turnShapeEvaluators: string[] = [];
   const stateSeen = new Set<string>();
   const candidateSeen = new Set<string>();
   const aggregateSeen = new Set<string>();
   const selectorSeen = new Set<string>();
+  const moduleSeen = new Set<string>();
+  const guardrailSeen = new Set<string>();
+  const turnShapeSeen = new Set<string>();
   const considerationSeen = new Set<string>();
   const considerations: string[] = [];
   let hasError = false;
@@ -1867,6 +2076,69 @@ function buildProfilePlan(
     selectors.push(selectorId);
   };
 
+  const visitModule = (moduleId: string): void => {
+    if (moduleSeen.has(moduleId)) {
+      return;
+    }
+    const module = library.strategyModules?.[moduleId];
+    if (module === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid strategy module "${moduleId}".`,
+        suggestion: 'Fix the referenced strategy module so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(module.dependencies);
+    moduleSeen.add(moduleId);
+    strategyModules.push(moduleId);
+  };
+
+  const visitGuardrail = (guardrailId: string): void => {
+    if (guardrailSeen.has(guardrailId)) {
+      return;
+    }
+    const guardrail = library.guardrails?.[guardrailId];
+    if (guardrail === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid guardrail "${guardrailId}".`,
+        suggestion: 'Fix the referenced guardrail so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(guardrail.dependencies);
+    guardrailSeen.add(guardrailId);
+    guardrails.push(guardrailId);
+  };
+
+  const visitTurnShapeEvaluator = (evaluatorId: string): void => {
+    if (turnShapeSeen.has(evaluatorId)) {
+      return;
+    }
+    const evaluator = library.turnShapeEvaluators?.[evaluatorId];
+    if (evaluator === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid turn-shape evaluator "${evaluatorId}".`,
+        suggestion: 'Fix the referenced turn-shape evaluator so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(evaluator.dependencies);
+    turnShapeSeen.add(evaluatorId);
+    turnShapeEvaluators.push(evaluatorId);
+  };
+
   const addDependencies = (dependencies: CompiledAgentDependencyRefs): void => {
     for (const featureId of dependencies.stateFeatures) {
       visitStateFeature(featureId);
@@ -1880,16 +2152,19 @@ function buildProfilePlan(
     for (const selectorId of dependencies.selectors ?? []) {
       visitSelector(selectorId);
     }
+    for (const moduleId of dependencies.strategyModules ?? []) {
+      visitModule(moduleId);
+    }
+    for (const guardrailId of dependencies.guardrails ?? []) {
+      visitGuardrail(guardrailId);
+    }
+    for (const evaluatorId of dependencies.turnShapeEvaluators ?? []) {
+      visitTurnShapeEvaluator(evaluatorId);
+    }
   };
 
-  for (const ruleId of use.pruningRules) {
-    const rule = library.pruningRules[ruleId];
-    if (rule === undefined) {
-      hasError = true;
-      continue;
-    }
-    addDependencies(rule.dependencies);
-  }
+  for (const guardrailId of use.guardrails ?? []) visitGuardrail(guardrailId);
+  for (const evaluatorId of use.turnShapeEvaluators ?? []) visitTurnShapeEvaluator(evaluatorId);
   for (const considerationId of use.considerations ?? []) {
     const consideration = library.considerations?.[considerationId];
     if (consideration === undefined) {
@@ -1910,6 +2185,9 @@ function buildProfilePlan(
     }
     addDependencies(tieBreaker.dependencies);
   }
+  for (const moduleId of Object.keys(library.strategyModules ?? {})) {
+    visitModule(moduleId);
+  }
 
   if (hasError) {
     return null;
@@ -1920,6 +2198,9 @@ function buildProfilePlan(
     candidateFeatures,
     candidateAggregates,
     ...(selectors.length === 0 ? {} : { selectors }),
+    ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
+    ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
   };
 }
@@ -1985,7 +2266,9 @@ class AgentLibraryCompiler {
     readonly candidateFeatures: Record<string, AgentCandidateFeatureWithExpr>;
     readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
     readonly selectors: Record<string, AgentSelectorWithExpr>;
-    readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
+    readonly strategyModules: Record<string, AgentStrategyModuleWithExpr>;
+    readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
+    readonly turnShapeEvaluators: Record<string, AgentTurnShapeEvaluatorWithExprInternal>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
     readonly strategicConditions: Record<string, StrategicConditionWithExpr>;
@@ -1995,7 +2278,9 @@ class AgentLibraryCompiler {
   private readonly candidateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
-  private readonly pruningRuleStatus = new Map<string, 'done' | 'failed'>();
+  private readonly strategyModuleStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly turnShapeStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -2004,6 +2289,9 @@ class AgentLibraryCompiler {
   private readonly candidateFeatureStack: string[] = [];
   private readonly aggregateStack: string[] = [];
   private readonly selectorStack: string[] = [];
+  private readonly strategyModuleStack: string[] = [];
+  private readonly guardrailStack: string[] = [];
+  private readonly turnShapeStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -2020,7 +2308,9 @@ class AgentLibraryCompiler {
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
-      pruningRules: {},
+      strategyModules: {},
+      guardrails: {},
+      turnShapeEvaluators: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -2042,9 +2332,18 @@ class AgentLibraryCompiler {
     for (const selectorId of Object.keys(this.authoredLibrary.selectors ?? {})) {
       this.compileSelector(selectorId);
     }
-    for (const ruleId of Object.keys(this.authoredLibrary.pruningRules ?? {})) {
-      this.compilePruningRule(ruleId);
+    for (const guardrailId of Object.keys(this.authoredLibrary.guardrails ?? {})) {
+      this.compileGuardrail(guardrailId);
     }
+    this.validateGuardrailTraceLabels();
+    for (const moduleId of Object.keys(this.authoredLibrary.strategyModules ?? {})) {
+      this.compileStrategyModule(moduleId);
+    }
+    this.validateModuleTraceLabels();
+    for (const evaluatorId of Object.keys(this.authoredLibrary.turnShapeEvaluators ?? {})) {
+      this.compileTurnShapeEvaluator(evaluatorId);
+    }
+    this.validateTurnShapeTraceLabels();
     for (const considerationId of Object.keys(this.authoredLibrary.considerations ?? {})) {
       this.compileConsideration(considerationId);
     }
@@ -2071,6 +2370,66 @@ class AgentLibraryCompiler {
         message: `Feature id "${candidateId}" is defined in both stateFeatures and candidateFeatures, which makes feature refs ambiguous.`,
         suggestion: 'Use distinct ids across stateFeatures and candidateFeatures.',
       });
+    }
+  }
+
+  private validateModuleTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [moduleId, module] of Object.entries(this.compiled.strategyModules)) {
+      const priorId = seen.get(module.traceLabel);
+      if (priorId === undefined) {
+        seen.set(module.traceLabel, moduleId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.strategyModules.${moduleId}.traceLabel`,
+        severity: 'error',
+        message: `Strategy module traceLabel "${module.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique strategy module trace labels for deterministic grouped traces.',
+      });
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      delete this.compiled.strategyModules[moduleId];
+    }
+  }
+
+  private validateGuardrailTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [guardrailId, guardrail] of Object.entries(this.compiled.guardrails)) {
+      const priorId = seen.get(guardrail.traceLabel);
+      if (priorId === undefined) {
+        seen.set(guardrail.traceLabel, guardrailId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.guardrails.${guardrailId}.traceLabel`,
+        severity: 'error',
+        message: `Guardrail traceLabel "${guardrail.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique guardrail trace labels for deterministic grouped traces.',
+      });
+      this.guardrailStatus.set(guardrailId, 'failed');
+      delete this.compiled.guardrails[guardrailId];
+    }
+  }
+
+  private validateTurnShapeTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [evaluatorId, evaluator] of Object.entries(this.compiled.turnShapeEvaluators)) {
+      const priorId = seen.get(evaluator.traceLabel);
+      if (priorId === undefined) {
+        seen.set(evaluator.traceLabel, evaluatorId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TURNSHAPE_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.turnShapeEvaluators.${evaluatorId}.traceLabel`,
+        severity: 'error',
+        message: `Turn-shape evaluator traceLabel "${evaluator.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique turn-shape evaluator trace labels for deterministic grouped traces.',
+      });
+      this.turnShapeStatus.set(evaluatorId, 'failed');
+      delete this.compiled.turnShapeEvaluators[evaluatorId];
     }
   }
 
@@ -2360,42 +2719,133 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compilePruningRule(ruleId: string): AgentPruningRuleWithExpr | null {
-    const status = this.pruningRuleStatus.get(ruleId);
+  private compileStrategyModule(moduleId: string): AgentStrategyModuleWithExpr | null {
+    const status = this.strategyModuleStatus.get(moduleId);
     if (status === 'done') {
-      return this.compiled.pruningRules[ruleId] ?? null;
+      return this.compiled.strategyModules[moduleId] ?? null;
     }
     if (status === 'failed') {
       return null;
     }
-    const def = this.authoredLibrary.pruningRules?.[ruleId];
+    if (status === 'compiling') {
+      this.reportModuleCycle(moduleId);
+      this.strategyModuleStatus.set(moduleId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.strategyModules?.[moduleId];
     if (def === undefined) {
-      this.pruningRuleStatus.set(ruleId, 'failed');
+      this.reportModuleRefUnknown(`module.${moduleId}`, `doc.agents.library.strategyModules.${moduleId}`);
+      this.strategyModuleStatus.set(moduleId, 'failed');
       return null;
     }
-    const context = this.createExprContext('rule');
-    const when = analyzePolicyExpr(def.when, context, this.diagnostics, `doc.agents.library.pruningRules.${ruleId}.when`);
-    if (when === null || when.valueType !== 'boolean') {
-      if (when !== null) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
-          path: `doc.agents.library.pruningRules.${ruleId}.when`,
-          severity: 'error',
-          message: `Pruning rule "${ruleId}" when clauses must compile to boolean.`,
-          suggestion: 'Use a boolean policy expression for pruningRule.when.',
-        });
-      }
-      this.pruningRuleStatus.set(ruleId, 'failed');
+
+    this.strategyModuleStatus.set(moduleId, 'compiling');
+    this.strategyModuleStack.push(moduleId);
+    const context = this.createExprContext('strategyModule');
+    const compiled = compileStrategyModuleDefinition({
+      moduleId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      compileSelector: (selectorId) => this.compileSelector(selectorId),
+      compileGuardrail: (guardrailId) => this.compileGuardrail(guardrailId),
+      reportModuleRefUnknown: (refPath, path) => this.reportModuleRefUnknown(refPath, path),
+    });
+    this.strategyModuleStack.pop();
+
+    if (compiled === null) {
+      this.strategyModuleStatus.set(moduleId, 'failed');
       return null;
     }
-    const compiled: AgentPruningRuleWithExpr = {
-      costClass: when.costClass,
-      when: when.expr,
-      dependencies: when.dependencies,
-      onEmpty: def.onEmpty ?? 'skipRule',
-    };
-    this.compiled.pruningRules[ruleId] = compiled;
-    this.pruningRuleStatus.set(ruleId, 'done');
+    this.compiled.strategyModules[moduleId] = compiled;
+    this.strategyModuleStatus.set(moduleId, 'done');
+    return compiled;
+  }
+
+  private compileGuardrail(guardrailId: string): AgentGuardrailWithExprInternal | null {
+    const status = this.guardrailStatus.get(guardrailId);
+    if (status === 'done') {
+      return this.compiled.guardrails[guardrailId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportGuardrailCycle(guardrailId);
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.guardrails?.[guardrailId];
+    if (def === undefined) {
+      this.reportGuardrailRefUnknown(`guardrail.${guardrailId}`, `doc.agents.library.guardrails.${guardrailId}`);
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+
+    this.guardrailStatus.set(guardrailId, 'compiling');
+    this.guardrailStack.push(guardrailId);
+    const context = this.createExprContext('guardrail');
+    const compiled = compileGuardrailDefinition({
+      guardrailId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      ...(this.options.actionDefs === undefined ? {} : { actionDefs: this.options.actionDefs }),
+      reportGuardrailRefUnknown: (refPath, path) => this.reportGuardrailRefUnknown(refPath, path),
+    });
+    this.guardrailStack.pop();
+
+    if (compiled === null) {
+      this.guardrailStatus.set(guardrailId, 'failed');
+      return null;
+    }
+    this.compiled.guardrails[guardrailId] = compiled;
+    this.guardrailStatus.set(guardrailId, 'done');
+    return compiled;
+  }
+
+  private compileTurnShapeEvaluator(evaluatorId: string): AgentTurnShapeEvaluatorWithExprInternal | null {
+    const status = this.turnShapeStatus.get(evaluatorId);
+    if (status === 'done') {
+      return this.compiled.turnShapeEvaluators[evaluatorId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportTurnShapeCycle(evaluatorId);
+      this.turnShapeStatus.set(evaluatorId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.turnShapeEvaluators?.[evaluatorId];
+    if (def === undefined) {
+      this.reportTurnShapeRefUnknown(`turnShape.${evaluatorId}`, `doc.agents.library.turnShapeEvaluators.${evaluatorId}`);
+      this.turnShapeStatus.set(evaluatorId, 'failed');
+      return null;
+    }
+
+    this.turnShapeStatus.set(evaluatorId, 'compiling');
+    this.turnShapeStack.push(evaluatorId);
+    const context = this.createExprContext('turnShapeEvaluator');
+    const compiled = compileTurnShapeEvaluatorDefinition({
+      evaluatorId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      reportTurnShapeRefUnknown: (refPath, path) => this.reportTurnShapeRefUnknown(refPath, path),
+      reportTurnShapeUnregisteredPreviewRef: (refPath, path) => this.reportTurnShapeUnregisteredPreviewRef(refPath, path),
+    });
+    this.turnShapeStack.pop();
+
+    if (compiled === null) {
+      this.turnShapeStatus.set(evaluatorId, 'failed');
+      return null;
+    }
+    this.compiled.turnShapeEvaluators[evaluatorId] = compiled;
+    this.turnShapeStatus.set(evaluatorId, 'done');
     return compiled;
   }
 
@@ -3237,6 +3687,71 @@ class AgentLibraryCompiler {
       };
     }
 
+    if (refPath.startsWith('module.')) {
+      const parsed = parseModuleRef(refPath);
+      if (parsed === null) {
+        this.reportModuleRefUnknown(refPath, path);
+        return null;
+      }
+      const module = this.compileStrategyModule(parsed.moduleId);
+      if (module === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: moduleCostToPolicyCostClass(module.costClass),
+        ref: { kind: 'strategyModule', moduleId: parsed.moduleId, field: parsed.field },
+        dependency: { kind: 'strategyModules', id: parsed.moduleId },
+      };
+    }
+
+    if (refPath.startsWith('guardrail.')) {
+      const parsed = parseGuardrailRef(refPath);
+      if (parsed === null) {
+        this.reportGuardrailRefUnknown(refPath, path);
+        return null;
+      }
+      const guardrail = this.compileGuardrail(parsed.guardrailId);
+      if (guardrail === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: selectorCostToPolicyCostClass(guardrail.costClass),
+        ref: { kind: 'guardrail', guardrailId: parsed.guardrailId, field: parsed.field },
+        dependency: { kind: 'guardrails', id: parsed.guardrailId },
+      };
+    }
+
+    if (refPath.startsWith('turnShape.')) {
+      const parsed = parseTurnShapeRef(refPath);
+      if (parsed === null) {
+        this.reportTurnShapeRefUnknown(refPath, path);
+        return null;
+      }
+      if (
+        scope === 'turnShapeEvaluator'
+        && parsed.evaluatorId === this.turnShapeStack.at(-1)
+        && path.includes('.minimumImpact')
+      ) {
+        return {
+          type: parsed.type,
+          costClass: 'preview',
+          ref: { kind: 'turnShape', evaluatorId: parsed.evaluatorId, field: parsed.field },
+        };
+      }
+      const evaluator = this.compileTurnShapeEvaluator(parsed.evaluatorId);
+      if (evaluator === null) {
+        return null;
+      }
+      return {
+        type: parsed.type,
+        costClass: 'preview',
+        ref: { kind: 'turnShape', evaluatorId: parsed.evaluatorId, field: parsed.field },
+        dependency: { kind: 'turnShapeEvaluators', id: parsed.evaluatorId },
+      };
+    }
+
     return this.resolveRuntimeRef(scope, refPath, path);
   }
 
@@ -3644,6 +4159,9 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('var.global.')) {
       const id = optionPath.slice('var.global.'.length);
       if (id.length === 0 || this.surfaceVisibility.globalVars[id] === undefined) {
+        if (scope === 'turnShapeEvaluator' && id.length > 0) {
+          return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'globalVar', id: tagUnregisteredTurnShapePreviewRef(id) } };
+        }
         if (scope === 'selector') {
           this.reportSelectorUnregisteredPreviewRef(refPath, path);
           return null;
@@ -3657,6 +4175,9 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('var.player.self.')) {
       const id = optionPath.slice('var.player.self.'.length);
       if (id.length === 0 || this.surfaceVisibility.perPlayerVars[id] === undefined) {
+        if (scope === 'turnShapeEvaluator' && id.length > 0) {
+          return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id: tagUnregisteredTurnShapePreviewRef(id) } };
+        }
         if (scope === 'selector') {
           this.reportSelectorUnregisteredPreviewRef(refPath, path);
           return null;
@@ -3670,6 +4191,9 @@ class AgentLibraryCompiler {
     if (optionPath.startsWith('metric.')) {
       const id = optionPath.slice('metric.'.length);
       if (id.length === 0 || this.surfaceVisibility.derivedMetrics[id] === undefined) {
+        if (scope === 'turnShapeEvaluator' && id.length > 0) {
+          return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'derivedMetric', id: tagUnregisteredTurnShapePreviewRef(id) } };
+        }
         if (scope === 'selector') {
           this.reportSelectorUnregisteredPreviewRef(refPath, path);
           return null;
@@ -3983,6 +4507,66 @@ class AgentLibraryCompiler {
     });
   }
 
+  private reportModuleCycle(moduleId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.strategyModules.${moduleId}`,
+      severity: 'error',
+      message: `Agent policy strategy module dependency cycle detected: ${[...this.strategyModuleStack, moduleId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each strategy module depends on an acyclic graph.',
+    });
+  }
+
+  private reportGuardrailCycle(guardrailId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.guardrails.${guardrailId}`,
+      severity: 'error',
+      message: `Agent policy guardrail dependency cycle detected: ${[...this.guardrailStack, guardrailId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each guardrail depends on an acyclic graph.',
+    });
+  }
+
+  private reportTurnShapeCycle(evaluatorId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TURNSHAPE_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.turnShapeEvaluators.${evaluatorId}`,
+      severity: 'error',
+      message: `Agent policy turn-shape evaluator dependency cycle detected: ${[...this.turnShapeStack, evaluatorId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each turn-shape evaluator depends on an acyclic graph.',
+    });
+  }
+
+  private reportModuleRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Strategy module references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared selectors, modules, conditions, features, or supported module fields.',
+    });
+  }
+
+  private reportGuardrailRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Guardrail references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared modules, conditions, features, selectors, or supported guardrail fields.',
+    });
+  }
+
+  private reportTurnShapeRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TURNSHAPE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Turn-shape evaluator references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared modules, objectives, preview refs, or supported turnShape fields.',
+    });
+  }
+
   private reportSelectorRefUnknown(refPath: string, path: string): void {
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_REF_UNKNOWN,
@@ -4000,6 +4584,16 @@ class AgentLibraryCompiler {
       severity: 'error',
       message: `Selector expression references preview ref "${refPath}" that is not registered on a visible policy surface.`,
       suggestion: 'Register the preview-visible surface or remove the preview-derived selector component.',
+    });
+  }
+
+  private reportTurnShapeUnregisteredPreviewRef(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_TURNSHAPE_REQUIRES_UNREGISTERED_PREVIEW_DRIVE,
+      path,
+      severity: 'error',
+      message: `Turn-shape evaluator references preview ref "${refPath}" that is not registered on the current preview drive.`,
+      suggestion: 'Register the needed preview drive or restate the objective using already-driven preview evidence.',
     });
   }
 
@@ -5137,12 +5731,18 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
 
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
+  const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
+  const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
+    ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
+    ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

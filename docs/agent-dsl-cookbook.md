@@ -37,6 +37,8 @@ agents:
     stateFeatures:
     candidateFeatures:
     candidateAggregates:
+    selectors:
+    strategyModules:
     pruningRules:
     considerations:
     tieBreakers:
@@ -51,12 +53,111 @@ Meaning:
 - `stateFeatures`: expressions evaluated once per published decision point
 - `candidateFeatures`: per-action expressions, often using `preview.*`
 - `candidateAggregates`: cross-candidate reductions such as `any`, `min`, `max`
+- `selectors`: named finite rankings over published candidates, microturn options, or generic collections
+- `strategyModules`: named strategic-intent groups that activate under conditions, bind selectors, and contribute grouped score
 - `pruningRules`: boolean filters that can drop bad candidates before scoring
 - `considerations`: weighted score terms; use `scopes: [move]` for action-selection candidates and `scopes: [microturn]` for inner `chooseOne` / `chooseNStep` frontiers
 - `tieBreakers`: deterministic tiebreak logic after weighted scoring
 - `strategicConditions`: reusable boolean/proximity conditions
 - `profiles`: seat- or variant-specific parameter and selection config
 - `bindings`: seat-to-profile mapping
+
+## Authoring a Strategic Module
+
+Use a module when the profile needs to name and trace a strategic intent that would otherwise be scattered across several flat action-tag considerations. A module is still scoring data: it never generates actions, hides actions, or adds game-specific runtime logic.
+
+Activation lives in `when` and should use reusable refs such as `condition.<id>.satisfied`, state features, candidate features, and selector refs. Keep the condition declarative and deterministic.
+
+Selector bindings give the module named roles:
+
+```yaml
+selectors:
+  - role: primaryTarget
+    selectorId: arvnPoliticalTargetOpportunity
+```
+
+The role is author-facing trace vocabulary. The `selectorId` must resolve to a `selectors:` entry that already fits the module scope and cost class.
+
+Score groups make the contribution explainable:
+
+```yaml
+scoreGroups:
+  - id: targetQuality
+    summary: sum
+    terms:
+      - weight: 325
+        value: 1
+  - id: standing
+    summary: sum
+    terms:
+      - weight: 325
+        value: 1
+```
+
+Use `summary: sum`, `product`, or `max` to describe how terms combine inside the group. Prefer a few meaningful groups over many tiny terms.
+
+Fallbacks must be explicit:
+
+```yaml
+fallback:
+  ifInactive: noContribution
+  ifSelectorEmpty: noContribution
+```
+
+Use `ifInactive: noContribution` for ordinary inactive modules. Use `ifSelectorEmpty: demoteAndTrace` only when an empty selector is itself negative evidence and include `selectorEmptyPenalty`.
+
+Profiles apply module score through an ordinary consideration, keeping dispatch and weighting visible:
+
+```yaml
+considerations:
+  applyBuildPoliticalEngineModule:
+    scopes: [move]
+    weight: 1
+    value:
+      ref: module.buildPoliticalEngine.contribution
+```
+
+Worked FITL example:
+
+```yaml
+strategyModules:
+  buildPoliticalEngine:
+    traceLabel: "build political engine"
+    when:
+      and:
+        - { ref: condition.selfPoliticalEngineBehind.satisfied }
+        - not: { ref: condition.militaryBoardCollapsing.satisfied }
+        - or:
+            - gt:
+                - { ref: feature.coinControlPop }
+                - 20
+            - gte:
+                - { ref: feature.projectedSelfMargin }
+                - -7
+    applies:
+      scopes: [move]
+      actionTags: [train]
+    priority:
+      tier: 30
+    selectors:
+      - role: primaryTarget
+        selectorId: arvnPoliticalTargetOpportunity
+    scoreGroups:
+      - id: targetQuality
+        summary: sum
+        terms:
+          - weight: 325
+            value: 1
+      - id: standing
+        summary: sum
+        terms:
+          - weight: 325
+            value: 1
+    guardrailIds: []
+    fallback:
+      ifInactive: noContribution
+      ifSelectorEmpty: noContribution
+```
 
 ## Recommended Reference Paths
 

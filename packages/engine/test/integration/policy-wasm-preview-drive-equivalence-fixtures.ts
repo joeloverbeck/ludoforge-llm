@@ -661,7 +661,7 @@ const createScoreParityCatalog = (
       },
     },
     candidateAggregates: {},
-    pruningRules: {},
+    guardrails: {},
     considerations: {
       moveRank: {
         scopes: ['move'],
@@ -693,7 +693,7 @@ const createScoreParityCatalog = (
       params: {},
       preview: { mode: 'exactWorld', budget: { strategy: 'balancedCoverage', fullCandidateCap: 4, minPerGroup: 1 } },
       selection: { mode: 'argmax' },
-      use: { pruningRules: [], considerations: ['moveRank', 'projectedScore'], tieBreakers: ['stable'] },
+      use: { guardrails: [], considerations: ['moveRank', 'projectedScore'], tieBreakers: ['stable'] },
       plan: {
         stateFeatures: [],
         candidateFeatures: ['projectedScoreFeature'],

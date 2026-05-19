@@ -62,7 +62,7 @@ function createCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         boardStrength: {
           scopes: ['move'],
@@ -116,7 +116,7 @@ function createCatalog(): AgentPolicyCatalog {
         preview: { mode: 'disabled' },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['boardStrength', 'adjacentThreat', 'alphaCount'],
           tieBreakers: ['stable'],
         },

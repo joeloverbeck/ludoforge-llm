@@ -81,7 +81,7 @@ describe('agent selector IR compilation', () => {
             params: {},
             use: {
               considerations: ['preferSelector'],
-              pruningRules: [],
+              guardrails: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -135,7 +135,7 @@ describe('agent selector IR compilation', () => {
           baseline: {
             observer: 'testObserver',
             params: {},
-            use: { considerations: ['useStateSelector', 'useCurrentSelector'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
+            use: { considerations: ['useStateSelector', 'useCurrentSelector'], guardrails: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { p1: 'baseline' },

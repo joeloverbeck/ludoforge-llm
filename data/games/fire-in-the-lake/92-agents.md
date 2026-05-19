@@ -204,6 +204,29 @@ agents:
         of:
           ref: feature.projectedSelfMargin
 
+    strategicConditions:
+      selfPoliticalEngineBehind:
+        description: "ARVN needs to build political engine when it is not currently leading."
+        target:
+          gte:
+            - { ref: feature.selfRank }
+            - 2
+        proximity:
+          current: { ref: feature.selfRank }
+          threshold: 2
+      militaryBoardCollapsing:
+        description: "ARVN has no resource base left for political consolidation."
+        target:
+          lt:
+            - { ref: feature.selfResources }
+            - 1
+        proximity:
+          current:
+            sub:
+              - 1
+              - { ref: feature.selfResources }
+          threshold: 1
+
     selectors:
       # Spec 181 migration: preferOptionProjectedMargin previously read
       # preview.option.delta.victory.currentMargin.self directly as a flat
@@ -226,14 +249,127 @@ agents:
           maxItems: 8
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
+      arvnPoliticalTargetOpportunity:
+        scopes: [move]
+        source:
+          collection:
+            kind: zones
+        quality:
+          components:
+            - id: projectedMargin
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 2
+            - id: controlledPopulation
+              value:
+                ref: feature.coinControlPop
+              weight: 1
+          order: qualityDesc
+        result:
+          maxItems: 8
+          order: [qualityDesc, stableKeyAsc]
+          onEmpty: noContribution
 
-    pruningRules:
+    strategyModules:
+      arvnPursueProjectedMargin:
+        traceLabel: "ARVN pursue projected margin"
+        when: true
+        applies:
+          scopes: [move, microturn]
+        priority:
+          tier: 20
+        selectors:
+          - role: primaryTarget
+            selectorId: arvnMicroturnOptionProjectedMargin
+        scoreGroups:
+          - id: targetQuality
+            summary: sum
+            terms:
+              - weight: 1
+                value: 1
+              - weight: 10
+                value:
+                  ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+        guardrailIds: []
+        fallback:
+          ifInactive: noContribution
+          ifSelectorEmpty: noContribution
+      buildPoliticalEngine:
+        traceLabel: "build political engine"
+        when:
+          and:
+            - { ref: condition.selfPoliticalEngineBehind.satisfied }
+            - not: { ref: condition.militaryBoardCollapsing.satisfied }
+            - or:
+                - gt:
+                    - { ref: feature.coinControlPop }
+                    - 20
+                - gte:
+                    - { ref: feature.projectedSelfMargin }
+                    - -7
+        applies:
+          scopes: [move]
+          actionTags: [train]
+        priority:
+          tier: 30
+        selectors:
+          - role: primaryTarget
+            selectorId: arvnPoliticalTargetOpportunity
+        scoreGroups:
+          - id: targetQuality
+            summary: sum
+            terms:
+              - weight: 325
+                value: 1
+          - id: standing
+            summary: sum
+            terms:
+              - weight: 325
+                value: 1
+        guardrailIds: []
+        fallback:
+          ifInactive: noContribution
+          ifSelectorEmpty: noContribution
+
+    guardrails:
       dropPassWhenOtherMovesExist:
+        traceLabel: "drop pass when other moves exist"
+        scopes: [move]
         when:
           and:
             - { ref: candidate.tag.pass }
             - { ref: aggregate.hasNonPassAlternative }
-        onEmpty: skipRule
+        severity: prune
+        safe: true
+        onAllPruned:
+          actionId: pass
+          traceLabel: "fallback: pass action when no other moves"
+        onUnavailable: noFire
+
+    turnShapeEvaluators:
+      currentTurnImpact:
+        traceLabel: "current turn impact"
+        source: currentPreviewDrive
+        bounds:
+          depthCapRef: profile.preview.inner.depthCap
+          maxSyntheticDecisions: 8
+        objectives:
+          - id: self-standing
+            delta:
+              ref: victory.currentMargin.self
+          - id: leader-denial
+            delta:
+              ref: victory.currentMargin.role:currentLeader
+        minimumImpact:
+          or:
+            - gt:
+                - { ref: turnShape.currentTurnImpact.objective.self-standing.delta }
+                - 0
+            - lt:
+                - { ref: turnShape.currentTurnImpact.objective.leader-denial.delta }
+                - 0
+        fallback:
+          onPreviewUnavailable: traceOnly
 
     considerations:
       preferProjectedSelfMargin:
@@ -493,6 +629,11 @@ agents:
         weight: 300
         value:
           ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+      applyBuildPoliticalEngineModule:
+        scopes: [move]
+        weight: 1
+        value:
+          ref: module.buildPoliticalEngine.contribution
 
     tieBreakers:
       stableMoveKey:
@@ -506,8 +647,10 @@ agents:
         projectedMarginWeight: 100
         resourceWeight: 2
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
+        strategyModules:
+          - arvnPursueProjectedMargin
         considerations:
           - preferProjectedSelfMargin
           - preserveResources
@@ -531,7 +674,7 @@ agents:
         projectedMarginWeight: 800
         governWeight: 500
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
@@ -570,11 +713,15 @@ agents:
           capClass: postGrant16
       params:
         projectedMarginWeight: 300
-        governWeight: 1000
+        governWeight: 700
         trainWeight: 300
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
+        strategyModules:
+          - buildPoliticalEngine
+        turnShapeEvaluators:
+          - currentTurnImpact
         considerations:
           - preferProjectedSelfMargin
           - preferProjectedRank
@@ -584,6 +731,7 @@ agents:
           - reduceNearestThreat
           - preferGovernWeighted
           - trainWhenControlLow
+          - applyBuildPoliticalEngineModule
           - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey
@@ -595,7 +743,7 @@ agents:
         projectedMarginWeight: 100
         resourceWeight: 3
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
@@ -618,7 +766,7 @@ agents:
         projectedMarginWeight: 500
         rallyWeight: 500
       use:
-        pruningRules:
+        guardrails:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferNormalizedMargin

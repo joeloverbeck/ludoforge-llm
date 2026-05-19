@@ -21,6 +21,10 @@ describe('engine test lane taxonomy policy', () => {
       packageJson.scripts?.['test:unit'],
       'node --test "dist/test/unit/**/*.test.js" "dist/test/architecture/**/*.test.js"',
     );
+    assert.equal(
+      packageJson.scripts?.['test:architecture:policy-preview-parity'],
+      'node scripts/run-tests.mjs --lane architecture:policy-preview-parity',
+    );
     assert.equal(packageJson.scripts?.['test:e2e'], 'node scripts/run-tests.mjs --lane e2e');
     assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
     assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all');
@@ -56,7 +60,12 @@ describe('engine test lane taxonomy policy', () => {
   it('keeps cross-subsystem architecture audits in the default blocking lane', async () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
     const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly listArchitectureTestsForLane: (lane: string) => readonly string[];
+      readonly toDistTestPath: (sourcePath: string) => string;
+    };
     const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
       readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
         readonly patterns: readonly string[];
@@ -64,12 +73,14 @@ describe('engine test lane taxonomy policy', () => {
     };
 
     const defaultPlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+    const defaultArchitectureTests = manifest.listArchitectureTestsForLane('architecture:default');
 
-    assert.equal(
-      defaultPlan.patterns.includes('dist/test/architecture/**/*.test.js'),
-      true,
-      'test/architecture audits must run in the default blocking engine lane',
-    );
+    assert.equal(defaultArchitectureTests.length > 0, true, 'default architecture test lane must not be empty');
+
+    for (const sourcePath of defaultArchitectureTests) {
+      const distPath = manifest.toDistTestPath(sourcePath);
+      assert.equal(defaultPlan.patterns.includes(distPath), true, `${distPath} must run in the default blocking engine lane`);
+    }
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {
@@ -226,6 +237,68 @@ describe('engine test lane taxonomy policy', () => {
       assert.equal(defaultPlan.patterns.includes(distPath), false, `${distPath} must stay out of the default lane plan`);
       assert.equal(slowPlan.patterns.includes(distPath), true, `${distPath} must appear in the slow-parity lane plan`);
     }
+  });
+
+  it('keeps the policy-preview parity architecture witness out of default and inside its CI shard', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
+    const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const packageJsonPath = findEnginePackageJson(thisDir);
+    const engineTestsWorkflowPath = resolve(repoRoot, '.github/workflows/engine-tests.yml');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly ALL_ARCHITECTURE_TESTS: readonly string[];
+      readonly POLICY_CANARY_INTEGRATION_TESTS: readonly string[];
+      readonly SLOW_ARCHITECTURE_TESTS: readonly string[];
+      readonly SLOW_INTEGRATION_TESTS: readonly string[];
+      readonly isSlowArchitectureTest: (sourcePath: string) => boolean;
+      readonly listArchitectureTestsForLane: (lane: string) => readonly string[];
+      readonly toDistTestPath: (sourcePath: string) => string;
+    };
+    const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
+      readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
+        readonly patterns: readonly string[];
+      };
+    };
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as EnginePackageJson;
+    const engineTestsWorkflow = readFileSync(engineTestsWorkflowPath, 'utf8');
+
+    const slowArchitectureSourcePaths = manifest.SLOW_ARCHITECTURE_TESTS.map((name) => `test/architecture/${name}`);
+    const defaultArchitectureLane = manifest.listArchitectureTestsForLane('architecture:default');
+    const policyPreviewParityLane = manifest.listArchitectureTestsForLane('architecture:policy-preview-parity');
+    const defaultPlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+    const policyPreviewParityPlan = runTests.buildExecutionPlan(['--lane', 'architecture:policy-preview-parity'], {});
+
+    assert.equal(manifest.SLOW_ARCHITECTURE_TESTS.length > 0, true, 'slow architecture manifest must not be empty');
+    assert.deepEqual(new Set(policyPreviewParityLane), new Set(slowArchitectureSourcePaths));
+
+    for (const sourcePath of slowArchitectureSourcePaths) {
+      const distPath = manifest.toDistTestPath(sourcePath);
+      assert.equal(existsSync(resolve(repoRoot, 'packages/engine', sourcePath)), true, `${sourcePath} must exist on disk`);
+      assert.equal(manifest.ALL_ARCHITECTURE_TESTS.includes(sourcePath), true, `${sourcePath} must be an architecture test`);
+      assert.equal(manifest.isSlowArchitectureTest(sourcePath), true, `${sourcePath} must classify as slow architecture`);
+      assert.equal(defaultArchitectureLane.includes(sourcePath), false, `${sourcePath} must not run in architecture:default`);
+      assert.equal(defaultPlan.patterns.includes(distPath), false, `${distPath} must stay out of the default lane plan`);
+      assert.equal(policyPreviewParityPlan.patterns.includes(distPath), true, `${distPath} must appear in the dedicated lane plan`);
+    }
+
+    const integrationBasenames = new Set([
+      ...manifest.SLOW_INTEGRATION_TESTS,
+      ...manifest.POLICY_CANARY_INTEGRATION_TESTS,
+    ]);
+    for (const name of manifest.SLOW_ARCHITECTURE_TESTS) {
+      assert.equal(integrationBasenames.has(name), false, `${name} must not also be classified as an integration exclusion`);
+    }
+
+    assert.equal(
+      packageJson.scripts?.['test:architecture:policy-preview-parity'],
+      'node scripts/run-tests.mjs --lane architecture:policy-preview-parity',
+    );
+    assert.equal(
+      engineTestsWorkflow.includes("id: policy-preview-parity, script: 'test:architecture:policy-preview-parity', timeout: 15"),
+      true,
+      'engine-tests.yml must run the policy-preview parity architecture shard',
+    );
   });
 
   it('zobrist incremental parity and bounded property proof files live in determinism lane, not default', async () => {

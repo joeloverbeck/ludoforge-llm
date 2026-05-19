@@ -257,7 +257,7 @@ function createStandingCatalog(options: {
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -300,7 +300,7 @@ function createStandingCatalog(options: {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         primeOpponentProjectedStandingSum: {
           scopes: ['move'],

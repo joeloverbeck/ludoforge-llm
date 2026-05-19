@@ -61,7 +61,7 @@ function createProfile(innerChooseOne: boolean | undefined): CompiledAgentProfil
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: ['preferProjectedMargin'],
       tieBreakers: [],
     },
@@ -99,7 +99,7 @@ function createCatalog(innerChooseOne: boolean | undefined): AgentPolicyCatalog 
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

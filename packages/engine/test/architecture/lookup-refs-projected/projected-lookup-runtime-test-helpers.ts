@@ -89,7 +89,7 @@ export function createProjectedCatalog(
     params: {},
     use: {
       considerations: Object.keys(considerations),
-      pruningRules: [],
+      guardrails: [],
       tieBreakers: [],
     },
     preview: {
@@ -124,7 +124,7 @@ export function createProjectedCatalog(
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -133,7 +133,7 @@ export function createProjectedCatalog(
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations,
       tieBreakers: {},
       strategicConditions: {},

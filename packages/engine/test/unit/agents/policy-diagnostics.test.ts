@@ -222,7 +222,7 @@ describe('policy-diagnostics', () => {
             },
           },
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {
             preferProjectedCount: {
               scopes: ['move'],
@@ -241,7 +241,7 @@ describe('policy-diagnostics', () => {
             params: {},
             preview: { mode: 'exactWorld' },
             selection: { mode: 'argmax' },
-            use: { pruningRules: [], considerations: ['preferProjectedCount'], tieBreakers: [] },
+            use: { guardrails: [], considerations: ['preferProjectedCount'], tieBreakers: [] },
             plan: {
               stateFeatures: ['vcGuerrillaCount'],
               candidateFeatures: ['projectedVcGuerrillaCount'],
@@ -337,7 +337,7 @@ describe('policy-diagnostics', () => {
           },
           candidateFeatures: {},
           candidateAggregates: {},
-          pruningRules: {},
+          guardrails: {},
           considerations: {},
           tieBreakers: {},
           strategicConditions: {},
@@ -348,7 +348,7 @@ describe('policy-diagnostics', () => {
             params: {},
             preview: { mode: 'exactWorld' },
             selection: { mode: 'argmax' },
-            use: { pruningRules: [], considerations: [], tieBreakers: [] },
+            use: { guardrails: [], considerations: [], tieBreakers: [] },
             plan: {
               stateFeatures: ['maxOpponentMargin', 'projectedThreat'],
               candidateFeatures: [],

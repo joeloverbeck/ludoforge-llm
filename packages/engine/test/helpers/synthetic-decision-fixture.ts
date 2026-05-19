@@ -83,7 +83,7 @@ export const createSyntheticPolicyGuidedDeps = (): {
     preview: { mode: 'exactWorld', completion: 'policyGuided' },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: ['preferRight'],
       tieBreakers: [],
     },
@@ -117,7 +117,7 @@ export const createSyntheticPolicyGuidedDeps = (): {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         preferRight: {
           scopes: ['microturn'],

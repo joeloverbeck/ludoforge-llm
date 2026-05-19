@@ -68,7 +68,7 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -106,7 +106,7 @@ function createCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

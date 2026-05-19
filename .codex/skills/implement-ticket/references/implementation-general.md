@@ -107,6 +107,8 @@ When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture,
 4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
 5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
 
+For new engine test files, mirror the repo's test-class marker discipline before broad proof: inspect nearby tests or the marker-enforcement lane and add exactly one `@test-class` marker such as `architectural-invariant`, `convergence-witness`, or `golden-trace` as appropriate. If a broad/default test lane fails only because a new test file lacks the marker, treat it as same-package verification fallout, add the marker, rebuild, and rerun the affected broad lane before terminal status.
+
 When a synthetic fixture proves simulator boundedness, turn retirement, or `runGame` stop behavior, add this stale-witness check before treating silence or timeout as harness drift:
 
 1. verify the live stop budget the runtime actually enforces (`turnCount`, decision count, terminal condition, or another owned bound) instead of assuming the draft witness still targets the same budget surface

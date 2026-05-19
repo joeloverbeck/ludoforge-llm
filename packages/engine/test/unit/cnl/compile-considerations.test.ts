@@ -83,7 +83,7 @@ describe('compile considerations', () => {
             params: {},
             use: {
               considerations: ['moveOnly', 'microturnOnly'],
-              pruningRules: [],
+              guardrails: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -125,7 +125,7 @@ describe('compile considerations', () => {
             params: {},
             use: {
               considerations: ['emptyScopes', 'invalidScope'],
-              pruningRules: [],
+              guardrails: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -183,7 +183,7 @@ describe('compile considerations', () => {
             params: {},
             use: {
               considerations: ['moveRefInMicroturn', 'microturnRefInMove', 'mixedScopes'],
-              pruningRules: [],
+              guardrails: [],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -240,7 +240,7 @@ describe('compile considerations', () => {
             params: {},
             use: {
               considerations: ['missing'],
-              pruningRules: [],
+              guardrails: [],
               tieBreakers: ['stableMoveKey'],
             },
           },

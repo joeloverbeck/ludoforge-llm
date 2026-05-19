@@ -39,6 +39,7 @@
     "cache:gamedef:warm": "node scripts/warm-gamedef-cache.mjs",
     "schema:artifacts:check": "node scripts/schema-artifacts.mjs --check",
     "test:unit": "node --test \"dist/test/unit/**/*.test.js\" \"dist/test/architecture/**/*.test.js\"",
+    "test:architecture:policy-preview-parity": "node scripts/run-tests.mjs --lane architecture:policy-preview-parity",
     "test:integration": "node scripts/run-tests.mjs --lane integration",
     "test:integration:core": "node scripts/run-tests.mjs --lane integration:core",
     "test:integration:policy-canaries": "node scripts/run-tests.mjs --lane integration:policy-canaries",

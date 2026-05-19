@@ -86,7 +86,7 @@ describe('resolveSectionsFromBlock', () => {
           baseline: {
             params: {},
             use: {
-              pruningRules: [],
+              guardrails: [],
               considerations: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -107,7 +107,7 @@ describe('resolveSectionsFromBlock', () => {
         baseline: {
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: [],
             tieBreakers: ['stableMoveKey'],
           },

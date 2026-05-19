@@ -42,7 +42,7 @@ const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref'])
 function createDef(
   fullCandidateCap: number,
   options: {
-    readonly materializePreviewInPruning?: boolean;
+    readonly materializePreviewInGuardrail?: boolean;
     readonly usePreviewStateFeatureRows?: boolean;
     readonly minPerGroup?: number;
     readonly actionEffects?: Readonly<Record<string, GameDef['actions'][number]['effects']>>;
@@ -103,10 +103,12 @@ function createDef(
           : {}),
       },
       candidateAggregates: {},
-      pruningRules: {
-        ...(options.materializePreviewInPruning === true
+      guardrails: {
+        ...(options.materializePreviewInGuardrail === true
           ? {
               warmPreview: {
+                traceLabel: 'warm preview',
+                scopes: ['move'],
                 costClass: 'preview',
                 when: {
                   kind: 'op',
@@ -116,8 +118,9 @@ function createDef(
                     literal(false),
                   ],
                 },
+                severity: 'warn',
+                onUnavailable: 'noFire',
                 dependencies: emptyDeps,
-                onEmpty: 'skipRule',
               },
             }
           : {}),
@@ -170,7 +173,7 @@ function createDef(
         },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: options.materializePreviewInPruning === true ? ['warmPreview'] : [],
+          guardrails: options.materializePreviewInGuardrail === true ? ['warmPreview'] : [],
           considerations: ['moveRank', 'projectedScore'],
           tieBreakers: ['stable'],
         },
@@ -233,7 +236,7 @@ function runPreviewBudget(
   fullCandidateCap: number,
   moves: readonly Move[],
   options: {
-    readonly materializePreviewInPruning?: boolean;
+    readonly materializePreviewInGuardrail?: boolean;
     readonly usePreviewStateFeatureRows?: boolean;
     readonly minPerGroup?: number;
     readonly actionEffects?: Readonly<Record<string, GameDef['actions'][number]['effects']>>;
@@ -385,7 +388,7 @@ describe('policy evaluation preview budget allocator', () => {
       { actionId, params: { rank: 10, projected: 0 } },
       { actionId, params: { rank: 1, projected: 1000 } },
     ];
-    const { result } = runPreviewBudget(1, moves, { materializePreviewInPruning: true });
+    const { result } = runPreviewBudget(1, moves, { materializePreviewInGuardrail: true });
 
     assert.equal(result.kind, 'success');
     assert.equal(result.move?.params.rank, 10);

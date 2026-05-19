@@ -68,7 +68,7 @@ function createProfile(depthCap: number): CompiledAgentProfile {
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -106,7 +106,7 @@ function createCatalog(depthCap = 3): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

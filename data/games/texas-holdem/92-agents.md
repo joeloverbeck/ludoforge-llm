@@ -67,8 +67,6 @@ agents:
 
     candidateAggregates: {}
 
-    pruningRules: {}
-
     considerations:
       preferCheck:
         scopes: [move]
@@ -116,7 +114,6 @@ agents:
         mode: softmaxSample
         temperature: 0.5
       use:
-        pruningRules: []
         considerations:
           - preferCheck
           - preferCall

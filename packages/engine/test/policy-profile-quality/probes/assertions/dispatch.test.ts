@@ -23,9 +23,16 @@ describe('probe assertion dispatcher', () => {
       { kind: 'traceLacksAdvisory', code: 'POLICY_PREVIEW_SIGNAL_UNAVAILABLE' },
       { kind: 'guardrailFired', guardrail: 'avoid-blunder' },
       { kind: 'guardrailNotFired', guardrail: 'avoid-blunder' },
+      { kind: 'guardrailFiresUniformAcross', guardrail: 'avoid-blunder', threshold: 1, windowMinDecisions: 1 },
+      { kind: 'turnShapeMinimumImpactObservedBoth', evaluatorId: 'impact', windowMinDecisions: 1 },
+      { kind: 'turnShapeNoAdditionalPreviewDrive' },
     ];
     for (const assertion of assertions) {
-      const occurrence = assertion.kind === 'actionFamilyDistributionBelow' ? 'every' : 'first';
+      const occurrence = (
+        assertion.kind === 'actionFamilyDistributionBelow'
+        || assertion.kind === 'guardrailFiresUniformAcross'
+        || assertion.kind === 'turnShapeMinimumImpactObservedBoth'
+      ) ? 'every' : 'first';
       assert.match(dispatchAssertion(assertion, { probe: testProbe(assertion, occurrence), matches: [match()] }).kind, /^(pass|fail|error)$/u);
     }
   });

@@ -7,7 +7,7 @@ This audit covers the live profiles declared in:
 
 Method:
 
-- Count only expressions reachable from each live profile's active `pruningRules`, `considerations`, and `tieBreakers`.
+- Count only expressions reachable from each live profile's active `guardrails`, `considerations`, and `tieBreakers`.
 - Include transitive supporting expressions (`stateFeatures`, `candidateFeatures`, `candidateAggregates`) because those expressions must migrate with the profile.
 - Treat preview settings such as `preview.mode` and `preview.phase1` as migration context, not standalone expression rows.
 
@@ -43,7 +43,7 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | us-baseline | `considerations.preferTrainAction.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
 | us-baseline | `considerations.preserveResources.value` | A | Reads current player resources only; valid at any microturn. |
 | us-baseline | `considerations.preserveResources.weight` | A | Tunable scalar weight survives unchanged. |
-| us-baseline | `pruningRules.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| us-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | us-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
 | us-baseline | `stateFeatures.selfResources.expr` | A | Reads current player resources only; no rewrite needed. |
 | arvn-baseline | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
@@ -54,7 +54,7 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | arvn-baseline | `considerations.preferPopulousTargets.when` | B | `decision.type` and `decision.name` rewrite to `microturnContext.decisionKind` and `microturnContext.decisionKey`; target kind comes from current option metadata. |
 | arvn-baseline | `considerations.preferProjectedSelfMargin.value` | C | Inherits the retired preview-based margin signal from `feature.projectedSelfMargin`; treat as a re-evolution input. |
 | arvn-baseline | `considerations.preferProjectedSelfMargin.weight` | A | Tunable scalar weight survives unchanged. |
-| arvn-baseline | `pruningRules.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| arvn-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | arvn-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
 | arvn-evolved | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
 | arvn-evolved | `candidateAggregates.maxMarginScore.of` | C | Depends on preview-derived projected margin candidates; no 1:1 microturn equivalent once candidate-set phase preview retires. |
@@ -79,7 +79,7 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | arvn-evolved | `considerations.preferTrainWeighted.weight` | A | Tunable scalar weight survives unchanged. |
 | arvn-evolved | `considerations.trainWhenControlLow.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
 | arvn-evolved | `considerations.trainWhenControlLow.when` | A | Reads current controlled-population metric only; no rewrite needed. |
-| arvn-evolved | `pruningRules.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| arvn-evolved | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | arvn-evolved | `stateFeatures.coinControlPop.expr` | A | Reads current metric only; no rewrite needed. |
 | arvn-evolved | `stateFeatures.patronage.expr` | A | Reads current patronage only; no rewrite needed. |
 | arvn-evolved | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
@@ -97,7 +97,7 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | nva-baseline | `considerations.preferTerrorAction.value` | A | `candidate.tag.terror` remains direct action-selection metadata. |
 | nva-baseline | `considerations.preserveResources.value` | A | Reads current player resources only; valid at any microturn. |
 | nva-baseline | `considerations.preserveResources.weight` | A | Tunable scalar weight survives unchanged. |
-| nva-baseline | `pruningRules.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| nva-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | nva-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
 | nva-baseline | `stateFeatures.selfResources.expr` | A | Reads current player resources only; no rewrite needed. |
 | vc-baseline | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
@@ -111,7 +111,7 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | vc-baseline | `considerations.preferRallyWeighted.value` | A | `candidate.tag.rally` remains direct action-selection metadata. |
 | vc-baseline | `considerations.preferRallyWeighted.weight` | A | Tunable scalar weight survives unchanged. |
 | vc-baseline | `considerations.valueCapabilityGain.value` | C | Inherits the retired preview-delta feature from `feature.projectedCapabilityGain`; treat as a re-evolution input. |
-| vc-baseline | `pruningRules.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| vc-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | vc-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
 | vc-baseline | `stateFeatures.vcFriendlyCapCount.expr` | A | Reads current capability markers only; no rewrite needed. |
 | baseline | `candidateFeatures.raiseAmount.expr` | B | `candidate.param.raiseAmount` rewrites to the bound raise-size option on the active raise microturn. |

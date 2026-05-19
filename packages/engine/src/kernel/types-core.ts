@@ -372,12 +372,22 @@ export type AgentParameterValue = number | boolean | string | readonly string[];
 export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
 export type SelectorCostClass = 'state' | 'candidate' | 'microturn' | 'preview' | 'auditOnly';
+export type GuardrailCostClass = SelectorCostClass;
+export type GuardrailSeverity = 'prune' | 'demote' | 'warn' | 'auditOnly';
+export type GuardrailOnUnavailable = 'warnUnknown' | 'noFire' | 'fire';
 export type SelectorId = string & { readonly __brand: 'SelectorId' };
+export type ModuleId = string & { readonly __brand: 'ModuleId' };
+export type GuardrailId = string & { readonly __brand: 'GuardrailId' };
+export type TurnShapeEvaluatorId = string & { readonly __brand: 'TurnShapeEvaluatorId' };
+export type ObjectiveId = string & { readonly __brand: 'ObjectiveId' };
+export type ModuleSelectorRoleId = string & { readonly __brand: 'ModuleSelectorRoleId' };
+export type ScoreGroupId = string & { readonly __brand: 'ScoreGroupId' };
 export type ComponentId = string & { readonly __brand: 'ComponentId' };
 export type GameAuthoredCollectionId = string & { readonly __brand: 'GameAuthoredCollectionId' };
 export type CandidateParamRef = string & { readonly __brand: 'CandidateParamRef' };
 export const MAX_SELECTOR_RESULT_ITEMS = 32;
 export const MAX_SELECTOR_PRODUCT_PAIRS = 256;
+export const MAX_MODULE_PRIORITY_TIER = 100;
 export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
 export type AgentPreviewFallback = {
@@ -496,6 +506,35 @@ export type CompiledAgentPolicyRef =
         | { readonly kind: 'selected.component'; readonly componentId: string }
         | { readonly kind: 'current.component'; readonly componentId: string }
         | { readonly kind: 'candidate.quality'; readonly key: string };
+    }
+  | {
+      readonly kind: 'strategyModule';
+      readonly moduleId: string;
+      readonly field:
+        | 'active'
+        | 'priority.value'
+        | 'contribution'
+        | { readonly kind: 'scoreGroup.value'; readonly scoreGroupId: string }
+        | { readonly kind: 'selector.id'; readonly role: string };
+    }
+  | {
+      readonly kind: 'guardrail';
+      readonly guardrailId: string;
+      readonly field:
+        | 'fired'
+        | 'severity'
+        | 'status'
+        | 'penalty'
+        | 'onUnavailable';
+    }
+  | {
+      readonly kind: 'turnShape';
+      readonly evaluatorId: string;
+      readonly field:
+        | 'minimumImpactSatisfied'
+        | 'previewStatus'
+        | { readonly kind: 'objective.value'; readonly objectiveId: string }
+        | { readonly kind: 'objective.delta'; readonly objectiveId: string };
     }
   | CompiledSurfaceRef
   | {
@@ -732,11 +771,103 @@ export interface CompiledPolicyAggregate {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
-export interface CompiledPolicyPruningRule {
-  readonly costClass: AgentPolicyCostClass;
+export type ModuleCostClass = SelectorCostClass;
+
+export interface ModuleAppliesSpec {
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly actionTags?: readonly string[];
+  readonly decisionKinds?: readonly string[];
+}
+
+export interface ModulePrioritySpec {
+  readonly tier: number;
+  readonly value?: CompiledPolicyExpr;
+}
+
+export interface ModuleSelectorBinding {
+  readonly role: ModuleSelectorRoleId;
+  readonly selectorId: SelectorId;
+}
+
+export interface ScoreTermDef {
+  readonly id?: string;
+  readonly value: CompiledPolicyExpr;
+  readonly weight: number;
+}
+
+export interface ScoreGroupDef {
+  readonly id: ScoreGroupId;
+  readonly terms: readonly ScoreTermDef[];
+  readonly summary: 'sum' | 'product' | 'max';
+}
+
+export interface ModuleFallbackSpec {
+  readonly ifInactive: 'noContribution' | 'traceOnly';
+  readonly ifSelectorEmpty: 'noContribution' | 'demoteAndTrace';
+  readonly selectorEmptyPenalty?: number;
+}
+
+export interface StrategyModuleDef {
+  readonly id: ModuleId;
+  readonly traceLabel: string;
   readonly when: CompiledPolicyExpr;
+  readonly applies: ModuleAppliesSpec;
+  readonly priority: ModulePrioritySpec;
+  readonly selectors: readonly ModuleSelectorBinding[];
+  readonly scoreGroups: readonly ScoreGroupDef[];
+  readonly guardrailIds: readonly GuardrailId[];
+  readonly fallback: ModuleFallbackSpec;
+  readonly costClass: ModuleCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
-  readonly onEmpty: 'skipRule' | 'error';
+}
+
+export interface PassFallbackSpec {
+  readonly actionId: ActionId;
+  readonly traceLabel: string;
+}
+
+export interface GuardrailDef {
+  readonly id: GuardrailId;
+  readonly traceLabel: string;
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly when: CompiledPolicyExpr;
+  readonly severity: GuardrailSeverity;
+  readonly penalty?: CompiledPolicyExpr;
+  readonly safe?: true;
+  readonly onAllPruned?: PassFallbackSpec;
+  readonly onUnavailable: GuardrailOnUnavailable;
+  readonly costClass: GuardrailCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export type TurnShapeCostClass = 'preview';
+
+export interface TurnShapeBoundsSpec {
+  readonly depthCapRef: 'profile.preview.inner.depthCap';
+  readonly maxSyntheticDecisions: number;
+}
+
+export interface ObjectiveDef {
+  readonly id: ObjectiveId;
+  readonly value?: CompiledPolicyExpr;
+  readonly delta?: CompiledPolicyExpr;
+}
+
+export interface TurnShapeFallbackSpec {
+  readonly onPreviewUnavailable: 'traceOnly' | 'demote';
+  readonly demotePenalty?: CompiledPolicyExpr;
+}
+
+export interface TurnShapeEvaluatorDef {
+  readonly id: TurnShapeEvaluatorId;
+  readonly traceLabel: string;
+  readonly source: 'currentPreviewDrive';
+  readonly bounds: TurnShapeBoundsSpec;
+  readonly objectives: readonly ObjectiveDef[];
+  readonly minimumImpact: CompiledPolicyExpr;
+  readonly fallback: TurnShapeFallbackSpec;
+  readonly costClass: TurnShapeCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
 }
 
 export interface CompiledPolicyConsideration {
@@ -781,7 +912,9 @@ export interface CompiledPolicyCatalog {
   readonly candidateFeatures: Readonly<Record<string, CompiledPolicyCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledPolicyAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
-  readonly pruningRules: Readonly<Record<string, CompiledPolicyPruningRule>>;
+  readonly strategyModules?: Readonly<Record<string, StrategyModuleDef>>;
+  readonly guardrails?: Readonly<Record<string, GuardrailDef>>;
+  readonly turnShapeEvaluators?: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledPolicyStrategicCondition>>;
@@ -916,6 +1049,9 @@ export interface CompiledAgentDependencyRefs {
   readonly candidateFeatures: readonly string[];
   readonly aggregates: readonly string[];
   readonly selectors?: readonly string[];
+  readonly strategyModules?: readonly string[];
+  readonly guardrails?: readonly string[];
+  readonly turnShapeEvaluators?: readonly string[];
   readonly strategicConditions: readonly string[];
 }
 
@@ -993,10 +1129,43 @@ export interface CompiledAgentSelector {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
-export interface CompiledAgentPruningRule {
-  readonly costClass: AgentPolicyCostClass;
+export interface CompiledAgentStrategyModule {
+  readonly traceLabel: string;
+  readonly applies: ModuleAppliesSpec;
+  readonly selectors: readonly ModuleSelectorBinding[];
+  readonly scoreGroups: readonly Omit<ScoreGroupDef, 'terms'>[];
+  readonly guardrailIds: readonly GuardrailId[];
+  readonly fallback: ModuleFallbackSpec;
+  readonly costClass: ModuleCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
-  readonly onEmpty: 'skipRule' | 'error';
+}
+
+export interface CompiledAgentGuardrail {
+  readonly traceLabel: string;
+  readonly scopes: readonly ('move' | 'microturn')[];
+  readonly severity: GuardrailSeverity;
+  readonly costClass: GuardrailCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+  readonly safe?: true;
+  readonly onUnavailable: GuardrailOnUnavailable;
+  readonly onAllPruned?: PassFallbackSpec;
+}
+
+export interface CompiledAgentTurnShapeEvaluator {
+  readonly traceLabel: string;
+  readonly source: 'currentPreviewDrive';
+  readonly bounds: TurnShapeBoundsSpec;
+  readonly objectives: readonly {
+    readonly id: ObjectiveId;
+    readonly hasValue: boolean;
+    readonly hasDelta: boolean;
+  }[];
+  readonly fallback: {
+    readonly onPreviewUnavailable: 'traceOnly' | 'demote';
+    readonly hasDemotePenalty: boolean;
+  };
+  readonly costClass: TurnShapeCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
 }
 
 export interface CompiledAgentConsideration {
@@ -1033,7 +1202,9 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
-  readonly pruningRules: Readonly<Record<string, CompiledAgentPruningRule>>;
+  readonly strategyModules?: Readonly<Record<string, CompiledAgentStrategyModule>>;
+  readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
+  readonly turnShapeEvaluators?: Readonly<Record<string, CompiledAgentTurnShapeEvaluator>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;
@@ -1111,7 +1282,9 @@ export interface CompiledAgentProfile {
   readonly params: Readonly<Record<string, AgentParameterValue>>;
   readonly use: {
     readonly considerations: readonly string[];
-    readonly pruningRules: readonly string[];
+    readonly strategyModules?: readonly string[];
+    readonly guardrails?: readonly string[];
+    readonly turnShapeEvaluators?: readonly string[];
     readonly tieBreakers: readonly string[];
   };
   readonly preview: CompiledAgentPreviewConfig;
@@ -1119,11 +1292,20 @@ export interface CompiledAgentProfile {
   readonly selector?: {
     readonly maxCostClass: SelectorCostClass;
   };
+  readonly strategyModules?: {
+    readonly maxCostClass: ModuleCostClass;
+  };
+  readonly guardrails?: {
+    readonly maxCostClass: GuardrailCostClass;
+  };
   readonly plan: {
     readonly stateFeatures: readonly string[];
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
     readonly selectors?: readonly string[];
+    readonly strategyModules?: readonly string[];
+    readonly guardrails?: readonly string[];
+    readonly turnShapeEvaluators?: readonly string[];
     readonly considerations: readonly string[];
   };
 }
@@ -2116,6 +2298,71 @@ export interface PolicySelectorTraceEntry {
   readonly truncated?: boolean;
 }
 
+export interface PolicyModuleTrace {
+  readonly active: readonly PolicyModuleActiveTraceEntry[];
+  readonly inactiveTopReasons: readonly PolicyModuleInactiveTraceEntry[];
+}
+
+export interface PolicyModuleActiveTraceEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly priorityTier: number;
+  readonly activationValue: number | null;
+  readonly contribution: number;
+  readonly scoreGroups: Readonly<Record<string, number>>;
+}
+
+export interface PolicyModuleInactiveTraceEntry {
+  readonly id: string;
+  readonly reason: 'conditionFalse' | 'scopeFiltered' | 'fallbackInactive';
+}
+
+export interface PolicyGuardrailTrace {
+  readonly fired: readonly PolicyGuardrailFiredEntry[];
+  readonly notFiredTop: readonly PolicyGuardrailNotFiredEntry[];
+  readonly allPrunedFallback?: PolicyGuardrailAllPrunedFallback;
+}
+
+export interface PolicyGuardrailAllPrunedFallback {
+  readonly guardrailId: string;
+  readonly actionId: string;
+  readonly traceLabel: string;
+  readonly constructibilityFailure?: true;
+}
+
+export interface PolicyGuardrailFiredEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly severity: GuardrailSeverity;
+  readonly penalty?: number;
+  readonly status: 'ready' | 'partial' | 'unavailable';
+  readonly onUnavailable?: GuardrailOnUnavailable;
+}
+
+export interface PolicyGuardrailNotFiredEntry {
+  readonly id: string;
+  readonly reason: 'whenFalse' | 'scopeFiltered' | 'previewUnavailable';
+  readonly onUnavailable?: GuardrailOnUnavailable;
+}
+
+export interface PolicyTurnShapeTrace {
+  readonly evaluators: readonly PolicyTurnShapeEvaluatorEntry[];
+}
+
+export interface PolicyTurnShapeEvaluatorEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly minimumImpactSatisfied: boolean;
+  readonly previewStatus: 'ready' | 'partial' | 'unavailable';
+  readonly objectives: readonly PolicyTurnShapeObjectiveTraceEntry[];
+}
+
+export interface PolicyTurnShapeObjectiveTraceEntry {
+  readonly id: string;
+  readonly value?: number;
+  readonly delta?: number;
+}
+
 export type PolicyPreviewSeatMatrixStatusTrace =
   | 'ready'
   | 'stochastic'
@@ -2250,6 +2497,9 @@ export interface PolicyAgentDecisionTrace {
   readonly previewUsage: PolicyPreviewUsageTrace;
   readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisoryTrace[];
   readonly selectors?: readonly PolicySelectorTraceEntry[];
+  readonly modules?: PolicyModuleTrace;
+  readonly guardrails?: PolicyGuardrailTrace;
+  readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

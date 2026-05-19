@@ -85,7 +85,7 @@ function createDef(): GameDef {
         stateFeatures: {},
         candidateFeatures: {},
         candidateAggregates: {},
-        pruningRules: {},
+        guardrails: {},
         considerations: {},
         tieBreakers: {},
         strategicConditions: {},

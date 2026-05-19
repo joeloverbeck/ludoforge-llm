@@ -153,7 +153,7 @@ export function makeScheduleCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         cards: {
           scopes: ['microturn'],

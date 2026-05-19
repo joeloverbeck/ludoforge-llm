@@ -10,7 +10,7 @@ import type {
 } from '../kernel/types.js';
 import type { PolicyEvaluationMetadata } from './policy-eval.js';
 
-export type PolicyDecisionTraceLevel = 'none' | 'summary' | 'verbose';
+export type PolicyDecisionTraceLevel = 'none' | 'summary' | 'verbose' | 'debug';
 
 export interface PolicyDiagnosticsSnapshot {
   readonly seatId: string | null;
@@ -23,7 +23,7 @@ export interface PolicyDiagnosticsSnapshot {
     readonly candidateFeatures: readonly string[];
     readonly candidateAggregates: readonly string[];
     readonly selectors: readonly string[];
-    readonly pruningRules: readonly string[];
+    readonly guardrails: readonly string[];
     readonly considerations: readonly string[];
     readonly tieBreakers: readonly string[];
   };
@@ -60,7 +60,7 @@ export function buildPolicyDiagnosticsSnapshot(
         candidateFeatures: [],
         candidateAggregates: [],
         selectors: [],
-        pruningRules: [],
+        guardrails: [],
         considerations: [],
         tieBreakers: [],
       },
@@ -91,7 +91,7 @@ export function buildPolicyDiagnosticsSnapshot(
       candidateFeatures: profile.plan.candidateFeatures,
       candidateAggregates: profile.plan.candidateAggregates,
       selectors: profile.plan.selectors ?? [],
-      pruningRules: profile.use.pruningRules,
+      guardrails: profile.use.guardrails ?? [],
       considerations: profile.use.considerations,
       tieBreakers: profile.use.tieBreakers,
     },
@@ -141,11 +141,14 @@ export function buildPolicyAgentDecisionTrace(
     previewUsage: metadata.previewUsage,
     ...(metadata.advisories === undefined ? {} : { advisories: metadata.advisories }),
     ...(metadata.selectors === undefined || metadata.selectors.length === 0 ? {} : { selectors: metadata.selectors }),
+    ...(metadata.modules === undefined ? {} : { modules: metadata.modules }),
+    ...(metadata.guardrails === undefined ? {} : { guardrails: metadata.guardrails }),
+    ...(metadata.turnShape === undefined ? {} : { turnShape: metadata.turnShape }),
     ...(metadata.selection === undefined ? {} : { selection: metadata.selection }),
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },
     ...(metadata.stateFeatures !== undefined ? { stateFeatures: metadata.stateFeatures } : {}),
-    ...(traceLevel === 'verbose'
+    ...(traceLevel === 'verbose' || traceLevel === 'debug'
       ? {
           candidates: verboseCandidates,
         }
@@ -210,10 +213,15 @@ function collectCostTiers(
       push(costClass, `selector:${selectorId}`);
     }
   }
-  for (const ruleId of profile.use.pruningRules) {
-    const rule = catalog.library.pruningRules[ruleId];
-    if (rule !== undefined) {
-      push(rule.costClass, `pruningRule:${ruleId}`);
+  for (const guardrailId of profile.use.guardrails ?? []) {
+    const guardrail = catalog.library.guardrails?.[guardrailId];
+    if (guardrail !== undefined) {
+      const costClass = guardrail.costClass === 'preview'
+        ? 'preview'
+        : guardrail.costClass === 'state'
+          ? 'state'
+          : 'candidate';
+      push(costClass, `guardrail:${guardrailId}`);
     }
   }
   const considerations = catalog.library.considerations ?? {};
@@ -331,10 +339,13 @@ function collectSurfaceRefs(
       }
     }
   }
-  for (const ruleId of profile.use.pruningRules) {
-    const rule = catalog.compiled.pruningRules[ruleId];
-    if (rule !== undefined) {
-      walkExpr(rule.when, visitRef);
+  for (const guardrailId of profile.use.guardrails ?? []) {
+    const guardrail = catalog.compiled.guardrails?.[guardrailId];
+    if (guardrail !== undefined) {
+      walkExpr(guardrail.when, visitRef);
+      if (guardrail.penalty !== undefined) {
+        walkExpr(guardrail.penalty, visitRef);
+      }
     }
   }
   const considerations = catalog.compiled.considerations;

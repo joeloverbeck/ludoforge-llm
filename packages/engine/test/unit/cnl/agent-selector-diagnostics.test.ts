@@ -151,7 +151,7 @@ describe('agent selector diagnostics', () => {
             observer: 'testObserver',
             params: {},
             selector: { maxCostClass: 'state' },
-            use: { considerations: ['useBad'], pruningRules: [], tieBreakers: ['stableMoveKey'] },
+            use: { considerations: ['useBad'], guardrails: [], tieBreakers: ['stableMoveKey'] },
           },
         },
         bindings: { p1: 'baseline' },

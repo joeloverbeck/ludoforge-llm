@@ -48,7 +48,7 @@ function baseDoc(considerations: Readonly<Record<string, GameSpecConsiderationDe
           observer: 'currentPlayer',
           params: {},
           use: {
-            pruningRules: [],
+            guardrails: [],
             considerations: Object.keys(considerations),
             tieBreakers: ['stableMoveKey'],
           },

@@ -77,7 +77,7 @@ const createCatalog = (
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: ['projectedPopulation'],
       tieBreakers: [],
     },
@@ -98,7 +98,7 @@ const createCatalog = (
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         projectedPopulation: {
           scopes: ['microturn'],

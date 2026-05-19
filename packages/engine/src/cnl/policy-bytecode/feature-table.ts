@@ -607,7 +607,19 @@ function forEachCompiledPolicyExpr(def: GameDef, visit: (expr: CompiledPolicyExp
       visit(component.value);
     }
   }
-  for (const rule of Object.values(compiled.pruningRules)) visit(rule.when);
+  for (const module of Object.values(compiled.strategyModules ?? {})) {
+    visit(module.when);
+    if (module.priority.value !== undefined) visit(module.priority.value);
+    for (const group of module.scoreGroups) {
+      for (const term of group.terms) {
+        visit(term.value);
+      }
+    }
+  }
+  for (const guardrail of Object.values(compiled.guardrails ?? {})) {
+    visit(guardrail.when);
+    if (guardrail.penalty !== undefined) visit(guardrail.penalty);
+  }
   for (const consideration of Object.values(compiled.considerations)) {
     if (consideration.when !== undefined) visit(consideration.when);
     visit(consideration.weight);

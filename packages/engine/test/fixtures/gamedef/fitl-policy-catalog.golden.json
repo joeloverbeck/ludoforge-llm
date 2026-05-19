@@ -973,7 +973,7 @@
         }
       }
     },
-    "pruningRules": {
+    "guardrails": {
       "dropPassWhenOtherMovesExist": {
         "costClass": "candidate",
         "dependencies": {
@@ -1995,7 +1995,7 @@
         }
       }
     },
-    "pruningRules": {
+    "guardrails": {
       "dropPassWhenOtherMovesExist": {
         "costClass": "candidate",
         "when": {
@@ -3916,7 +3916,7 @@
         "resourceWeight": 2
       },
       "use": {
-        "pruningRules": [
+        "guardrails": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
@@ -3968,7 +3968,7 @@
         "governWeight": 500
       },
       "use": {
-        "pruningRules": [
+        "guardrails": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
@@ -4017,7 +4017,7 @@
         "trainWeight": 300
       },
       "use": {
-        "pruningRules": [
+        "guardrails": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
@@ -4101,7 +4101,7 @@
         "resourceWeight": 3
       },
       "use": {
-        "pruningRules": [
+        "guardrails": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [
@@ -4157,7 +4157,7 @@
         "rallyWeight": 500
       },
       "use": {
-        "pruningRules": [
+        "guardrails": [
           "dropPassWhenOtherMovesExist"
         ],
         "considerations": [

@@ -80,7 +80,7 @@ function createProfile(chooseNStep: ChoosenStepPreviewFlag): CompiledAgentProfil
     },
     selection: { mode: 'argmax' },
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations,
       tieBreakers: [],
     },
@@ -119,7 +119,7 @@ export function createChoosenStepPreviewCatalog(chooseNStep: ChoosenStepPreviewF
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: microturnConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',

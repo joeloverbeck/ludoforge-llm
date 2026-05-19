@@ -92,7 +92,7 @@ function createCatalog(): AgentPolicyCatalog {
         },
       },
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: moveConsiderations({
         preferProjectedMargin: {
           costClass: 'preview',
@@ -117,7 +117,7 @@ function createCatalog(): AgentPolicyCatalog {
         preview: { mode: 'exactWorld' },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['preferProjectedMargin'],
           tieBreakers: ['stableMoveKey'],
         },

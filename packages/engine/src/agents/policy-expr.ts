@@ -367,6 +367,12 @@ function analyzeRefExpr(
         return withResolvedRef(resolved, { ...dependencies, aggregates: [resolved.dependency.id] });
       case 'selectors':
         return withResolvedRef(resolved, { ...dependencies, selectors: [resolved.dependency.id] });
+      case 'strategyModules':
+        return withResolvedRef(resolved, { ...dependencies, strategyModules: [resolved.dependency.id] });
+      case 'guardrails':
+        return withResolvedRef(resolved, { ...dependencies, guardrails: [resolved.dependency.id] });
+      case 'turnShapeEvaluators':
+        return withResolvedRef(resolved, { ...dependencies, turnShapeEvaluators: [resolved.dependency.id] });
       case 'strategicConditions':
         return withResolvedRef(resolved, { ...dependencies, strategicConditions: [resolved.dependency.id] });
     }
@@ -847,12 +853,18 @@ function mergeAnalyses(
 
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
+  const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
+  const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
     candidateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.candidateFeatures)),
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
+    ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(guardrails.length === 0 ? {} : { guardrails }),
+    ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

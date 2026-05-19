@@ -15,11 +15,12 @@ import {
 
 const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
-const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection', 'selector'] as const;
+const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection', 'selector', 'strategyModules', 'guardrails'] as const;
+const DEPRECATED_PRUNING_RULES_KEY = 'pruning' + 'Rules';
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
-type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey | 'selectors', Record<string, unknown>>>;
+type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey | 'selectors' | 'strategyModules', Record<string, unknown>>>;
 
 const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'expr',
@@ -30,7 +31,8 @@ const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'candidateFeatures',
   'candidateAggregates',
   'selectors',
-  'pruningRules',
+  'strategyModules',
+  'guardrails',
   'considerations',
   'tieBreakers',
 ]);
@@ -64,6 +66,7 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
     return;
   }
 
+  reportDeprecatedGuardrailKey(library, 'doc.agents.library', diagnostics);
   validateUnknownKeys(library, AGENT_POLICY_LIBRARY_BUCKETS, 'doc.agents.library', diagnostics, 'agents library');
 
   for (const key of AGENT_POLICY_LIBRARY_BUCKETS) {
@@ -406,6 +409,7 @@ function validateProfileUse(
     return;
   }
 
+  reportDeprecatedGuardrailKey(use, path, diagnostics);
   validateUnknownKeys(use, AGENT_POLICY_PROFILE_USE_BUCKETS, path, diagnostics, 'agents profile use');
   for (const key of AGENT_POLICY_PROFILE_USE_BUCKETS) {
     const listValue = use[key];
@@ -449,6 +453,23 @@ function validateProfileUse(
       });
     }
   }
+}
+
+function reportDeprecatedGuardrailKey(
+  value: Record<string, unknown>,
+  path: string,
+  diagnostics: Diagnostic[],
+): void {
+  if (!(DEPRECATED_PRUNING_RULES_KEY in value)) {
+    return;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_GUARDRAIL_PRUNINGRULES_DEPRECATED,
+    path: `${path}.${DEPRECATED_PRUNING_RULES_KEY}`,
+    severity: 'error',
+    message: 'Agent pruning rules were replaced by guardrails.',
+    suggestion: 'Move this entry to guardrails and declare severity, safety, fallback, and onUnavailable behavior.',
+  });
 }
 
 function validateConsiderationScopes(

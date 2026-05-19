@@ -55,7 +55,7 @@ function createMinimalCatalog(): AgentPolicyCatalog {
     fingerprint: 'decision-local-scope-drop-profile',
     params: {},
     use: {
-      pruningRules: [],
+      guardrails: [],
       considerations: [],
       tieBreakers: [],
     },
@@ -92,7 +92,7 @@ function createMinimalCatalog(): AgentPolicyCatalog {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},

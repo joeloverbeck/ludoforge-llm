@@ -189,7 +189,12 @@ export function computeDependenciesReadFootprint(dependencies: CompiledAgentDepe
   if (dependencies.stateFeatures.length > 0) {
     surfaces.push(withRead({ ...emptySurface(), variables: 'unknown', zones: 'unknown', tokens: 'unknown', scores: 'unknown' }));
   }
-  if (dependencies.candidateFeatures.length > 0 || dependencies.aggregates.length > 0 || dependencies.strategicConditions.length > 0) {
+  if (
+    dependencies.candidateFeatures.length > 0
+    || dependencies.aggregates.length > 0
+    || dependencies.strategicConditions.length > 0
+    || (dependencies.strategyModules?.length ?? 0) > 0
+  ) {
     surfaces.push(withRead({ ...emptySurface(), variables: 'unknown', zones: 'unknown', tokens: 'unknown', scores: 'unknown' }));
   }
   return unionFootprints(surfaces);

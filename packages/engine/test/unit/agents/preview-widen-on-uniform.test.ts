@@ -65,7 +65,7 @@ function createDef(budget: CompiledAgentPreviewBudgetConfig): GameDef {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      guardrails: {},
       considerations: {
         moveRank: {
           scopes: ['move'],
@@ -101,7 +101,7 @@ function createDef(budget: CompiledAgentPreviewBudgetConfig): GameDef {
         preview: { mode: 'exactWorld', budget },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          guardrails: [],
           considerations: ['moveRank', 'projectedScore'],
           tieBreakers: ['stable'],
         },

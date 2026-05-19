@@ -2345,6 +2345,24 @@ export interface PolicyGuardrailNotFiredEntry {
   readonly onUnavailable?: GuardrailOnUnavailable;
 }
 
+export interface PolicyTurnShapeTrace {
+  readonly evaluators: readonly PolicyTurnShapeEvaluatorEntry[];
+}
+
+export interface PolicyTurnShapeEvaluatorEntry {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly minimumImpactSatisfied: boolean;
+  readonly previewStatus: 'ready' | 'partial' | 'unavailable';
+  readonly objectives: readonly PolicyTurnShapeObjectiveTraceEntry[];
+}
+
+export interface PolicyTurnShapeObjectiveTraceEntry {
+  readonly id: string;
+  readonly value?: number;
+  readonly delta?: number;
+}
+
 export type PolicyPreviewSeatMatrixStatusTrace =
   | 'ready'
   | 'stochastic'
@@ -2481,6 +2499,7 @@ export interface PolicyAgentDecisionTrace {
   readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly modules?: PolicyModuleTrace;
   readonly guardrails?: PolicyGuardrailTrace;
+  readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

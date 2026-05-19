@@ -143,6 +143,7 @@ export function buildPolicyAgentDecisionTrace(
     ...(metadata.selectors === undefined || metadata.selectors.length === 0 ? {} : { selectors: metadata.selectors }),
     ...(metadata.modules === undefined ? {} : { modules: metadata.modules }),
     ...(metadata.guardrails === undefined ? {} : { guardrails: metadata.guardrails }),
+    ...(metadata.turnShape === undefined ? {} : { turnShape: metadata.turnShape }),
     ...(metadata.selection === undefined ? {} : { selection: metadata.selection }),
     emergencyFallback: metadata.usedFallback,
     failure: metadata.failure === null ? null : { code: metadata.failure.code, message: metadata.failure.message },

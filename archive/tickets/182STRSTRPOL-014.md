@@ -137,7 +137,7 @@ Implemented the Phase 4 runtime evaluator slice for `turnShapeEvaluators`:
   - `packages/engine/test/unit/agents/turn-shape-preview-fallback.test.ts`
   - `packages/engine/test/unit/agents/turn-shape-bounded-execution.test.ts`
 
-Out-of-scope work remains with the named siblings: trace formatting in `tickets/182STRSTRPOL-015.md`, architectural probe coverage in `tickets/182STRSTRPOL-016.md`, and FITL authored conformance in `tickets/182STRSTRPOL-017.md`.
+Out-of-scope work remains with the named siblings: trace formatting in `archive/tickets/182STRSTRPOL-015.md`, architectural probe coverage in `tickets/182STRSTRPOL-016.md`, and FITL authored conformance in `tickets/182STRSTRPOL-017.md`.
 
 Source-size ledger:
 

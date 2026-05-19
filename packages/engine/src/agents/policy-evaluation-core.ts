@@ -69,6 +69,7 @@ import {
   type StrategyModuleEvaluationView,
 } from './policy-strategy-module-eval.js';
 import { buildStrategyModuleTrace } from './policy-strategy-module-trace.js';
+import { buildTurnShapeTrace } from './policy-turn-shape-trace.js';
 import type { GuardrailRefResult, GuardrailRefView } from './policy-guardrail-eval.js';
 import {
   evaluateTurnShapeObjectives,
@@ -548,6 +549,35 @@ export class PolicyEvaluationContext {
       traceLevel,
       selectedCandidate?.stableMoveKey,
     );
+  }
+
+  getEvaluatedTurnShapeTrace(
+    traceLevel: 'summary' | 'verbose' | 'debug' = 'summary',
+    selectedCandidate?: PolicyEvaluationCandidate,
+  ): ReturnType<typeof buildTurnShapeTrace> {
+    const selectedStableMoveKey = selectedCandidate?.stableMoveKey;
+    const results: TurnShapeEvaluatorResult[] = [];
+    const seen = new Set<string>();
+    for (const [cacheKey, result] of [...this.turnShapeEvaluationCache.entries()].sort(([left], [right]) => {
+      if (left < right) return -1;
+      if (left > right) return 1;
+      return 0;
+    })) {
+      const stableMoveKey = stableMoveKeyFromTurnShapeCacheKey(cacheKey, result.evaluatorId);
+      if (selectedStableMoveKey !== undefined && stableMoveKey !== selectedStableMoveKey) {
+        continue;
+      }
+      if (seen.has(result.evaluatorId)) {
+        continue;
+      }
+      seen.add(result.evaluatorId);
+      results.push(result);
+    }
+    return buildTurnShapeTrace({
+      results,
+      catalog: this.input.catalog,
+      traceLevel,
+    });
   }
 
   evaluateStateFeature(featureId: string): PolicyValue {
@@ -2723,6 +2753,15 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
 
 function candidateParamTraceRefId(paramId: string): string {
   return `candidate.params.${paramId}`;
+}
+
+function stableMoveKeyFromTurnShapeCacheKey(cacheKey: string, evaluatorId: string): string {
+  const prefix = `${evaluatorId}:`;
+  const suffixStart = cacheKey.lastIndexOf(':');
+  if (!cacheKey.startsWith(prefix) || suffixStart < prefix.length) {
+    return '__state__';
+  }
+  return cacheKey.slice(prefix.length, suffixStart);
 }
 
 export function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {

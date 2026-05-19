@@ -19,6 +19,7 @@ import type {
   Move,
   PolicyGuardrailTrace,
   PolicyModuleTrace,
+  PolicyTurnShapeTrace,
   PolicyPreviewOutcomeBreakdownTrace,
   PolicySelectorTraceEntry,
   PolicyPreviewSeatMatrixCellTrace,
@@ -340,6 +341,7 @@ export interface PolicyEvaluationMetadata {
   readonly selectors?: readonly PolicySelectorTraceEntry[];
   readonly modules?: PolicyModuleTrace;
   readonly guardrails?: PolicyGuardrailTrace;
+  readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -960,6 +962,12 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             selected,
           )
         : undefined;
+      const turnShapeTrace = collectDiagnostics && input.traceLevel !== 'none'
+        ? evaluation.getEvaluatedTurnShapeTrace(
+            input.traceLevel === 'debug' ? 'debug' : input.traceLevel === 'verbose' ? 'verbose' : 'summary',
+            selected,
+          )
+        : undefined;
       logPolicyEvalOomTrace(
         'success',
         currentDepth,
@@ -1007,6 +1015,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           ...(selectorTraces.length === 0 ? {} : { selectors: selectorTraces }),
           ...(moduleTrace === undefined ? {} : { modules: moduleTrace }),
           ...(guardrailTrace === undefined ? {} : { guardrails: guardrailTrace }),
+          ...(turnShapeTrace === undefined ? {} : { turnShape: turnShapeTrace }),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),

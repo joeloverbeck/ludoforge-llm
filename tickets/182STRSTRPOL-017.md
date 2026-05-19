@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `data/games/fire-in-the-lake/92-agents.md` (add turn-shape evaluator), new conformance probe under `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/`
-**Deps**: `tickets/182STRSTRPOL-015.md`, `tickets/182STRSTRPOL-016.md`
+**Deps**: `archive/tickets/182STRSTRPOL-015.md`, `tickets/182STRSTRPOL-016.md`
 
 ## Problem
 

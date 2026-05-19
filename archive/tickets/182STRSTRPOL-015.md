@@ -1,6 +1,6 @@
 # 182STRSTRPOL-015: Phase 4 — Turn-shape evaluator trace contract extension
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, trace formatting / mode handling for `turnShape` block
@@ -114,3 +114,34 @@ In the trace builder that consumes ticket 014's evaluator results, populate `tur
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/turn-shape-trace-*.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-19
+
+Implemented the Phase 4 turn-shape trace contract extension:
+
+- Added `PolicyTurnShapeTrace`, `PolicyTurnShapeEvaluatorEntry`, and `PolicyTurnShapeObjectiveTraceEntry` to `PolicyAgentDecisionTrace`.
+- Added `packages/engine/src/agents/policy-turn-shape-trace.ts` to build deterministic `turnShape.evaluators` entries from ticket 014's cached evaluator results.
+- Wired policy evaluation metadata and diagnostics output so selected-candidate turn-shape evaluator results appear under `agentDecision.turnShape`.
+- Added `packages/engine/test/unit/agents/turn-shape-trace-ordering.test.ts` and `packages/engine/test/unit/agents/turn-shape-trace-caps.test.ts`.
+
+No game-specific identifiers were added to trace code. FITL evaluator authoring, the no-additional-preview-drive architectural probe, and full evaluator-using profile determinism remain with `tickets/182STRSTRPOL-016.md` and `tickets/182STRSTRPOL-017.md`.
+
+Source-size ledger:
+
+| path | final lines | active growth | crossed cap? | decision |
+| --- | ---: | ---: | --- | --- |
+| `packages/engine/src/agents/policy-eval.ts` | 1706 | +9 | no — pre-existing over cap | User-approved option 1 on 2026-05-19: defer broad extraction; active growth is narrow metadata plumbing required by this ticket. |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2776 | +39 | no — pre-existing over cap | User-approved option 1 on 2026-05-19: defer broad extraction; helper extraction for trace construction is in `policy-turn-shape-trace.ts`. |
+| `packages/engine/src/kernel/types-core.ts` | 2737 | +19 | no — pre-existing over cap | User-approved option 1 on 2026-05-19: defer broad type-surface split; this ticket adds the required public trace shape. |
+| `packages/engine/src/agents/policy-turn-shape-trace.ts` | 54 | +54 | no | New focused helper under guidance. |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/turn-shape-trace-*.test.js` — passed; 4 tests / 2 suites.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed; Turbo 5/5 tasks successful, engine default lane `98/98 files passed`.
+- `pnpm turbo lint` — passed; 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed; 3/3 tasks successful.

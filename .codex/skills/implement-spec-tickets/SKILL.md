@@ -265,6 +265,7 @@ Compact pre-commit visibility gate. This is a quick index for the longer rules b
 - `Post-ticket review` block, or `not_applicable` classification
 - `post-ticket-review` audit block when triggered, or `not_applicable` classification
 - generated-artifact provenance when triggered
+- source-size ledger when triggered by `implement-ticket`
 - state-file validation when the state file changed
 - `Required-visible-block checkpoint`
 - full `Harness handoff` readiness
@@ -276,7 +277,7 @@ Before committing:
 3. Verify every dirty path is owned by the iteration, explicitly approved, or intentionally left unstaged.
    - Unrelated untracked files, reports, generated artifacts, and proof byproducts must remain untouched and unstaged unless the user explicitly approves deletion or inclusion. Do not remove them merely to make `git status --short` clean; instead, record them in `dirty_state` and the handoff as unrelated retained paths.
 4. Run whitespace/hygiene over owned files. For newly untracked files, use `git diff --no-index --check /dev/null <path>` or an equivalent trailing-whitespace check.
-   - For any new generated fixture, witness, report, trace, or serialized-state artifact over 1 MB or over 10,000 lines, emit a generated-artifact provenance ledger before staging:
+   - For any new or regenerated generated fixture, witness, report, trace, generated schema/contract artifact, serialized-state artifact, or comparable generated proof artifact over 1 MB or over 10,000 lines, emit a generated-artifact provenance ledger before staging:
      - `artifact path`
      - `size / line count`
      - `generation command or retained script`
@@ -284,6 +285,7 @@ Before committing:
      - `why checked in instead of generated on demand`
      - `hygiene proof`
      If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
+   - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner.
    - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
      - `artifact path`
      - `generation command or retained script`
@@ -308,11 +310,12 @@ Required-visible-block checkpoint:
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
 - state-file validity: <valid | not_changed | blocked: reason>
 - generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
+- source-size ledger: <emitted | not_applicable: reason | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
-Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
 
 If a required child skill audit block is missing and there is no visible evidence that the audit actually ran in the current observable context, run the child audit before committing or finalizing. Do not treat a late checkpoint as a substitute for an unrun or unobservable `$skill-audit`. After running it, emit the compact child-audit block and apply, reject, or defer evidence-backed suggestions under the normal child-audit rules.
 

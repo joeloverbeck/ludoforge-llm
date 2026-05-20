@@ -16,9 +16,9 @@
   ],
   "phase": "in_progress",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 186 ticket 001 archived in work commit 07cdbd03fa4932c7c99298e42d77fffae436f9b5; remaining ticket queue starts at 002.",
+  "owned_dirty_summary": "Spec 186 ticket 001 archived in work commit 07cdbd03fa4932c7c99298e42d77fffae436f9b5; remaining ticket queue starts at 002; final worktree clean.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "state_file_only",
+  "dirty_state": "clean",
   "updated_at": "2026-05-20"
 }

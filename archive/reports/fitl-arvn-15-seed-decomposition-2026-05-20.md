@@ -1,9 +1,9 @@
 # FITL ARVN 15-Seed Per-Microturn-Class Decomposition
 
 **Date**: 2026-05-20
-**Status**: FITL ARVN measurement witness.
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
 **Command**: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date 2026-05-20`
-**CSV**: `reports/fitl-arvn-15-seed-decomposition-2026-05-20.csv`
+**CSV**: `archive/reports/fitl-arvn-15-seed-decomposition-2026-05-20.csv`
 
 ## Summary
 

@@ -2,7 +2,7 @@
 
 **Status**: ✅ EXPLOITED — archived 2026-05-19.
 
-**Follow-up (2026-05-20)**: "EXPLOITED" here meant this report triggered Spec 183 — NOT that its core recommendation was acted on. The recommended engine fix (Direction A: land an `outcomeGrantResolve` opt-in spec, then resume the campaign) was *not* done; Spec 183 instead reframed the uniform-preview symptom into an evolution-loop acceptance penalty, leaving the engine gap open. See `reports/agent-evolution-and-opponent-preview-2026-05-20.md` for the reassessment and the deep-research brief on the still-unfixed preview-cascade gap.
+**Follow-up (2026-05-20)**: "EXPLOITED" here meant this report triggered Spec 183 — NOT that its core recommendation was acted on. The recommended engine fix (Direction A: land an `outcomeGrantResolve` opt-in spec, then resume the campaign) was *not* done; Spec 183 instead reframed the uniform-preview symptom into an evolution-loop acceptance penalty, leaving the engine gap open. See `archive/reports/agent-evolution-and-opponent-preview-2026-05-20.md` for the reassessment and the deep-research brief on the still-unfixed preview-cascade gap.
 
 **Date**: 2026-05-17
 **Status**: discovery report; no spec yet.

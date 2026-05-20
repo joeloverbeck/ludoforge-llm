@@ -1,5 +1,7 @@
 # **Proposal: ARVN Agent Evolution, Opponent Preview Integrity, and Structured Policy Direction**
 
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
+
 ## **1. Executive verdict**
 
 Pause ARVN evolution. Do **not** merge `arvn-evolved` into the production baseline yet.
@@ -29,7 +31,7 @@ I did not execute code or tests. This proposal is based on targeted current-repo
 | ----- | ----- |
 | The ARVN policy has grown beyond flat considerations into selectors, strategy modules, guardrails, and turn-shape evaluators. | True. `92-agents.md` defines structured candidate features, standing-role aggregates, selectors/modules/guardrails, `currentTurnImpact`, and opponent-denial considerations. |
 | `arvn-baseline` and `arvn-evolved` both exist, and `arvn-evolved` is the richer profile. | True. `arvn-baseline` is much thinner; `arvn-evolved` has broader preview budget, inner preview, continued deepening, post-grant continuation, structured module usage, guardrail, turn-shape evaluator, and opponent refs. The ARVN binding points to `arvn-evolved`. |
-| The structured-over-flat direction in `reports/ai-agent-overhaul-proposal.md` is directionally right. | True. The proposal correctly identifies flat action scoring as “numeric sludge” and recommends structured selectors/modules/guardrails/turn-shape/evolution of structure, not just weights. |
+| The structured-over-flat direction in `archive/reports/ai-agent-overhaul-proposal.md` is directionally right. | True. The proposal correctly identifies flat action scoring as “numeric sludge” and recommends structured selectors/modules/guardrails/turn-shape/evolution of structure, not just weights. |
 | Foundation #20 requires preview surfaces to distinguish ready, unknown, hidden, stochastic, unresolved, failed, depth-capped, partial, etc., instead of silently pretending a bounded preview is complete. | True and central. |
 | Campaign docs treat evolved profiles as temporary campaign state until deliberately promoted, and promotion should rename repository-owned refs rather than preserve compatibility aliases. | True; this aligns with Foundation #14. |
 
@@ -941,4 +943,3 @@ Explicitly reject:
 * After proof, replace obsolete `arvn-baseline` with a structured production ARVN profile.  
 * Remove obsolete aliases/references in the same promotion change.  
 * Resume evolution from the structured baseline using scenario probes and quality-diversity descriptors.
-

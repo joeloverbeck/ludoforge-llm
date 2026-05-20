@@ -1,5 +1,7 @@
 # **1. Executive verdict**
 
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
+
 **Augment flat weighted considerations; do not replace them.** The current model is a competent utility-AI leaf evaluator, but it is not a sufficient strategy authoring surface. It should become the bottom layer of a **game-agnostic structured strategy system**: strategic modules, selectors, guardrails, turn-shape evaluators, audit probes, and trace labels, all compiled into deterministic bounded IR. The engine must still know nothing about Govern, Patronage, COIN control, ARVN, Fire in the Lake, or any future game-specific concept.
 
 The strongest recommendation is a **hybrid architecture**:
@@ -1321,4 +1323,3 @@ Value: evolution discovers strategies rather than tuning sludge.
     Maybe, but not in runtime policy execution. They would be separate tooling, not part of the deterministic game-agnostic kernel.  
 7. **What is the minimum viable first win?**  
     Add trace grouping, policy lint warnings, and an audit harness before adding new scoring semantics. That will expose the worst strategy holes quickly and cheaply.
-

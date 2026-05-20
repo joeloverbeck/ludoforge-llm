@@ -1,7 +1,7 @@
 # Spec 181 — Structured Strategy Policy Layer Phase 0/1: Audit Probe Harness and First-Class Selectors
 
 **Status**: PROPOSED
-**Priority**: High — closes the two-month FITL/ARVN authoring pain documented in `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` and `reports/ai-agent-overhaul-proposal.md` by adding the missing "middle layer" between flat considerations and policy intent, and by short-cutting the 15-seed tournament feedback loop.
+**Priority**: High — closes the two-month FITL/ARVN authoring pain documented in `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` and `archive/reports/ai-agent-overhaul-proposal.md` by adding the missing "middle layer" between flat considerations and policy intent, and by short-cutting the 15-seed tournament feedback loop.
 **Complexity**: M–L — two independently mergeable phases. Phase 0 (probe harness) is S–M and unblocks fast iteration on everything that follows. Phase 1 (selectors) is M–L and is the load-bearing expressiveness fix.
 **Date**: 2026-05-18
 **Dependencies**:
@@ -15,7 +15,7 @@
 - `archive/specs/104-unified-decision-context-considerations.md` (consideration scoping — selectors honor `scopes: [move, microturn]`)
 
 **Trigger reports**:
-- `reports/ai-agent-overhaul-proposal.md` (external ChatGPT-Pro deep-research proposal reassessed by this spec — see §12)
+- `archive/reports/ai-agent-overhaul-proposal.md` (external ChatGPT-Pro deep-research proposal reassessed by this spec — see §12)
 - `reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (original pain witness — Phase 0 encodes its property form)
 
 **Ticket namespace**: `181STRPOLLAY` (proposed; finalize during ticket decomposition)
@@ -320,7 +320,7 @@ Each phase is independently mergeable. Phase 0 ships first because Phase 1's con
 
 ## 11. Out of scope (named follow-on specs)
 
-> **Reassessed 2026-05-18**: deferred-work disposition has moved on. Specs 182 (modules + guardrails + turn-shape evaluators, consolidated engine-layer composition) and 183 (evolution-loop overhaul, campaign-runner-layer work) absorb the items below and the source-proposal sections cross-referenced from them. The Stage 7 influence-fields follow-up listed in `reports/ai-agent-overhaul-proposal.md` §17 is dropped as niche perf optimization rather than load-bearing authoring layer. New work should cite Specs 182 / 183 directly rather than this §11.
+> **Reassessed 2026-05-18**: deferred-work disposition has moved on. Specs 182 (modules + guardrails + turn-shape evaluators, consolidated engine-layer composition) and 183 (evolution-loop overhaul, campaign-runner-layer work) absorb the items below and the source-proposal sections cross-referenced from them. The Stage 7 influence-fields follow-up listed in `archive/reports/ai-agent-overhaul-proposal.md` §17 is dropped as niche perf optimization rather than load-bearing authoring layer. New work should cite Specs 182 / 183 directly rather than this §11.
 
 - **Spec 182 — Strategic Modules**. Composition layer that groups `(activation conditions, applicable scopes, selectors, scoreGroups, fallback)` into named modules with trace labels. Adds priority bands if traces from the selector cookbook show flat selector ranking obscures intent. Dependency: requires Phase 1 selectors as input surface. Includes the broader cookbook migration the proposal contemplates.
 - **Spec 183 — Guardrails with severity tiers**. Separate negative-evidence layer with `prune | demote | warn | auditOnly`. `prune` requires `safe: true` + `onAllPruned` per the proposal §6.4. Most guardrail predicates need selector outputs (`target failed selector minimum quality`, `selected origin loses more value than destination gains`), so this depends on Spec 181 Phase 1.
@@ -329,7 +329,7 @@ Each phase is independently mergeable. Phase 0 ships first because Phase 1's con
 
 ## 12. Reassessment of source proposal
 
-Per-recommendation disposition table for `reports/ai-agent-overhaul-proposal.md`. The proposal is architecturally sound and FOUNDATIONS-aligned; corrections are factual rather than directional.
+Per-recommendation disposition table for `archive/reports/ai-agent-overhaul-proposal.md`. The proposal is architecturally sound and FOUNDATIONS-aligned; corrections are factual rather than directional.
 
 | Proposal section / recommendation | Disposition | Notes |
 | --- | --- | --- |

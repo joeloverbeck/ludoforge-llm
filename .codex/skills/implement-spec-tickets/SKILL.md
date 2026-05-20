@@ -88,6 +88,8 @@ If state conflicts with the live repo, trust the live repo and refresh the state
 
 If an in-flight proof command or terminal session may still be running after interruption or compaction, poll or classify it before rerunning proof, editing closeout, committing, or finalizing. If the old session is unobservable, mark it unverified and rerun the lane before citing it.
 
+If resuming after compaction, interruption, or a long handoff near proof, closeout, commit, or final response time, reread `### 5. Commit The Iteration` before committing or finalizing. Emit the required visible blocks or an explicit `late harness recovery checkpoint` before any commit/final response: child audit blocks, `Acceptance-to-command map`, `Post-ticket review` block, generated-artifact provenance when triggered, state-file validation when changed, `Required-visible-block checkpoint`, and full `Harness handoff` readiness. A recovered checkpoint can repair conversation visibility, but it is not a substitute for an unrun or unobservable child workflow.
+
 ## Intake
 
 1. Resolve `spec_path` to exactly one live file under `specs/`. If it is missing, ambiguous, or already archived, stop and ask for the exact active spec path.
@@ -247,6 +249,8 @@ If `post-ticket-review` creates or materially updates a follow-up ticket, active
 ```text
 $skill-audit .codex/skills/post-ticket-review
 ```
+
+Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
 
 Apply sound, evidence-backed suggestions under the same rules as the implement-ticket audit. Emit the same compact child-audit block and run focused hygiene over changed skill files.
 

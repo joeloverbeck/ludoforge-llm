@@ -208,7 +208,7 @@ If post-ticket review makes or requires must-fix-now implementation, ticket, spe
 
 If a proof lane consumes generated artifacts after `npm run clean`, `pnpm run clean`, package-local clean scripts, archive helpers, fixture refreshes, or any other step that may delete `dist`, schemas, WASM targets, compiled JSON, goldens, or cache-backed outputs, do not trust cached producer logs alone. Either force/rerun the producer that materializes the consumed artifact, or verify the required generated files exist before running or citing the consumer lane. Treat a cached build replay that does not restore a required artifact as non-proving for artifact-consuming tests until the artifact is rebuilt or observed.
 
-When a ticket is archived, independently grep the originating spec for the moved active ticket path before committing, even when `post-ticket-review` or the archive helper reports successful reference repair. Patch actionable stale spec-list or dependency references to the archive path, or report why a remaining reference is historical and harmless.
+When a ticket is archived, independently grep the originating spec and `.codex/run-state/implement-spec-tickets.json` for the moved active ticket path before committing, even when `post-ticket-review` or the archive helper reports successful reference repair. Patch actionable stale spec-list, dependency, queue, next-target, or in-progress references to the archive path or next active ticket as appropriate, or report why a remaining reference is historical and harmless.
 
 If review blocks archival because same-seam work remains, put the active ticket back at the front of the queue and continue through `implement-ticket` unless the review requires a user decision.
 
@@ -281,6 +281,8 @@ If a required child skill audit block is missing and there is no visible evidenc
 Manual review is not a substitute for a child-skill workflow unless it is explicitly classified in this checkpoint. If you manually perform any `post-ticket-review` step, still emit the `Post-ticket review:` block and classify it as `child-skill invocation`, `manual late recovery`, or `not_applicable`.
 
 If a required-visible block was missed at its intended point, emit a `late harness recovery checkpoint` before committing or finalizing. Name the missed block, classify why it was late, provide the current truthful contents, and do not describe the recovered block as timely in the commit or handoff.
+
+If a required-visible block is discovered missing only after the iteration work commit already exists, do not rewrite or amend the work commit solely to add conversational visibility. Emit the `late harness recovery checkpoint` immediately, classify the missed block as post-commit recovery, provide the current truthful contents, and name the missed-checkpoint fact in the final handoff or state-only commit handoff. If any missing block reflects an unrun or unobservable child workflow rather than only missed visibility text, run or rerun that workflow before finalizing.
 
 When user-approved extra paths are included in the iteration commit even though they are not ticket-owned, list them in the checkpoint and final handoff. The commit message must either mention the extra skill/process hardening if it is material, or the final handoff must explicitly state that the extra path was included by user approval and was not part of the ticket deliverable. Do not let approved unrelated paths appear as silent ticket-owned work.
 

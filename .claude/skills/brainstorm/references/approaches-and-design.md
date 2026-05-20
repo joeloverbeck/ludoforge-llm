@@ -11,6 +11,8 @@ Present **2-4 distinct approaches** with:
 - **Tradeoffs**: What you gain, what you give up
 - **Recommendation**: Lead with your recommended option and explain why
 
+**When approaches are presented as AskUserQuestion options** (the compound-move terminal prompt per Pre-Set Directives §3 in `references/interview-protocol.md`): encode the recommendation via option ordering — put the recommended option first and append `(Recommended)` to its label — and carry the "explain why" in the accompanying prose recap rather than inside the option description. The lead-with-recommendation requirement above is then satisfied by ordering + label + prose together, not by prose alone.
+
 A 4th approach is justified only when it sits on an axis orthogonal to the primary 3 (i.e., not just a variant intensity of the same idea) AND the reference file documents it as load-bearing context that materially changes the recommendation. Default to 2-3; the 4th is opt-in, not encouraged.
 
 **Worked example — orthogonal vs variant intensity**: "profile-only", "phased witness+optimization", and "two-spec split" are NOT three orthogonal axes — they are three commitment-scope intensities of the same axis (how much to commit before measuring). Treat as one approach with sub-options unless one of them carries a load-bearing distinction the others lack. By contrast, "skip the witness and commit directly to the architectural change" IS orthogonal to that axis (different commitment *shape* entirely, not a different intensity), so a 4th approach is justified. The orthogonality test: would picking approach A vs B change *what* the next step looks like, or only *how big* it is? Only the former counts as a separate axis.

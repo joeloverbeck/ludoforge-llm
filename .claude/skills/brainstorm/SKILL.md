@@ -38,7 +38,8 @@ Classify: design | decision/triage | operational | diagnostic | decision-requiri
          |
          +--> DIAGNOSTIC MODE: brief interview -> Step 1.5 verification (bulk of work)
          |     -> follow DESIGN MODE flow with diagnostic-mode section grammar
-         |     -> output reports/<topic>-<descriptor>.md naming a follow-up artifact
+         |     -> output reports/<topic>-<descriptor>.md naming a follow-up
+         |        (spec, ticket, "investigation closed", or external handoff)
          |
          +--> DESIGN MODE (default; includes Decision-requiring-design when
          |     evaluation requires producing the design):

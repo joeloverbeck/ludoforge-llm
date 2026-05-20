@@ -23,6 +23,7 @@ describe('post-grant preview continuation', () => {
     assert.equal(optOutRuntime.getOutcome(candidate), 'grantFlowPartial');
     assert.equal(optOutRuntime.getPreviewDrive(candidate)?.kind, 'completed');
     assert.equal(grantPhase(optOutPreview, 'grant-a'), 'ready');
+    assert.equal(optOutPreview?.globalVars.target, 0);
 
     const optInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
@@ -32,9 +33,10 @@ describe('post-grant preview continuation', () => {
       freeOperationCapClass: 'grantFlow16',
     });
     const optInPreview = optInRuntime.getPreviewState(candidate);
-    assert.equal(optInRuntime.getOutcome(candidate), 'grantFlowPartial');
+    assert.equal(optInRuntime.getOutcome(candidate), 'ready');
     assert.equal(optInRuntime.getPreviewDrive(candidate)?.kind, 'completed');
-    assert.equal(grantPhase(optInPreview, 'grant-a'), 'offered');
+    assert.equal(grantPhase(optInPreview, 'grant-a'), undefined);
+    assert.equal(optInPreview?.globalVars.target, 1);
 
     const repeatedOptInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
@@ -48,11 +50,13 @@ describe('post-grant preview continuation', () => {
         outcome: repeatedOptInRuntime.getOutcome(candidate),
         drive: repeatedOptInRuntime.getPreviewDrive(candidate),
         grantPhase: grantPhase(repeatedOptInRuntime.getPreviewState(candidate), 'grant-a'),
+        target: repeatedOptInRuntime.getPreviewState(candidate)?.globalVars.target,
       },
       {
         outcome: optInRuntime.getOutcome(candidate),
         drive: optInRuntime.getPreviewDrive(candidate),
         grantPhase: grantPhase(optInPreview, 'grant-a'),
+        target: optInPreview?.globalVars.target,
       },
     );
   });

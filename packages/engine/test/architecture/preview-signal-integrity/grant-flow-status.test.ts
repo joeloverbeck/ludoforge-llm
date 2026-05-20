@@ -53,7 +53,7 @@ const opponentSeatMarginSum = (): AgentPolicyExpr => ({
   availability: 'requireAllReady',
 });
 
-function createProfile(postGrantDepthCap = 4): CompiledAgentProfile {
+function createProfile(postGrantDepthCap = 4, grantFlowEnabled = true): CompiledAgentProfile {
   const considerations = ['selfPreviewMargin', 'opponentPreviewMargin'];
   return {
     fingerprint: 'grant-flow-status',
@@ -61,13 +61,17 @@ function createProfile(postGrantDepthCap = 4): CompiledAgentProfile {
     preview: {
       mode: 'exactWorld',
       completion: 'greedy',
-      grantFlowContinuation: {
-        enabled: true,
-        postGrantDepthCap,
-        postGrantCapClass: 'postGrant16',
-        freeOperationDepthCap: 16,
-        freeOperationCapClass: 'grantFlow16',
-      },
+      ...(grantFlowEnabled
+        ? {
+            grantFlowContinuation: {
+              enabled: true,
+              postGrantDepthCap,
+              postGrantCapClass: 'postGrant16',
+              freeOperationDepthCap: 16,
+              freeOperationCapClass: 'grantFlow16',
+            },
+          }
+        : {}),
     },
     selection: { mode: 'argmax' },
     use: {
@@ -84,8 +88,8 @@ function createProfile(postGrantDepthCap = 4): CompiledAgentProfile {
   };
 }
 
-function createCatalog(postGrantDepthCap?: number): AgentPolicyCatalog {
-  const profile = createProfile(postGrantDepthCap);
+function createCatalog(postGrantDepthCap?: number, grantFlowEnabled?: boolean): AgentPolicyCatalog {
+  const profile = createProfile(postGrantDepthCap, grantFlowEnabled);
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: profile.fingerprint,
@@ -138,7 +142,7 @@ function createCatalog(postGrantDepthCap?: number): AgentPolicyCatalog {
   });
 }
 
-function createDef(postGrantDepthCap?: number): GameDef {
+function createDef(postGrantDepthCap?: number, grantFlowEnabled?: boolean): GameDef {
   return {
     ...createPostGrantDef(),
     terminal: {
@@ -149,12 +153,12 @@ function createDef(postGrantDepthCap?: number): GameDef {
       ],
       ranking: { order: 'desc' },
     },
-    agents: createCatalog(postGrantDepthCap),
+    agents: createCatalog(postGrantDepthCap, grantFlowEnabled),
   };
 }
 
-function evaluate(grantIds: readonly string[], postGrantDepthCap?: number) {
-  const def = createDef(postGrantDepthCap);
+function evaluate(grantIds: readonly string[], postGrantDepthCap?: number, grantFlowEnabled?: boolean) {
+  const def = createDef(postGrantDepthCap, grantFlowEnabled);
   const state = createBaseState();
   const trustedMove = createTrustedOperation(state);
   const legalMoves: readonly Move[] = [{ actionId: asActionId('operation'), params: {} }];
@@ -178,7 +182,7 @@ function evaluate(grantIds: readonly string[], postGrantDepthCap?: number) {
 
 describe('grant-flow preview status integrity', () => {
   it('marks opponent/standing refs partial while preserving self-only ready values', () => {
-    const trace = evaluate(['grant-a']);
+    const trace = evaluate(['grant-a'], undefined, false);
     const candidate = trace.candidates?.[0];
     assert.ok(candidate);
 
@@ -193,6 +197,17 @@ describe('grant-flow preview status integrity', () => {
     assert.equal(trace.previewUsage.readyRefStats[SEAT_REF_ID]?.readyCount, 0);
     assert.equal(trace.previewUsage.outcomeBreakdown?.unknownGrantFlowPartial, 1);
     assert.equal(trace.previewUsage.outcomeBreakdown?.unknownDepthCap, 0);
+  });
+
+  it('reports ready when enabled grant-flow continuation reaches the free-operation effect', () => {
+    const trace = evaluate(['grant-a']);
+    const candidate = trace.candidates?.[0];
+    assert.ok(candidate);
+
+    assert.equal(candidate.previewOutcome, 'ready');
+    assert.equal(candidate.unknownPreviewRefs.length, 0);
+    assert.equal(trace.previewUsage.outcomeBreakdown?.ready, 1);
+    assert.equal(trace.previewUsage.outcomeBreakdown?.unknownGrantFlowPartial, 0);
   });
 
   it('keeps postGrantCap distinct from ordinary depth caps and declares future free-operation caps', () => {

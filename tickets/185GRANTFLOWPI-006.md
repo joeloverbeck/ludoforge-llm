@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: No — test-only (engine architecture fixture + policy-profile-quality probe)
-**Deps**: `tickets/185GRANTFLOWPI-003.md`, `tickets/185GRANTFLOWPI-004.md`, `tickets/185GRANTFLOWPI-005.md`
+**Deps**: `archive/tickets/185GRANTFLOWPI-003.md`, `tickets/185GRANTFLOWPI-004.md`, `tickets/185GRANTFLOWPI-005.md`
 
 ## Problem
 

@@ -36,6 +36,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -126,6 +129,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -216,6 +222,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -306,6 +315,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -448,6 +460,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -570,6 +585,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -679,6 +697,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -801,6 +822,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1093,6 +1117,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1297,6 +1324,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1589,6 +1619,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1793,6 +1826,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2085,6 +2121,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2289,6 +2328,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2581,6 +2623,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2785,6 +2830,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3077,6 +3125,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3281,6 +3332,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3573,6 +3627,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3777,6 +3834,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -4789,6 +4849,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -5449,6 +5512,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -6109,6 +6175,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -6769,6 +6838,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -7429,6 +7501,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -8761,6 +8836,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -9773,6 +9851,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10433,6 +10514,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10555,6 +10639,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10667,6 +10754,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10757,6 +10847,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10879,6 +10972,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11001,6 +11097,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11123,6 +11222,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11235,6 +11337,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11325,6 +11430,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11437,6 +11545,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11527,6 +11638,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11639,6 +11753,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11729,6 +11846,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11851,6 +11971,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -12391,6 +12514,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -12931,6 +13057,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -13471,6 +13600,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -14011,6 +14143,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -14551,6 +14686,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -15091,6 +15229,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -15631,6 +15772,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -16171,6 +16315,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -16623,6 +16770,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -16995,6 +17145,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -17287,6 +17440,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -17491,6 +17647,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -18473,6 +18632,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -19114,6 +19276,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -19654,6 +19819,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -20194,6 +20362,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -20734,6 +20905,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -21274,6 +21448,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -21814,6 +21991,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -22354,6 +22534,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -22894,6 +23077,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 8,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -23434,6 +23620,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -23886,6 +24075,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -24258,6 +24450,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -24550,6 +24745,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -24754,6 +24952,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -25646,6 +25847,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -26230,6 +26434,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -26352,6 +26559,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -26474,6 +26684,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -26565,13 +26778,13 @@
     },
     {
       "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"northeast-cambodia:none\"",
+      "turnId": 206,
+      "decisionKey": "decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin",
+      "selectedValue": "an-loc:none",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
+        "evaluatedCandidateCount": 3,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -26579,1266 +26792,37 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 0,
-            "distinctValueCount": 0,
-            "min": null,
-            "max": null,
-            "range": null,
-            "allReadyValuesEqual": true
+            "readyCount": 3,
+            "distinctValueCount": 3,
+            "min": -1,
+            "max": 2,
+            "range": 3,
+            "allReadyValuesEqual": false
           }
         },
-        "utility": "none",
+        "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 0,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 4,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 0,
-          "unavailableRootOptionCount": 4,
-          "allRootsUnavailable": true,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [
-        {
-          "code": "POLICY_PREVIEW_SIGNAL_UNAVAILABLE",
-          "profileId": "arvn-evolved",
-          "seatId": "arvn",
-          "decisionKind": "chooseOne",
-          "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]",
-          "requestedRefs": [
-            "preview.option.delta.victory.currentMargin.self"
-          ],
-          "evaluatedRootOptionCount": 4,
-          "unavailableRootOptionCount": 4,
-          "unavailabilityBreakdown": {
-            "random": 0,
-            "hidden": 0,
-            "unresolved": 0,
-            "failed": 0,
-            "depthCap": 4,
-            "noPreviewDecision": 0,
-            "gated": 0
-          },
-          "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"northeast-cambodia:none\"",
-          "selectionReason": "tiebreakAfterPreviewNoSignal"
-        }
-      ],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[0]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 0,
-            "distinctValueCount": 0,
-            "min": null,
-            "max": null,
-            "range": null,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "none",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 0,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 4,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 0,
-          "unavailableRootOptionCount": 4,
-          "allRootsUnavailable": true,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [
-        {
-          "code": "POLICY_PREVIEW_SIGNAL_UNAVAILABLE",
-          "profileId": "arvn-evolved",
-          "seatId": "arvn",
-          "decisionKind": "chooseOne",
-          "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]",
-          "requestedRefs": [
-            "preview.option.delta.victory.currentMargin.self"
-          ],
-          "evaluatedRootOptionCount": 4,
-          "unavailableRootOptionCount": 4,
-          "unavailabilityBreakdown": {
-            "random": 0,
-            "hidden": 0,
-            "unresolved": 0,
-            "failed": 0,
-            "depthCap": 4,
-            "noPreviewDecision": 0,
-            "gated": 0
-          },
-          "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-          "selectionReason": "tiebreakAfterPreviewNoSignal"
-        }
-      ],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[1]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 0,
-            "distinctValueCount": 0,
-            "min": null,
-            "max": null,
-            "range": null,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "none",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 0,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 4,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 0,
-          "unavailableRootOptionCount": 4,
-          "allRootsUnavailable": true,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [
-        {
-          "code": "POLICY_PREVIEW_SIGNAL_UNAVAILABLE",
-          "profileId": "arvn-evolved",
-          "seatId": "arvn",
-          "decisionKind": "chooseOne",
-          "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]",
-          "requestedRefs": [
-            "preview.option.delta.victory.currentMargin.self"
-          ],
-          "evaluatedRootOptionCount": 4,
-          "unavailableRootOptionCount": 4,
-          "unavailabilityBreakdown": {
-            "random": 0,
-            "hidden": 0,
-            "unresolved": 0,
-            "failed": 0,
-            "depthCap": 4,
-            "noPreviewDecision": 0,
-            "gated": 0
-          },
-          "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-          "selectionReason": "tiebreakAfterPreviewNoSignal"
-        }
-      ],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[2]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 0,
-            "distinctValueCount": 0,
-            "min": null,
-            "max": null,
-            "range": null,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "none",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 0,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 4,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 0,
-          "unavailableRootOptionCount": 4,
-          "allRootsUnavailable": true,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [
-        {
-          "code": "POLICY_PREVIEW_SIGNAL_UNAVAILABLE",
-          "profileId": "arvn-evolved",
-          "seatId": "arvn",
-          "decisionKind": "chooseOne",
-          "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]",
-          "requestedRefs": [
-            "preview.option.delta.victory.currentMargin.self"
-          ],
-          "evaluatedRootOptionCount": 4,
-          "unavailableRootOptionCount": 4,
-          "unavailabilityBreakdown": {
-            "random": 0,
-            "hidden": 0,
-            "unresolved": 0,
-            "failed": 0,
-            "depthCap": 4,
-            "noPreviewDecision": 0,
-            "gated": 0
-          },
-          "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-          "selectionReason": "tiebreakAfterPreviewNoSignal"
-        }
-      ],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[3]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [
-            {
-              "refId": "preview.option.delta.victory.currentMargin.self",
-              "reason": "depthCap"
-            }
-          ],
-          "previewFallbackFired": {
-            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
-            "kind": "noContribution"
-          },
-          "selectionReason": "gated",
-          "previewOutcome": "depthCap",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 4,
-            "distinctValueCount": 1,
-            "min": 0,
-            "max": 0,
-            "range": 0,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "constant",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 4,
+          "ready": 3,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 4,
+          "evaluatedRootOptionCount": 3,
+          "readyRootOptionCount": 3,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "selectedByTieBreakerBecausePreviewUnavailable": false,
           "strategy": "continuedDeepening",
           "capClass": "deep1024"
         }
@@ -27846,481 +26830,17 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"northeast-cambodia:none\"",
-          "score": 0,
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"an-loc:none\"",
+          "score": 600,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 0
+              "contribution": 600
             }
           ],
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[4]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 4,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 3,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 4,
-            "distinctValueCount": 1,
-            "min": 0,
-            "max": 0,
-            "range": 0,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "constant",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 4,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 4,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"sihanoukville:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"the-fishhook:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[5]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 4,
-            "distinctValueCount": 1,
-            "min": 0,
-            "max": 0,
-            "range": 0,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "constant",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 4,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 4,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"northeast-cambodia:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "selectionReason": "scored",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 2,
@@ -28329,8 +26849,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
+                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -28340,12 +26860,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"sihanoukville:none\"",
-          "score": 0,
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"kien-giang-an-xuyen:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 0
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -28359,8 +26879,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
+                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"ba-xuyen:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -28370,12 +26890,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"the-fishhook:none\"",
-          "score": 0,
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[0].effects.0.if.else.0.chooseOne::$transportOrigin:\"quang-nam:none\"",
+          "score": -300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 0
+              "contribution": -300
             }
           ],
           "unknownPreviewRefs": [],
@@ -28389,38 +26909,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[6]:\"the-parrots-beak:none\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
+                "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"an-loc:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -28433,13 +26923,13 @@
     },
     {
       "turnCount": null,
-      "turnId": 204,
-      "decisionKey": "decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]",
-      "selectedValue": "northeast-cambodia:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
+      "turnId": 206,
+      "decisionKey": "decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination",
+      "selectedValue": "binh-dinh:none",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
+        "evaluatedCandidateCount": 37,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -28447,34 +26937,37 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 4,
-            "distinctValueCount": 1,
+            "readyCount": 37,
+            "distinctValueCount": 3,
             "min": 0,
-            "max": 0,
-            "range": 0,
-            "allReadyValuesEqual": true
+            "max": 2,
+            "range": 2,
+            "allReadyValuesEqual": false
           }
         },
-        "utility": "constant",
+        "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 4,
+          "ready": 37,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 4,
+          "evaluatedRootOptionCount": 37,
+          "readyRootOptionCount": 37,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "selectedByTieBreakerBecausePreviewUnavailable": false,
           "strategy": "continuedDeepening",
           "capClass": "deep1024"
         }
@@ -28482,17 +26975,17 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"northeast-cambodia:none\"",
-          "score": 0,
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-dinh:none\"",
+          "score": 600,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 0
+              "contribution": 600
             }
           ],
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "selectionReason": "scored",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 1,
@@ -28501,7 +26994,7 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"sihanoukville:none\"",
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"binh-tuy-binh-thuan:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -28520,7 +27013,7 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"the-fishhook:none\"",
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"cam-ranh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -28539,7 +27032,634 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.61.shaded.effects.0.let.in.0.let.in.0.distributeTokens.chooseDestination[7]:\"the-parrots-beak:none\"",
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"can-tho:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"central-laos:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"da-nang:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"hue:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"khanh-hoa:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kien-hoa-vinh-binh:none\"",
+          "score": 600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kien-phong:none\"",
+          "score": 600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"kontum:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-ban-me-thuot-da-lat:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-cam-ranh-da-lat:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-da-nang-dak-to:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-da-nang-qui-nhon:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-hue-da-nang:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-hue-khe-sanh:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-kontum-ban-me-thuot:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-kontum-dak-to:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-kontum-qui-nhon:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-qui-nhon-cam-ranh:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-an-loc-ban-me-thuot:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-cam-ranh:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-can-tho:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"loc-saigon-da-lat:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"phu-bon-phu-yen:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"phuoc-long:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"pleiku-darlac:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"quang-duc-long-khanh:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"quang-nam:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"quang-tin-quang-ngai:none\"",
+          "score": 600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"quang-tri-thua-thien:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"qui-nhon:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"saigon:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"southern-laos:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"tay-ninh:none\"",
+          "score": 600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.21.stages[1].effects.0.chooseOne::$transportDestination:\"the-fishhook:none\"",
           "score": 0,
           "scoreContributions": [
             {

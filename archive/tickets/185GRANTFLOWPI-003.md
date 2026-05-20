@@ -1,6 +1,6 @@
 # 185GRANTFLOWPI-003: Phase 2 — Generalized grant-flow continuation drive
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts` (continuation drive); possibly `packages/engine/src/kernel/legal-moves.ts` / `kernel/microturn/*` (generic grant-authorization helpers / published-action metadata)
@@ -82,3 +82,42 @@ If `legalMoves`/microturn publication does not expose enough to answer "is this 
 
 1. `pnpm turbo build && node --test packages/engine/dist/test/architecture/preview-post-grant/post-grant-free-operation-continuation.test.js`
 2. `pnpm turbo lint && pnpm turbo typecheck && pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+Completed on 2026-05-20.
+
+What landed:
+
+- `driveSyntheticCompletion` now continues an enabled grant-flow preview through the real published `freeOperation: true` action-selection move for the same origin seat/turn, using the existing deterministic move key ordering and real `applyMove` path. Opt-out behavior still stops at the offered grant.
+- Added a distinct free-operation segment budget and `freeOperationCap` exit so exhausted free-operation continuation is visible instead of collapsing into a generic completion or depth cap.
+- Added the required architecture tests:
+  - `packages/engine/test/architecture/preview-post-grant/post-grant-free-operation-continuation.test.ts`
+  - `packages/engine/test/architecture/preview-post-grant/grant-flow-consequence-chain-boundary.test.ts`
+- Updated the generic post-grant fixture so the granted operation mutates an observable global value only when the free operation executes.
+- Updated the grant-flow status/trace tests, `Trace.schema.json`, and legacy preview golden fixtures to reflect the newly reachable grant-flow outcome counters and the corrected ready/differentiating behavior for affected ARVN parity seeds.
+
+Scope notes:
+
+- No new `legal-moves.ts` or `microturn/*` helper was needed. The live `move.freeOperation` flag plus same origin seat/turn boundary was sufficient for this ticket's generic consequence-chain guard.
+- Rich ordered trace segments and full taxonomy presentation remain ticket 004. This ticket added only the minimal `freeOperationCap` enum/counter plumbing required because 003 makes that exit reachable.
+- WASM parity remains ticket 005. FITL ARVN profile-quality witnesses remain ticket 006.
+- The first `test:all` run exposed stale compiled `dist` files for the retired `preview-config-back-compat` tests. I cleaned `packages/engine/dist`, rebuilt, refreshed the ticket-owned golden fixtures, and reran the broad lane green.
+
+Source-size hard-gate ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| `packages/engine/src/agents/policy-preview.ts` | 1410 | 1498 | no; preexisting over 800 | +88 | User-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral; extraction would widen the grant-flow drive while the change stays local to the existing preview driver. | none for 003 |
+| `packages/engine/src/agents/policy-eval.ts` | 1724 | 1730 | no; preexisting over 800 | +6 | User-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral; only outcome-count plumbing was added. | none for 003 |
+| `packages/engine/src/kernel/types-core.ts` | 2749 | 2750 | no; preexisting over 800 | +1 | User-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral; only the trace/status union was extended. | none for 003 |
+| `packages/engine/src/kernel/schemas-core.ts` | 3037 | 3038 | no; preexisting over 800 | +1 | User-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral; only schema enum/counter shape was extended. | none for 003 |
+
+Verification:
+
+- `pnpm turbo build` — passed after the final clean rebuild. Runner emitted the existing Vite bundle-size advisory; no engine failure.
+- `node --test packages/engine/dist/test/architecture/preview-post-grant/post-grant-free-operation-continuation.test.js` — passed, 2 tests.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, 162/162 default files.
+- `pnpm -F @ludoforge/engine run clean && pnpm turbo build && pnpm -F @ludoforge/engine test:all` — final broad rerun passed, 943/943 files.

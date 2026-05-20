@@ -2476,7 +2476,7 @@ const SyntheticDecisionTraceEntrySchema = z
 
 const PolicyPreviewDriveTraceSchema = z
   .object({
-    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'stochastic']).optional(),
+    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'stochastic']).optional(),
     depth: IntegerSchema.nonnegative(),
     completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
@@ -2620,6 +2620,7 @@ const PolicyPreviewGrantFlowContinuationTraceSchema = z
       .object({
         completed: IntegerSchema.nonnegative(),
         postGrantCap: IntegerSchema.nonnegative(),
+        freeOperationCap: IntegerSchema.nonnegative(),
         stochastic: IntegerSchema.nonnegative(),
       })
       .strict(),

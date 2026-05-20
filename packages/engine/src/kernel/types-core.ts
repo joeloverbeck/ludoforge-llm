@@ -2224,7 +2224,7 @@ export interface SyntheticDecisionTraceEntry {
 }
 
 export interface PolicyPreviewDriveTrace {
-  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'stochastic';
+  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'freeOperationCap' | 'stochastic';
   readonly depth: number;
   readonly completionPolicy: AgentPreviewCompletionPolicy;
   readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
@@ -2422,6 +2422,7 @@ export interface PolicyPreviewGrantFlowContinuationTrace {
   readonly exitCounts: {
     readonly completed: number;
     readonly postGrantCap: number;
+    readonly freeOperationCap: number;
     readonly stochastic: number;
   };
 }

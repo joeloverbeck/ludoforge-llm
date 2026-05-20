@@ -124,4 +124,4 @@ Source-size ledger:
 
 Archive status:
 
-- Archived after post-ticket review. Remaining Spec 185 continuation behavior stays in active ticket `tickets/185GRANTFLOWPI-003.md`.
+- Archived after post-ticket review. The Spec 185 continuation behavior was completed in `archive/tickets/185GRANTFLOWPI-003.md`.

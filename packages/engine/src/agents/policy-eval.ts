@@ -279,6 +279,7 @@ export interface PolicyEvaluationGrantFlowContinuationUsage {
   readonly exitCounts: {
     readonly completed: number;
     readonly postGrantCap: number;
+    readonly freeOperationCap: number;
     readonly stochastic: number;
   };
 }
@@ -1427,6 +1428,7 @@ function summarizeGrantFlowContinuation(
 ): PolicyEvaluationGrantFlowContinuationUsage {
   let completed = 0;
   let postGrantCap = 0;
+  let freeOperationCap = 0;
   let stochastic = 0;
   let extraDepthReached = 0;
 
@@ -1442,6 +1444,9 @@ function summarizeGrantFlowContinuation(
         break;
       case 'postGrantCap':
         postGrantCap += 1;
+        break;
+      case 'freeOperationCap':
+        freeOperationCap += 1;
         break;
       case 'stochastic':
         stochastic += 1;
@@ -1462,6 +1467,7 @@ function summarizeGrantFlowContinuation(
     exitCounts: {
       completed,
       postGrantCap,
+      freeOperationCap,
       stochastic,
     },
   };

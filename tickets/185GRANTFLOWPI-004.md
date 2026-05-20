@@ -4,15 +4,15 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/` (policy-preview exit reasons, policy-eval summary counters, trace), kernel types-core (trace schema)
-**Deps**: `tickets/185GRANTFLOWPI-003.md`
+**Deps**: `archive/tickets/185GRANTFLOWPI-003.md`
 
 ## Problem
 
-Once ticket 003 drives the grant-flow continuation, the preview must report *how* it exited and *what* it did, so operators and witnesses can distinguish "completed through the effect" from "stopped at a cap" from "stopped before the effect". Today the drive's exit reasons are coarse and `summarizePreviewOutcomes` collapses `postGrantCap` into `depthCap` (ticket 001 began un-collapsing it). This ticket completes the §6.2 taxonomy: distinct exit reasons, ordered per-candidate trace segments, and fully-populated summary counters (including `freeOperationCap`, which ticket 003 made reachable).
+Once ticket 003 drives the grant-flow continuation, the preview must report *how* it exited and *what* it did, so operators and witnesses can distinguish "completed through the effect" from "stopped at a cap" from "stopped before the effect". Ticket 003 added the minimal `freeOperationCap` enum/counter plumbing needed for its reachable cap exit, but the ordered per-candidate provenance remains coarse. This ticket completes the §6.2 taxonomy: distinct exit reasons, ordered per-candidate trace segments, and any remaining richer summary presentation beyond the minimal 003 counter surface.
 
 ## Assumption Reassessment (2026-05-20)
 
-1. Ticket 001 added the `grantFlowPartial`/`freeOperationCap` summary counter fields and un-collapsed `postGrantCap`; ticket 003 made `freeOperationCap` reachable via continuation. This ticket populates and surfaces them.
+1. Tickets 001 and 003 added the minimal `grantFlowPartial`/`postGrantCap`/`freeOperationCap` counter surfaces and ticket 003 made `freeOperationCap` reachable via continuation. This ticket owns the richer ordered trace/provenance surface and any remaining summary presentation needed for that taxonomy.
 2. The WASM drive (`policy-wasm-preview-drive.ts:26`) does not emit the new statuses; bringing it to parity is ticket 005, explicitly out of scope here.
 3. `turnShapePreviewStatus` (`turn-shape-eval.ts:40-56`) already maps capped outcomes to `partial`; new exit reasons must map consistently.
 
@@ -32,9 +32,9 @@ Once ticket 003 drives the grant-flow continuation, the preview must report *how
 
 Record per candidate: `stableMoveKey`, root `actionId`, preview mode, completion policy, grant-continuation enabled/capClass/cap, and ordered segments — `outcomeGrantResolve`, `grantOffered`, `freeOperationActionSelection`, `selectedFreeOperation`, `innerChoice`, `grantConsumed`/`grantSkipped`/`grantExpired`, `deferredEffectsReleased` — plus `exitReason` and final status. Extend the trace schema in `kernel/types-core.ts`.
 
-### 3. Fully populate summary counters
+### 3. Preserve and extend summary counters as needed
 
-`summarizePreviewOutcomes` records `freeOperationCap` and `grantFlowPartial` from real continuation outcomes; `PolicyPreviewOutcomeBreakdownTrace` reflects them.
+Keep the minimal counter surface from tickets 001/003 intact and extend it only as needed for the ordered trace taxonomy. `PolicyPreviewOutcomeBreakdownTrace` must continue to distinguish `postGrantCap`, `freeOperationCap`, and `grantFlowPartial`.
 
 ### 4. Extend the existing smoke fixture
 

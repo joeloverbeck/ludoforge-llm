@@ -174,10 +174,11 @@ describe('previewUsage grantFlowContinuation trace surface', () => {
       postGrantCapClass: 'postGrant16',
       freeOperationDepthCap: 16,
       freeOperationCapClass: 'grantFlow16',
-      extraDepthReached: 1,
+      extraDepthReached: 2,
       exitCounts: {
         completed: 1,
         postGrantCap: 0,
+        freeOperationCap: 0,
         stochastic: 0,
       },
     });
@@ -209,6 +210,7 @@ describe('previewUsage grantFlowContinuation trace surface', () => {
       exitCounts: {
         completed: 0,
         postGrantCap: 1,
+        freeOperationCap: 0,
         stochastic: 0,
       },
     });

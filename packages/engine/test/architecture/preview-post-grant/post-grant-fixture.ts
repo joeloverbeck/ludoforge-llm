@@ -3,6 +3,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asSeatId,
   createTrustedExecutableMove,
   type GameDef,
   type GameState,
@@ -10,6 +11,7 @@ import {
   type TurnFlowPendingFreeOperationGrant,
 } from '../../../src/kernel/index.js';
 import { asDecisionFrameId, asTurnId, type DecisionStackFrame } from '../../../src/kernel/microturn/types.js';
+import { EFFECT_KIND_TAG } from '../../../src/kernel/types-ast.js';
 
 export const grantPhase = (
   state: GameState | undefined,
@@ -23,7 +25,7 @@ export const createPostGrantDef = (): GameDef => ({
   metadata: { id: 'post-grant-preview-driver', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
   seats: [{ id: '0' }, { id: '1' }],
   constants: {},
-  globalVars: [],
+  globalVars: [{ name: 'target', type: 'int', init: 0, min: 0, max: 10 }],
   perPlayerVars: [],
   zones: [],
   tokenTypes: [],
@@ -52,7 +54,7 @@ export const createPostGrantDef = (): GameDef => ({
     params: [],
     pre: null,
     cost: [],
-    effects: [],
+    effects: [{ _k: EFFECT_KIND_TAG.addVar, addVar: { scope: 'global', var: 'target', delta: 1 } }],
     limits: [],
   }],
   triggers: [],
@@ -92,7 +94,7 @@ const grantFrame = (
 });
 
 export const createBaseState = (): GameState => ({
-  globalVars: {},
+  globalVars: { target: 0 },
   perPlayerVars: {},
   zoneVars: {},
   playerCount: 2,
@@ -167,6 +169,25 @@ export const createOutcomeGrantState = (
   };
 };
 
+export const createActionSelectionState = (
+  baseState: GameState,
+  seatId = '0',
+  turnId = 0,
+): GameState => ({
+  ...baseState,
+  decisionStack: [{
+    frameId: asDecisionFrameId(1),
+    parentFrameId: null,
+    turnId: asTurnId(turnId),
+    context: {
+      kind: 'actionSelection',
+      seatId: asSeatId(seatId),
+      eligibleActions: [asActionId('operation')],
+    },
+    effectFrame: emptyEffectFrame(),
+  }],
+});
+
 export const createRuntime = (
   def: GameDef,
   state: GameState,
@@ -179,6 +200,7 @@ export const createRuntime = (
     readonly freeOperationDepthCap: number;
     readonly freeOperationCapClass: 'grantFlow16' | 'grantFlow32';
   },
+  postRootState?: GameState,
 ): PolicyPreviewRuntime =>
   createPolicyPreviewRuntime({
     def,
@@ -192,7 +214,7 @@ export const createRuntime = (
     ...(grantFlowContinuation === undefined ? {} : { grantFlowContinuation }),
     dependencies: {
       applyMove() {
-        return { state: createOutcomeGrantState(state, grantIds) };
+        return { state: postRootState ?? createOutcomeGrantState(state, grantIds) };
       },
     },
   });

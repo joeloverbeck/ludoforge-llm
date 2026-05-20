@@ -36,6 +36,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -126,6 +129,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -216,6 +222,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -538,6 +547,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -761,6 +773,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1083,6 +1098,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1306,6 +1324,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1628,6 +1649,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -1851,6 +1875,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2173,6 +2200,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2396,6 +2426,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2718,6 +2751,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -2941,6 +2977,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3263,6 +3302,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -3486,6 +3528,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -4468,6 +4513,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -5109,6 +5157,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -5750,6 +5801,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -6391,6 +6445,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -7032,6 +7089,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -8324,6 +8384,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -9306,6 +9369,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -9947,6 +10013,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10059,6 +10128,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10149,6 +10221,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10261,6 +10336,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10320,7 +10398,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 66,
+      "turnId": 68,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]",
       "selectedValue": "aid",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]:\"aid\"",
@@ -10351,6 +10429,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10432,7 +10513,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 66,
+      "turnId": 68,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@khanh-hoa:none[1]",
       "selectedValue": "patronage",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@khanh-hoa:none[1]:\"patronage\"",
@@ -10463,6 +10544,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10553,6 +10637,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10665,6 +10752,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10724,7 +10814,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 76,
+      "turnId": 75,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]",
       "selectedValue": "aid",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]:\"aid\"",
@@ -10755,6 +10845,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10836,7 +10929,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 76,
+      "turnId": 75,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[1]",
       "selectedValue": "aid",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[1]:\"aid\"",
@@ -10867,6 +10960,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -10926,7 +11022,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 83,
+      "turnId": 82,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]",
       "selectedValue": "aid",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@da-nang:none[0]:\"aid\"",
@@ -10957,6 +11053,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0
@@ -11038,7 +11137,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 83,
+      "turnId": 82,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[1]",
       "selectedValue": "aid",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kontum:none[1]:\"aid\"",
@@ -11069,6 +11168,9 @@
           "unknownHidden": 0,
           "unknownUnresolved": 0,
           "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
           "unknownNoPreviewDecision": 0,
           "unknownGated": 0,
           "unknownFailed": 0

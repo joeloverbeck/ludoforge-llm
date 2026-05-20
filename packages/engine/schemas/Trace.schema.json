@@ -2222,6 +2222,14 @@
                               }
                             ]
                           },
+                          "freeOperationCap": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
                           "stochastic": {
                             "minimum": 0,
                             "allOf": [
@@ -2234,6 +2242,7 @@
                         "required": [
                           "completed",
                           "postGrantCap",
+                          "freeOperationCap",
                           "stochastic"
                         ],
                         "additionalProperties": false
@@ -3180,6 +3189,7 @@
                             "completed",
                             "depthCap",
                             "postGrantCap",
+                            "freeOperationCap",
                             "stochastic"
                           ]
                         },

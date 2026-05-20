@@ -1182,11 +1182,17 @@ export interface CompiledPlanFallback {
   readonly ifPreviewUnavailable?: string;
 }
 
+export interface CompiledPlanCaps {
+  readonly capClass: string;
+  readonly maxSteps: number;
+}
+
 export interface CompiledPlanTemplate {
   readonly traceLabel: string;
   readonly root: CompiledPlanRoot;
   readonly roles: Readonly<Record<string, CompiledPlanRole>>;
   readonly steps: readonly CompiledPlanStep[];
+  readonly caps: CompiledPlanCaps;
   readonly postureHook?: string;
   readonly fallback: CompiledPlanFallback;
   readonly dependencies: CompiledAgentDependencyRefs;

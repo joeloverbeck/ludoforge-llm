@@ -1425,6 +1425,10 @@ const CompiledPlanTemplateSchema = z.object({
       stageIndex: z.number().int().nonnegative().optional(),
     }).strict(),
   }).strict()),
+  caps: z.object({
+    capClass: StringSchema,
+    maxSteps: z.number().int().positive(),
+  }).strict(),
   postureHook: StringSchema.optional(),
   fallback: z.object({
     ifSpecialUnavailable: StringSchema.optional(),

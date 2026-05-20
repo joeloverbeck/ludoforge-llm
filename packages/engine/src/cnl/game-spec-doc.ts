@@ -810,11 +810,17 @@ export interface GameSpecPlanStepDef {
   };
 }
 
+export interface GameSpecPlanCapsDef {
+  readonly capClass: string;
+  readonly maxSteps: number;
+}
+
 export interface GameSpecPlanTemplateDef {
   readonly traceLabel?: string;
   readonly root: GameSpecPlanRootDef;
   readonly roles: Readonly<Record<string, GameSpecPlanRoleDef>>;
   readonly steps: readonly GameSpecPlanStepDef[];
+  readonly caps: GameSpecPlanCapsDef;
   readonly postureHook?: string;
   readonly fallback?: {
     readonly ifSpecialUnavailable?: string;

@@ -2253,6 +2253,24 @@
                       "additionalProperties": false
                     }
                   },
+                  "caps": {
+                    "type": "object",
+                    "properties": {
+                      "capClass": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      },
+                      "maxSteps": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "capClass",
+                      "maxSteps"
+                    ],
+                    "additionalProperties": false
+                  },
                   "postureHook": {
                     "allOf": [
                       {
@@ -2296,6 +2314,7 @@
                   "root",
                   "roles",
                   "steps",
+                  "caps",
                   "fallback",
                   "dependencies"
                 ],

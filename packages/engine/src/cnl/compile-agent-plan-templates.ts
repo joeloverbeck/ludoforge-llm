@@ -76,7 +76,12 @@ export function compilePlanTemplateDefinition({
     failed = true;
   }
 
-  if (failed) {
+  const caps = lowerPlanCaps(def.caps, `${basePath}.caps`, templateId, diagnostics);
+  if (caps === null) {
+    failed = true;
+  }
+
+  if (failed || caps === null) {
     return null;
   }
 
@@ -97,6 +102,7 @@ export function compilePlanTemplateDefinition({
     },
     roles,
     steps,
+    caps,
     ...(def.postureHook === undefined ? {} : { postureHook: def.postureHook }),
     fallback: {
       ...(def.fallback?.ifSpecialUnavailable === undefined ? {} : {
@@ -110,6 +116,28 @@ export function compilePlanTemplateDefinition({
       }),
     },
     dependencies: mergePlanDependencies(dependencyRefs),
+  };
+}
+
+function lowerPlanCaps(
+  caps: GameSpecPlanTemplateDef['caps'] | undefined,
+  path: string,
+  templateId: string,
+  diagnostics: Diagnostic[],
+): CompiledPlanTemplate['caps'] | null {
+  if (caps === undefined || typeof caps !== 'object' || caps === null) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Plan template "${templateId}" must declare caps with capClass and maxSteps.`,
+      suggestion: 'Declare caps: { capClass: "standard256", maxSteps: <positive integer> } on the plan template.',
+    });
+    return null;
+  }
+  return {
+    capClass: String(caps.capClass),
+    maxSteps: caps.maxSteps,
   };
 }
 

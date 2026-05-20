@@ -100,6 +100,7 @@ function compilePlanDoc() {
                 },
               },
             ],
+            caps: { capClass: 'standard256', maxSteps: 2 },
             fallback: {
               ifRoleTargetUnavailable: 'primitivePolicy',
               ifPreviewUnavailable: 'traceOnly',
@@ -141,6 +142,7 @@ describe('agent plan-template IR compilation', () => {
     assert.equal(template?.roles.trainSpace?.selector.refs.quality, 'role.trainSpace.quality');
     assert.deepEqual(template?.roles.governSpace?.constraints, [{ kind: 'notEqual', role: 'trainSpace' }]);
     assert.equal(template?.steps[1]?.match.actionTag, 'specialActivity');
+    assert.deepEqual(template?.caps, { capClass: 'standard256', maxSteps: 2 });
     assert.deepEqual(first.gameDef?.agents?.profiles.baseline?.plan.planTemplates, ['trainGovern']);
 
     assert.equal(JSON.stringify(first.gameDef), JSON.stringify(second.gameDef));

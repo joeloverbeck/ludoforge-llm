@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — investigation + reporting deliverable
-**Deps**: `specs/184-wasm-preview-drive-aggregate-coverage.md`
+**Deps**: `archive/specs/184-wasm-preview-drive-aggregate-coverage.md`
 
 ## Problem
 
@@ -112,7 +112,7 @@ Verification:
 - `pnpm -F @ludoforge/engine build` — passed.
 - `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --output-dir /tmp/ludoforge-184 --date 2026-05-19` — passed, 15/15 seeds completed, 3808 per-decision rows, route count 3163, unsupported count 2936.
 - `pnpm run check:ticket-deps` — passed for 4 active tickets and 2447 archived tickets.
-- `git diff --check -- specs/184-wasm-preview-drive-aggregate-coverage.md tickets/184WASMPREDRI-001.md reports/184-phase-0-wasm-preview-drive-divergence-inventory.md .codex/run-state/implement-spec-tickets.json` — passed.
+- `git diff --check` on the originating spec, ticket, report, and run-state paths — passed before archival.
 - `pnpm turbo test` — passed.
 - `pnpm turbo lint` — passed.
 - `pnpm turbo typecheck` — passed.

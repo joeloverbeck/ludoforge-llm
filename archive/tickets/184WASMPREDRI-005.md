@@ -8,7 +8,7 @@
 
 ## Problem
 
-`tickets/184WASMPREDRI-004.md` cannot safely remove the defensive `previewFeatureRowsExerciseAggregate` fallback yet. A live removal probe on 2026-05-19 rebuilt the engine and ran `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js`; the test failed at decision 47 with the original aggregate score divergence. WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower for the non-`tax` candidates whose scores depend on `minMarginScore` / `maxMarginScore` aggregates fed by `preview.victory.currentMargin.$seat`.
+`archive/tickets/184WASMPREDRI-004.md` could not yet safely remove the defensive `previewFeatureRowsExerciseAggregate` fallback. A live removal probe on 2026-05-19 rebuilt the engine and ran `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js`; the test failed at decision 47 with the original aggregate score divergence. WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower for the non-`tax` candidates whose scores depend on `minMarginScore` / `maxMarginScore` aggregates fed by `preview.victory.currentMargin.$seat`.
 
 Archived ticket 003 correctly documented the residual `$seat` seat-matrix `victoryCurrentMargin` shape as unsupported and covered by TS fallback parity. That is not enough for ticket 004, because removing the aggregate fallback routes aggregate-fed preview candidate features through a dynamic-row ABI that currently carries one value per candidate/ref, not one value per candidate/ref/seat-context. The missing seat-context dimension must land before the fallback can be deleted.
 
@@ -16,7 +16,7 @@ Archived ticket 003 correctly documented the residual `$seat` seat-matrix `victo
 
 1. `archive/tickets/184WASMPREDRI-002.md` proves non-seat-matrix `victoryCurrentMargin` slots through the supported preview-drive fixture, but explicitly delegates `$seat` seat-matrix refs.
 2. `archive/tickets/184WASMPREDRI-003.md` documents `unsupported preview surface "victoryCurrentMargin"` for the residual `$seat` seat-matrix case and proves the null-return → TS-fallback path.
-3. `tickets/184WASMPREDRI-004.md` attempted removal is still red: the ARVN tournament equivalence trigger fails at decision 47 when the aggregate fallback is deleted.
+3. `archive/tickets/184WASMPREDRI-004.md` attempted removal was still red: the ARVN tournament equivalence trigger failed at decision 47 when the aggregate fallback was deleted.
 4. The current dynamic-row shape is insufficient for `seatAgg` expressions because it cannot represent per-candidate/per-ref/per-seat-context values. A single scalar row would silently collapse distinct seat-context evidence, violating Foundation #20.
 
 ## Architecture Check
@@ -111,7 +111,7 @@ Deviations from original plan:
 
 - `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` did not need a source edit. The existing production preview drive already evaluates concrete role-seat slots; the missing piece was JS-side slot expansion plus the candidate-feature row evaluator for `seatAgg`.
 - No Rust ABI bump was needed. The dynamic-row contract changed in the JS precomputed-row shape consumed before score-row evaluation, not in the Rust preview-drive input/output words.
-- `tickets/184WASMPREDRI-004.md` remains the owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket only proves the missing `$seat` evidence can be carried by the supported dynamic-row path.
+- `archive/tickets/184WASMPREDRI-004.md` remained the owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket only proved the missing `$seat` evidence could be carried by the supported dynamic-row path.
 
 Verification:
 
@@ -130,4 +130,4 @@ Source-size ledger:
 - `packages/engine/src/agents/policy-wasm-score-routing.ts` grew during the first implementation attempt and crossed the 800-line guidance, so the new evaluator was extracted before closeout. Final size: 663 lines.
 - `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts` is 192 lines.
 
-Post-review: archived on 2026-05-19. Active successor `tickets/184WASMPREDRI-004.md` was unblocked for the fallback-removal pass.
+Post-review: archived on 2026-05-19. Successor `archive/tickets/184WASMPREDRI-004.md` later completed the fallback-removal pass.

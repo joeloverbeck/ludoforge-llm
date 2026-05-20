@@ -1,19 +1,17 @@
 {
   "originating_spec": "specs/184-wasm-preview-drive-aggregate-coverage.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/184WASMPREDRI-006.md",
-  "last_result": "completed_archived_184WASMPREDRI-006",
-  "last_work_commit": "a6447b86e918f0e62de442bb076623247f3a6308",
+  "archived_spec": "archive/specs/184-wasm-preview-drive-aggregate-coverage.md",
+  "last_ticket": "archive/tickets/184WASMPREDRI-004.md",
+  "last_result": "completed_archived_ticket_and_spec",
+  "last_work_commit": "self",
   "last_state_commit": "self",
-  "next_target": "tickets/184WASMPREDRI-004.md",
-  "queue": [
-    "tickets/184WASMPREDRI-004.md"
-  ],
-  "phase": "between_tickets",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "184WASMPREDRI-006 implemented and archived; ticket 004 unblocked as next target",
+  "owned_dirty_summary": "Spec 184 completed: 184WASMPREDRI-004 removed the broad aggregate preview fallback, added row-local oracle fallback telemetry, updated 15-seed reporting, archived the ticket, and archived the originating spec.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "owned implementation/archive changes pending commit",
+  "dirty_state": "ready_to_commit",
   "updated_at": "2026-05-20"
 }

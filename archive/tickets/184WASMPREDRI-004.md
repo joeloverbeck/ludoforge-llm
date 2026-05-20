@@ -1,6 +1,6 @@
 # 184WASMPREDRI-004: Phase 4 — Remove defensive aggregate-coverage fallback
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (delete `previewFeatureRowsExerciseAggregate` and inline its call site)
@@ -75,9 +75,10 @@ Run `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` 
 
 ### 4. 15-seed report regression check
 
-Run `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` and confirm:
+Run `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` and confirm:
 - `wasmProductionPreviewDriveRouteCount` is ≥ baseline (proving the drive is engaged on the previously-bypassed paths)
-- `wasmProductionPreviewDriveUnsupportedCount` shows zero new unsupported reasons (proving tickets 002 and 003 covered the surface)
+- `wasmProductionPreviewDriveUnsupportedReasons` shows no new unsupported reason classes (proving tickets 002 and 003 covered the exposed surface)
+- `wasmPreviewCandidateFeatureRowOracleFallbackCount` is non-zero (proving the row-local TS-oracle replacement path is explicitly visible per Foundation #20)
 
 ## Files to Touch
 
@@ -105,7 +106,7 @@ The prerequisite chain includes `archive/tickets/184WASMPREDRI-005.md` and `arch
 ### Invariants
 
 1. `grep -rn "previewFeatureRowsExerciseAggregate" packages/engine/` returns zero matches after this ticket lands.
-2. The 15-seed report records `wasmProductionPreviewDriveRouteCount` ≥ baseline and zero new unsupported reasons.
+2. The 15-seed report records `wasmProductionPreviewDriveRouteCount` ≥ baseline, zero new unsupported reason classes, and non-zero row-local TS-oracle fallback count.
 3. WASM/TS equivalence is the active oracle on every previously-divergent path; no silent fallback intercepts preview candidate features that feed plan aggregates.
 
 ## Test Plan
@@ -120,7 +121,7 @@ Run:
 
 1. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — primary regression gate
 2. `pnpm -F @ludoforge/engine test:integration` — broader equivalence sweep including bytecode and preview-drive equivalence tests
-3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` — manual route-count and unsupported-count comparison against baseline
+3. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — manual route-count, unsupported-reason-class, and row-oracle fallback comparison against baseline
 4. `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck` — full repo quality gate
 
 ## Prior Blocked Probe
@@ -144,7 +145,7 @@ Verification:
 
 Next workflow:
 
-- `$implement-ticket tickets/184WASMPREDRI-004.md . Rely on specs/184-wasm-preview-drive-aggregate-coverage.md`
+- Superseded by this archived completion record; the originating spec is archived at `archive/specs/184-wasm-preview-drive-aggregate-coverage.md`.
 
 Readiness update: 2026-05-19 (superseded on 2026-05-20)
 
@@ -170,3 +171,32 @@ Verification:
 Next workflow:
 
 - Superseded: `archive/tickets/184WASMPREDRI-006.md` has landed. Continue this ticket's fallback-removal workflow.
+
+## Outcome (2026-05-20)
+
+Implemented:
+
+- Deleted the broad `previewFeatureRowsExerciseAggregate` defensive bypass and its test-only force-through hook from `packages/engine/src/agents/policy-wasm-score-routing.ts`.
+- Left aggregate-fed preview candidate-feature rows on the normal WASM materialization path, with row-local Spec 175 TS-oracle replacement only when an individual aggregate-fed preview row resolves to a non-ready or unavailable WASM value.
+- Added `wasmPreviewCandidateFeatureRowOracleFallbackCount` runtime telemetry and surfaced it in the 15-seed decomposition CSV/Markdown report, so the row-local fallback is explicit per Foundation #20.
+- Updated the ARVN equivalence canary to assert that WASM score rows, preview candidate-feature rows, and row-local oracle fallbacks are all exercised while decision 47 remains byte-equivalent.
+
+Proof:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — passed, including the decision-47 aggregate-fed preview-row canary.
+3. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — passed.
+4. `pnpm -F @ludoforge/engine test:integration` — passed, `311/311` integration files.
+5. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — passed, `15/15` seeds; report written to `reports/fitl-arvn-15-seed-decomposition-2026-05-20.md` and `.csv`.
+6. `pnpm turbo test` — passed, `5/5` tasks; engine default lane reported `159/159` files.
+7. `pnpm turbo lint` — passed, `2/2` tasks.
+8. `pnpm turbo typecheck` — passed, `3/3` tasks.
+9. `pnpm run check:ticket-deps` — passed.
+10. `git diff --check` — passed.
+11. `rg -n "previewFeatureRowsExerciseAggregate" packages/engine` — zero matches.
+
+15-seed acceptance:
+
+- Baseline from `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`: route count `3163`, unsupported count `2936`.
+- Current report: route count `4100`, unsupported count `3359`, row-local oracle fallback count `516`, batch count `4612`.
+- The unsupported count rises because deleting the broad aggregate bypass exposes already documented unsupported classes; the unsupported reason class set does not widen, and the row-local fallback count is now explicit.

@@ -5,7 +5,6 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/index.js';
 import { __internal_for_tests as policyWasmRuntimeInternals } from '../../src/agents/policy-wasm-runtime.js';
 import { initializePolicyWasmRuntimeSync } from '../../src/agents/policy-wasm-runtime-node-loader.js';
-import { __internal_for_tests as policyWasmScoreRoutingInternals } from '../../src/agents/policy-wasm-score-routing.js';
 import { createGameDefRuntime, type AgentDecisionTrace, type Decision } from '../../src/kernel/index.js';
 import { runGameSteps } from '../../src/sim/index.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
@@ -52,6 +51,7 @@ const captureDecisionStream = (wasmEnabled: boolean): {
   readonly decisions: readonly NormalizedDecision[];
   readonly wasmRouteCount: number;
   readonly wasmPreviewCandidateFeatureRowRouteCount: number;
+  readonly wasmPreviewCandidateFeatureRowOracleFallbackCount: number;
 } => {
   policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
@@ -89,21 +89,12 @@ const captureDecisionStream = (wasmEnabled: boolean): {
       decisions,
       wasmRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
       wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
+      wasmPreviewCandidateFeatureRowOracleFallbackCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowOracleFallbackCount(),
     };
   } finally {
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
-    policyWasmScoreRoutingInternals.setForceAggregatePreviewRowsThroughWasm(false);
   }
-};
-
-const captureDecisionStreamWithAggregatePreviewRowsThroughWasm = (): {
-  readonly decisions: readonly NormalizedDecision[];
-  readonly wasmRouteCount: number;
-  readonly wasmPreviewCandidateFeatureRowRouteCount: number;
-} => {
-  policyWasmScoreRoutingInternals.setForceAggregatePreviewRowsThroughWasm(true);
-  return captureDecisionStream(true);
 };
 
 describe('ARVN tournament WASM equivalence', () => {
@@ -133,12 +124,16 @@ describe('ARVN tournament WASM equivalence', () => {
 
   it('preserves decision 47 candidate scores when aggregate-fed preview rows use WASM materialization', { timeout: 60_000 }, () => {
     const wasmOff = captureDecisionStream(false);
-    const wasmOn = captureDecisionStreamWithAggregatePreviewRowsThroughWasm();
+    const wasmOn = captureDecisionStream(true);
 
     assert.ok(wasmOn.wasmRouteCount > 0, 'WASM-enabled run must exercise the production WASM score-row route');
     assert.ok(
       wasmOn.wasmPreviewCandidateFeatureRowRouteCount > 0,
       'WASM-enabled run must exercise preview candidate-feature row materialization',
+    );
+    assert.ok(
+      wasmOn.wasmPreviewCandidateFeatureRowOracleFallbackCount > 0,
+      'WASM-enabled run must expose row-local TS oracle fallbacks for non-ready aggregate-fed preview rows',
     );
     assert.deepEqual(
       wasmOn.decisions[47],

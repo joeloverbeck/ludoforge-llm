@@ -8,7 +8,7 @@
 
 ## Problem
 
-`tickets/184WASMPREDRI-004.md` still cannot safely remove the defensive `previewFeatureRowsExerciseAggregate` fallback. A live removal probe on 2026-05-20 rebuilt the engine and ran `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js`; the test failed at decision 47 with the same aggregate score divergence seen before ticket 005. WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower than TypeScript for aggregate-fed margin candidates.
+`archive/tickets/184WASMPREDRI-004.md` could not yet safely remove the defensive `previewFeatureRowsExerciseAggregate` fallback. A live removal probe on 2026-05-20 rebuilt the engine and ran `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js`; the test failed at decision 47 with the same aggregate score divergence seen before ticket 005. WASM and TypeScript both selected `rally`, but WASM candidate scores were 500 lower than TypeScript for aggregate-fed margin candidates.
 
 Ticket 005's seat-context dynamic-row support was necessary but not sufficient. This ticket owns the remaining root-cause preview-drive parity gap so ticket 004 can later delete the fallback without weakening the WASM/TS byte-equivalence oracle.
 
@@ -17,7 +17,7 @@ Ticket 005's seat-context dynamic-row support was necessary but not sufficient. 
 1. `archive/tickets/184WASMPREDRI-005.md` has landed and is no longer the active owner for the remaining red proof.
 2. The trigger oracle still fails only when the aggregate fallback is removed; with the fallback restored, production routing retains the Spec 175 TS-fallback safety path.
 3. The failure is architecture-relevant, not a harmless score display difference: the candidate-score rows are part of the byte-equivalence oracle required by Spec 184 and Foundations #8, #16, and #20.
-4. `tickets/184WASMPREDRI-004.md` remains the cleanup owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket owns the prerequisite parity fix.
+4. `archive/tickets/184WASMPREDRI-004.md` remained the cleanup owner for deleting `previewFeatureRowsExerciseAggregate`; this ticket owned the prerequisite parity fix.
 
 ## Boundary Reset (2026-05-20)
 
@@ -34,7 +34,7 @@ Corrected boundary:
 
 1. This ticket owns a generic row-level Spec 175 TS-oracle fallback for non-ready aggregate-fed preview candidate-feature rows, so the byte-equivalence oracle stays authoritative when the broad aggregate fallback is bypassed.
 2. This ticket does not own full agent-guided gated continuation modeling in the WASM preview drive.
-3. `tickets/184WASMPREDRI-004.md` remains the only owner for deleting `previewFeatureRowsExerciseAggregate` after this row-level fallback is proven.
+3. `archive/tickets/184WASMPREDRI-004.md` remained the only owner for deleting `previewFeatureRowsExerciseAggregate` after this row-level fallback was proven.
 
 ## Architecture Check
 

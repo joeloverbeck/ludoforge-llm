@@ -26,6 +26,7 @@ import type { PolicyWasmPreviewStatus } from './policy-wasm-preview-drive.js';
 import {
   evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
+  recordProductionPolicyWasmPreviewCandidateFeatureRowOracleFallback,
   recordProductionPolicyWasmPreviewDrive,
   recordProductionPolicyWasmPreviewCandidateFeatureRows,
   recordProductionPolicyWasmScoreRows,
@@ -58,8 +59,6 @@ interface EncodedPolicyView {
   readonly layout: EncodedStateLayout;
   readonly encoded: EncodedState;
 }
-
-let forceAggregatePreviewRowsThroughWasmForTests = false;
 
 export interface PolicyWasmScoreRoutingCandidate extends PolicyEvaluationCandidate {
   readonly move: Move;
@@ -423,11 +422,10 @@ const previewValueFromWasmRow = (
  * candidate feature is read by an aggregate the profile's considerations
  * consume, the divergence propagates into the WASM score-row stream.
  *
- * Until the production preview drive is extended to cover every aggregate-fed
- * preview shape, evaluate preview-classed candidate features through the TS path
- * whenever they feed an aggregate in the profile's plan. Spec 184 Phase 3.6 owns
- * the remaining ARVN decision-47 parity gap that still reproduces after the
- * seat-context dynamic-row work.
+ * Aggregate-fed preview candidate-feature rows must remain byte-equivalent even
+ * when the production preview drive reports a non-ready value for one candidate.
+ * The row-local oracle fallback below preserves the Spec 175 TS oracle without
+ * bypassing supported preview-drive rows for the whole aggregate-fed feature.
  */
 const candidateFeatureFeedsPlanAggregate = (
   profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
@@ -445,12 +443,6 @@ const candidateFeatureFeedsPlanAggregate = (
   }
   return false;
 };
-
-const previewFeatureRowsExerciseAggregate = (
-  profile: NonNullable<AgentPolicyCatalog['profiles'][string]>,
-  catalog: AgentPolicyCatalog,
-  featureId: string,
-): boolean => candidateFeatureFeedsPlanAggregate(profile, catalog, featureId);
 
 const shouldUseTsOracleForPreviewCandidateFeatureRow = (
   candidate: PolicyWasmScoreRoutingCandidate,
@@ -471,9 +463,11 @@ const applyAggregatePreviewCandidateFeatureRowOracle = (
 ): readonly PolicyValue[] =>
   values.map((value, index) => {
     const candidate = input.candidates[index]!;
-    return shouldUseTsOracleForPreviewCandidateFeatureRow(candidate, value)
-      ? input.evaluation.evaluateCandidateFeature(candidate, featureId)
-      : value;
+    if (!shouldUseTsOracleForPreviewCandidateFeatureRow(candidate, value)) {
+      return value;
+    }
+    recordProductionPolicyWasmPreviewCandidateFeatureRowOracleFallback();
+    return input.evaluation.evaluateCandidateFeature(candidate, featureId);
   });
 
 export function tryScoreMoveConsiderationsWithWasm(input: {
@@ -541,13 +535,10 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       continue;
     }
     const aggregateFedPreviewFeature = candidateFeatureFeedsPlanAggregate(input.profile, input.catalog, id);
-    const precomputedDynamicCandidateFeatures = previewFeatureRowsExerciseAggregate(input.profile, input.catalog, id)
-      && !forceAggregatePreviewRowsThroughWasmForTests
-      ? null
-      : materializePreviewDynamicRowsWithWasm(
-          input,
-          collectPreviewDynamicRefs(feature.expr),
-        );
+    const precomputedDynamicCandidateFeatures = materializePreviewDynamicRowsWithWasm(
+      input,
+      collectPreviewDynamicRefs(feature.expr),
+    );
     if (precomputedDynamicCandidateFeatures === null) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
       const values = input.candidates.map((candidate) => {
@@ -695,9 +686,3 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   }
   return true;
 }
-
-export const __internal_for_tests = {
-  setForceAggregatePreviewRowsThroughWasm(value: boolean): void {
-    forceAggregatePreviewRowsThroughWasmForTests = value;
-  },
-};

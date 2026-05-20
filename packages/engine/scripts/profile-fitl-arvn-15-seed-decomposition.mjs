@@ -382,6 +382,7 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPa
           wasmScoreRowUnsupportedCount: delta(after, before, 'wasmScoreRowUnsupportedCount'),
           wasmPreviewCandidateFeatureRowRouteCount: delta(after, before, 'wasmPreviewCandidateFeatureRowRouteCount'),
           wasmPreviewCandidateFeatureRowUnsupportedCount: delta(after, before, 'wasmPreviewCandidateFeatureRowUnsupportedCount'),
+          wasmPreviewCandidateFeatureRowOracleFallbackCount: delta(after, before, 'wasmPreviewCandidateFeatureRowOracleFallbackCount'),
           wasmProductionPreviewDriveRouteCount: delta(after, before, 'wasmProductionPreviewDriveRouteCount'),
           wasmProductionPreviewDriveUnsupportedCount: delta(after, before, 'wasmProductionPreviewDriveUnsupportedCount'),
           wasmProductionPreviewDriveUnsupportedReasons: deltaReasonCounts(
@@ -453,6 +454,8 @@ function readCounters(internals) {
       internals.policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount:
       internals.policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
+    wasmPreviewCandidateFeatureRowOracleFallbackCount:
+      internals.policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowOracleFallbackCount(),
     wasmProductionPreviewDriveRouteCount:
       internals.policyWasmRuntimeInternals.getProductionPreviewDriveRouteCount(),
     wasmProductionPreviewDriveUnsupportedCount:
@@ -559,6 +562,7 @@ function aggregateRows(rows, keyFn) {
       cacheCompileTimeMs: 0,
       wasmProductionPreviewDriveRouteCount: 0,
       wasmProductionPreviewDriveUnsupportedCount: 0,
+      wasmPreviewCandidateFeatureRowOracleFallbackCount: 0,
       wasmProductionPreviewDriveUnsupportedReasons: new Map(),
       wasmProductionPreviewDriveBatchCount: 0,
       marshalingMs: 0,
@@ -590,6 +594,7 @@ function aggregateRows(rows, keyFn) {
     bucket.cacheCompileTimeMs += Number(row.cacheCompileTimeMs || 0);
     bucket.wasmProductionPreviewDriveRouteCount += row.wasmProductionPreviewDriveRouteCount;
     bucket.wasmProductionPreviewDriveUnsupportedCount += row.wasmProductionPreviewDriveUnsupportedCount;
+    bucket.wasmPreviewCandidateFeatureRowOracleFallbackCount += row.wasmPreviewCandidateFeatureRowOracleFallbackCount;
     addReasonCounts(bucket.wasmProductionPreviewDriveUnsupportedReasons, row.wasmProductionPreviewDriveUnsupportedReasons);
     bucket.wasmProductionPreviewDriveBatchCount += row.wasmProductionPreviewDriveBatchCount;
     bucket.marshalingMs += row.marshalingMs;
@@ -634,6 +639,7 @@ function aggregateRows(rows, keyFn) {
       cacheCompileTimeMs: round4(bucket.cacheCompileTimeMs),
       wasmProductionPreviewDriveRouteCount: bucket.wasmProductionPreviewDriveRouteCount,
       wasmProductionPreviewDriveUnsupportedCount: bucket.wasmProductionPreviewDriveUnsupportedCount,
+      wasmPreviewCandidateFeatureRowOracleFallbackCount: bucket.wasmPreviewCandidateFeatureRowOracleFallbackCount,
       wasmProductionPreviewDriveUnsupportedReasons: reasonRows(bucket.wasmProductionPreviewDriveUnsupportedReasons),
       wasmProductionPreviewDriveBatchCount: bucket.wasmProductionPreviewDriveBatchCount,
       marshalingMs: round4(bucket.marshalingMs),

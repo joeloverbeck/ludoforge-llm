@@ -1,17 +1,15 @@
 {
   "originating_spec": "specs/186-advisory-turn-plan-architecture-core.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/186ADVTURNPLAN-006.md",
+  "last_ticket": "archive/tickets/186ADVTURNPLAN-007.md",
   "last_result": "completed_archived",
-  "last_work_commit": "5c1b6dec103a5396843a9fd5bd66e0446099293e",
+  "last_work_commit": "a8fc17db80971c243ca543b514c0e7630f79ecc3",
   "last_state_commit": "self",
-  "next_target": "tickets/186ADVTURNPLAN-007.md",
-  "queue": [
-    "tickets/186ADVTURNPLAN-007.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "final_spec_archive",
+  "queue": [],
+  "phase": "ready_for_final_spec_archive",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "186ADVTURNPLAN-006 completed, reviewed, archived, and committed; next queue target is 186ADVTURNPLAN-007.",
+  "owned_dirty_summary": "186ADVTURNPLAN-007 completed, reviewed, archived, and committed; all Spec 186 tickets archived; next action final spec archive.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

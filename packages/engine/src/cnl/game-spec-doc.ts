@@ -866,10 +866,12 @@ export interface GameSpecAgentProfileDef {
         };
       };
     };
-    readonly outcomeGrantContinuation?: {
+    readonly grantFlowContinuation?: {
       readonly enabled?: boolean;
-      readonly extraDepthCap?: number;
-      readonly capClass?: string;
+      readonly postGrantDepthCap?: number;
+      readonly postGrantCapClass?: string;
+      readonly freeOperationDepthCap?: number;
+      readonly freeOperationCapClass?: string;
     };
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;

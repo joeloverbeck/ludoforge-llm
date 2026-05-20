@@ -1538,11 +1538,13 @@ const CompiledAgentProfileSchema = z
           })
           .strict()
           .optional(),
-        outcomeGrantContinuation: z
+        grantFlowContinuation: z
           .object({
             enabled: z.boolean(),
-            extraDepthCap: z.number().int().positive(),
-            capClass: z.literal('postGrant16'),
+            postGrantDepthCap: z.number().int().positive(),
+            postGrantCapClass: z.literal('postGrant16'),
+            freeOperationDepthCap: z.number().int().positive(),
+            freeOperationCapClass: z.enum(['grantFlow16', 'grantFlow32']),
           })
           .strict()
           .optional(),
@@ -2426,6 +2428,8 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('failed'),
       z.literal('depthCap'),
       z.literal('postGrantCap'),
+      z.literal('freeOperationCap'),
+      z.literal('grantFlowPartial'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]),
@@ -2470,12 +2474,35 @@ const SyntheticDecisionTraceEntrySchema = z
   })
   .strict();
 
+const PolicyPreviewGrantFlowSegmentTraceSchema = z
+  .object({
+    depth: IntegerSchema.nonnegative(),
+    kind: z.enum([
+      'outcomeGrantResolve',
+      'grantOffered',
+      'freeOperationActionSelection',
+      'selectedFreeOperation',
+      'innerChoice',
+      'grantConsumed',
+      'grantSkipped',
+      'grantExpired',
+      'deferredEffectsReleased',
+    ]),
+    decisionKey: StringSchema.optional(),
+    actionId: StringSchema.optional(),
+    grantId: StringSchema.optional(),
+    grantPhase: StringSchema.optional(),
+    selectedOptionStableKey: StringSchema.optional(),
+  })
+  .strict();
+
 const PolicyPreviewDriveTraceSchema = z
   .object({
-    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'stochastic']).optional(),
+    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'stochastic', 'failed']).optional(),
     depth: IntegerSchema.nonnegative(),
     completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
+    grantFlowSegments: z.array(PolicyPreviewGrantFlowSegmentTraceSchema).optional(),
   })
   .strict();
 
@@ -2529,6 +2556,9 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
       z.literal('depthCap'),
+      z.literal('postGrantCap'),
+      z.literal('freeOperationCap'),
+      z.literal('grantFlowPartial'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]).optional(),
@@ -2567,6 +2597,9 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
     unknownDepthCap: NumberSchema,
+    unknownPostGrantCap: NumberSchema,
+    unknownFreeOperationCap: NumberSchema,
+    unknownGrantFlowPartial: NumberSchema,
     unknownNoPreviewDecision: NumberSchema,
     unknownGated: NumberSchema,
     unknownFailed: NumberSchema,
@@ -2597,17 +2630,20 @@ const PolicyPreviewCoverageTraceSchema = z
   })
   .strict();
 
-const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
+const PolicyPreviewGrantFlowContinuationTraceSchema = z
   // Spec 179: decision-level aggregate for the opt-in post-grant preview drive.
   .object({
     enabled: z.literal(true),
-    extraDepthCap: IntegerSchema.positive(),
-    capClass: z.literal('postGrant16'),
+    postGrantDepthCap: IntegerSchema.positive(),
+    postGrantCapClass: z.literal('postGrant16'),
+    freeOperationDepthCap: IntegerSchema.positive(),
+    freeOperationCapClass: z.enum(['grantFlow16', 'grantFlow32']),
     extraDepthReached: IntegerSchema.nonnegative(),
     exitCounts: z
       .object({
         completed: IntegerSchema.nonnegative(),
         postGrantCap: IntegerSchema.nonnegative(),
+        freeOperationCap: IntegerSchema.nonnegative(),
         stochastic: IntegerSchema.nonnegative(),
       })
       .strict(),
@@ -2617,7 +2653,7 @@ const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
 const PolicyPreviewSeatMatrixCellTraceSchema = z
   .discriminatedUnion('status', [
     z.object({ status: z.literal('ready'), value: NumberSchema }).strict(),
-    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'noPreviewDecision', 'gated']) }).strict(),
+    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'grantFlowPartial', 'noPreviewDecision', 'gated']) }).strict(),
   ]);
 
 const PolicyPreviewSeatMatrixCandidateTraceSchema = z
@@ -2641,7 +2677,7 @@ const PolicyPreviewUsageTraceSchema = z
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
     seatMatrix: PolicyPreviewSeatMatrixTraceSchema.optional(),
-    outcomeGrantContinuation: PolicyPreviewOutcomeGrantContinuationTraceSchema.optional(),
+    grantFlowContinuation: PolicyPreviewGrantFlowContinuationTraceSchema.optional(),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),

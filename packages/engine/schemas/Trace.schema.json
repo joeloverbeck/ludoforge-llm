@@ -2007,7 +2007,7 @@
                   "unknownRefs": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_27d91bdf"
+                      "$ref": "#/definitions/anon_c4e380a3"
                     }
                   },
                   "readyRefStats": {
@@ -2132,6 +2132,8 @@
                                             "failed",
                                             "depthCap",
                                             "postGrantCap",
+                                            "freeOperationCap",
+                                            "grantFlowPartial",
                                             "noPreviewDecision",
                                             "gated"
                                           ]
@@ -2159,14 +2161,14 @@
                     ],
                     "additionalProperties": false
                   },
-                  "outcomeGrantContinuation": {
+                  "grantFlowContinuation": {
                     "type": "object",
                     "properties": {
                       "enabled": {
                         "type": "boolean",
                         "const": true
                       },
-                      "extraDepthCap": {
+                      "postGrantDepthCap": {
                         "exclusiveMinimum": 0,
                         "allOf": [
                           {
@@ -2174,9 +2176,24 @@
                           }
                         ]
                       },
-                      "capClass": {
+                      "postGrantCapClass": {
                         "type": "string",
                         "const": "postGrant16"
+                      },
+                      "freeOperationDepthCap": {
+                        "exclusiveMinimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "freeOperationCapClass": {
+                        "type": "string",
+                        "enum": [
+                          "grantFlow16",
+                          "grantFlow32"
+                        ]
                       },
                       "extraDepthReached": {
                         "minimum": 0,
@@ -2205,6 +2222,14 @@
                               }
                             ]
                           },
+                          "freeOperationCap": {
+                            "minimum": 0,
+                            "allOf": [
+                              {
+                                "$ref": "#/definitions/anon_e7c99bd4"
+                              }
+                            ]
+                          },
                           "stochastic": {
                             "minimum": 0,
                             "allOf": [
@@ -2217,6 +2242,7 @@
                         "required": [
                           "completed",
                           "postGrantCap",
+                          "freeOperationCap",
                           "stochastic"
                         ],
                         "additionalProperties": false
@@ -2224,8 +2250,10 @@
                     },
                     "required": [
                       "enabled",
-                      "extraDepthCap",
-                      "capClass",
+                      "postGrantDepthCap",
+                      "postGrantCapClass",
+                      "freeOperationDepthCap",
+                      "freeOperationCapClass",
                       "extraDepthReached",
                       "exitCounts"
                     ],
@@ -2264,6 +2292,15 @@
                       "unknownDepthCap": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
                       },
+                      "unknownPostGrantCap": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
+                      "unknownFreeOperationCap": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
+                      "unknownGrantFlowPartial": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
                       "unknownNoPreviewDecision": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
                       },
@@ -2281,6 +2318,9 @@
                       "unknownHidden",
                       "unknownUnresolved",
                       "unknownDepthCap",
+                      "unknownPostGrantCap",
+                      "unknownFreeOperationCap",
+                      "unknownGrantFlowPartial",
                       "unknownNoPreviewDecision",
                       "unknownGated",
                       "unknownFailed"
@@ -2741,7 +2781,7 @@
                     "unknownPreviewRefs": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_27d91bdf"
+                        "$ref": "#/definitions/anon_c4e380a3"
                       }
                     },
                     "unknownLookupRefs": {
@@ -3120,6 +3160,18 @@
                         },
                         {
                           "type": "string",
+                          "const": "postGrantCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "freeOperationCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "grantFlowPartial"
+                        },
+                        {
+                          "type": "string",
                           "const": "noPreviewDecision"
                         },
                         {
@@ -3137,7 +3189,9 @@
                             "completed",
                             "depthCap",
                             "postGrantCap",
-                            "stochastic"
+                            "freeOperationCap",
+                            "stochastic",
+                            "failed"
                           ]
                         },
                         "depth": {
@@ -3217,6 +3271,76 @@
                               "score",
                               "scoreContributions",
                               "completionPolicy"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "grantFlowSegments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "depth": {
+                                "minimum": 0,
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_e7c99bd4"
+                                  }
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "outcomeGrantResolve",
+                                  "grantOffered",
+                                  "freeOperationActionSelection",
+                                  "selectedFreeOperation",
+                                  "innerChoice",
+                                  "grantConsumed",
+                                  "grantSkipped",
+                                  "grantExpired",
+                                  "deferredEffectsReleased"
+                                ]
+                              },
+                              "decisionKey": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "grantId": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "grantPhase": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "selectedOptionStableKey": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "depth",
+                              "kind"
                             ],
                             "additionalProperties": false
                           }
@@ -4164,55 +4288,6 @@
       "items": {
         "$ref": "#/definitions/anon_3a403105"
       }
-    },
-    "anon_27d91bdf": {
-      "type": "object",
-      "properties": {
-        "refId": {
-          "$ref": "#/definitions/anon_4682db72"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "random"
-            },
-            {
-              "type": "string",
-              "const": "hidden"
-            },
-            {
-              "type": "string",
-              "const": "unresolved"
-            },
-            {
-              "type": "string",
-              "const": "failed"
-            },
-            {
-              "type": "string",
-              "const": "depthCap"
-            },
-            {
-              "type": "string",
-              "const": "postGrantCap"
-            },
-            {
-              "type": "string",
-              "const": "noPreviewDecision"
-            },
-            {
-              "type": "string",
-              "const": "gated"
-            }
-          ]
-        }
-      },
-      "required": [
-        "refId",
-        "reason"
-      ],
-      "additionalProperties": false
     },
     "anon_3456318e": {
       "minItems": 1,
@@ -7751,6 +7826,63 @@
           "$ref": "#/definitions/anon_77f815fd"
         }
       ]
+    },
+    "anon_c4e380a3": {
+      "type": "object",
+      "properties": {
+        "refId": {
+          "$ref": "#/definitions/anon_4682db72"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "random"
+            },
+            {
+              "type": "string",
+              "const": "hidden"
+            },
+            {
+              "type": "string",
+              "const": "unresolved"
+            },
+            {
+              "type": "string",
+              "const": "failed"
+            },
+            {
+              "type": "string",
+              "const": "depthCap"
+            },
+            {
+              "type": "string",
+              "const": "postGrantCap"
+            },
+            {
+              "type": "string",
+              "const": "freeOperationCap"
+            },
+            {
+              "type": "string",
+              "const": "grantFlowPartial"
+            },
+            {
+              "type": "string",
+              "const": "noPreviewDecision"
+            },
+            {
+              "type": "string",
+              "const": "gated"
+            }
+          ]
+        }
+      },
+      "required": [
+        "refId",
+        "reason"
+      ],
+      "additionalProperties": false
     },
     "anon_c5a341f1": {
       "pattern": "^\\$.+",

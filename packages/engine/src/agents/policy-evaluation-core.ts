@@ -177,7 +177,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
-  outcomeGrantContinuationDepth?: number;
+  grantFlowContinuationDepth?: number;
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
   scheduleFallbackFired?: PolicyScheduleFallbackFired;
@@ -2630,9 +2630,9 @@ export class PolicyEvaluationContext {
       candidate.completionPolicyFallbackCount =
         this.runtimeProviders.previewSurface.getCompletionPolicyFallbackCount(candidate);
     }
-    if (candidate.outcomeGrantContinuationDepth === undefined) {
-      candidate.outcomeGrantContinuationDepth =
-        this.runtimeProviders.previewSurface.getOutcomeGrantContinuationDepth(candidate);
+    if (candidate.grantFlowContinuationDepth === undefined) {
+      candidate.grantFlowContinuationDepth =
+        this.runtimeProviders.previewSurface.getGrantFlowContinuationDepth(candidate);
     }
   }
 

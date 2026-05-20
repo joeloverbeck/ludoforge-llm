@@ -6,7 +6,7 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
   CompiledAgentPreviewBudgetConfig,
-  CompiledAgentPreviewOutcomeGrantContinuationConfig,
+  CompiledAgentPreviewGrantFlowContinuationConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
   DeepTrigger,
@@ -262,21 +262,24 @@ export interface PolicyEvaluationPreviewUsage {
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
   readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
-  readonly outcomeGrantContinuation?: PolicyEvaluationOutcomeGrantContinuationUsage;
+  readonly grantFlowContinuation?: PolicyEvaluationGrantFlowContinuationUsage;
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverage;
 }
 
-export interface PolicyEvaluationOutcomeGrantContinuationUsage {
+export interface PolicyEvaluationGrantFlowContinuationUsage {
   readonly enabled: true;
-  readonly extraDepthCap: number;
-  readonly capClass: CompiledAgentPreviewOutcomeGrantContinuationConfig['capClass'];
+  readonly postGrantDepthCap: number;
+  readonly postGrantCapClass: CompiledAgentPreviewGrantFlowContinuationConfig['postGrantCapClass'];
+  readonly freeOperationDepthCap: number;
+  readonly freeOperationCapClass: CompiledAgentPreviewGrantFlowContinuationConfig['freeOperationCapClass'];
   readonly extraDepthReached: number;
   readonly exitCounts: {
     readonly completed: number;
     readonly postGrantCap: number;
+    readonly freeOperationCap: number;
     readonly stochastic: number;
   };
 }
@@ -310,8 +313,10 @@ export interface PolicyPreviewSignalUnavailableAdvisory {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap'>, number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap' | 'freeOperationCap' | 'grantFlowPartial'>, number> & {
     readonly postGrantCap?: number;
+    readonly freeOperationCap?: number;
+    readonly grantFlowPartial?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;
@@ -412,7 +417,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
-  outcomeGrantContinuationDepth?: number;
+  grantFlowContinuationDepth?: number;
   completionPolicyFallbackCount?: number;
   previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
@@ -980,7 +985,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         profile.preview.mode,
         evaluation,
         false,
-        profile.preview.outcomeGrantContinuation,
+        profile.preview.grantFlowContinuation,
       );
       updatePreviewWideningMemory(
         input.previewWideningState,
@@ -1294,9 +1299,9 @@ function scoreCandidateForGateFlipProbe(
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
-    ...(candidate.outcomeGrantContinuationDepth === undefined
+    ...(candidate.grantFlowContinuationDepth === undefined
       ? {}
-      : { outcomeGrantContinuationDepth: candidate.outcomeGrantContinuationDepth }),
+      : { grantFlowContinuationDepth: candidate.grantFlowContinuationDepth }),
     ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
   };
   return considerationIds.reduce((total, considerationId) => (
@@ -1351,7 +1356,7 @@ function summarizePreviewUsage(
   mode: AgentPreviewMode,
   evaluation: PolicyEvaluationContext,
   widenedBecauseUniform = false,
-  outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig,
+  grantFlowContinuation?: CompiledAgentPreviewGrantFlowContinuationConfig,
 ): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
@@ -1376,8 +1381,8 @@ function summarizePreviewUsage(
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
     ...(seatMatrix === undefined ? {} : { seatMatrix }),
-    ...(outcomeGrantContinuation?.enabled === true
-      ? { outcomeGrantContinuation: summarizeOutcomeGrantContinuation(evaluatedCandidates, outcomeGrantContinuation) }
+    ...(grantFlowContinuation?.enabled === true
+      ? { grantFlowContinuation: summarizeGrantFlowContinuation(evaluatedCandidates, grantFlowContinuation) }
       : {}),
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform,
@@ -1417,17 +1422,18 @@ function summarizeSeatMatrix(evaluatedCandidates: readonly CandidateEntry[]): Po
   return Object.keys(byCandidate).length === 0 ? undefined : { byCandidate };
 }
 
-function summarizeOutcomeGrantContinuation(
+function summarizeGrantFlowContinuation(
   evaluatedCandidates: readonly CandidateEntry[],
-  config: CompiledAgentPreviewOutcomeGrantContinuationConfig,
-): PolicyEvaluationOutcomeGrantContinuationUsage {
+  config: CompiledAgentPreviewGrantFlowContinuationConfig,
+): PolicyEvaluationGrantFlowContinuationUsage {
   let completed = 0;
   let postGrantCap = 0;
+  let freeOperationCap = 0;
   let stochastic = 0;
   let extraDepthReached = 0;
 
   for (const candidate of evaluatedCandidates) {
-    const postGrantDepth = candidate.outcomeGrantContinuationDepth ?? 0;
+    const postGrantDepth = candidate.grantFlowContinuationDepth ?? 0;
     if (postGrantDepth <= 0) {
       continue;
     }
@@ -1438,6 +1444,9 @@ function summarizeOutcomeGrantContinuation(
         break;
       case 'postGrantCap':
         postGrantCap += 1;
+        break;
+      case 'freeOperationCap':
+        freeOperationCap += 1;
         break;
       case 'stochastic':
         stochastic += 1;
@@ -1450,12 +1459,15 @@ function summarizeOutcomeGrantContinuation(
 
   return {
     enabled: true,
-    extraDepthCap: config.extraDepthCap,
-    capClass: config.capClass,
+    postGrantDepthCap: config.postGrantDepthCap,
+    postGrantCapClass: config.postGrantCapClass,
+    freeOperationDepthCap: config.freeOperationDepthCap,
+    freeOperationCapClass: config.freeOperationCapClass,
     extraDepthReached,
     exitCounts: {
       completed,
       postGrantCap,
+      freeOperationCap,
       stochastic,
     },
   };
@@ -1507,9 +1519,6 @@ function summarizeReadyRefStats(
   for (const refId of refIds) {
     const values: number[] = [];
     for (const candidate of canonicalCandidates) {
-      if (candidate.previewOutcome !== 'ready') {
-        continue;
-      }
       const value = evaluation.getResolvedPreviewRefValue(candidate, refId);
       if (value !== undefined) {
         values.push(value);
@@ -1563,17 +1572,7 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
     readyRefStats: {},
     utility: 'none',
     widenedBecauseUniform: false,
-    outcomeBreakdown: {
-      ready: 0,
-      stochastic: 0,
-      unknownRandom: 0,
-      unknownHidden: 0,
-      unknownUnresolved: 0,
-      unknownDepthCap: 0,
-      unknownNoPreviewDecision: 0,
-      unknownGated: 0,
-      unknownFailed: 0,
-    },
+    outcomeBreakdown: emptyOutcomeBreakdown(),
     coverage: {
       requestedRefCount: 0,
       evaluatedRootOptionCount: 0,
@@ -1589,17 +1588,7 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
 
 function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]): PolicyPreviewOutcomeBreakdownTrace {
   if (evaluatedCandidates.length === 0) {
-    return {
-      ready: 0,
-      stochastic: 0,
-      unknownRandom: 0,
-      unknownHidden: 0,
-      unknownUnresolved: 0,
-      unknownDepthCap: 0,
-      unknownNoPreviewDecision: 0,
-      unknownGated: 0,
-      unknownFailed: 0,
-    };
+    return emptyOutcomeBreakdown();
   }
 
   let ready = 0;
@@ -1608,6 +1597,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   let hidden = 0;
   let unresolved = 0;
   let depthCap = 0;
+  let postGrantCap = 0;
+  let freeOperationCap = 0;
+  let grantFlowPartial = 0;
   let noPreviewDecision = 0;
   let gated = 0;
   let failed = 0;
@@ -1634,8 +1626,20 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
-    if (outcome === 'depthCap' || outcome === 'postGrantCap') {
+    if (outcome === 'depthCap') {
       depthCap += 1;
+      continue;
+    }
+    if (outcome === 'postGrantCap') {
+      postGrantCap += 1;
+      continue;
+    }
+    if (outcome === 'freeOperationCap') {
+      freeOperationCap += 1;
+      continue;
+    }
+    if (outcome === 'grantFlowPartial') {
+      grantFlowPartial += 1;
       continue;
     }
     if (outcome === 'noPreviewDecision') {
@@ -1656,9 +1660,29 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
     unknownHidden: hidden,
     unknownUnresolved: unresolved,
     unknownDepthCap: depthCap,
+    unknownPostGrantCap: postGrantCap,
+    unknownFreeOperationCap: freeOperationCap,
+    unknownGrantFlowPartial: grantFlowPartial,
     unknownNoPreviewDecision: noPreviewDecision,
     unknownGated: gated,
     unknownFailed: failed,
+  };
+}
+
+function emptyOutcomeBreakdown(): PolicyPreviewOutcomeBreakdownTrace {
+  return {
+    ready: 0,
+    stochastic: 0,
+    unknownRandom: 0,
+    unknownHidden: 0,
+    unknownUnresolved: 0,
+    unknownDepthCap: 0,
+    unknownPostGrantCap: 0,
+    unknownFreeOperationCap: 0,
+    unknownGrantFlowPartial: 0,
+    unknownNoPreviewDecision: 0,
+    unknownGated: 0,
+    unknownFailed: 0,
   };
 }
 

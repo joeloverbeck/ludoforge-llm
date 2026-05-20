@@ -18,8 +18,10 @@ describe('post-grant preview cap exit', () => {
     const trustedMove = createTrustedOperation(state);
     const runtime = createRuntime(def, state, trustedMove, ['grant-a', 'grant-b'], {
       enabled: true,
-      extraDepthCap: 1,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 1,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
     const candidate = { move: trustedMove.move, stableMoveKey: 'candidate', actionId: 'operation' };
 

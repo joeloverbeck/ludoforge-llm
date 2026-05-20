@@ -20,35 +20,53 @@ describe('post-grant preview continuation', () => {
 
     const optOutRuntime = createRuntime(def, state, trustedMove, ['grant-a']);
     const optOutPreview = optOutRuntime.getPreviewState(candidate);
-    assert.equal(optOutRuntime.getOutcome(candidate), 'ready');
+    assert.equal(optOutRuntime.getOutcome(candidate), 'grantFlowPartial');
     assert.equal(optOutRuntime.getPreviewDrive(candidate)?.kind, 'completed');
     assert.equal(grantPhase(optOutPreview, 'grant-a'), 'ready');
+    assert.equal(optOutPreview?.globalVars.target, 0);
 
     const optInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
     const optInPreview = optInRuntime.getPreviewState(candidate);
+    const optInDrive = optInRuntime.getPreviewDrive(candidate);
     assert.equal(optInRuntime.getOutcome(candidate), 'ready');
-    assert.equal(optInRuntime.getPreviewDrive(candidate)?.kind, 'completed');
-    assert.equal(grantPhase(optInPreview, 'grant-a'), 'offered');
+    assert.equal(optInDrive?.kind, 'completed');
+    assert.equal(optInDrive?.depth, 2);
+    assert.deepEqual(optInDrive?.grantFlowSegments?.map((segment) => segment.kind), [
+      'outcomeGrantResolve',
+      'grantOffered',
+      'freeOperationActionSelection',
+      'selectedFreeOperation',
+      'deferredEffectsReleased',
+      'grantConsumed',
+    ]);
+    assert.equal(grantPhase(optInPreview, 'grant-a'), undefined);
+    assert.equal(optInPreview?.globalVars.target, 1);
 
     const repeatedOptInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
     assert.deepEqual(
       {
         outcome: repeatedOptInRuntime.getOutcome(candidate),
         drive: repeatedOptInRuntime.getPreviewDrive(candidate),
         grantPhase: grantPhase(repeatedOptInRuntime.getPreviewState(candidate), 'grant-a'),
+        target: repeatedOptInRuntime.getPreviewState(candidate)?.globalVars.target,
       },
       {
         outcome: optInRuntime.getOutcome(candidate),
         drive: optInRuntime.getPreviewDrive(candidate),
         grantPhase: grantPhase(optInPreview, 'grant-a'),
+        target: optInPreview?.globalVars.target,
       },
     );
   });

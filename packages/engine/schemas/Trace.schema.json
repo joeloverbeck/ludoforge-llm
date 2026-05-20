@@ -2161,14 +2161,14 @@
                     ],
                     "additionalProperties": false
                   },
-                  "outcomeGrantContinuation": {
+                  "grantFlowContinuation": {
                     "type": "object",
                     "properties": {
                       "enabled": {
                         "type": "boolean",
                         "const": true
                       },
-                      "extraDepthCap": {
+                      "postGrantDepthCap": {
                         "exclusiveMinimum": 0,
                         "allOf": [
                           {
@@ -2176,9 +2176,24 @@
                           }
                         ]
                       },
-                      "capClass": {
+                      "postGrantCapClass": {
                         "type": "string",
                         "const": "postGrant16"
+                      },
+                      "freeOperationDepthCap": {
+                        "exclusiveMinimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "freeOperationCapClass": {
+                        "type": "string",
+                        "enum": [
+                          "grantFlow16",
+                          "grantFlow32"
+                        ]
                       },
                       "extraDepthReached": {
                         "minimum": 0,
@@ -2226,8 +2241,10 @@
                     },
                     "required": [
                       "enabled",
-                      "extraDepthCap",
-                      "capClass",
+                      "postGrantDepthCap",
+                      "postGrantCapClass",
+                      "freeOperationDepthCap",
+                      "freeOperationCapClass",
                       "extraDepthReached",
                       "exitCounts"
                     ],

@@ -6,7 +6,7 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
   CompiledAgentPreviewBudgetConfig,
-  CompiledAgentPreviewOutcomeGrantContinuationConfig,
+  CompiledAgentPreviewGrantFlowContinuationConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
   DeepTrigger,
@@ -262,17 +262,19 @@ export interface PolicyEvaluationPreviewUsage {
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
   readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
-  readonly outcomeGrantContinuation?: PolicyEvaluationOutcomeGrantContinuationUsage;
+  readonly grantFlowContinuation?: PolicyEvaluationGrantFlowContinuationUsage;
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverage;
 }
 
-export interface PolicyEvaluationOutcomeGrantContinuationUsage {
+export interface PolicyEvaluationGrantFlowContinuationUsage {
   readonly enabled: true;
-  readonly extraDepthCap: number;
-  readonly capClass: CompiledAgentPreviewOutcomeGrantContinuationConfig['capClass'];
+  readonly postGrantDepthCap: number;
+  readonly postGrantCapClass: CompiledAgentPreviewGrantFlowContinuationConfig['postGrantCapClass'];
+  readonly freeOperationDepthCap: number;
+  readonly freeOperationCapClass: CompiledAgentPreviewGrantFlowContinuationConfig['freeOperationCapClass'];
   readonly extraDepthReached: number;
   readonly exitCounts: {
     readonly completed: number;
@@ -414,7 +416,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
-  outcomeGrantContinuationDepth?: number;
+  grantFlowContinuationDepth?: number;
   completionPolicyFallbackCount?: number;
   previewSeatMatrix?: Map<string, Map<string, PolicyPreviewSeatMatrixCellTrace>>;
   scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
@@ -982,7 +984,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         profile.preview.mode,
         evaluation,
         false,
-        profile.preview.outcomeGrantContinuation,
+        profile.preview.grantFlowContinuation,
       );
       updatePreviewWideningMemory(
         input.previewWideningState,
@@ -1296,9 +1298,9 @@ function scoreCandidateForGateFlipProbe(
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
-    ...(candidate.outcomeGrantContinuationDepth === undefined
+    ...(candidate.grantFlowContinuationDepth === undefined
       ? {}
-      : { outcomeGrantContinuationDepth: candidate.outcomeGrantContinuationDepth }),
+      : { grantFlowContinuationDepth: candidate.grantFlowContinuationDepth }),
     ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
   };
   return considerationIds.reduce((total, considerationId) => (
@@ -1353,7 +1355,7 @@ function summarizePreviewUsage(
   mode: AgentPreviewMode,
   evaluation: PolicyEvaluationContext,
   widenedBecauseUniform = false,
-  outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig,
+  grantFlowContinuation?: CompiledAgentPreviewGrantFlowContinuationConfig,
 ): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
@@ -1378,8 +1380,8 @@ function summarizePreviewUsage(
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
     ...(seatMatrix === undefined ? {} : { seatMatrix }),
-    ...(outcomeGrantContinuation?.enabled === true
-      ? { outcomeGrantContinuation: summarizeOutcomeGrantContinuation(evaluatedCandidates, outcomeGrantContinuation) }
+    ...(grantFlowContinuation?.enabled === true
+      ? { grantFlowContinuation: summarizeGrantFlowContinuation(evaluatedCandidates, grantFlowContinuation) }
       : {}),
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform,
@@ -1419,17 +1421,17 @@ function summarizeSeatMatrix(evaluatedCandidates: readonly CandidateEntry[]): Po
   return Object.keys(byCandidate).length === 0 ? undefined : { byCandidate };
 }
 
-function summarizeOutcomeGrantContinuation(
+function summarizeGrantFlowContinuation(
   evaluatedCandidates: readonly CandidateEntry[],
-  config: CompiledAgentPreviewOutcomeGrantContinuationConfig,
-): PolicyEvaluationOutcomeGrantContinuationUsage {
+  config: CompiledAgentPreviewGrantFlowContinuationConfig,
+): PolicyEvaluationGrantFlowContinuationUsage {
   let completed = 0;
   let postGrantCap = 0;
   let stochastic = 0;
   let extraDepthReached = 0;
 
   for (const candidate of evaluatedCandidates) {
-    const postGrantDepth = candidate.outcomeGrantContinuationDepth ?? 0;
+    const postGrantDepth = candidate.grantFlowContinuationDepth ?? 0;
     if (postGrantDepth <= 0) {
       continue;
     }
@@ -1452,8 +1454,10 @@ function summarizeOutcomeGrantContinuation(
 
   return {
     enabled: true,
-    extraDepthCap: config.extraDepthCap,
-    capClass: config.capClass,
+    postGrantDepthCap: config.postGrantDepthCap,
+    postGrantCapClass: config.postGrantCapClass,
+    freeOperationDepthCap: config.freeOperationDepthCap,
+    freeOperationCapClass: config.freeOperationCapClass,
     extraDepthReached,
     exitCounts: {
       completed,

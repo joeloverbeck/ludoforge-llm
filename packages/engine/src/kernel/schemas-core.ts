@@ -1538,11 +1538,13 @@ const CompiledAgentProfileSchema = z
           })
           .strict()
           .optional(),
-        outcomeGrantContinuation: z
+        grantFlowContinuation: z
           .object({
             enabled: z.boolean(),
-            extraDepthCap: z.number().int().positive(),
-            capClass: z.literal('postGrant16'),
+            postGrantDepthCap: z.number().int().positive(),
+            postGrantCapClass: z.literal('postGrant16'),
+            freeOperationDepthCap: z.number().int().positive(),
+            freeOperationCapClass: z.enum(['grantFlow16', 'grantFlow32']),
           })
           .strict()
           .optional(),
@@ -2605,12 +2607,14 @@ const PolicyPreviewCoverageTraceSchema = z
   })
   .strict();
 
-const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
+const PolicyPreviewGrantFlowContinuationTraceSchema = z
   // Spec 179: decision-level aggregate for the opt-in post-grant preview drive.
   .object({
     enabled: z.literal(true),
-    extraDepthCap: IntegerSchema.positive(),
-    capClass: z.literal('postGrant16'),
+    postGrantDepthCap: IntegerSchema.positive(),
+    postGrantCapClass: z.literal('postGrant16'),
+    freeOperationDepthCap: IntegerSchema.positive(),
+    freeOperationCapClass: z.enum(['grantFlow16', 'grantFlow32']),
     extraDepthReached: IntegerSchema.nonnegative(),
     exitCounts: z
       .object({
@@ -2649,7 +2653,7 @@ const PolicyPreviewUsageTraceSchema = z
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
     seatMatrix: PolicyPreviewSeatMatrixTraceSchema.optional(),
-    outcomeGrantContinuation: PolicyPreviewOutcomeGrantContinuationTraceSchema.optional(),
+    grantFlowContinuation: PolicyPreviewGrantFlowContinuationTraceSchema.optional(),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),

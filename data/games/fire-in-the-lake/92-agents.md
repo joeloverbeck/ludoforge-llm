@@ -707,10 +707,12 @@ agents:
                 - allRequestedRefsDepthCapped
                 - allReadyValuesUniform
               rootPolicy: allRootsWithinCap
-        outcomeGrantContinuation:
+        grantFlowContinuation:
           enabled: true
-          extraDepthCap: 4
-          capClass: postGrant16
+          postGrantDepthCap: 4
+          postGrantCapClass: postGrant16
+          freeOperationDepthCap: 16
+          freeOperationCapClass: grantFlow16
       params:
         projectedMarginWeight: 300
         governWeight: 700

@@ -1,6 +1,6 @@
 # 185GRANTFLOWPI-002: Phase 2 — Grant-flow config generalization + `grantFlow` cap-class registry
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/` (compile-agents, validate-agents), kernel types-core (config type), `data/games/fire-in-the-lake/92-agents.md` (profile migration)
@@ -79,3 +79,49 @@ Update the `arvn-evolved` profile in `92-agents.md` to the generalized config sh
 
 1. `pnpm turbo build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo schema:artifacts`
+
+## Outcome
+
+Completed: 2026-05-20
+
+What changed:
+
+- Renamed the authored and compiled preview continuation contract from `outcomeGrantContinuation` to `grantFlowContinuation` with no compatibility alias.
+- Split the generalized block into explicit segment budgets: `postGrantDepthCap`/`postGrantCapClass` for the legacy `outcomeGrantResolve` acknowledgment segment and `freeOperationDepthCap`/`freeOperationCapClass` for the free-operation segment ticket 003 will consume.
+- Added generic `grantFlow16` and `grantFlow32` cap-class registry entries with budgets `16` and `32`, and required the authored depth caps to equal their selected class budgets.
+- Migrated the `arvn-evolved` profile in `data/games/fire-in-the-lake/92-agents.md` to the new shape with `postGrant16` plus `grantFlow16`.
+- Updated the GameSpecDoc type, compiled types, Zod schemas, runtime pass-through, preview usage trace surface, focused architecture tests, and generated GameDef/Trace schema artifacts for the new contract.
+
+Deviations from original plan:
+
+- The finalized shape is split per segment rather than a single generalized cap. That matches Spec 185 §5.4/§6.1 because ticket 003 needs separate post-grant acknowledgment and free-operation continuation budgets.
+- The owned file surface expanded beyond the draft `Files to Touch` list to include `game-spec-doc.ts`, `schemas-core.ts`, generated schemas, runtime pass-through, trace summary code, and focused tests. Those are direct no-alias fallout from Foundation #14.
+- The source-size gate uses the user-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral already recorded by ticket 001/state for pre-existing oversized source files. No broad extraction/refactor was folded into this config-contract ticket.
+
+Generated artifact provenance:
+
+- `packages/engine/schemas/GameDef.schema.json` and `packages/engine/schemas/Trace.schema.json` were regenerated with `pnpm -F @ludoforge/engine run schema:artifacts` and `pnpm turbo schema:artifacts` from `packages/engine/src/kernel/schemas-core.ts`/`types-core.ts`.
+- The refresh is expected because the compiled GameDef preview config schema and preview trace schema now expose `grantFlowContinuation` with split cap-class fields.
+
+Verification:
+
+- `pnpm turbo build` — passed.
+- `node --test packages/engine/dist/test/architecture/preview-grant-flow-config/*.js packages/engine/dist/test/architecture/preview-post-grant/*.js packages/engine/dist/test/architecture/preview-signal-integrity/grant-flow-status.test.js` — passed, 13 tests.
+- `pnpm -F @ludoforge/engine test` — passed, `160/160 files passed`.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo schema:artifacts` — passed.
+- `rg -n "outcomeGrantContinuation|extraDepthCap|capClass: 'postGrant16'|back compatibility|back-compat" packages/engine/src packages/engine/test data/games/fire-in-the-lake/92-agents.md packages/engine/schemas` — no matches.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/compile-agents.ts`: 5772 -> 5826 lines, pre-existing oversized file, +54 lines for split grant-flow config lowering and cap-class registry validation.
+- `packages/engine/src/cnl/validate-agents.ts`: 615 -> 658 lines, pre-existing oversized file, +43 lines for split-field validation and cap-budget checks.
+- `packages/engine/src/kernel/types-core.ts`: 2744 -> 2749 lines, pre-existing oversized file, +5 lines for the new free-operation cap-class union and split config/trace fields.
+- `packages/engine/src/kernel/schemas-core.ts`: 3033 -> 3037 lines, pre-existing oversized file, +4 lines for the new compiled config and trace schema fields.
+- `packages/engine/src/agents/policy-preview.ts`: 1410 -> 1410 lines, pre-existing oversized file, mechanical rename only.
+- `packages/engine/src/agents/policy-eval.ts`: 1720 -> 1724 lines, pre-existing oversized file, +4 lines for the split trace summary fields.
+
+Archive status:
+
+- Archived after post-ticket review. Remaining Spec 185 continuation behavior stays in active ticket `tickets/185GRANTFLOWPI-003.md`.

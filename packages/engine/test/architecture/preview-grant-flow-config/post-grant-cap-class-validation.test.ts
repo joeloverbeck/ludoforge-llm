@@ -73,20 +73,22 @@ function createDocWithPreview(preview: Record<string, unknown>) {
   };
 }
 
-describe('preview outcomeGrantContinuation validation', () => {
-  it('rejects enabled outcomeGrantContinuation without an extraDepthCap', () => {
+describe('preview grantFlowContinuation validation', () => {
+  it('rejects enabled grantFlowContinuation without a postGrantDepthCap', () => {
     const result = compileGameSpecToGameDef(createDocWithPreview({
       mode: 'exactWorld',
-      outcomeGrantContinuation: {
+      grantFlowContinuation: {
         enabled: true,
-        capClass: 'postGrant16',
+        postGrantCapClass: 'postGrant16',
+        freeOperationDepthCap: 16,
+        freeOperationCapClass: 'grantFlow16',
       },
     }));
 
     assert.equal(
       result.diagnostics.some((diagnostic) =>
         diagnostic.code === 'CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID'
-        && diagnostic.path === 'doc.agents.profiles.baseline.preview.outcomeGrantContinuation.extraDepthCap'
+        && diagnostic.path === 'doc.agents.profiles.baseline.preview.grantFlowContinuation.postGrantDepthCap'
       ),
       true,
     );
@@ -96,38 +98,66 @@ describe('preview outcomeGrantContinuation validation', () => {
   it('rejects unknown post-grant cap classes', () => {
     const result = compileGameSpecToGameDef(createDocWithPreview({
       mode: 'exactWorld',
-      outcomeGrantContinuation: {
+      grantFlowContinuation: {
         enabled: true,
-        extraDepthCap: 4,
-        capClass: 'postGrant99',
+        postGrantDepthCap: 4,
+        postGrantCapClass: 'postGrant99',
+        freeOperationDepthCap: 16,
+        freeOperationCapClass: 'grantFlow16',
       },
     }));
 
     assert.equal(
       result.diagnostics.some((diagnostic) =>
         diagnostic.code === 'CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN'
-        && diagnostic.path === 'doc.agents.profiles.baseline.preview.outcomeGrantContinuation.capClass'
+        && diagnostic.path === 'doc.agents.profiles.baseline.preview.grantFlowContinuation.postGrantCapClass'
       ),
       true,
     );
     assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
   });
 
-  it('lowers valid postGrant16 config into the compiled profile', () => {
+  it('rejects grant-flow cap mismatches', () => {
     const result = compileGameSpecToGameDef(createDocWithPreview({
       mode: 'exactWorld',
-      outcomeGrantContinuation: {
+      grantFlowContinuation: {
         enabled: true,
-        extraDepthCap: 4,
-        capClass: 'postGrant16',
+        postGrantDepthCap: 4,
+        postGrantCapClass: 'postGrant16',
+        freeOperationDepthCap: 15,
+        freeOperationCapClass: 'grantFlow16',
+      },
+    }));
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code === 'CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID'
+        && diagnostic.path === 'doc.agents.profiles.baseline.preview.grantFlowContinuation.freeOperationDepthCap'
+      ),
+      true,
+    );
+    assert.equal(result.gameDef?.agents?.profiles.baseline, undefined);
+  });
+
+  it('lowers valid grant-flow config into the compiled profile', () => {
+    const result = compileGameSpecToGameDef(createDocWithPreview({
+      mode: 'exactWorld',
+      grantFlowContinuation: {
+        enabled: true,
+        postGrantDepthCap: 4,
+        postGrantCapClass: 'postGrant16',
+        freeOperationDepthCap: 16,
+        freeOperationCapClass: 'grantFlow16',
       },
     }));
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview.outcomeGrantContinuation, {
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview.grantFlowContinuation, {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
   });
 });

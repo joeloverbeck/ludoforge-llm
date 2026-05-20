@@ -17,6 +17,8 @@ const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
 const AGENT_PROFILE_KEYS = ['observer', 'params', 'use', 'preview', 'selection', 'selector', 'strategyModules', 'guardrails'] as const;
 const DEPRECATED_PRUNING_RULES_KEY = 'pruning' + 'Rules';
+const POST_GRANT_CAP_CLASS_BUDGETS = { postGrant16: 4 } as const;
+const GRANT_FLOW_CAP_CLASS_BUDGETS = { grantFlow16: 16, grantFlow32: 32 } as const;
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
@@ -123,30 +125,30 @@ function validateProfiles(
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
-    validatePreviewOutcomeGrantContinuation(profileId, profileDef, profilePath, diagnostics);
+    validatePreviewGrantFlowContinuation(profileId, profileDef, profilePath, diagnostics);
     validatePolicyGuidedMicroturnConsiderations(profileId, profileDef, profilePath, library, diagnostics);
     validateInnerPreviewOptionConsiderations(profileId, profileDef, profilePath, library, diagnostics);
   }
 }
 
-function validatePreviewOutcomeGrantContinuation(
+function validatePreviewGrantFlowContinuation(
   profileId: string,
   profileDef: Record<string, unknown>,
   profilePath: string,
   diagnostics: Diagnostic[],
 ): void {
   const preview = profileDef.preview;
-  const block = isRecord(preview) ? preview.outcomeGrantContinuation : undefined;
+  const block = isRecord(preview) ? preview.grantFlowContinuation : undefined;
   if (block === undefined) {
     return;
   }
   if (!isRecord(block)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
-      path: `${profilePath}.preview.outcomeGrantContinuation`,
+      path: `${profilePath}.preview.grantFlowContinuation`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.outcomeGrantContinuation must be an object.`,
-      suggestion: 'Use preview.outcomeGrantContinuation with enabled, extraDepthCap, and capClass.',
+      message: `Profile "${profileId}" preview.grantFlowContinuation must be an object.`,
+      suggestion: 'Use preview.grantFlowContinuation with enabled, postGrantDepthCap, postGrantCapClass, freeOperationDepthCap, and freeOperationCapClass.',
     });
     return;
   }
@@ -154,10 +156,10 @@ function validatePreviewOutcomeGrantContinuation(
   if (typeof enabled !== 'boolean') {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_INVALID,
-      path: `${profilePath}.preview.outcomeGrantContinuation.enabled`,
+      path: `${profilePath}.preview.grantFlowContinuation.enabled`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.outcomeGrantContinuation.enabled must be a boolean, got ${typeof enabled}.`,
-      suggestion: 'Set preview.outcomeGrantContinuation.enabled to true or false.',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.enabled must be a boolean, got ${typeof enabled}.`,
+      suggestion: 'Set preview.grantFlowContinuation.enabled to true or false.',
     });
     return;
   }
@@ -165,26 +167,67 @@ function validatePreviewOutcomeGrantContinuation(
     return;
   }
   if (
-    typeof block.extraDepthCap !== 'number'
-    || !Number.isSafeInteger(block.extraDepthCap)
-    || block.extraDepthCap <= 0
+    typeof block.postGrantDepthCap !== 'number'
+    || !Number.isSafeInteger(block.postGrantDepthCap)
+    || block.postGrantDepthCap <= 0
   ) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
-      path: `${profilePath}.preview.outcomeGrantContinuation.extraDepthCap`,
+      path: `${profilePath}.preview.grantFlowContinuation.postGrantDepthCap`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.outcomeGrantContinuation.extraDepthCap must be a positive safe integer when outcomeGrantContinuation is enabled.`,
-      suggestion: 'Set preview.outcomeGrantContinuation.extraDepthCap to 4 for capClass postGrant16.',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.postGrantDepthCap must be a positive safe integer when grantFlowContinuation is enabled.`,
+      suggestion: 'Set preview.grantFlowContinuation.postGrantDepthCap to 4 for postGrantCapClass postGrant16.',
     });
   }
-  if (block.capClass !== 'postGrant16') {
+  if (block.postGrantCapClass !== 'postGrant16') {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN,
-      path: `${profilePath}.preview.outcomeGrantContinuation.capClass`,
+      path: `${profilePath}.preview.grantFlowContinuation.postGrantCapClass`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.outcomeGrantContinuation.capClass must be postGrant16.`,
-      suggestion: 'Set preview.outcomeGrantContinuation.capClass to postGrant16.',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.postGrantCapClass must be postGrant16.`,
+      suggestion: 'Set preview.grantFlowContinuation.postGrantCapClass to postGrant16.',
     });
+  } else if (block.postGrantDepthCap !== POST_GRANT_CAP_CLASS_BUDGETS.postGrant16) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${profilePath}.preview.grantFlowContinuation.postGrantDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.postGrantDepthCap must equal postGrantCapClass postGrant16 budget 4.`,
+      suggestion: 'Set preview.grantFlowContinuation.postGrantDepthCap to 4 for postGrantCapClass postGrant16.',
+    });
+  }
+  if (
+    typeof block.freeOperationDepthCap !== 'number'
+    || !Number.isSafeInteger(block.freeOperationDepthCap)
+    || block.freeOperationDepthCap <= 0
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+      path: `${profilePath}.preview.grantFlowContinuation.freeOperationDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.freeOperationDepthCap must be a positive safe integer when grantFlowContinuation is enabled.`,
+      suggestion: 'Set preview.grantFlowContinuation.freeOperationDepthCap to 16 for freeOperationCapClass grantFlow16.',
+    });
+  }
+  if (block.freeOperationCapClass !== 'grantFlow16' && block.freeOperationCapClass !== 'grantFlow32') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_CAP_CLASS_UNKNOWN,
+      path: `${profilePath}.preview.grantFlowContinuation.freeOperationCapClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.grantFlowContinuation.freeOperationCapClass must be grantFlow16 or grantFlow32.`,
+      suggestion: 'Set preview.grantFlowContinuation.freeOperationCapClass to grantFlow16 or grantFlow32.',
+    });
+  } else {
+    const expectedFreeOperationDepthCap = GRANT_FLOW_CAP_CLASS_BUDGETS[block.freeOperationCapClass as keyof typeof GRANT_FLOW_CAP_CLASS_BUDGETS];
+    if (block.freeOperationDepthCap !== expectedFreeOperationDepthCap) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POST_GRANT_EXTRA_DEPTH_CAP_INVALID,
+        path: `${profilePath}.preview.grantFlowContinuation.freeOperationDepthCap`,
+        severity: 'error',
+        message: `Profile "${profileId}" preview.grantFlowContinuation.freeOperationDepthCap must equal freeOperationCapClass ${String(block.freeOperationCapClass)} budget ${expectedFreeOperationDepthCap}.`,
+        suggestion: `Set preview.grantFlowContinuation.freeOperationDepthCap to ${expectedFreeOperationDepthCap} for freeOperationCapClass ${String(block.freeOperationCapClass)}.`,
+      });
+    }
   }
 }
 

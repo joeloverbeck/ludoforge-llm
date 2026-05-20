@@ -53,7 +53,7 @@ const opponentSeatMarginSum = (): AgentPolicyExpr => ({
   availability: 'requireAllReady',
 });
 
-function createProfile(extraDepthCap = 4): CompiledAgentProfile {
+function createProfile(postGrantDepthCap = 4): CompiledAgentProfile {
   const considerations = ['selfPreviewMargin', 'opponentPreviewMargin'];
   return {
     fingerprint: 'grant-flow-status',
@@ -61,7 +61,13 @@ function createProfile(extraDepthCap = 4): CompiledAgentProfile {
     preview: {
       mode: 'exactWorld',
       completion: 'greedy',
-      outcomeGrantContinuation: { enabled: true, extraDepthCap, capClass: 'postGrant16' },
+      grantFlowContinuation: {
+        enabled: true,
+        postGrantDepthCap,
+        postGrantCapClass: 'postGrant16',
+        freeOperationDepthCap: 16,
+        freeOperationCapClass: 'grantFlow16',
+      },
     },
     selection: { mode: 'argmax' },
     use: {
@@ -78,8 +84,8 @@ function createProfile(extraDepthCap = 4): CompiledAgentProfile {
   };
 }
 
-function createCatalog(extraDepthCap?: number): AgentPolicyCatalog {
-  const profile = createProfile(extraDepthCap);
+function createCatalog(postGrantDepthCap?: number): AgentPolicyCatalog {
+  const profile = createProfile(postGrantDepthCap);
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: profile.fingerprint,
@@ -132,7 +138,7 @@ function createCatalog(extraDepthCap?: number): AgentPolicyCatalog {
   });
 }
 
-function createDef(extraDepthCap?: number): GameDef {
+function createDef(postGrantDepthCap?: number): GameDef {
   return {
     ...createPostGrantDef(),
     terminal: {
@@ -143,12 +149,12 @@ function createDef(extraDepthCap?: number): GameDef {
       ],
       ranking: { order: 'desc' },
     },
-    agents: createCatalog(extraDepthCap),
+    agents: createCatalog(postGrantDepthCap),
   };
 }
 
-function evaluate(grantIds: readonly string[], extraDepthCap?: number) {
-  const def = createDef(extraDepthCap);
+function evaluate(grantIds: readonly string[], postGrantDepthCap?: number) {
+  const def = createDef(postGrantDepthCap);
   const state = createBaseState();
   const trustedMove = createTrustedOperation(state);
   const legalMoves: readonly Move[] = [{ actionId: asActionId('operation'), params: {} }];

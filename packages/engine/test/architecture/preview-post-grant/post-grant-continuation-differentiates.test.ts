@@ -26,8 +26,10 @@ describe('post-grant preview continuation', () => {
 
     const optInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
     const optInPreview = optInRuntime.getPreviewState(candidate);
     assert.equal(optInRuntime.getOutcome(candidate), 'grantFlowPartial');
@@ -36,8 +38,10 @@ describe('post-grant preview continuation', () => {
 
     const repeatedOptInRuntime = createRuntime(def, state, trustedMove, ['grant-a'], {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
     });
     assert.deepEqual(
       {

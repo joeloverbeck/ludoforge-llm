@@ -34,15 +34,15 @@ const previewMarginRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'previe
   selector: { kind: 'player', player: 'self' },
 };
 
-function createProfile(outcomeGrantContinuation?: CompiledAgentProfile['preview']['outcomeGrantContinuation']): CompiledAgentProfile {
+function createProfile(grantFlowContinuation?: CompiledAgentProfile['preview']['grantFlowContinuation']): CompiledAgentProfile {
   const considerations = ['preferPreviewMargin'];
   return {
-    fingerprint: `post-grant-trace-${outcomeGrantContinuation?.enabled === true ? 'opt-in' : 'opt-out'}`,
+    fingerprint: `post-grant-trace-${grantFlowContinuation?.enabled === true ? 'opt-in' : 'opt-out'}`,
     params: {},
     preview: {
       mode: 'exactWorld',
       completion: 'greedy',
-      ...(outcomeGrantContinuation === undefined ? {} : { outcomeGrantContinuation }),
+      ...(grantFlowContinuation === undefined ? {} : { grantFlowContinuation }),
     },
     selection: { mode: 'argmax' },
     use: {
@@ -59,8 +59,8 @@ function createProfile(outcomeGrantContinuation?: CompiledAgentProfile['preview'
   };
 }
 
-function createCatalog(outcomeGrantContinuation?: CompiledAgentProfile['preview']['outcomeGrantContinuation']): AgentPolicyCatalog {
-  const profile = createProfile(outcomeGrantContinuation);
+function createCatalog(grantFlowContinuation?: CompiledAgentProfile['preview']['grantFlowContinuation']): AgentPolicyCatalog {
+  const profile = createProfile(grantFlowContinuation);
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: profile.fingerprint,
@@ -114,7 +114,7 @@ function createCatalog(outcomeGrantContinuation?: CompiledAgentProfile['preview'
   });
 }
 
-function createDef(outcomeGrantContinuation?: CompiledAgentProfile['preview']['outcomeGrantContinuation']): GameDef {
+function createDef(grantFlowContinuation?: CompiledAgentProfile['preview']['grantFlowContinuation']): GameDef {
   return {
     ...createPostGrantDef(),
     terminal: {
@@ -125,12 +125,12 @@ function createDef(outcomeGrantContinuation?: CompiledAgentProfile['preview']['o
       ],
       ranking: { order: 'desc' },
     },
-    agents: createCatalog(outcomeGrantContinuation),
+    agents: createCatalog(grantFlowContinuation),
   };
 }
 
-function evaluate(grantIds: readonly string[], outcomeGrantContinuation?: CompiledAgentProfile['preview']['outcomeGrantContinuation']) {
-  const def = createDef(outcomeGrantContinuation);
+function evaluate(grantIds: readonly string[], grantFlowContinuation?: CompiledAgentProfile['preview']['grantFlowContinuation']) {
+  const def = createDef(grantFlowContinuation);
   const state = createBaseState();
   const trustedMove = createTrustedOperation(state);
   const legalMoves: readonly Move[] = [{ actionId: asActionId('operation'), params: {} }];
@@ -152,20 +152,28 @@ function evaluate(grantIds: readonly string[], outcomeGrantContinuation?: Compil
   return buildPolicyAgentDecisionTrace(result.metadata, 'verbose');
 }
 
-describe('previewUsage outcomeGrantContinuation trace surface', () => {
+describe('previewUsage grantFlowContinuation trace surface', () => {
   it('omits the aggregate block for opt-out profiles', () => {
     const trace = evaluate(['grant-a']);
 
-    assert.equal(Object.hasOwn(trace.previewUsage, 'outcomeGrantContinuation'), false);
+    assert.equal(Object.hasOwn(trace.previewUsage, 'grantFlowContinuation'), false);
   });
 
   it('aggregates completed post-grant continuation exits for opt-in profiles', () => {
-    const trace = evaluate(['grant-a'], { enabled: true, extraDepthCap: 4, capClass: 'postGrant16' });
-
-    assert.deepEqual(trace.previewUsage.outcomeGrantContinuation, {
+    const trace = evaluate(['grant-a'], {
       enabled: true,
-      extraDepthCap: 4,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
+    });
+
+    assert.deepEqual(trace.previewUsage.grantFlowContinuation, {
+      enabled: true,
+      postGrantDepthCap: 4,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
       extraDepthReached: 1,
       exitCounts: {
         completed: 1,
@@ -176,13 +184,27 @@ describe('previewUsage outcomeGrantContinuation trace surface', () => {
   });
 
   it('aggregates postGrantCap exits and keeps the block deterministic', () => {
-    const firstTrace = evaluate(['grant-a', 'grant-b'], { enabled: true, extraDepthCap: 1, capClass: 'postGrant16' });
-    const secondTrace = evaluate(['grant-a', 'grant-b'], { enabled: true, extraDepthCap: 1, capClass: 'postGrant16' });
-
-    assert.deepEqual(firstTrace.previewUsage.outcomeGrantContinuation, {
+    const firstTrace = evaluate(['grant-a', 'grant-b'], {
       enabled: true,
-      extraDepthCap: 1,
-      capClass: 'postGrant16',
+      postGrantDepthCap: 1,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
+    });
+    const secondTrace = evaluate(['grant-a', 'grant-b'], {
+      enabled: true,
+      postGrantDepthCap: 1,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
+    });
+
+    assert.deepEqual(firstTrace.previewUsage.grantFlowContinuation, {
+      enabled: true,
+      postGrantDepthCap: 1,
+      postGrantCapClass: 'postGrant16',
+      freeOperationDepthCap: 16,
+      freeOperationCapClass: 'grantFlow16',
       extraDepthReached: 1,
       exitCounts: {
         completed: 0,
@@ -191,8 +213,8 @@ describe('previewUsage outcomeGrantContinuation trace surface', () => {
       },
     });
     assert.equal(
-      JSON.stringify(firstTrace.previewUsage.outcomeGrantContinuation),
-      JSON.stringify(secondTrace.previewUsage.outcomeGrantContinuation),
+      JSON.stringify(firstTrace.previewUsage.grantFlowContinuation),
+      JSON.stringify(secondTrace.previewUsage.grantFlowContinuation),
     );
   });
 });

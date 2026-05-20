@@ -1218,6 +1218,7 @@ export type AgentPreviewBudgetStrategy = 'balancedCoverage';
 export type AgentPreviewInnerStrategy = 'singlePass' | 'continuedDeepening';
 export type AgentPreviewInnerCapClass = 'standard256' | 'deep1024';
 export type AgentPreviewPostGrantCapClass = 'postGrant16';
+export type AgentPreviewGrantFlowCapClass = 'grantFlow16' | 'grantFlow32';
 export type DeepTrigger = 'allRequestedRefsDepthCapped' | 'allReadyValuesUniform';
 
 export interface CompiledAgentPreviewBudgetConfig {
@@ -1251,10 +1252,12 @@ export interface ContinuedDeepeningConfig {
   };
 }
 
-export interface CompiledAgentPreviewOutcomeGrantContinuationConfig {
+export interface CompiledAgentPreviewGrantFlowContinuationConfig {
   readonly enabled: boolean;
-  readonly extraDepthCap: number;
-  readonly capClass: AgentPreviewPostGrantCapClass;
+  readonly postGrantDepthCap: number;
+  readonly postGrantCapClass: AgentPreviewPostGrantCapClass;
+  readonly freeOperationDepthCap: number;
+  readonly freeOperationCapClass: AgentPreviewGrantFlowCapClass;
 }
 
 export interface CompiledAgentPreviewConfig {
@@ -1264,7 +1267,7 @@ export interface CompiledAgentPreviewConfig {
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly inner?: CompiledAgentPreviewInnerConfig;
-  readonly outcomeGrantContinuation?: CompiledAgentPreviewOutcomeGrantContinuationConfig;
+  readonly grantFlowContinuation?: CompiledAgentPreviewGrantFlowContinuationConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }
@@ -2402,17 +2405,19 @@ export interface PolicyPreviewUsageTrace {
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
   readonly seatMatrix?: PolicyPreviewSeatMatrixTrace;
-  readonly outcomeGrantContinuation?: PolicyPreviewOutcomeGrantContinuationTrace;
+  readonly grantFlowContinuation?: PolicyPreviewGrantFlowContinuationTrace;
   readonly utility: PolicyPreviewUtilityTrace;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
   readonly coverage: PolicyPreviewCoverageTrace;
 }
 
-export interface PolicyPreviewOutcomeGrantContinuationTrace {
+export interface PolicyPreviewGrantFlowContinuationTrace {
   readonly enabled: true;
-  readonly extraDepthCap: number;
-  readonly capClass: AgentPreviewPostGrantCapClass;
+  readonly postGrantDepthCap: number;
+  readonly postGrantCapClass: AgentPreviewPostGrantCapClass;
+  readonly freeOperationDepthCap: number;
+  readonly freeOperationCapClass: AgentPreviewGrantFlowCapClass;
   readonly extraDepthReached: number;
   readonly exitCounts: {
     readonly completed: number;

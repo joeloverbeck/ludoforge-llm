@@ -172,10 +172,12 @@ export const createRuntime = (
   state: GameState,
   trustedMove: TrustedExecutableMove,
   grantIds: readonly string[],
-  outcomeGrantContinuation?: {
+  grantFlowContinuation?: {
     readonly enabled: boolean;
-    readonly extraDepthCap: number;
-    readonly capClass: 'postGrant16';
+    readonly postGrantDepthCap: number;
+    readonly postGrantCapClass: 'postGrant16';
+    readonly freeOperationDepthCap: number;
+    readonly freeOperationCapClass: 'grantFlow16' | 'grantFlow32';
   },
 ): PolicyPreviewRuntime =>
   createPolicyPreviewRuntime({
@@ -187,7 +189,7 @@ export const createRuntime = (
     previewMode: 'exactWorld',
     completionPolicy: 'greedy',
     completionDepthCap: 8,
-    ...(outcomeGrantContinuation === undefined ? {} : { outcomeGrantContinuation }),
+    ...(grantFlowContinuation === undefined ? {} : { grantFlowContinuation }),
     dependencies: {
       applyMove() {
         return { state: createOutcomeGrantState(state, grantIds) };

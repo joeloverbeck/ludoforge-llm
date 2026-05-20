@@ -1949,6 +1949,7 @@ export class PolicyEvaluationContext {
       ...(candidate === undefined ? {} : { candidate }),
       ...(this.input.selectorMicroturnOptions === undefined ? {} : { microturnOptions: this.input.selectorMicroturnOptions }),
       ...(currentItemKey === undefined ? {} : { currentItemKey }),
+      ...(this.input.catalog.compiled.selectors === undefined ? {} : { selectors: this.input.catalog.compiled.selectors }),
       observerPlayerId: this.input.playerId,
       ...this.resolveSelectorObserverProfile(),
       evaluateExpr: (expr, itemCandidate, microturnOption) => this.evaluateSelectorItemExpr(

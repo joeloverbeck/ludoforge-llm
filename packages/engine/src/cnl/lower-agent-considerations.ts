@@ -13,6 +13,7 @@ import type {
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
   CompiledPolicySelector,
+  CompiledPlanTemplate,
   CompiledPolicyStateFeature,
   CompiledPolicyStrategicCondition,
   CompiledPolicyTieBreaker,
@@ -50,6 +51,7 @@ export interface AgentPolicyLibraryWithExpr {
   }>>;
   readonly selectors: Readonly<Record<string, CompiledPolicySelector>>;
   readonly strategyModules: Readonly<Record<string, StrategyModuleDef>>;
+  readonly planTemplates: Readonly<Record<string, CompiledPlanTemplate>>;
   readonly guardrails: Readonly<Record<string, GuardrailDef>>;
   readonly turnShapeEvaluators: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly considerations: Readonly<Record<string, {

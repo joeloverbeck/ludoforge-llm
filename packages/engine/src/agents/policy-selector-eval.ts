@@ -47,6 +47,7 @@ export interface SelectorEvalContext {
   readonly observerPlayerId?: PlayerId;
   readonly observerProfile?: CompiledObserverProfile;
   readonly currentItemKey?: string;
+  readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
   evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined, microturnOption?: SelectorEvalMicroturnOption): PolicyValue;
   onProductTruncated?(selectorId: string): void;
   onSelectorEmpty?(selectorId: string, reason: SelectedSelectorView['emptyReason']): void;
@@ -74,7 +75,15 @@ export function evaluateSelector(
   selector: CompiledPolicySelector,
   context: SelectorEvalContext,
 ): SelectedSelectorView {
-  const source = materializeSource(selector, context);
+  return evaluateSelectorInternal(selector, context, [selector.id]);
+}
+
+function evaluateSelectorInternal(
+  selector: CompiledPolicySelector,
+  context: SelectorEvalContext,
+  selectorStack: readonly string[],
+): SelectedSelectorView {
+  const source = materializeSource(selector, context, selectorStack);
   if (source.length === 0) {
     return emptyView(selector, context, 'sourceEmpty');
   }
@@ -125,6 +134,7 @@ function emptyView(
 function materializeSource(
   selector: CompiledPolicySelector,
   context: SelectorEvalContext,
+  selectorStack: readonly string[],
 ): readonly SelectorSourceItem[] {
   const { source } = selector;
   switch (source.kind) {
@@ -145,11 +155,86 @@ function materializeSource(
       }
       return result;
     }
+    case 'routePairs': {
+      const origin = materializeSelectorSource(source.originSelectorId, context, selectorStack);
+      const destination = materializeSelectorSource(source.destinationSelectorId, context, selectorStack);
+      const result: SelectorSourceItem[] = [];
+      for (const originItem of origin) {
+        for (const destinationItem of destination) {
+          if (result.length >= source.maxPairs) {
+            context.onProductTruncated?.(selector.id);
+            return result;
+          }
+          result.push({ key: `${originItem.key}|${destinationItem.key}` });
+        }
+      }
+      return result;
+    }
+    case 'subset': {
+      const base = source.of.kind === 'collection'
+        ? materializeCollection(source.of.collection, context)
+        : materializeSelectorSource(source.of.selectorId, context, selectorStack);
+      return materializeSubsets(base, source.min, source.max, source.beamWidth);
+    }
     case 'candidateParams':
       return materializeCandidateParam(source.param, context.candidate);
     case 'microturnOptions':
       return (context.microturnOptions ?? []).map((entry) => ({ key: entry.key, microturnOption: entry }));
   }
+}
+
+function materializeSelectorSource(
+  selectorId: string,
+  context: SelectorEvalContext,
+  selectorStack: readonly string[],
+): readonly SelectorSourceItem[] {
+  if (selectorStack.includes(selectorId)) {
+    return [];
+  }
+  const selector = context.selectors?.[selectorId];
+  if (selector === undefined) {
+    return [];
+  }
+  const view = evaluateSelectorInternal(selector, context, [...selectorStack, selectorId]);
+  return view.selected.map((item) => ({ key: item.key }));
+}
+
+function materializeSubsets(
+  source: readonly SelectorSourceItem[],
+  min: number,
+  max: number,
+  beamWidth: number,
+): readonly SelectorSourceItem[] {
+  const ordered = [...source].sort((left, right) => left.key.localeCompare(right.key));
+  const result: SelectorSourceItem[] = [];
+  const upper = Math.min(max, ordered.length);
+  const pushCombinations = (start: number, size: number, keys: readonly string[]): void => {
+    if (result.length >= beamWidth) {
+      return;
+    }
+    if (keys.length === size) {
+      result.push({ key: keys.join('|') });
+      return;
+    }
+    const remaining = size - keys.length;
+    for (let index = start; index <= ordered.length - remaining; index += 1) {
+      pushCombinations(index + 1, size, [...keys, ordered[index]!.key]);
+      if (result.length >= beamWidth) {
+        return;
+      }
+    }
+  };
+  for (let size = min; size <= upper; size += 1) {
+    if (size === 0) {
+      result.push({ key: '' });
+    } else {
+      pushCombinations(0, size, []);
+    }
+    if (result.length >= beamWidth) {
+      return result;
+    }
+  }
+  return result;
 }
 
 function materializeCollection(

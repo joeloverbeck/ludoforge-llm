@@ -151,7 +151,7 @@ function makePartialVisibilityCatalog(): AgentPolicyCatalog {
   });
 
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'partial-visibility-runtime',
     surfaceVisibility: {
       globalVars: {},

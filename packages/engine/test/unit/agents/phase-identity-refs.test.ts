@@ -44,7 +44,7 @@ const considerationIds = [
 ] as const;
 
 const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-  schemaVersion: 2,
+  schemaVersion: 3,
   catalogFingerprint: 'phase-identity-refs-test',
   surfaceVisibility: {
     globalVars: {},

@@ -2701,6 +2701,235 @@
                 ],
                 "additionalProperties": false
               },
+              "plan": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "selected",
+                      "noTemplate",
+                      "noRootMatch",
+                      "noRoleBinding"
+                    ]
+                  },
+                  "capClass": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    ]
+                  },
+                  "capLimit": {
+                    "minimum": 0,
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_e7c99bd4"
+                      }
+                    ]
+                  },
+                  "selectedTemplate": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    ]
+                  },
+                  "selectedIntent": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    ]
+                  },
+                  "selectedRootStableMoveKey": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    ]
+                  },
+                  "activeDoctrines": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "rejectedDoctrines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "doctrineId": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "inactive",
+                            "noRootMatch"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "doctrineId",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "roleBindings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "selectedId": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "quality": {
+                          "$ref": "#/definitions/anon_c0e4ebfe"
+                        },
+                        "rank": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "components": {
+                          "type": "object",
+                          "propertyNames": {
+                            "$ref": "#/definitions/anon_4682db72"
+                          },
+                          "additionalProperties": {
+                            "$ref": "#/definitions/anon_c0e4ebfe"
+                          }
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "selectedId",
+                        "quality",
+                        "rank",
+                        "components"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "alternatives": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "templateId": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "rootStableMoveKey": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "score": {
+                          "$ref": "#/definitions/anon_c0e4ebfe"
+                        },
+                        "priorityTier": {
+                          "$ref": "#/definitions/anon_c0e4ebfe"
+                        },
+                        "stableKey": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "rootStableMoveKey",
+                        "score",
+                        "priorityTier",
+                        "stableKey"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "postureStatus": {
+                    "type": "string",
+                    "enum": [
+                      "notConfigured",
+                      "ready",
+                      "unavailable"
+                    ]
+                  },
+                  "microturns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "expectedStep": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/definitions/anon_4682db72"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "matchedRole": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/definitions/anon_4682db72"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "selectedLegalOption": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "match": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "reselected",
+                            "fallback"
+                          ]
+                        },
+                        "deviation": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          ]
+                        },
+                        "fallbackReason": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "expectedStep",
+                        "matchedRole",
+                        "selectedLegalOption",
+                        "match"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "activeDoctrines",
+                  "rejectedDoctrines",
+                  "roleBindings",
+                  "alternatives",
+                  "postureStatus"
+                ],
+                "additionalProperties": false
+              },
               "emergencyFallback": {
                 "$ref": "#/definitions/anon_def33f2f"
               },

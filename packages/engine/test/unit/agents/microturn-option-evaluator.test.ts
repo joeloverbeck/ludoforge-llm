@@ -69,7 +69,7 @@ const considerationIds = [
 ] as const;
 
 const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-  schemaVersion: 2,
+  schemaVersion: 3,
   catalogFingerprint: 'microturn-option-evaluator-test',
   surfaceVisibility: {
     globalVars: {},

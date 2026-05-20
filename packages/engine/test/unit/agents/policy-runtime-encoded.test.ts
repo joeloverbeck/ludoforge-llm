@@ -40,7 +40,7 @@ const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'litera
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'encoded-policy-runtime-test',
     surfaceVisibility: {
       globalVars: {},

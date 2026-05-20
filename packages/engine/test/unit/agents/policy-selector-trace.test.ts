@@ -46,7 +46,7 @@ function selector(
 
 function createCatalog(selectors: readonly CompiledPolicySelector[]): AgentPolicyCatalog {
   const base = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'selector-trace-test',
     surfaceVisibility: {
       globalVars: {},

@@ -18,6 +18,7 @@ import type {
   LookupUnavailabilityReason,
   Move,
   PolicyGuardrailTrace,
+  PolicyPlanTrace,
   PolicyModuleTrace,
   PolicyTurnShapeTrace,
   PolicyPreviewOutcomeBreakdownTrace,
@@ -330,7 +331,6 @@ export interface PolicyEvaluationSelectionTrace {
   readonly samplingProbabilities?: readonly number[];
   readonly selectedIndex: number;
 }
-
 export interface PolicyEvaluationMetadata {
   readonly seatId: string | null;
   readonly requestedProfileId: string | null;
@@ -348,6 +348,7 @@ export interface PolicyEvaluationMetadata {
   readonly guardrails?: PolicyGuardrailTrace;
   readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicyEvaluationSelectionTrace;
+  readonly plan?: PolicyPlanTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
@@ -360,7 +361,6 @@ export interface PolicyEvaluationMetadata {
   readonly usedFallback: boolean;
   readonly failure: PolicyEvaluationFailure | null;
 }
-
 export interface PolicyEvaluationResult {
   readonly move: Move;
   readonly rng: Rng;

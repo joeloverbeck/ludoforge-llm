@@ -43,7 +43,7 @@ const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref'])
 
 const createBroadRouteDef = (): GameDef => {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'preview-drive-production-route-activation',
     surfaceVisibility: {
       globalVars: {

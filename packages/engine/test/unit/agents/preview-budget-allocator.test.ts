@@ -49,7 +49,7 @@ function createDef(
   } = {},
 ): GameDef {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'preview-budget-test',
     surfaceVisibility: {
       globalVars: {

@@ -86,7 +86,7 @@ function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackM
 function createCatalog(previewAvailable: boolean, fallbackMode: PreviewFallbackMode): AgentPolicyCatalog {
   const profile = createProfile(previewAvailable, fallbackMode);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}`,
     surfaceVisibility: {
       globalVars: {},

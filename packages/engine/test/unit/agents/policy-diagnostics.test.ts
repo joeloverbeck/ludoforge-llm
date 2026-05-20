@@ -192,7 +192,7 @@ describe('policy-diagnostics', () => {
       setup: [],
       turnStructure: { phases: [{ id: 'main' as never }] },
       agents: withCompiledPolicyCatalog({
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: 'preview-feature-catalog',
         surfaceVisibility: {
           globalVars: {},
@@ -282,7 +282,7 @@ describe('policy-diagnostics', () => {
       setup: [],
       turnStructure: { phases: [{ id: 'main' as never }] },
       agents: withCompiledPolicyCatalog({
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: 'seat-agg-catalog',
         surfaceVisibility: {
           globalVars: {},

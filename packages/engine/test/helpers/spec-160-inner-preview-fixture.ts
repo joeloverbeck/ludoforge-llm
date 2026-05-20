@@ -77,7 +77,7 @@ function createProfile(innerChooseOne: boolean | undefined): CompiledAgentProfil
 function createCatalog(innerChooseOne: boolean | undefined): AgentPolicyCatalog {
   const profile = createProfile(innerChooseOne);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `spec-160-inner-preview-${innerChooseOne === true ? 'on' : 'off'}`,
     surfaceVisibility: {
       globalVars: {},

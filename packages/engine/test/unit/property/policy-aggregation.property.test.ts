@@ -58,7 +58,7 @@ function moveConsiderations(
 
 function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-aggregation-property',
     surfaceVisibility: {
       globalVars: {},

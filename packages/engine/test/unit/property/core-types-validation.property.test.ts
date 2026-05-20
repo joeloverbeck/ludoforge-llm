@@ -25,7 +25,7 @@ describe('core-types validation property-style checks', () => {
         ...base,
         metadata: { ...base.metadata, id: 'fixture-minimal-agents' },
         agents: {
-          schemaVersion: 2,
+          schemaVersion: 3,
           catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           surfaceVisibility: {
             globalVars: {},
@@ -144,7 +144,7 @@ describe('core-types validation property-style checks', () => {
       ...base,
       metadata: { ...base.metadata, id: 'fixture-minimal-legacy-agents' },
       agents: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},

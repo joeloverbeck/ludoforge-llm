@@ -89,7 +89,7 @@ const createCatalog = (
     },
   };
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `projected-lookup-deepening-${trigger}-${pickCount}`,
     surfaceVisibility: lookupSurfaceVisibility,
     parameterDefs: {},

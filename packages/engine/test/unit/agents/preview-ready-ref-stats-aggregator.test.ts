@@ -37,7 +37,7 @@ const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref'])
 
 const createDef = (fullCandidateCap: number): GameDef => {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `ready-ref-stats-${fullCandidateCap}`,
     surfaceVisibility: {
       globalVars: {

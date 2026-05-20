@@ -28,7 +28,6 @@ import type {
   AgentPreviewFallback,
   SurfaceVisibilityClass,
   AgentPolicyValueType,
-  CandidateParamRef,
   CompiledAgentPolicyRef,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
@@ -41,6 +40,7 @@ import type {
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewGrantFlowContinuationConfig,
   CompiledAgentSelector,
+  CompiledPlanTemplate,
   CompiledAgentGuardrail,
   CompiledAgentTurnShapeEvaluator,
   CompiledAgentStrategyModule,
@@ -51,7 +51,6 @@ import type {
   ContinuedDeepeningConfig,
   QualitySpec,
   SelectorCostClass,
-  SelectorSource,
   DeepTrigger,
   AgentPreviewGrantFlowCapClass,
   AgentPreviewPostGrantCapClass,
@@ -89,14 +88,13 @@ import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibrary
 import {
   deriveSelectorCostClass,
   isSelectorCostClass,
-  isSelectorProductPairCapExceeded,
-  normalizeSelectorCollection,
   normalizeSelectorResult,
   normalizeSelectorScopes,
   parseSelectorRef,
   selectorCostClassLeq,
   selectorCostToPolicyCostClass,
 } from './compile-agent-selectors.js';
+import { lowerSelectorSource, type LoweredSelectorSource } from './compile-agent-selector-sources.js';
 import {
   compileStrategyModuleDefinition,
   moduleCostToPolicyCostClass,
@@ -114,6 +112,7 @@ import {
   tagUnregisteredTurnShapePreviewRef,
   type AgentTurnShapeEvaluatorWithExpr,
 } from './compile-agent-turn-shape.js';
+import { compilePlanTemplateDefinition } from './compile-agent-plan-templates.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -138,6 +137,7 @@ type AgentAggregateWithExpr = CompiledAgentAggregate & {
   readonly where?: AgentPolicyExpr;
 };
 type AgentSelectorWithExpr = CompiledPolicySelector;
+type AgentPlanTemplateWithExpr = CompiledPlanTemplate;
 type AgentGuardrailWithExprInternal = AgentGuardrailWithExpr;
 type AgentTurnShapeEvaluatorWithExprInternal = AgentTurnShapeEvaluatorWithExpr;
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
@@ -230,7 +230,7 @@ export function lowerAgents(
   const compiled = lowerAgentConsiderations(library);
   const hasSelectors = Object.keys(library.selectors ?? {}).length > 0;
   const catalogWithoutFingerprint = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     surfaceVisibility,
     parameterDefs,
     candidateParamDefs,
@@ -256,6 +256,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
   const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
   const selectors: Record<string, CompiledAgentSelector> = {};
   const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
+  const planTemplates: Record<string, CompiledPlanTemplate> = {};
   const guardrails: Record<string, CompiledAgentGuardrail> = {};
   const turnShapeEvaluators: Record<string, CompiledAgentTurnShapeEvaluator> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
@@ -307,6 +308,9 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       costClass: module.costClass,
       dependencies: module.dependencies,
     };
+  }
+  for (const [id, template] of Object.entries(library.planTemplates ?? {})) {
+    planTemplates[id] = template;
   }
   for (const [id, guardrail] of Object.entries(library.guardrails ?? {})) {
     guardrails[id] = {
@@ -372,6 +376,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
     candidateAggregates,
     ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
+    ...(Object.keys(planTemplates).length === 0 ? {} : { planTemplates }),
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
     ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
@@ -2018,6 +2023,7 @@ function buildProfilePlan(
   const candidateAggregates: string[] = [];
   const selectors: string[] = [];
   const strategyModules: string[] = [];
+  const planTemplates: string[] = [];
   const guardrails: string[] = [];
   const turnShapeEvaluators: string[] = [];
   const stateSeen = new Set<string>();
@@ -2025,6 +2031,7 @@ function buildProfilePlan(
   const aggregateSeen = new Set<string>();
   const selectorSeen = new Set<string>();
   const moduleSeen = new Set<string>();
+  const planTemplateSeen = new Set<string>();
   const guardrailSeen = new Set<string>();
   const turnShapeSeen = new Set<string>();
   const considerationSeen = new Set<string>();
@@ -2151,6 +2158,27 @@ function buildProfilePlan(
     strategyModules.push(moduleId);
   };
 
+  const visitPlanTemplate = (templateId: string): void => {
+    if (planTemplateSeen.has(templateId)) {
+      return;
+    }
+    const template = library.planTemplates?.[templateId];
+    if (template === undefined) {
+      hasError = true;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROFILE_USE_UNKNOWN_ID,
+        path: `doc.agents.profiles.${profileId}`,
+        severity: 'error',
+        message: `Profile "${profileId}" depends on invalid plan template "${templateId}".`,
+        suggestion: 'Fix the referenced plan template so it compiles successfully.',
+      });
+      return;
+    }
+    addDependencies(template.dependencies);
+    planTemplateSeen.add(templateId);
+    planTemplates.push(templateId);
+  };
+
   const visitGuardrail = (guardrailId: string): void => {
     if (guardrailSeen.has(guardrailId)) {
       return;
@@ -2209,6 +2237,9 @@ function buildProfilePlan(
     for (const moduleId of dependencies.strategyModules ?? []) {
       visitModule(moduleId);
     }
+    for (const templateId of dependencies.planTemplates ?? []) {
+      visitPlanTemplate(templateId);
+    }
     for (const guardrailId of dependencies.guardrails ?? []) {
       visitGuardrail(guardrailId);
     }
@@ -2242,6 +2273,9 @@ function buildProfilePlan(
   for (const moduleId of Object.keys(library.strategyModules ?? {})) {
     visitModule(moduleId);
   }
+  for (const templateId of Object.keys(library.planTemplates ?? {})) {
+    visitPlanTemplate(templateId);
+  }
 
   if (hasError) {
     return null;
@@ -2253,6 +2287,7 @@ function buildProfilePlan(
     candidateAggregates,
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(planTemplates.length === 0 ? {} : { planTemplates }),
     ...(guardrails.length === 0 ? {} : { guardrails }),
     ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
     considerations,
@@ -2321,6 +2356,7 @@ class AgentLibraryCompiler {
     readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
     readonly selectors: Record<string, AgentSelectorWithExpr>;
     readonly strategyModules: Record<string, AgentStrategyModuleWithExpr>;
+    readonly planTemplates: Record<string, AgentPlanTemplateWithExpr>;
     readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
     readonly turnShapeEvaluators: Record<string, AgentTurnShapeEvaluatorWithExprInternal>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
@@ -2333,6 +2369,7 @@ class AgentLibraryCompiler {
   private readonly aggregateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly selectorStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly strategyModuleStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly planTemplateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly turnShapeStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
@@ -2344,6 +2381,7 @@ class AgentLibraryCompiler {
   private readonly aggregateStack: string[] = [];
   private readonly selectorStack: string[] = [];
   private readonly strategyModuleStack: string[] = [];
+  private readonly planTemplateStack: string[] = [];
   private readonly guardrailStack: string[] = [];
   private readonly turnShapeStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
@@ -2363,6 +2401,7 @@ class AgentLibraryCompiler {
       candidateAggregates: {},
       selectors: {},
       strategyModules: {},
+      planTemplates: {},
       guardrails: {},
       turnShapeEvaluators: {},
       considerations: {},
@@ -2394,6 +2433,9 @@ class AgentLibraryCompiler {
       this.compileStrategyModule(moduleId);
     }
     this.validateModuleTraceLabels();
+    for (const templateId of Object.keys(this.authoredLibrary.planTemplates ?? {})) {
+      this.compilePlanTemplate(templateId);
+    }
     for (const evaluatorId of Object.keys(this.authoredLibrary.turnShapeEvaluators ?? {})) {
       this.compileTurnShapeEvaluator(evaluatorId);
     }
@@ -2750,12 +2792,12 @@ class AgentLibraryCompiler {
       minImpact,
       ...(quality.components.map((component) => component.analysis)),
     ].filter((entry): entry is PolicyExprAnalysis => entry !== null);
-    const dependencies = mergeDependencies(analyses.map((entry) => entry.dependencies));
-    const costClass = deriveSelectorCostClass(source, analyses);
+    const dependencies = mergeDependencies([source.dependencies, ...analyses.map((entry) => entry.dependencies)]);
+    const costClass = maxSelectorCostClass(deriveSelectorCostClass(source.source, analyses), source.costClass);
     const compiled: AgentSelectorWithExpr = {
       id: selectorId as AgentSelectorWithExpr['id'],
       scopes,
-      source,
+      source: source.source,
       ...(where === null ? {} : { where: where.expr }),
       ...(quality.components.length === 0 ? {} : {
         quality: {
@@ -2814,6 +2856,46 @@ class AgentLibraryCompiler {
     }
     this.compiled.strategyModules[moduleId] = compiled;
     this.strategyModuleStatus.set(moduleId, 'done');
+    return compiled;
+  }
+
+  private compilePlanTemplate(templateId: string): AgentPlanTemplateWithExpr | null {
+    const status = this.planTemplateStatus.get(templateId);
+    if (status === 'done') {
+      return this.compiled.planTemplates[templateId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('planTemplates', templateId, this.planTemplateStack);
+      this.planTemplateStatus.set(templateId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.planTemplates?.[templateId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`planTemplate.${templateId}`, `doc.agents.library.planTemplates.${templateId}`);
+      this.planTemplateStatus.set(templateId, 'failed');
+      return null;
+    }
+
+    this.planTemplateStatus.set(templateId, 'compiling');
+    this.planTemplateStack.push(templateId);
+    const compiled = compilePlanTemplateDefinition({
+      templateId,
+      def,
+      diagnostics: this.diagnostics,
+      compileSelector: (selectorId) => this.compileSelector(selectorId),
+    });
+    this.planTemplateStack.pop();
+
+    if (compiled === null) {
+      this.planTemplateStatus.set(templateId, 'failed');
+      return null;
+    }
+    this.compiled.planTemplates[templateId] = compiled;
+    this.planTemplateStatus.set(templateId, 'done');
     return compiled;
   }
 
@@ -3288,82 +3370,14 @@ class AgentLibraryCompiler {
     }
   }
 
-  private lowerSelectorSource(source: GameSpecSelectorSource | undefined, path: string): SelectorSource | null {
-    if (source === undefined || source === null || typeof source !== 'object' || Array.isArray(source)) {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
-        path,
-        severity: 'error',
-        message: 'Selector source must be a supported finite source object.',
-        suggestion: 'Use source.collection, source.kind: product, source.kind: microturnOptions, or source.kind: candidateParams.',
-      });
-      return null;
-    }
-    if (source.kind === 'product') {
-      const left = normalizeSelectorCollection(source.left, `${path}.left`, this.diagnostics);
-      const right = normalizeSelectorCollection(source.right, `${path}.right`, this.diagnostics);
-      if (source.maxPairs === undefined) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MISSING_MAXPAIRS,
-          path: `${path}.maxPairs`,
-          severity: 'error',
-          message: 'Product selector source requires maxPairs.',
-          suggestion: `Set maxPairs to a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
-        });
-        return null;
-      }
-      if (isSelectorProductPairCapExceeded(source.maxPairs)) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MAXPAIRS_EXCEEDS_CAP,
-          path: `${path}.maxPairs`,
-          severity: 'error',
-          message: `Product selector maxPairs must be a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
-          suggestion: `Reduce maxPairs to ${MAX_SELECTOR_PRODUCT_PAIRS} or less.`,
-        });
-        return null;
-      }
-      return left === null || right === null ? null : { kind: 'product', left, right, maxPairs: source.maxPairs };
-    }
-    if (source.kind === 'microturnOptions') {
-      return { kind: 'microturnOptions' };
-    }
-    if (source.kind === 'candidateParams') {
-      if (typeof source.param !== 'string' || source.param.length === 0 || this.candidateParamDefs[source.param] === undefined) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
-          path: `${path}.param`,
-          severity: 'error',
-          message: `Selector candidateParams source references unknown candidate param "${String(source.param)}".`,
-          suggestion: 'Reference a declared doc.agents.candidateParams entry.',
-        });
-        return null;
-      }
-      return { kind: 'candidateParams', param: source.param as CandidateParamRef };
-    }
-    const collection = normalizeSelectorCollection(source.collection, `${path}.collection`, this.diagnostics);
-    if (collection === null) {
-      return null;
-    }
-    const sourceRecord = source as Readonly<Record<string, unknown>>;
-    const key = sourceRecord.key;
-    const keyFrom = key === null || typeof key !== 'object'
-      ? undefined
-      : (key as Readonly<Record<string, unknown>>).from;
-    if (key !== undefined && (typeof keyFrom !== 'string' || keyFrom.length === 0)) {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_BINDING_TYPE_MISMATCH,
-        path: `${path}.key.from`,
-        severity: 'error',
-        message: 'Selector source key.from must be a non-empty string when source.key is declared.',
-        suggestion: 'Use key: { from: <candidate field> } or omit source.key.',
-      });
-      return null;
-    }
-    return {
-      kind: 'collection',
-      collection,
-      ...(source.key?.from === undefined ? {} : { key: { from: source.key.from } }),
-    };
+  private lowerSelectorSource(source: GameSpecSelectorSource | undefined, path: string): LoweredSelectorSource | null {
+    return lowerSelectorSource({
+      source,
+      path,
+      diagnostics: this.diagnostics,
+      candidateParamDefs: this.candidateParamDefs,
+      compileSelector: (selectorId) => this.compileSelector(selectorId),
+    });
   }
 
   private lowerSelectorQuality(
@@ -5786,6 +5800,7 @@ function diagnosticsContainProfileUseErrors(profileId: string, diagnostics: read
 function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[]): CompiledAgentDependencyRefs {
   const selectors = uniqueSorted(dependencies.flatMap((entry) => entry.selectors ?? []));
   const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
+  const planTemplates = uniqueSorted(dependencies.flatMap((entry) => entry.planTemplates ?? []));
   const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
   return {
@@ -5795,6 +5810,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     aggregates: uniqueSorted(dependencies.flatMap((entry) => entry.aggregates)),
     ...(selectors.length === 0 ? {} : { selectors }),
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
+    ...(planTemplates.length === 0 ? {} : { planTemplates }),
     ...(guardrails.length === 0 ? {} : { guardrails }),
     ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
@@ -5813,6 +5829,10 @@ function emptyDependencies(): CompiledAgentDependencyRefs {
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort();
+}
+
+function maxSelectorCostClass(left: SelectorCostClass, right: SelectorCostClass): SelectorCostClass {
+  return selectorCostClassLeq(left, right) ? right : left;
 }
 
 function maxCostClass(left: AgentPolicyCostClass, right: AgentPolicyCostClass): AgentPolicyCostClass {

@@ -94,7 +94,7 @@ function createProfile(chooseNStep: boolean, selectorDriven = false): CompiledAg
 function createCatalog(chooseNStep: boolean, selectorDriven = false): AgentPolicyCatalog {
   const profile = createProfile(chooseNStep, selectorDriven);
   const baseCatalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `policy-agent-inner-preview-${chooseNStep ? 'enabled' : 'disabled'}-${selectorDriven ? 'selector' : 'direct'}`,
     surfaceVisibility: {
       globalVars: {},

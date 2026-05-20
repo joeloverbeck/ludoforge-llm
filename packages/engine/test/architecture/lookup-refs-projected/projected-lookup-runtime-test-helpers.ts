@@ -113,7 +113,7 @@ export function createProjectedCatalog(
     },
   };
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'projected-lookup-runtime',
     surfaceVisibility: lookupSurfaceVisibility,
     parameterDefs: {},

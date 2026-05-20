@@ -36,6 +36,9 @@ import type {
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
+import { updatePlanExecutionLifecycle, type PlanExecutionStateStore } from './plan-execution.js';
+import { proposeAndCommitAdvisoryTurnPlan } from './plan-proposal.js';
+import { selectPlanControlledDecision } from './plan-controller.js';
 import {
   createPolicyAgentChooseNStepInnerPreview,
   createPolicyAgentChooseOneInnerPreview,
@@ -50,7 +53,6 @@ export interface PolicyAgentConfig {
   readonly fallbackOnError?: boolean;
   readonly disableGuidedChooser?: boolean;
 }
-
 interface FrontierCandidate {
   readonly decision: Decision;
   readonly stableMoveKey: string;
@@ -576,6 +578,7 @@ export class PolicyAgent implements Agent {
   private readonly fallbackOnError: boolean | undefined;
   private readonly disableGuidedChooser: boolean;
   private readonly previewWideningState: PreviewWideningState = new Map();
+  private readonly planExecutionState: PlanExecutionStateStore = new Map();
 
   constructor(config: PolicyAgentConfig = {}) {
     this.profileId = config.profileId;
@@ -583,14 +586,13 @@ export class PolicyAgent implements Agent {
     this.fallbackOnError = config.fallbackOnError;
     this.disableGuidedChooser = config.disableGuidedChooser ?? false;
   }
-
   chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
     if (input.microturn.legalActions.length === 0) {
       throw new Error('PolicyAgent.chooseDecision called with empty legalActions');
     }
-
     policyChooseCallCount += 1;
     logPolicyOomTrace('choose:start', input);
+    updatePlanExecutionLifecycle(this.planExecutionState, input);
     const t0Eval = perfStart(input.profiler);
     const result = input.microturn.kind === 'actionSelection'
       ? this.chooseActionSelectionDecision(input)
@@ -598,7 +600,6 @@ export class PolicyAgent implements Agent {
     perfDynEnd(input.profiler, 'agent:evaluatePolicyExpression', t0Eval);
     return result;
   }
-
   private chooseActionSelectionDecision(
     input: AgentMicroturnDecisionInput,
   ): AgentMicroturnDecisionResult {
@@ -610,7 +611,6 @@ export class PolicyAgent implements Agent {
     if (actionDecisions.length === 0) {
       return this.chooseFrontierDecision(input);
     }
-
     const traceHeapDelta = shouldLogPolicyOomTrace();
     const evalHeapBefore = traceHeapDelta ? heapUsedMb() : 0;
     const evaluation = evaluatePolicyMove({
@@ -631,6 +631,7 @@ export class PolicyAgent implements Agent {
         seatId: String(input.microturn.seatId),
       },
     });
+    const planTrace = proposeAndCommitAdvisoryTurnPlan(input, this.planExecutionState, this.profileId)?.trace;
     logPolicyOomTrace(
       'actionSelection:evaluated',
       input,
@@ -649,7 +650,7 @@ export class PolicyAgent implements Agent {
       decision: selectedDecision,
       rng: evaluation.rng,
       ...(evaluation.metadata.selectedReason === undefined ? {} : { selectedByReason: evaluation.metadata.selectedReason }),
-      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(evaluation.metadata, this.traceLevel) }),
+      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(planTrace === undefined ? evaluation.metadata : { ...evaluation.metadata, plan: planTrace }, this.traceLevel) }),
     };
   }
 
@@ -671,7 +672,44 @@ export class PolicyAgent implements Agent {
           resolvedProfile,
           innerPreview?.refsByOptionKey,
           innerPreview?.projectedStateByOptionKey,
-    );
+        );
+    const primitiveDecision = guidedChoice?.matchedDecision;
+    if (resolvedProfile !== null) {
+      const controlled = selectPlanControlledDecision({
+        def: input.def,
+        catalog: resolvedProfile.catalog,
+        store: this.planExecutionState,
+        turnId: input.microturn.turnId,
+        seatId: String(input.microturn.seatId),
+        legalActions: input.microturn.legalActions,
+        ...(primitiveDecision === undefined ? {} : { primitiveDecision }),
+      });
+      if (controlled !== undefined) {
+        const selectedStableMoveKey = frontierDecisionKey(input.def, controlled.decision);
+        const metadata: PolicyEvaluationMetadata = {
+          seatId: resolvedProfile.seatId,
+          requestedProfileId: this.profileId ?? null,
+          profileId: resolvedProfile.profileId,
+          profileFingerprint: resolvedProfile.profile.fingerprint,
+          canonicalOrder: input.microturn.legalActions.map((decision) => frontierDecisionKey(input.def, decision)),
+          candidates: [],
+          pruningSteps: [],
+          tieBreakChain: [],
+          previewUsage: innerPreview?.usage ?? emptyPreviewUsage('disabled'),
+          selectedStableMoveKey,
+          finalScore: null,
+          candidateParamFallbackFiredCount: 0,
+          plan: controlled.planTrace,
+          usedFallback: false,
+          failure: null,
+        };
+        return {
+          decision: controlled.decision,
+          rng: input.rng,
+          ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel) }),
+        };
+      }
+    }
     if (guidedChoice !== null) {
       const selectedStableMoveKey = frontierDecisionKey(input.def, guidedChoice.matchedDecision);
       const previewUsage = innerPreview?.usage ?? emptyPreviewUsage('disabled');

@@ -88,7 +88,7 @@ function createMinimalCatalog(overrides?: {
     },
   };
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'test-catalog',
     surfaceVisibility: {
       globalVars: {},

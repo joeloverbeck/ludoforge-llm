@@ -278,7 +278,7 @@ function createStandingCatalog(options: {
   };
 
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: profile.fingerprint,
     surfaceVisibility: {
       globalVars: {},

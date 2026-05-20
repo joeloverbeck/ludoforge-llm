@@ -131,7 +131,7 @@ export function makeScheduleRefDef(hiddenDrawZone = false): GameDef {
 
 export function makeScheduleCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'schedule-ref-test',
     surfaceVisibility: {
       globalVars: {},

@@ -72,6 +72,7 @@ import type {
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
 import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
+import type { PolicyPlanTrace } from './types-plan-trace.js';
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
   readonly version: 1;
@@ -387,6 +388,7 @@ export type GameAuthoredCollectionId = string & { readonly __brand: 'GameAuthore
 export type CandidateParamRef = string & { readonly __brand: 'CandidateParamRef' };
 export const MAX_SELECTOR_RESULT_ITEMS = 32;
 export const MAX_SELECTOR_PRODUCT_PAIRS = 256;
+export const MAX_SELECTOR_SUBSET_BEAM_WIDTH = 256;
 export const MAX_MODULE_PRIORITY_TIER = 100;
 export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
@@ -1050,6 +1052,7 @@ export interface CompiledAgentDependencyRefs {
   readonly aggregates: readonly string[];
   readonly selectors?: readonly string[];
   readonly strategyModules?: readonly string[];
+  readonly planTemplates?: readonly string[];
   readonly guardrails?: readonly string[];
   readonly turnShapeEvaluators?: readonly string[];
   readonly strategicConditions: readonly string[];
@@ -1077,8 +1080,14 @@ export interface CompiledAgentAggregate {
 export type SelectorSource =
   | { readonly kind: 'collection'; readonly collection: CollectionRef; readonly key?: KeyBinding }
   | { readonly kind: 'product'; readonly left: CollectionRef; readonly right: CollectionRef; readonly maxPairs: number }
+  | { readonly kind: 'routePairs'; readonly originSelectorId: SelectorId; readonly destinationSelectorId: SelectorId; readonly maxPairs: number }
+  | { readonly kind: 'subset'; readonly of: SelectorSubsetSource; readonly min: number; readonly max: number; readonly beamWidth: number }
   | { readonly kind: 'microturnOptions' }
   | { readonly kind: 'candidateParams'; readonly param: CandidateParamRef };
+
+export type SelectorSubsetSource =
+  | { readonly kind: 'collection'; readonly collection: CollectionRef }
+  | { readonly kind: 'selector'; readonly selectorId: SelectorId };
 
 export type CollectionRef =
   | { readonly kind: 'zones' }
@@ -1126,6 +1135,74 @@ export interface CompiledAgentSelector {
   readonly source: SelectorSource;
   readonly result: ResultSpec;
   readonly costClass: SelectorCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledRoleSelector extends CompiledAgentSelector {
+  readonly selectorId: SelectorId;
+  readonly role: string;
+  readonly refs: {
+    readonly id: string;
+    readonly quality: string;
+    readonly rank: string;
+    readonly components: string;
+  };
+}
+
+export interface CompiledPlanRoot {
+  readonly actionTags: readonly string[];
+  readonly actionIds: readonly string[];
+  readonly compound?: {
+    readonly specialTags: readonly string[];
+    readonly timing: 'before' | 'during' | 'after';
+    readonly interruptAfterStage?: number;
+  };
+}
+
+export type CompiledPlanRoleConstraint =
+  | { readonly kind: 'notEqual'; readonly role: string }
+  | { readonly kind: 'locatedIn'; readonly role: string };
+
+export interface CompiledPlanRole {
+  readonly selectorId: SelectorId;
+  readonly required: boolean;
+  readonly constraints: readonly CompiledPlanRoleConstraint[];
+  readonly selector: CompiledRoleSelector;
+}
+
+export interface CompiledPlanStepMatch {
+  readonly decisionKind: string;
+  readonly targetKind: string;
+  readonly decisionPath: string;
+  readonly actionTag?: string;
+  readonly stageIndex?: number;
+}
+
+export interface CompiledPlanStep {
+  readonly label: string;
+  readonly role: string;
+  readonly match: CompiledPlanStepMatch;
+}
+
+export interface CompiledPlanFallback {
+  readonly ifSpecialUnavailable?: string;
+  readonly ifRoleTargetUnavailable?: string;
+  readonly ifPreviewUnavailable?: string;
+}
+
+export interface CompiledPlanCaps {
+  readonly capClass: string;
+  readonly maxSteps: number;
+}
+
+export interface CompiledPlanTemplate {
+  readonly traceLabel: string;
+  readonly root: CompiledPlanRoot;
+  readonly roles: Readonly<Record<string, CompiledPlanRole>>;
+  readonly steps: readonly CompiledPlanStep[];
+  readonly caps: CompiledPlanCaps;
+  readonly postureHook?: string;
+  readonly fallback: CompiledPlanFallback;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
@@ -1203,6 +1280,7 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
   readonly strategyModules?: Readonly<Record<string, CompiledAgentStrategyModule>>;
+  readonly planTemplates?: Readonly<Record<string, CompiledPlanTemplate>>;
   readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, CompiledAgentTurnShapeEvaluator>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
@@ -1307,6 +1385,7 @@ export interface CompiledAgentProfile {
     readonly candidateAggregates: readonly string[];
     readonly selectors?: readonly string[];
     readonly strategyModules?: readonly string[];
+    readonly planTemplates?: readonly string[];
     readonly guardrails?: readonly string[];
     readonly turnShapeEvaluators?: readonly string[];
     readonly considerations: readonly string[];
@@ -1314,7 +1393,7 @@ export interface CompiledAgentProfile {
 }
 
 export interface AgentPolicyCatalog {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly catalogFingerprint: string;
   readonly surfaceVisibility: CompiledSurfaceCatalog;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
@@ -2536,14 +2615,13 @@ export interface PolicyAgentDecisionTrace {
   readonly guardrails?: PolicyGuardrailTrace;
   readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicySelectionTrace;
+  readonly plan?: PolicyPlanTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
-
 export type AgentDecisionTrace = PolicyAgentDecisionTrace;
-
 // ── Execution Options & Collector ─────────────────────────
 
 export interface ExecutionOptions {

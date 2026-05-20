@@ -167,7 +167,7 @@ function createBaseDef(overrides?: {
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
     agents: withCompiledPolicyCatalog({
-      schemaVersion: 2,
+      schemaVersion: 3,
       catalogFingerprint: 'test',
       surfaceVisibility: {
         globalVars: {},

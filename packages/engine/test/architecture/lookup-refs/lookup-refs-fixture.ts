@@ -164,7 +164,7 @@ const createLookupCatalog = (
   profiles: AgentPolicyCatalog['profiles'] = {},
   bindingsBySeat: AgentPolicyCatalog['bindingsBySeat'] = {},
 ): AgentPolicyCatalog => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   catalogFingerprint: 'lookup-refs-fixture',
   surfaceVisibility: lookupSurfaceVisibility,
   parameterDefs: {},

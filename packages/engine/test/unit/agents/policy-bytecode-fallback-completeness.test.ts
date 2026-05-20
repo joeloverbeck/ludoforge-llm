@@ -109,7 +109,7 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-bytecode-fallback-completeness-test',
     surfaceVisibility: {
       globalVars: { round: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } } },

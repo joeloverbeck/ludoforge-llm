@@ -124,7 +124,7 @@ const createCatalog = (
 ): AgentPolicyCatalog => {
   const profile = createProfile(strategy);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `continued-deepening-${strategy}`,
     surfaceVisibility: {
       globalVars: {},

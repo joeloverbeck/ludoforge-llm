@@ -62,7 +62,7 @@ function createProfile(grantFlowContinuation?: CompiledAgentProfile['preview']['
 function createCatalog(grantFlowContinuation?: CompiledAgentProfile['preview']['grantFlowContinuation']): AgentPolicyCatalog {
   const profile = createProfile(grantFlowContinuation);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: profile.fingerprint,
     surfaceVisibility: {
       globalVars: {},

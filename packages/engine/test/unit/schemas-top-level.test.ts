@@ -124,7 +124,7 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
   return {
     ...minimalGameDef,
     agents: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       surfaceVisibility: {
         globalVars: {},
@@ -348,7 +348,7 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
@@ -533,7 +533,7 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
@@ -794,7 +794,7 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         surfaceVisibility: {
           globalVars: {},
@@ -864,7 +864,7 @@ describe('top-level runtime schemas', () => {
     const result = GameDefSchema.safeParse({
       ...minimalGameDef,
       agents: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         surfaceVisibility: {
           globalVars: {},
           globalMarkers: {},

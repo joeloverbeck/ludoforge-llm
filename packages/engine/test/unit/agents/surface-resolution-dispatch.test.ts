@@ -45,7 +45,7 @@ function createDef(): GameDef {
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
     agents: withCompiledPolicyCatalog({
-      schemaVersion: 2,
+      schemaVersion: 3,
       catalogFingerprint: 'surface-resolution-dispatch-test',
       surfaceVisibility: {
         globalVars: {},

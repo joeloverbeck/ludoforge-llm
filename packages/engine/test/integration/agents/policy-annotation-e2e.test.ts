@@ -124,7 +124,7 @@ function createCatalog(overrides?: {
     },
   };
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'e2e-catalog',
     surfaceVisibility: {
       globalVars: {},

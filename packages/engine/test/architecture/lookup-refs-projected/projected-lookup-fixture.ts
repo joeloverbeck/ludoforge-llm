@@ -163,7 +163,7 @@ function createProfile(kind: FixtureProfileKind): CompiledAgentProfile {
 export function createProjectedLookupCatalog(kind: FixtureProfileKind = 'projected'): AgentPolicyCatalog {
   const profile = createProfile(kind);
   const catalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `projected-lookup-fixture-${kind}`,
     surfaceVisibility: projectedLookupSurfaceVisibility,
     parameterDefs: {},

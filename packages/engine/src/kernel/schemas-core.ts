@@ -1114,7 +1114,9 @@ const CompiledAgentDependencyRefsSchema = z
     aggregates: z.array(StringSchema),
     selectors: z.array(StringSchema).optional(),
     strategyModules: z.array(StringSchema).optional(),
+    planTemplates: z.array(StringSchema).optional(),
     guardrails: z.array(StringSchema).optional(),
+    turnShapeEvaluators: z.array(StringSchema).optional(),
     strategicConditions: z.array(StringSchema),
   })
   .strict();
@@ -1271,6 +1273,14 @@ const SelectorCollectionRefSchema = z.union([
   z.object({ kind: z.literal('authoredFinite'), collectionId: StringSchema }).strict(),
 ]);
 
+const SelectorSubsetSourceSchema = z.union([
+  z.object({
+    kind: z.literal('collection'),
+    collection: SelectorCollectionRefSchema,
+  }).strict(),
+  z.object({ kind: z.literal('selector'), selectorId: StringSchema }).strict(),
+]);
+
 const SelectorSourceSchema = z.union([
   z.object({
     kind: z.literal('collection'),
@@ -1282,6 +1292,19 @@ const SelectorSourceSchema = z.union([
     left: SelectorCollectionRefSchema,
     right: SelectorCollectionRefSchema,
     maxPairs: z.number().int().positive().max(256),
+  }).strict(),
+  z.object({
+    kind: z.literal('routePairs'),
+    originSelectorId: StringSchema,
+    destinationSelectorId: StringSchema,
+    maxPairs: z.number().int().positive().max(256),
+  }).strict(),
+  z.object({
+    kind: z.literal('subset'),
+    of: SelectorSubsetSourceSchema,
+    min: z.number().int().nonnegative().max(256),
+    max: z.number().int().nonnegative().max(256),
+    beamWidth: z.number().int().positive().max(256),
   }).strict(),
   z.object({ kind: z.literal('microturnOptions') }).strict(),
   z.object({ kind: z.literal('candidateParams'), param: StringSchema }).strict(),
@@ -1321,6 +1344,17 @@ const CompiledAgentSelectorSchema = z.object({
   result: SelectorResultSchema,
   costClass: SelectorCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const CompiledRoleSelectorSchema = CompiledAgentSelectorSchema.extend({
+  selectorId: StringSchema,
+  role: StringSchema,
+  refs: z.object({
+    id: StringSchema,
+    quality: StringSchema,
+    rank: StringSchema,
+    components: StringSchema,
+  }).strict(),
 }).strict();
 
 const ModuleAppliesSpecSchema = z.object({
@@ -1377,6 +1411,91 @@ const CompiledAgentStrategyModuleSchema = z.object({
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const CompiledPlanRoleConstraintSchema = z.union([
+  z.object({ kind: z.literal('notEqual'), role: StringSchema }).strict(),
+  z.object({ kind: z.literal('locatedIn'), role: StringSchema }).strict(),
+]);
+
+const CompiledPlanTemplateSchema = z.object({
+  traceLabel: StringSchema,
+  root: z.object({
+    actionTags: z.array(StringSchema),
+    actionIds: z.array(StringSchema),
+    compound: z.object({
+      specialTags: z.array(StringSchema),
+      timing: z.enum(['before', 'during', 'after']),
+      interruptAfterStage: z.number().int().nonnegative().optional(),
+    }).strict().optional(),
+  }).strict(),
+  roles: z.record(StringSchema, z.object({
+    selectorId: StringSchema,
+    required: z.boolean(),
+    constraints: z.array(CompiledPlanRoleConstraintSchema),
+    selector: CompiledRoleSelectorSchema,
+  }).strict()),
+  steps: z.array(z.object({
+    label: StringSchema,
+    role: StringSchema,
+    match: z.object({
+      decisionKind: StringSchema,
+      targetKind: StringSchema,
+      decisionPath: StringSchema,
+      actionTag: StringSchema.optional(),
+      stageIndex: z.number().int().nonnegative().optional(),
+    }).strict(),
+  }).strict()),
+  caps: z.object({
+    capClass: StringSchema,
+    maxSteps: z.number().int().positive(),
+  }).strict(),
+  postureHook: StringSchema.optional(),
+  fallback: z.object({
+    ifSpecialUnavailable: StringSchema.optional(),
+    ifRoleTargetUnavailable: StringSchema.optional(),
+    ifPreviewUnavailable: StringSchema.optional(),
+  }).strict(),
+  dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const PolicyPlanMicroturnTraceSchema = z.object({
+  expectedStep: StringSchema.nullable(),
+  matchedRole: StringSchema.nullable(),
+  selectedLegalOption: StringSchema,
+  match: z.enum(['exact', 'reselected', 'fallback']),
+  deviation: StringSchema.optional(),
+  fallbackReason: StringSchema.optional(),
+}).strict();
+
+const PolicyPlanTraceSchema = z.object({
+  status: z.enum(['selected', 'noTemplate', 'noRootMatch', 'noRoleBinding']),
+  capClass: StringSchema.optional(),
+  capLimit: IntegerSchema.nonnegative().optional(),
+  selectedTemplate: StringSchema.optional(),
+  selectedIntent: StringSchema.optional(),
+  selectedRootStableMoveKey: StringSchema.optional(),
+  activeDoctrines: z.array(StringSchema),
+  rejectedDoctrines: z.array(z.object({
+    doctrineId: StringSchema,
+    reason: z.enum(['inactive', 'noRootMatch']),
+  }).strict()),
+  roleBindings: z.array(z.object({
+    role: StringSchema,
+    selectedId: StringSchema,
+    quality: NumberSchema,
+    rank: IntegerSchema.nonnegative(),
+    components: z.record(StringSchema, NumberSchema),
+  }).strict()),
+  alternatives: z.array(z.object({
+    templateId: StringSchema,
+    rootStableMoveKey: StringSchema,
+    score: NumberSchema,
+    priorityTier: NumberSchema,
+    stableKey: StringSchema,
+  }).strict()),
+  postureStatus: z.enum(['notConfigured', 'ready', 'unavailable']),
+  microturns: z.array(PolicyPlanMicroturnTraceSchema).optional(),
 }).strict();
 
 const PassFallbackSpecSchema = z.object({
@@ -1476,6 +1595,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     selectors: z.record(StringSchema, CompiledAgentSelectorSchema).optional(),
     strategyModules: z.record(StringSchema, CompiledAgentStrategyModuleSchema).optional(),
+    planTemplates: z.record(StringSchema, CompiledPlanTemplateSchema).optional(),
     guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
@@ -1565,7 +1685,9 @@ const CompiledAgentProfileSchema = z
         candidateAggregates: z.array(StringSchema),
         selectors: z.array(StringSchema).optional(),
         strategyModules: z.array(StringSchema).optional(),
+        planTemplates: z.array(StringSchema).optional(),
         guardrails: z.array(StringSchema).optional(),
+        turnShapeEvaluators: z.array(StringSchema).optional(),
         considerations: z.array(StringSchema),
       })
       .strict(),
@@ -1577,7 +1699,7 @@ const CompiledAgentProfileSchema = z
 
 const AgentPolicyCatalogSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
     catalogFingerprint: StringSchema,
     surfaceVisibility: CompiledSurfaceCatalogSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
@@ -2769,6 +2891,7 @@ const AgentDecisionTraceSchema = z
     advisories: z.array(PolicyPreviewSignalUnavailableAdvisoryTraceSchema).optional(),
     modules: PolicyModuleTraceSchema.optional(),
     selection: PolicySelectionTraceSchema.optional(),
+    plan: PolicyPlanTraceSchema.optional(),
     emergencyFallback: BooleanSchema,
     failure: AgentDecisionFailureSummarySchema.nullable(),
     stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),

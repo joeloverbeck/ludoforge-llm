@@ -12,6 +12,7 @@ import {
   pushMissingReferenceDiagnostic,
   validateUnknownKeys,
 } from './validate-spec-shared.js';
+import { validatePlanTemplates } from './validate-agent-plan-templates.js';
 
 const AGENTS_SECTION_KEYS = ['parameters', 'library', 'profiles', 'bindings'] as const;
 const AGENT_PARAMETER_KEYS = ['type', 'default', 'min', 'max', 'tunable', 'values', 'allowedIds'] as const;
@@ -22,7 +23,7 @@ const GRANT_FLOW_CAP_CLASS_BUDGETS = { grantFlow16: 16, grantFlow32: 32 } as con
 
 const BUILT_IN_OBSERVER_NAMES = new Set<string>(['omniscient', 'default']);
 type AgentProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
-type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey | 'selectors' | 'strategyModules', Record<string, unknown>>>;
+type AgentLibraryBucketMap = Partial<Record<AgentProfileUseKey | 'selectors' | 'strategyModules' | 'planTemplates', Record<string, unknown>>>;
 
 const INLINE_PROFILE_LOGIC_KEYS = new Set([
   'expr',
@@ -74,6 +75,8 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
   for (const key of AGENT_POLICY_LIBRARY_BUCKETS) {
     validateNamedDefinitionMap(library[key], `doc.agents.library.${key}`, diagnostics, `agents library ${key}`);
   }
+
+  validatePlanTemplates(library, diagnostics);
 
   const considerations = library.considerations;
   if (!isRecord(considerations)) {

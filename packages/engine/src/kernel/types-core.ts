@@ -2223,11 +2223,33 @@ export interface SyntheticDecisionTraceEntry {
   readonly completionPolicy: AgentPreviewCompletionPolicy;
 }
 
+export type PolicyPreviewGrantFlowSegmentKind =
+  | 'outcomeGrantResolve'
+  | 'grantOffered'
+  | 'freeOperationActionSelection'
+  | 'selectedFreeOperation'
+  | 'innerChoice'
+  | 'grantConsumed'
+  | 'grantSkipped'
+  | 'grantExpired'
+  | 'deferredEffectsReleased';
+
+export interface PolicyPreviewGrantFlowSegmentTrace {
+  readonly depth: number;
+  readonly kind: PolicyPreviewGrantFlowSegmentKind;
+  readonly decisionKey?: string;
+  readonly actionId?: string;
+  readonly grantId?: string;
+  readonly grantPhase?: string;
+  readonly selectedOptionStableKey?: string;
+}
+
 export interface PolicyPreviewDriveTrace {
-  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'freeOperationCap' | 'stochastic';
+  readonly kind?: 'completed' | 'depthCap' | 'postGrantCap' | 'freeOperationCap' | 'stochastic' | 'failed';
   readonly depth: number;
   readonly completionPolicy: AgentPreviewCompletionPolicy;
   readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+  readonly grantFlowSegments?: readonly PolicyPreviewGrantFlowSegmentTrace[];
 }
 
 export interface PolicyCandidateDecisionTrace {

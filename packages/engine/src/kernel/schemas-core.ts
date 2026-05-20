@@ -2474,12 +2474,35 @@ const SyntheticDecisionTraceEntrySchema = z
   })
   .strict();
 
+const PolicyPreviewGrantFlowSegmentTraceSchema = z
+  .object({
+    depth: IntegerSchema.nonnegative(),
+    kind: z.enum([
+      'outcomeGrantResolve',
+      'grantOffered',
+      'freeOperationActionSelection',
+      'selectedFreeOperation',
+      'innerChoice',
+      'grantConsumed',
+      'grantSkipped',
+      'grantExpired',
+      'deferredEffectsReleased',
+    ]),
+    decisionKey: StringSchema.optional(),
+    actionId: StringSchema.optional(),
+    grantId: StringSchema.optional(),
+    grantPhase: StringSchema.optional(),
+    selectedOptionStableKey: StringSchema.optional(),
+  })
+  .strict();
+
 const PolicyPreviewDriveTraceSchema = z
   .object({
-    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'stochastic']).optional(),
+    kind: z.enum(['completed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'stochastic', 'failed']).optional(),
     depth: IntegerSchema.nonnegative(),
     completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
+    grantFlowSegments: z.array(PolicyPreviewGrantFlowSegmentTraceSchema).optional(),
   })
   .strict();
 

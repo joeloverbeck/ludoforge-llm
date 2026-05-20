@@ -1,6 +1,6 @@
 # 185GRANTFLOWPI-004: Phase 3 — Exit-reason taxonomy and grant-flow trace provenance
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/` (policy-preview exit reasons, policy-eval summary counters, trace), kernel types-core (trace schema)
@@ -80,3 +80,38 @@ Update `post-grant-continuation-differentiates.test.ts` to assert the cap class 
 
 1. `pnpm turbo build && node --test packages/engine/dist/test/architecture/preview-trace/grant-flow-trace.test.js`
 2. `pnpm turbo lint && pnpm turbo typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-20.
+
+What landed:
+
+- Added `grantFlowSegments` to `PolicyPreviewDriveTrace` and the exported trace schema. The preview drive now records ordered generic grant-flow provenance for `outcomeGrantResolve`, grant offer, free-operation action selection, selected free operation, inner choices, deferred-effect release, and grant terminal lifecycle segments.
+- Preserved the existing `postGrantCap`, `freeOperationCap`, and `grantFlowPartial` outcome/counter behavior from tickets 001/003. `policy-eval.ts` and `turn-shape-eval.ts` were verified-no-edit because their current summary counters and partial-status mapping already covered this ticket's status taxonomy.
+- Added `packages/engine/test/architecture/preview-trace/grant-flow-trace.test.ts` for completed and capped grant-flow trace paths.
+- Extended `packages/engine/test/architecture/preview-post-grant/post-grant-continuation-differentiates.test.ts` so the smoke fixture asserts the ordered trace path and drive depth while still leaving effect-complete behavior to the free-operation fixture from ticket 003.
+- Regenerated `packages/engine/schemas/Trace.schema.json` after the public trace shape changed.
+
+Scope notes:
+
+- No WASM parity or fallback work was done; ticket 005 still owns that.
+- No FITL-like or ARVN end-to-end witness was added; ticket 006 still owns that.
+- No `policy-eval.ts` edit was needed beyond existing ticket 001/003 summary counters; no `turn-shape-eval.ts` edit was needed because capped/partial grant-flow outcomes already map to `partial`.
+
+Source-size hard-gate ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| `packages/engine/src/agents/policy-preview.ts` | 1498 | 1583 | no; preexisting over 800 | +85 | Existing user-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral from the harness state applies; extracting trace capture would widen this ticket beyond the local preview-drive provenance seam. | none for 004 |
+| `packages/engine/src/kernel/types-core.ts` | 2750 | 2772 | no; preexisting over 800 | +22 | Existing user-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral applies; this is a narrow public trace type extension. | none for 004 |
+| `packages/engine/src/kernel/schemas-core.ts` | 3038 | 3061 | no; preexisting over 800 | +23 | Existing user-approved 2026-05-20 Spec 185 Option 1 minimal-touch deferral applies; this mirrors the public trace schema type. | none for 004 |
+
+Verification:
+
+- `pnpm turbo build` — initially failed on a local TypeScript scope error in the new trace helper; fixed, then passed.
+- `node --test packages/engine/dist/test/architecture/preview-trace/grant-flow-trace.test.js packages/engine/dist/test/architecture/preview-post-grant/post-grant-continuation-differentiates.test.js packages/engine/dist/test/architecture/preview-post-grant/trace-shape-outcome-grant-continuation.test.js packages/engine/dist/test/architecture/preview-post-grant/post-grant-free-operation-continuation.test.js packages/engine/dist/test/architecture/preview-post-grant/post-grant-cap-exit-witness.test.js packages/engine/dist/test/architecture/preview-post-grant/grant-flow-consequence-chain-boundary.test.js` — passed, 11 tests.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — initially failed because `Trace.schema.json` was out of sync; regenerated schemas and reran green.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, 163/163 files.

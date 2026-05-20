@@ -33,8 +33,18 @@ describe('post-grant preview continuation', () => {
       freeOperationCapClass: 'grantFlow16',
     });
     const optInPreview = optInRuntime.getPreviewState(candidate);
+    const optInDrive = optInRuntime.getPreviewDrive(candidate);
     assert.equal(optInRuntime.getOutcome(candidate), 'ready');
-    assert.equal(optInRuntime.getPreviewDrive(candidate)?.kind, 'completed');
+    assert.equal(optInDrive?.kind, 'completed');
+    assert.equal(optInDrive?.depth, 2);
+    assert.deepEqual(optInDrive?.grantFlowSegments?.map((segment) => segment.kind), [
+      'outcomeGrantResolve',
+      'grantOffered',
+      'freeOperationActionSelection',
+      'selectedFreeOperation',
+      'deferredEffectsReleased',
+      'grantConsumed',
+    ]);
     assert.equal(grantPhase(optInPreview, 'grant-a'), undefined);
     assert.equal(optInPreview?.globalVars.target, 1);
 

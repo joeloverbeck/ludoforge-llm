@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-preview-drive.ts` (+ ABI/status set or fallback path)
-**Deps**: `tickets/185GRANTFLOWPI-004.md`
+**Deps**: `archive/tickets/185GRANTFLOWPI-004.md`
 
 ## Problem
 

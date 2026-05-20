@@ -3190,7 +3190,8 @@
                             "depthCap",
                             "postGrantCap",
                             "freeOperationCap",
-                            "stochastic"
+                            "stochastic",
+                            "failed"
                           ]
                         },
                         "depth": {
@@ -3270,6 +3271,76 @@
                               "score",
                               "scoreContributions",
                               "completionPolicy"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "grantFlowSegments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "depth": {
+                                "minimum": 0,
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_e7c99bd4"
+                                  }
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "outcomeGrantResolve",
+                                  "grantOffered",
+                                  "freeOperationActionSelection",
+                                  "selectedFreeOperation",
+                                  "innerChoice",
+                                  "grantConsumed",
+                                  "grantSkipped",
+                                  "grantExpired",
+                                  "deferredEffectsReleased"
+                                ]
+                              },
+                              "decisionKey": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "actionId": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "grantId": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "grantPhase": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "selectedOptionStableKey": {
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "depth",
+                              "kind"
                             ],
                             "additionalProperties": false
                           }

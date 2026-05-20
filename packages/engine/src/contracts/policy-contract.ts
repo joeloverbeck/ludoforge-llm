@@ -7,6 +7,7 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'strategyModules',
   'guardrails',
   'turnShapeEvaluators',
+  'postureEvaluators',
   'considerations',
   'tieBreakers',
   'strategicConditions',

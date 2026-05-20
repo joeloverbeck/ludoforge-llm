@@ -1117,6 +1117,7 @@ const CompiledAgentDependencyRefsSchema = z
     planTemplates: z.array(StringSchema).optional(),
     guardrails: z.array(StringSchema).optional(),
     turnShapeEvaluators: z.array(StringSchema).optional(),
+    postureEvaluators: z.array(StringSchema).optional(),
     strategicConditions: z.array(StringSchema),
   })
   .strict();
@@ -1554,6 +1555,30 @@ const CompiledPolicyStrategicConditionSchema = z
   })
   .strict();
 
+const CompiledPostureEvaluatorSchema = z
+  .object({
+    id: StringSchema,
+    traceLabel: StringSchema,
+    must: z.array(z.object({
+      id: StringSchema,
+      condition: CompiledPolicyExprSchema,
+      onViolation: z.enum(['demote', 'veto']),
+      demotePenalty: CompiledPolicyExprSchema.optional(),
+    }).strict()),
+    prefer: z.array(z.object({
+      id: StringSchema,
+      when: CompiledPolicyExprSchema.optional(),
+      value: CompiledPolicyExprSchema,
+      weight: CompiledPolicyExprSchema,
+      fallback: z.object({
+        contribution: CompiledPolicyExprSchema,
+      }).strict(),
+    }).strict()),
+    costClass: AgentPolicyCostClassSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
 const CompiledPolicyCatalogSchema = z
   .object({
     stateFeatures: z.record(StringSchema, CompiledPolicyStateFeatureSchema),
@@ -1562,6 +1587,7 @@ const CompiledPolicyCatalogSchema = z
     selectors: z.record(StringSchema, CompiledPolicySelectorSchema).optional(),
     strategyModules: z.record(StringSchema, StrategyModuleSchema).optional(),
     guardrails: z.record(StringSchema, GuardrailSchema).optional(),
+    postureEvaluators: z.record(StringSchema, CompiledPostureEvaluatorSchema).optional(),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledPolicyStrategicConditionSchema),
@@ -1588,6 +1614,24 @@ const CompiledStrategicConditionSchema = z
   })
   .strict();
 
+const CompiledAgentPostureEvaluatorSchema = z
+  .object({
+    traceLabel: StringSchema,
+    must: z.array(z.object({
+      id: StringSchema,
+      onViolation: z.enum(['demote', 'veto']),
+      hasDemotePenalty: z.boolean(),
+    }).strict()),
+    prefer: z.array(z.object({
+      id: StringSchema,
+      hasWhen: z.boolean(),
+      hasFallbackContribution: z.boolean(),
+    }).strict()),
+    costClass: AgentPolicyCostClassSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
 const CompiledAgentLibraryIndexSchema = z
   .object({
     stateFeatures: z.record(StringSchema, CompiledAgentStateFeatureSchema),
@@ -1597,6 +1641,7 @@ const CompiledAgentLibraryIndexSchema = z
     strategyModules: z.record(StringSchema, CompiledAgentStrategyModuleSchema).optional(),
     planTemplates: z.record(StringSchema, CompiledPlanTemplateSchema).optional(),
     guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
+    postureEvaluators: z.record(StringSchema, CompiledAgentPostureEvaluatorSchema).optional(),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),

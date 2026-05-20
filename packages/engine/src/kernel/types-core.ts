@@ -872,6 +872,32 @@ export interface TurnShapeEvaluatorDef {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface PostureMustDef {
+  readonly id: string;
+  readonly condition: CompiledPolicyExpr;
+  readonly onViolation: 'demote' | 'veto';
+  readonly demotePenalty?: CompiledPolicyExpr;
+}
+
+export interface PosturePreferDef {
+  readonly id: string;
+  readonly when?: CompiledPolicyExpr;
+  readonly value: CompiledPolicyExpr;
+  readonly weight: CompiledPolicyExpr;
+  readonly fallback: {
+    readonly contribution: CompiledPolicyExpr;
+  };
+}
+
+export interface CompiledPostureEvaluator {
+  readonly id: string;
+  readonly traceLabel: string;
+  readonly must: readonly PostureMustDef[];
+  readonly prefer: readonly PosturePreferDef[];
+  readonly costClass: TurnShapeCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
 export interface CompiledPolicyConsideration {
   readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
@@ -917,6 +943,7 @@ export interface CompiledPolicyCatalog {
   readonly strategyModules?: Readonly<Record<string, StrategyModuleDef>>;
   readonly guardrails?: Readonly<Record<string, GuardrailDef>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, TurnShapeEvaluatorDef>>;
+  readonly postureEvaluators?: Readonly<Record<string, CompiledPostureEvaluator>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledPolicyStrategicCondition>>;
@@ -1055,6 +1082,7 @@ export interface CompiledAgentDependencyRefs {
   readonly planTemplates?: readonly string[];
   readonly guardrails?: readonly string[];
   readonly turnShapeEvaluators?: readonly string[];
+  readonly postureEvaluators?: readonly string[];
   readonly strategicConditions: readonly string[];
 }
 
@@ -1245,6 +1273,22 @@ export interface CompiledAgentTurnShapeEvaluator {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface CompiledAgentPostureEvaluator {
+  readonly traceLabel: string;
+  readonly must: readonly {
+    readonly id: string;
+    readonly onViolation: 'demote' | 'veto';
+    readonly hasDemotePenalty: boolean;
+  }[];
+  readonly prefer: readonly {
+    readonly id: string;
+    readonly hasWhen: boolean;
+    readonly hasFallbackContribution: boolean;
+  }[];
+  readonly costClass: TurnShapeCostClass;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
 export interface CompiledAgentConsideration {
   readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
@@ -1283,6 +1327,7 @@ export interface CompiledAgentLibraryIndex {
   readonly planTemplates?: Readonly<Record<string, CompiledPlanTemplate>>;
   readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, CompiledAgentTurnShapeEvaluator>>;
+  readonly postureEvaluators?: Readonly<Record<string, CompiledAgentPostureEvaluator>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;

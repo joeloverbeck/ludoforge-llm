@@ -415,6 +415,7 @@ function mergeModuleDependencies(dependencies: readonly CompiledAgentDependencyR
   const strategyModules = uniqueSorted(dependencies.flatMap((entry) => entry.strategyModules ?? []));
   const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
+  const postureEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.postureEvaluators ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -424,6 +425,7 @@ function mergeModuleDependencies(dependencies: readonly CompiledAgentDependencyR
     ...(strategyModules.length === 0 ? {} : { strategyModules }),
     ...(guardrails.length === 0 ? {} : { guardrails }),
     ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
+    ...(postureEvaluators.length === 0 ? {} : { postureEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

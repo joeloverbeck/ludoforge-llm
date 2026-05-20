@@ -194,6 +194,7 @@ export function computeDependenciesReadFootprint(dependencies: CompiledAgentDepe
     || dependencies.aggregates.length > 0
     || dependencies.strategicConditions.length > 0
     || (dependencies.strategyModules?.length ?? 0) > 0
+    || (dependencies.postureEvaluators?.length ?? 0) > 0
   ) {
     surfaces.push(withRead({ ...emptySurface(), variables: 'unknown', zones: 'unknown', tokens: 'unknown', scores: 'unknown' }));
   }

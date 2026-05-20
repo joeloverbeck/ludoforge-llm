@@ -1,6 +1,6 @@
 # 187WHOTURPOS-001: `postureEvaluators` library bucket (compiler)
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `contracts/policy-contract.ts`, `cnl/game-spec-doc.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`, `cnl/lower-agent-considerations.ts`, `cnl/compile-agents.ts`
@@ -85,3 +85,30 @@ In `cnl/lower-agent-considerations.ts` (and the orchestration in `cnl/compile-ag
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/<posture-compiler-test>.test.js`
 2. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-05-21
+
+What changed:
+
+- Added `postureEvaluators` to `AGENT_POLICY_LIBRARY_BUCKETS` without adding it to `AGENT_POLICY_PROFILE_USE_BUCKETS`; posture evaluators are library-only and referenced through plan-template `postureHook`.
+- Added authored and compiled posture evaluator shapes, schema validation, dependency propagation, expression lowering, and static validation that every `prefer` term declares `fallback.contribution`.
+- Validated `planTemplates.<id>.postureHook` against the compiled posture evaluator bucket and records the dependency on the plan template.
+- Added `packages/engine/src/cnl/compile-agent-posture-evaluators.ts` for posture-specific compiler lowering and `packages/engine/src/cnl/strip-agent-library-expressions.ts` to keep new projection logic out of the already-large `compile-agents.ts`.
+- Regenerated `packages/engine/schemas/GameDef.schema.json` with `pnpm -F @ludoforge/engine run schema:artifacts`.
+
+Deviations from original plan:
+
+- The compiled shape uses explicit `must[].condition`, `prefer[].value`, `prefer[].weight`, and `prefer[].fallback.contribution` fields. Runtime posture evaluation, `preview.plan.delta.*`, and relationship refs remain out of scope for tickets `187WHOTURPOS-002` through `-005`.
+- `compile-agents.ts` was already above the repository file-size guidance. The implementation extracted existing expression-stripping logic into `strip-agent-library-expressions.ts`; final active growth in `compile-agents.ts` is negative relative to the starting diff, while new posture-specific files are below guidance.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/cnl/agent-posture-evaluator-compile.test.js` — passed, 3 tests.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after regenerating schema artifacts.
+- `pnpm -F @ludoforge/engine test` — passed, 165/165 files.
+- `pnpm turbo lint typecheck` — first run failed on unused imports introduced by the extraction; after removing them, rerun passed, 5/5 tasks.
+
+Post-review: completed in the Spec 187 implementation harness; no must-fix cleanup or follow-up ticket was needed before archival.

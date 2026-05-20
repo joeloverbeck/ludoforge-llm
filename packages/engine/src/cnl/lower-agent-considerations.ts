@@ -13,6 +13,7 @@ import type {
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
   CompiledPolicySelector,
+  CompiledPostureEvaluator,
   CompiledPlanTemplate,
   CompiledPolicyStateFeature,
   CompiledPolicyStrategicCondition,
@@ -54,6 +55,7 @@ export interface AgentPolicyLibraryWithExpr {
   readonly planTemplates: Readonly<Record<string, CompiledPlanTemplate>>;
   readonly guardrails: Readonly<Record<string, GuardrailDef>>;
   readonly turnShapeEvaluators: Readonly<Record<string, TurnShapeEvaluatorDef>>;
+  readonly postureEvaluators: Readonly<Record<string, CompiledPostureEvaluator>>;
   readonly considerations: Readonly<Record<string, {
     readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
@@ -99,6 +101,7 @@ export function lowerAgentConsiderations(
   const strategyModules: Record<string, StrategyModuleDef> = {};
   const guardrails: Record<string, GuardrailDef> = {};
   const turnShapeEvaluators: Record<string, TurnShapeEvaluatorDef> = {};
+  const postureEvaluators: Record<string, CompiledPostureEvaluator> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
   const strategicConditions: Record<string, CompiledPolicyStrategicCondition> = {};
@@ -228,6 +231,46 @@ export function lowerAgentConsiderations(
     };
   }
 
+  for (const [evaluatorId, evaluator] of Object.entries(library.postureEvaluators)) {
+    const must = evaluator.must.map((entry) => {
+      const condition = lowerAgentPolicyExpr(entry.condition);
+      const demotePenalty = entry.demotePenalty === undefined ? null : lowerAgentPolicyExpr(entry.demotePenalty);
+      return condition === null || (entry.demotePenalty !== undefined && demotePenalty === null)
+        ? null
+        : {
+          ...entry,
+          condition,
+          ...(demotePenalty === null ? {} : { demotePenalty }),
+        };
+    });
+    const prefer = evaluator.prefer.map((entry) => {
+      const when = entry.when === undefined ? null : lowerAgentPolicyExpr(entry.when);
+      const value = lowerAgentPolicyExpr(entry.value);
+      const weight = lowerAgentPolicyExpr(entry.weight);
+      const fallbackContribution = lowerAgentPolicyExpr(entry.fallback.contribution);
+      return (entry.when !== undefined && when === null)
+        || value === null
+        || weight === null
+        || fallbackContribution === null
+        ? null
+        : {
+          ...entry,
+          ...(when === null ? {} : { when }),
+          value,
+          weight,
+          fallback: { contribution: fallbackContribution },
+        };
+    });
+    if (must.some((entry) => entry === null) || prefer.some((entry) => entry === null)) {
+      continue;
+    }
+    postureEvaluators[evaluatorId] = {
+      ...evaluator,
+      must: must as CompiledPostureEvaluator['must'],
+      prefer: prefer as CompiledPostureEvaluator['prefer'],
+    };
+  }
+
   for (const [considerationId, consideration] of Object.entries(library.considerations)) {
     const weight = lowerAgentPolicyExpr(consideration.weight);
     const value = lowerAgentPolicyExpr(consideration.value);
@@ -293,6 +336,7 @@ export function lowerAgentConsiderations(
     ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
     ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
+    ...(Object.keys(postureEvaluators).length === 0 ? {} : { postureEvaluators }),
     considerations,
     tieBreakers,
     strategicConditions,

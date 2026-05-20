@@ -214,7 +214,7 @@ This spec is a scoped reassessment of the ChatGPT-Pro proposal, not a verbatim t
 
 Decomposed via `/spec-to-tickets` on 2026-05-20:
 
-- [`tickets/185GRANTFLOWPI-001.md`](../tickets/185GRANTFLOWPI-001.md) — Phase 1 — Preview status integrity for un-driven grant obligations (covers §4)
+- [`archive/tickets/185GRANTFLOWPI-001.md`](../archive/tickets/185GRANTFLOWPI-001.md) — Phase 1 — Preview status integrity for un-driven grant obligations (covers §4)
 - [`tickets/185GRANTFLOWPI-002.md`](../tickets/185GRANTFLOWPI-002.md) — Phase 2 — Grant-flow config generalization + `grantFlow` cap-class registry (covers §5.4, §6.1 registry)
 - [`tickets/185GRANTFLOWPI-003.md`](../tickets/185GRANTFLOWPI-003.md) — Phase 2 — Generalized grant-flow continuation drive (covers §5.1–§5.3)
 - [`tickets/185GRANTFLOWPI-004.md`](../tickets/185GRANTFLOWPI-004.md) — Phase 3 — Exit-reason taxonomy and grant-flow trace provenance (covers §6.2)

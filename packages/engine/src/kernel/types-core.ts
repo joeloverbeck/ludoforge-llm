@@ -2168,7 +2168,7 @@ export type PolicyScheduleInputRefTrace =
 
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
-  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'freeOperationCap' | 'grantFlowPartial' | 'noPreviewDecision' | 'gated';
 }
 
 export interface PolicyLookupUnknownRefTrace {
@@ -2256,7 +2256,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
-  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'noPreviewDecision' | 'gated';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'postGrantCap' | 'freeOperationCap' | 'grantFlowPartial' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
@@ -2372,6 +2372,8 @@ export type PolicyPreviewSeatMatrixStatusTrace =
   | 'failed'
   | 'depthCap'
   | 'postGrantCap'
+  | 'freeOperationCap'
+  | 'grantFlowPartial'
   | 'noPreviewDecision'
   | 'gated';
 
@@ -2448,8 +2450,10 @@ export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnknownRefTrace['reason'], 'postGrantCap'>, number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnknownRefTrace['reason'], 'postGrantCap' | 'freeOperationCap' | 'grantFlowPartial'>, number> & {
     readonly postGrantCap?: number;
+    readonly freeOperationCap?: number;
+    readonly grantFlowPartial?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;
@@ -2471,6 +2475,9 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownHidden: number;
   readonly unknownUnresolved: number;
   readonly unknownDepthCap: number;
+  readonly unknownPostGrantCap: number;
+  readonly unknownFreeOperationCap: number;
+  readonly unknownGrantFlowPartial: number;
   readonly unknownNoPreviewDecision: number;
   readonly unknownGated: number;
   readonly unknownFailed: number;

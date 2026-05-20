@@ -20,7 +20,7 @@ describe('post-grant preview continuation', () => {
 
     const optOutRuntime = createRuntime(def, state, trustedMove, ['grant-a']);
     const optOutPreview = optOutRuntime.getPreviewState(candidate);
-    assert.equal(optOutRuntime.getOutcome(candidate), 'ready');
+    assert.equal(optOutRuntime.getOutcome(candidate), 'grantFlowPartial');
     assert.equal(optOutRuntime.getPreviewDrive(candidate)?.kind, 'completed');
     assert.equal(grantPhase(optOutPreview, 'grant-a'), 'ready');
 
@@ -30,7 +30,7 @@ describe('post-grant preview continuation', () => {
       capClass: 'postGrant16',
     });
     const optInPreview = optInRuntime.getPreviewState(candidate);
-    assert.equal(optInRuntime.getOutcome(candidate), 'ready');
+    assert.equal(optInRuntime.getOutcome(candidate), 'grantFlowPartial');
     assert.equal(optInRuntime.getPreviewDrive(candidate)?.kind, 'completed');
     assert.equal(grantPhase(optInPreview, 'grant-a'), 'offered');
 

@@ -2007,7 +2007,7 @@
                   "unknownRefs": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/anon_27d91bdf"
+                      "$ref": "#/definitions/anon_c4e380a3"
                     }
                   },
                   "readyRefStats": {
@@ -2132,6 +2132,8 @@
                                             "failed",
                                             "depthCap",
                                             "postGrantCap",
+                                            "freeOperationCap",
+                                            "grantFlowPartial",
                                             "noPreviewDecision",
                                             "gated"
                                           ]
@@ -2264,6 +2266,15 @@
                       "unknownDepthCap": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
                       },
+                      "unknownPostGrantCap": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
+                      "unknownFreeOperationCap": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
+                      "unknownGrantFlowPartial": {
+                        "$ref": "#/definitions/anon_c0e4ebfe"
+                      },
                       "unknownNoPreviewDecision": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
                       },
@@ -2281,6 +2292,9 @@
                       "unknownHidden",
                       "unknownUnresolved",
                       "unknownDepthCap",
+                      "unknownPostGrantCap",
+                      "unknownFreeOperationCap",
+                      "unknownGrantFlowPartial",
                       "unknownNoPreviewDecision",
                       "unknownGated",
                       "unknownFailed"
@@ -2741,7 +2755,7 @@
                     "unknownPreviewRefs": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/definitions/anon_27d91bdf"
+                        "$ref": "#/definitions/anon_c4e380a3"
                       }
                     },
                     "unknownLookupRefs": {
@@ -3117,6 +3131,18 @@
                         {
                           "type": "string",
                           "const": "depthCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "postGrantCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "freeOperationCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "grantFlowPartial"
                         },
                         {
                           "type": "string",
@@ -4164,55 +4190,6 @@
       "items": {
         "$ref": "#/definitions/anon_3a403105"
       }
-    },
-    "anon_27d91bdf": {
-      "type": "object",
-      "properties": {
-        "refId": {
-          "$ref": "#/definitions/anon_4682db72"
-        },
-        "reason": {
-          "anyOf": [
-            {
-              "type": "string",
-              "const": "random"
-            },
-            {
-              "type": "string",
-              "const": "hidden"
-            },
-            {
-              "type": "string",
-              "const": "unresolved"
-            },
-            {
-              "type": "string",
-              "const": "failed"
-            },
-            {
-              "type": "string",
-              "const": "depthCap"
-            },
-            {
-              "type": "string",
-              "const": "postGrantCap"
-            },
-            {
-              "type": "string",
-              "const": "noPreviewDecision"
-            },
-            {
-              "type": "string",
-              "const": "gated"
-            }
-          ]
-        }
-      },
-      "required": [
-        "refId",
-        "reason"
-      ],
-      "additionalProperties": false
     },
     "anon_3456318e": {
       "minItems": 1,
@@ -7751,6 +7728,63 @@
           "$ref": "#/definitions/anon_77f815fd"
         }
       ]
+    },
+    "anon_c4e380a3": {
+      "type": "object",
+      "properties": {
+        "refId": {
+          "$ref": "#/definitions/anon_4682db72"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "random"
+            },
+            {
+              "type": "string",
+              "const": "hidden"
+            },
+            {
+              "type": "string",
+              "const": "unresolved"
+            },
+            {
+              "type": "string",
+              "const": "failed"
+            },
+            {
+              "type": "string",
+              "const": "depthCap"
+            },
+            {
+              "type": "string",
+              "const": "postGrantCap"
+            },
+            {
+              "type": "string",
+              "const": "freeOperationCap"
+            },
+            {
+              "type": "string",
+              "const": "grantFlowPartial"
+            },
+            {
+              "type": "string",
+              "const": "noPreviewDecision"
+            },
+            {
+              "type": "string",
+              "const": "gated"
+            }
+          ]
+        }
+      },
+      "required": [
+        "refId",
+        "reason"
+      ],
+      "additionalProperties": false
     },
     "anon_c5a341f1": {
       "pattern": "^\\$.+",

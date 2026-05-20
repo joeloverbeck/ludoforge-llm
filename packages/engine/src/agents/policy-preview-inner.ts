@@ -154,6 +154,9 @@ export const emptyOutcomeBreakdown = (): PolicyPreviewOutcomeBreakdownTrace => (
   unknownHidden: 0,
   unknownUnresolved: 0,
   unknownDepthCap: 0,
+  unknownPostGrantCap: 0,
+  unknownFreeOperationCap: 0,
+  unknownGrantFlowPartial: 0,
   unknownNoPreviewDecision: 0,
   unknownGated: 0,
   unknownFailed: 0,
@@ -180,8 +183,16 @@ export const incrementOutcome = (
       (breakdown as { unknownUnresolved: number }).unknownUnresolved += 1;
       return;
     case 'depthCap':
-    case 'postGrantCap':
       (breakdown as { unknownDepthCap: number }).unknownDepthCap += 1;
+      return;
+    case 'postGrantCap':
+      (breakdown as { unknownPostGrantCap: number }).unknownPostGrantCap += 1;
+      return;
+    case 'freeOperationCap':
+      (breakdown as { unknownFreeOperationCap: number }).unknownFreeOperationCap += 1;
+      return;
+    case 'grantFlowPartial':
+      (breakdown as { unknownGrantFlowPartial: number }).unknownGrantFlowPartial += 1;
       return;
     case 'noPreviewDecision':
       (breakdown as { unknownNoPreviewDecision: number }).unknownNoPreviewDecision += 1;

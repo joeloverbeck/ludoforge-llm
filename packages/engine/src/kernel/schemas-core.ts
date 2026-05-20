@@ -2426,6 +2426,8 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('failed'),
       z.literal('depthCap'),
       z.literal('postGrantCap'),
+      z.literal('freeOperationCap'),
+      z.literal('grantFlowPartial'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]),
@@ -2529,6 +2531,9 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('unresolved'),
       z.literal('failed'),
       z.literal('depthCap'),
+      z.literal('postGrantCap'),
+      z.literal('freeOperationCap'),
+      z.literal('grantFlowPartial'),
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]).optional(),
@@ -2567,6 +2572,9 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
     unknownDepthCap: NumberSchema,
+    unknownPostGrantCap: NumberSchema,
+    unknownFreeOperationCap: NumberSchema,
+    unknownGrantFlowPartial: NumberSchema,
     unknownNoPreviewDecision: NumberSchema,
     unknownGated: NumberSchema,
     unknownFailed: NumberSchema,
@@ -2617,7 +2625,7 @@ const PolicyPreviewOutcomeGrantContinuationTraceSchema = z
 const PolicyPreviewSeatMatrixCellTraceSchema = z
   .discriminatedUnion('status', [
     z.object({ status: z.literal('ready'), value: NumberSchema }).strict(),
-    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'noPreviewDecision', 'gated']) }).strict(),
+    z.object({ status: z.enum(['stochastic', 'random', 'hidden', 'unresolved', 'failed', 'depthCap', 'postGrantCap', 'freeOperationCap', 'grantFlowPartial', 'noPreviewDecision', 'gated']) }).strict(),
   ]);
 
 const PolicyPreviewSeatMatrixCandidateTraceSchema = z

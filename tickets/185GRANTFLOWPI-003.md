@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts` (continuation drive); possibly `packages/engine/src/kernel/legal-moves.ts` / `kernel/microturn/*` (generic grant-authorization helpers / published-action metadata)
-**Deps**: `tickets/185GRANTFLOWPI-001.md`, `tickets/185GRANTFLOWPI-002.md`
+**Deps**: `archive/tickets/185GRANTFLOWPI-001.md`, `tickets/185GRANTFLOWPI-002.md`
 
 ## Problem
 

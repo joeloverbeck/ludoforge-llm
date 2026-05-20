@@ -310,8 +310,10 @@ export interface PolicyPreviewSignalUnavailableAdvisory {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap'>, number> & {
+  readonly unavailabilityBreakdown: Readonly<Record<Exclude<PolicyPreviewUnavailabilityReason, 'postGrantCap' | 'freeOperationCap' | 'grantFlowPartial'>, number> & {
     readonly postGrantCap?: number;
+    readonly freeOperationCap?: number;
+    readonly grantFlowPartial?: number;
     readonly afterDeepPass?: number;
   }>;
   readonly selectedStableMoveKey: string;
@@ -1507,9 +1509,6 @@ function summarizeReadyRefStats(
   for (const refId of refIds) {
     const values: number[] = [];
     for (const candidate of canonicalCandidates) {
-      if (candidate.previewOutcome !== 'ready') {
-        continue;
-      }
       const value = evaluation.getResolvedPreviewRefValue(candidate, refId);
       if (value !== undefined) {
         values.push(value);
@@ -1563,17 +1562,7 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
     readyRefStats: {},
     utility: 'none',
     widenedBecauseUniform: false,
-    outcomeBreakdown: {
-      ready: 0,
-      stochastic: 0,
-      unknownRandom: 0,
-      unknownHidden: 0,
-      unknownUnresolved: 0,
-      unknownDepthCap: 0,
-      unknownNoPreviewDecision: 0,
-      unknownGated: 0,
-      unknownFailed: 0,
-    },
+    outcomeBreakdown: emptyOutcomeBreakdown(),
     coverage: {
       requestedRefCount: 0,
       evaluatedRootOptionCount: 0,
@@ -1589,17 +1578,7 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
 
 function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]): PolicyPreviewOutcomeBreakdownTrace {
   if (evaluatedCandidates.length === 0) {
-    return {
-      ready: 0,
-      stochastic: 0,
-      unknownRandom: 0,
-      unknownHidden: 0,
-      unknownUnresolved: 0,
-      unknownDepthCap: 0,
-      unknownNoPreviewDecision: 0,
-      unknownGated: 0,
-      unknownFailed: 0,
-    };
+    return emptyOutcomeBreakdown();
   }
 
   let ready = 0;
@@ -1608,6 +1587,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   let hidden = 0;
   let unresolved = 0;
   let depthCap = 0;
+  let postGrantCap = 0;
+  let freeOperationCap = 0;
+  let grantFlowPartial = 0;
   let noPreviewDecision = 0;
   let gated = 0;
   let failed = 0;
@@ -1634,8 +1616,20 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
-    if (outcome === 'depthCap' || outcome === 'postGrantCap') {
+    if (outcome === 'depthCap') {
       depthCap += 1;
+      continue;
+    }
+    if (outcome === 'postGrantCap') {
+      postGrantCap += 1;
+      continue;
+    }
+    if (outcome === 'freeOperationCap') {
+      freeOperationCap += 1;
+      continue;
+    }
+    if (outcome === 'grantFlowPartial') {
+      grantFlowPartial += 1;
       continue;
     }
     if (outcome === 'noPreviewDecision') {
@@ -1656,9 +1650,29 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
     unknownHidden: hidden,
     unknownUnresolved: unresolved,
     unknownDepthCap: depthCap,
+    unknownPostGrantCap: postGrantCap,
+    unknownFreeOperationCap: freeOperationCap,
+    unknownGrantFlowPartial: grantFlowPartial,
     unknownNoPreviewDecision: noPreviewDecision,
     unknownGated: gated,
     unknownFailed: failed,
+  };
+}
+
+function emptyOutcomeBreakdown(): PolicyPreviewOutcomeBreakdownTrace {
+  return {
+    ready: 0,
+    stochastic: 0,
+    unknownRandom: 0,
+    unknownHidden: 0,
+    unknownUnresolved: 0,
+    unknownDepthCap: 0,
+    unknownPostGrantCap: 0,
+    unknownFreeOperationCap: 0,
+    unknownGrantFlowPartial: 0,
+    unknownNoPreviewDecision: 0,
+    unknownGated: 0,
+    unknownFailed: 0,
   };
 }
 

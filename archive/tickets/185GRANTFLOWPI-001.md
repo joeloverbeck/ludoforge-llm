@@ -1,6 +1,6 @@
 # 185GRANTFLOWPI-001: Phase 1 — Preview status integrity for un-driven grant obligations
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/` (policy-preview finalization status, policy-eval ref stats + summary), kernel types-core trace breakdown
@@ -88,3 +88,51 @@ Ensure `turnShapePreviewStatus` (`turn-shape-eval.ts:40-56`) maps `grantFlowPart
 
 1. `pnpm turbo build && node --test packages/engine/dist/test/architecture/preview-signal-integrity/grant-flow-status.test.js`
 2. `pnpm turbo lint && pnpm turbo typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-05-20
+
+What changed:
+
+- Added `grantFlowPartial` as a preview unavailability/status reason for previews that stop with a newly unresolved same-seat free-operation grant obligation, while preserving self-only preview refs as value-bearing when they can still be resolved from the finalized state.
+- Added `freeOperationCap` to the trace/status vocabulary and outcome breakdown as the Phase 1-declared future cap bucket; it remains zero until the continuation/cap work in later Spec 185 tickets can populate it.
+- Kept `postGrantCap` distinct from `depthCap` in preview usage summaries and inner-preview summaries.
+- Updated policy diagnostics, seat-matrix/turn-shape status handling, trace types, Zod schemas, generated `Trace.schema.json`, and existing trace fixtures/goldens for the expanded outcome-breakdown contract.
+- Added `packages/engine/test/architecture/preview-signal-integrity/grant-flow-status.test.ts` to prove opponent/standing refs are `grantFlowPartial`, self-only refs remain usable, ready-ref stats exclude the partial refs, and cap counters remain distinct.
+
+Deviations from original plan:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts` did not require a direct edit. Seat-matrix integrity is carried by the existing status propagation path once `grantFlowPartial` is surfaced by preview resolution and accepted by trace/status consumers.
+- The ticket's source-size gate used the user-approved 2026-05-20 Option 1 minimal-touch deferral for pre-existing oversized source files. No extraction/refactor was folded into this ticket.
+
+Generated artifact provenance:
+
+- `packages/engine/schemas/Trace.schema.json` was regenerated with `pnpm -F @ludoforge/engine run schema:artifacts` from `packages/engine/src/kernel/schemas-core.ts`/`types-core.ts`.
+- Golden trace fixtures were refreshed only to include the new zero-valued outcome-breakdown fields required by the trace contract.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/architecture/preview-signal-integrity/grant-flow-status.test.js` — passed.
+- `node --test packages/engine/dist/test/architecture/preview-post-grant/post-grant-continuation-differentiates.test.js packages/engine/dist/test/architecture/preview-post-grant/post-grant-cap-exit-witness.test.js packages/engine/dist/test/architecture/preview-post-grant/trace-shape-outcome-grant-continuation.test.js` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `node --test packages/engine/dist/test/integration/policy-preview-inner-fitl-canary-golden.test.js` — passed after the golden fixture contract refresh.
+- `pnpm -F @ludoforge/engine test` — passed, `160/160 files passed`.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-preview.ts`: 1367 -> 1410 lines, pre-existing oversized file, +43 lines for grant-flow detection/status.
+- `packages/engine/src/agents/policy-eval.ts`: 1706 -> 1720 lines, pre-existing oversized file, +14 lines for distinct counters/ref-stat filtering.
+- `packages/engine/src/agents/policy-preview-inner.ts`: 640 -> 651 lines, pre-existing oversized file, +11 lines for mirrored outcome-breakdown counters.
+- `packages/engine/src/agents/policy-agent.ts`: 936 -> 942 lines, pre-existing oversized file, +6 lines for optional advisory counters.
+- `packages/engine/src/kernel/types-core.ts`: 2737 -> 2744 lines, pre-existing oversized file, +7 lines for trace type expansion.
+- `packages/engine/src/kernel/schemas-core.ts`: 3025 -> 3033 lines, pre-existing oversized file, +8 lines for schema enum/breakdown expansion.
+- `packages/engine/src/agents/turn-shape-eval.ts`: 97 -> 99 lines, within guidance.
+- `packages/engine/test/architecture/preview-signal-integrity/grant-flow-status.test.ts`: new, 200 lines.
+
+Archive status:
+
+- Ready to archive. Remaining Spec 185 work stays in active tickets `185GRANTFLOWPI-002` through `185GRANTFLOWPI-006`.

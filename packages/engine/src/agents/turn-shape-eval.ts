@@ -49,6 +49,8 @@ export function turnShapePreviewStatus(
       return 'ready';
     case 'depthCap':
     case 'postGrantCap':
+    case 'freeOperationCap':
+    case 'grantFlowPartial':
       return 'partial';
     default:
       return 'unavailable';

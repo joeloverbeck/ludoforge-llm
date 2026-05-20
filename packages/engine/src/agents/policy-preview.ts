@@ -171,6 +171,8 @@ export type PolicyPreviewUnavailabilityReason =
   | 'failed'
   | 'depthCap'
   | 'postGrantCap'
+  | 'freeOperationCap'
+  | 'grantFlowPartial'
   | 'noPreviewDecision'
   | 'gated';
 export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
@@ -235,6 +237,7 @@ type PreviewOutcome =
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
+      readonly grantFlowPartial: boolean;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -251,6 +254,7 @@ type PreviewOutcome =
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly completionPolicyFallbackCount: number;
+      readonly grantFlowPartial: boolean;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -373,6 +377,36 @@ const defaultDependencies = {
   evaluateGrantedOperation: () => undefined,
   computeDerivedMetricValue,
 } satisfies Required<PolicyPreviewDependencies>;
+
+const UNRESOLVED_GRANT_PHASES = new Set(['sequenceWaiting', 'ready', 'offered']);
+
+function unresolvedGrantIdsForSeat(state: GameState | undefined, seatId: string): ReadonlySet<string> {
+  if (state?.turnOrderState?.type !== 'cardDriven') {
+    return new Set();
+  }
+  return new Set(
+    (state.turnOrderState.runtime.pendingFreeOperationGrants ?? [])
+      .filter((grant) => grant.seat === seatId && UNRESOLVED_GRANT_PHASES.has(grant.phase))
+      .map((grant) => grant.grantId),
+  );
+}
+
+function hasNewUnresolvedGrantForSeat(
+  state: GameState,
+  seatId: string,
+  initialGrantIds: ReadonlySet<string>,
+): boolean {
+  for (const grantId of unresolvedGrantIdsForSeat(state, seatId)) {
+    if (!initialGrantIds.has(grantId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isSelfOnlyPreviewRef(ref: CompiledPreviewSurfaceRef): boolean {
+  return ref.selector?.kind === 'player' && ref.selector.player === 'self';
+}
 
 export function applyPreviewMove(
   def: GameDef,
@@ -636,6 +670,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const outcomeGrantContinuation = input.outcomeGrantContinuation?.enabled === true
     ? input.outcomeGrantContinuation
     : undefined;
+  const initialUnresolvedGrantIds = unresolvedGrantIdsForSeat(input.state, input.seatId);
   // origin is computed against `input.state`, which is invariant across all
   // candidates in this runtime. Cache lazily so each driveSyntheticCompletion
   // pays the publishMicroturn cost once instead of once per candidate.
@@ -719,6 +754,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         targetPlayerIndex,
       )) {
         return { kind: 'unknown', reason: 'hidden' };
+      }
+      if (preview.grantFlowPartial && !isSelfOnlyPreviewRef(ref)) {
+        return { kind: 'unknown', reason: 'grantFlowPartial', failureReason: 'grantFlowPartial' };
       }
       if (preview.hiddenSamplingZones.length > 0 && !visibility.preview.allowWhenHiddenSampling) {
         return { kind: 'unknown', reason: 'hidden' };
@@ -1214,6 +1252,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       completionPolicy,
       syntheticDecisions: result.syntheticDecisions,
       completionPolicyFallbackCount: result.completionPolicyFallbackCount,
+      grantFlowPartial: hasNewUnresolvedGrantForSeat(result.state, input.seatId, initialUnresolvedGrantIds),
       hiddenSamplingZones,
       metricCache: new Map<string, number>(),
       victorySurface: null,
@@ -1306,7 +1345,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 }
 
 function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutcome {
-  return outcome.kind === 'ready' ? 'ready' : outcome.kind === 'stochastic' ? 'stochastic' : outcome.reason;
+  return outcome.kind === 'ready'
+    ? outcome.grantFlowPartial ? 'grantFlowPartial' : 'ready'
+    : outcome.kind === 'stochastic'
+      ? outcome.grantFlowPartial ? 'grantFlowPartial' : 'stochastic'
+      : outcome.reason;
 }
 
 function getVictorySurface(

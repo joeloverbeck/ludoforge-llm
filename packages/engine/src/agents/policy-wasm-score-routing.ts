@@ -307,6 +307,9 @@ const materializePreviewDynamicRowsWithWasm = (
       previewBranch: input.profile.preview.inner?.strategy === 'continuedDeepening'
         ? 'continuedDeepening'
         : 'greedy',
+      ...(input.profile.preview.grantFlowContinuation === undefined
+        ? {}
+        : { grantFlowContinuation: input.profile.preview.grantFlowContinuation }),
       serializationAxisLabel: policyWasmAxisLabelFromActionIds(input.profile, group.map((candidate) => candidate.actionId ?? String(candidate.move.actionId))),
       previewStateSlots,
       candidates: group,

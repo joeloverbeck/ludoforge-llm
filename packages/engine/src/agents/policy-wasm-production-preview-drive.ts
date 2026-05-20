@@ -128,6 +128,13 @@ export const policyWasmProductionPreviewDriveInternals = {
 const compileProductionPreviewDrive = (
   input: PolicyWasmProductionPreviewDriveInput,
 ): CompileResult => {
+  if (input.grantFlowContinuation?.enabled === true) {
+    return unsupported(
+      'grant-flow-continuation',
+      'production-preview-drive.grantFlowContinuation',
+      'production preview-drive requires TypeScript fallback when grant-flow continuation is enabled',
+    );
+  }
   if (input.candidates.length === 0) {
     return unsupported('unknown', 'production-preview-drive', 'production preview-drive requires at least one candidate');
   }

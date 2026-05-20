@@ -107,6 +107,7 @@ export type PolicyWasmPreviewDriveUnsupportedClass =
   | 'gated'
   | 'hidden-sampling'
   | 'agent-guided-completion'
+  | 'grant-flow-continuation'
   | 'unsupported-effect'
   | 'unknown';
 
@@ -603,6 +604,8 @@ const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupporte
       return 2;
     case 'agent-guided-completion':
       return 3;
+    case 'grant-flow-continuation':
+      return 6;
     case 'unsupported-effect':
       return 4;
     case 'unknown':

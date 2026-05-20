@@ -218,5 +218,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-20:
 - [`archive/tickets/185GRANTFLOWPI-002.md`](../archive/tickets/185GRANTFLOWPI-002.md) — Phase 2 — Grant-flow config generalization + `grantFlow` cap-class registry (covers §5.4, §6.1 registry)
 - [`archive/tickets/185GRANTFLOWPI-003.md`](../archive/tickets/185GRANTFLOWPI-003.md) — Phase 2 — Generalized grant-flow continuation drive (covers §5.1–§5.3)
 - [`archive/tickets/185GRANTFLOWPI-004.md`](../archive/tickets/185GRANTFLOWPI-004.md) — Phase 3 — Exit-reason taxonomy and grant-flow trace provenance (covers §6.2)
-- [`tickets/185GRANTFLOWPI-005.md`](../tickets/185GRANTFLOWPI-005.md) — Phase 3 — WASM preview-drive parity or forced TS fallback (covers §6.3)
+- [`archive/tickets/185GRANTFLOWPI-005.md`](../archive/tickets/185GRANTFLOWPI-005.md) — Phase 3 — WASM preview-drive parity or forced TS fallback (covers §6.3)
 - [`tickets/185GRANTFLOWPI-006.md`](../tickets/185GRANTFLOWPI-006.md) — Phase 3 — End-to-end witnesses (covers §6.4, §10 witness)

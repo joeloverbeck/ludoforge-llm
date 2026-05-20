@@ -1305,6 +1305,7 @@ export {
   getProductionPolicyWasmPreviewDriveUnsupportedCount,
   getProductionPolicyWasmPreviewDriveUnsupportedReasonCounts,
   type PolicyWasmPreviewDriveUnsupportedDetail,
+  recordProductionPolicyWasmPreviewCandidateFeatureRowOracleFallback,
   recordProductionPolicyWasmPreviewCandidateFeatureRows,
   recordProductionPolicyWasmPreviewDrive,
   recordProductionPolicyWasmScoreRows,

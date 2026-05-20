@@ -229,6 +229,8 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
           completionPolicyFallbackCount,
         },
       }
+    // Reaching a terminal/seat boundary before projected-state materialization is
+    // an expected deep-continuation boundary, not a missing mutation handler.
     : unsupportedWasmDeepDrive(
         'unknown',
         'production-deep-choosenstep-continuation.projectedState',

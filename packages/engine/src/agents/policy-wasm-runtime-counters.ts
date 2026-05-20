@@ -35,6 +35,7 @@ let productionScoreRowRouteCount = 0;
 let productionScoreRowUnsupportedCount = 0;
 let productionPreviewCandidateFeatureRowRouteCount = 0;
 let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+let productionPreviewCandidateFeatureRowOracleFallbackCount = 0;
 let productionPreviewDriveRouteCount = 0;
 let productionPreviewDriveUnsupportedCount = 0;
 const productionPreviewDriveUnsupportedReasonCounts = new Map<string, PolicyWasmPreviewDriveUnsupportedReasonCount>();
@@ -53,6 +54,10 @@ export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'sup
   } else {
     productionPreviewCandidateFeatureRowUnsupportedCount += 1;
   }
+};
+
+export const recordProductionPolicyWasmPreviewCandidateFeatureRowOracleFallback = (): void => {
+  productionPreviewCandidateFeatureRowOracleFallbackCount += 1;
 };
 
 export const recordProductionPolicyWasmPreviewDrive = (
@@ -126,6 +131,9 @@ export const productionPolicyWasmCounterInternals = {
   getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
     return productionPreviewCandidateFeatureRowUnsupportedCount;
   },
+  getProductionPreviewCandidateFeatureRowOracleFallbackCount(): number {
+    return productionPreviewCandidateFeatureRowOracleFallbackCount;
+  },
   getProductionPreviewDriveRouteCount(): number {
     return productionPreviewDriveRouteCount;
   },
@@ -140,6 +148,7 @@ export const productionPolicyWasmCounterInternals = {
     productionScoreRowUnsupportedCount = 0;
     productionPreviewCandidateFeatureRowRouteCount = 0;
     productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+    productionPreviewCandidateFeatureRowOracleFallbackCount = 0;
     productionPreviewDriveRouteCount = 0;
     productionPreviewDriveUnsupportedCount = 0;
     productionPreviewDriveUnsupportedReasonCounts.clear();

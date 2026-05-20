@@ -59,6 +59,7 @@ export interface PolicyWasmPrecomputedPreviewCandidateFeature {
 export interface PolicyWasmPrecomputedDynamicCandidateFeature {
   readonly code: number;
   readonly values: readonly PolicyValue[];
+  readonly seatContextValues?: Readonly<Record<string, readonly PolicyValue[]>>;
 }
 
 export interface PolicyWasmPrecomputedAggregate {

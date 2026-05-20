@@ -175,6 +175,7 @@ If the current audit targets a different skill than any earlier audit in this se
   - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
 - For `skill-audit` self-audits, report those five dimensions explicitly in the final audit under `Alignment Check` using the optional `Self-audit rubric` block. Do not leave the rubric implicit.
 - For self-audits, compare the immediately previous audit output against the report template before drafting findings. Explicitly check whether the required headings, summary fields, per-finding structure, and total-count summary were present.
+  - For first-pass self-audits, use the immediately previous audit report as structure and handoff evidence only; do not create a re-audit delta unless the previous audit targeted `skill-audit`.
   - If context compaction or missing history prevents direct comparison to the immediately previous audit output, use the available conversation summary and tool history, state the evidence limitation in the audit scope or relevant finding, and only score/report structure details that can be verified. Do not infer missing headings, counts, or severity calibration from memory alone.
 - For non-self re-audits where the prior audit output is unavailable, use the same evidence-limitation discipline: say what source you used for the prior-finding map and classify uncertain items as unverified rather than resolved or still open.
 - Use this optional self-audit rubric when deciding whether each evidence dimension passed:

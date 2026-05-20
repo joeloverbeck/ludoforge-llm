@@ -1,17 +1,17 @@
 {
-  "originating_spec": "specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md",
-  "archived_spec": "archive/specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md",
-  "last_ticket": "archive/tickets/182STRSTRPOL-017.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "667914721e376ce025036e50fc618d4b99a11b10",
+  "originating_spec": "specs/184-wasm-preview-drive-aggregate-coverage.md",
+  "archived_spec": "archive/specs/184-wasm-preview-drive-aggregate-coverage.md",
+  "last_ticket": "archive/tickets/184WASMPREDRI-004.md",
+  "last_result": "completed_archived_ticket_and_spec",
+  "last_work_commit": "self",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": null,
+  "owned_dirty_summary": "Spec 184 completed: 184WASMPREDRI-004 removed the broad aggregate preview fallback, added row-local oracle fallback telemetry, updated 15-seed reporting, archived the ticket, and archived the originating spec.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
-  "updated_at": "2026-05-19"
+  "dirty_state": "ready_to_commit",
+  "updated_at": "2026-05-20"
 }

@@ -114,6 +114,39 @@ export interface PolicyLookupFallbackFired {
   readonly value?: number;
 }
 
+export interface PreviewPlanDeltaCompositionInput {
+  readonly stepStatuses: readonly PreviewOptionRefStatus[];
+  readonly stepCap: number;
+}
+
+export const previewPlanRefKey = (
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewPlanRef' }>,
+): string => {
+  switch (ref.refKind) {
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'preview.plan.delta.victory.currentMargin.self';
+  }
+};
+
+export const composePreviewPlanDelta = (
+  input: PreviewPlanDeltaCompositionInput,
+): PreviewOptionRefStatus => {
+  if (input.stepStatuses.length > input.stepCap) {
+    return { kind: 'unavailable', reason: 'depthCap' };
+  }
+  let total = 0;
+  for (const status of input.stepStatuses) {
+    if (status.kind === 'unavailable') {
+      return status;
+    }
+    if (typeof status.value !== 'number') {
+      return { kind: 'unavailable', reason: 'unresolved' };
+    }
+    total += status.value;
+  }
+  return { kind: 'ready', value: total };
+};
+
 export type PolicyScheduleFallbackKind =
   | 'useLowerBound'
   | 'noContribution'
@@ -212,6 +245,9 @@ export interface CreatePolicyEvaluationContextInput {
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
     readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
     readonly projectedState?: PreviewOptionProjectedState;
+  };
+  readonly previewPlan?: {
+    readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   };
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
@@ -1813,6 +1849,8 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
         return this.resolvePreviewOptionRef(ref, candidate);
+      case 'previewPlanRef':
+        return this.resolvePreviewPlanRef(ref, candidate);
       case 'lookup':
         return this.resolveLookupRef(ref, candidate);
       case 'currentSurface':
@@ -2086,6 +2124,23 @@ export class PolicyEvaluationContext {
     }
     const key = previewOptionRefKey(ref);
     const status = resolvedRefs.get(key);
+    if (status === undefined) {
+      this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
+      return undefined;
+    }
+    if (status.kind === 'unavailable') {
+      this.recordUnknownPreviewRef(candidate, key, status.reason);
+      return undefined;
+    }
+    return status.value;
+  }
+
+  private resolvePreviewPlanRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewPlanRef' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const key = previewPlanRefKey(ref);
+    const status = this.input.previewPlan?.resolvedRefs.get(key);
     if (status === undefined) {
       this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
       return undefined;

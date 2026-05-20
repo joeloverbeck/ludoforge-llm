@@ -76,6 +76,12 @@ export const AGENT_POLICY_PREVIEW_OPTION_REF_KINDS = [
 
 export type AgentPolicyPreviewOptionRefKind = typeof AGENT_POLICY_PREVIEW_OPTION_REF_KINDS[number];
 
+export const AGENT_POLICY_PREVIEW_PLAN_REF_KINDS = [
+  'deltaVictoryCurrentMarginSelf',
+] as const;
+
+export type AgentPolicyPreviewPlanRefKind = typeof AGENT_POLICY_PREVIEW_PLAN_REF_KINDS[number];
+
 export const AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS = ['self', 'active', 'none'] as const;
 
 export type AgentPolicyZoneTokenAggOwnerKeyword = typeof AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS[number];

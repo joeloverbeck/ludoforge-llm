@@ -3,7 +3,9 @@ import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
   AGENT_POLICY_MICROTURN_INTRINSICS,
   AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
-  AGENT_POLICY_PREVIEW_OPTION_REF_KINDS, AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
+  AGENT_POLICY_PREVIEW_OPTION_REF_KINDS,
+  AGENT_POLICY_PREVIEW_PLAN_REF_KINDS,
+  AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
   AGENT_POLICY_STANDING_ROLE_SELECTORS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_FILTER_OPS,
@@ -800,6 +802,11 @@ const CompiledAgentPolicyRefSchema = z.union([
   z.object({
     kind: z.literal('previewOptionRef'),
     refKind: z.enum(AGENT_POLICY_PREVIEW_OPTION_REF_KINDS),
+    id: StringSchema.optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('previewPlanRef'),
+    refKind: z.enum(AGENT_POLICY_PREVIEW_PLAN_REF_KINDS),
     id: StringSchema.optional(),
   }).strict(),
   z.object({

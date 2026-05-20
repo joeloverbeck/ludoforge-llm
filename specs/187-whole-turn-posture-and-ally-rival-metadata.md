@@ -108,7 +108,7 @@ Plan proposer (Spec 186 §4.4) → for each candidate plan, evaluate `postureHoo
 Decomposed via `/spec-to-tickets` on 2026-05-21:
 
 - [`archive/tickets/187WHOTURPOS-001.md`](../archive/tickets/187WHOTURPOS-001.md) — `postureEvaluators` library bucket (compiler) — completed 2026-05-21 (covers §4.1)
-- [`tickets/187WHOTURPOS-002.md`](../tickets/187WHOTURPOS-002.md) — `preview.plan.delta.*` ref namespace + bounded per-step composition (covers §4.1)
+- [`archive/tickets/187WHOTURPOS-002.md`](../archive/tickets/187WHOTURPOS-002.md) — `preview.plan.delta.*` ref namespace + bounded per-step composition (covers §4.1)
 - [`tickets/187WHOTURPOS-003.md`](../tickets/187WHOTURPOS-003.md) — Runtime posture evaluation + `PolicyPlanTrace.posture` block (covers §4.1, §4.3, §5, §6)
 - [`tickets/187WHOTURPOS-004.md`](../tickets/187WHOTURPOS-004.md) — `relationships` library bucket + relationship refs (covers §4.2)
 - [`tickets/187WHOTURPOS-005.md`](../tickets/187WHOTURPOS-005.md) — Conditional ally weighting + `allyWeightContext` trace (covers §4.2, §6, §8)

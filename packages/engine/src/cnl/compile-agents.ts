@@ -3898,6 +3898,11 @@ class AgentLibraryCompiler {
       return previewOptionResolved;
     }
 
+    const previewPlanResolved = this.resolvePreviewPlanRuntimeRef(scope, refPath, path);
+    if (previewPlanResolved !== null) {
+      return previewPlanResolved;
+    }
+
     const previewResolved = this.resolvePreviewRuntimeRef(scope, refPath, path);
     if (previewResolved !== null) {
       return previewResolved;
@@ -4234,6 +4239,34 @@ class AgentLibraryCompiler {
 
     this.reportUnknownLibraryRef(refPath, path);
     return null;
+  }
+
+  private resolvePreviewPlanRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (!refPath.startsWith('preview.plan.')) {
+      return null;
+    }
+    if (scope === 'stateFeature') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED,
+        path,
+        severity: 'error',
+        message: `State features may not use preview-plan refs ("${refPath}").`,
+        suggestion: 'Use preview.plan.* refs only from plan/posture-scoped policy expressions.',
+      });
+      return null;
+    }
+
+    const planPath = refPath.slice('preview.plan.'.length);
+    switch (planPath) {
+      case 'delta.victory.currentMargin.self':
+        if (this.options.hasVictoryMargins === false) {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewPlanRef', refKind: 'deltaVictoryCurrentMarginSelf' } };
+      default:
+        return null;
+    }
   }
 
   private resolvePreviewRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
@@ -5730,6 +5763,9 @@ function collectConsiderationRefKinds(
         kinds.add('candidate');
         return;
       case 'previewSurface':
+        kinds.add('preview');
+        return;
+      case 'previewPlanRef':
         kinds.add('preview');
         return;
       case 'microturnIntrinsic':

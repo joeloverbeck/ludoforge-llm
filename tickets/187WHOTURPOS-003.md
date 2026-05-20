@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents/plan-proposal.ts`, `agents/plan-controller.ts`, `kernel/types-plan-trace.ts`, `kernel/schemas-core.ts`, `agents/policy-evaluation-core.ts`
-**Deps**: `archive/tickets/187WHOTURPOS-001.md`, `tickets/187WHOTURPOS-002.md`
+**Deps**: `archive/tickets/187WHOTURPOS-001.md`, `archive/tickets/187WHOTURPOS-002.md`
 
 ## Problem
 

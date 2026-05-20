@@ -1,6 +1,6 @@
 # Spec 186 — Advisory Turn-Plan Architecture (Core): Composed-Turn Evaluation Over the Atomic Microturn Frontier
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: High — this is the architectural replacement of the primary agent decision paradigm. It is the prerequisite for Specs 187 (posture preview + ally-rival metadata) and 188 (FITL four-faction migration).
 **Complexity**: L — three mergeable phases. Phase 1 (plan IR + compiler) is M. Phase 2 (plan runtime + cross-microturn execution) is the substantive M–L engine change. Phase 3 (ARVN Train+Govern proof slice + witnesses) is M.
 **Date**: 2026-05-20

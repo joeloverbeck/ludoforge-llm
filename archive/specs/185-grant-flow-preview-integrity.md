@@ -1,6 +1,6 @@
 # Spec 185 — Grant-Flow Preview Integrity: Honest Status, Bounded Free-Operation Continuation, and Witnesses
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — this is the unfixed engine-coverage gap that has been re-diagnosed ~4× (exp-004/005/006 on 2026-05-14; exp-002/arch-gap-003 on 2026-05-17) and blocks the `fitl-arvn-agent-evolution` campaign and the Spec 183 evolution-loop overhaul. Downstream specs keep building on a dishonest preview surface.
 **Complexity**: M–L — three independently mergeable phases. Phase 1 (status integrity) is S–M and lands first: it stops the false-`ready` lie with no behavioral continuation change. Phase 2 (generalized grant-flow continuation) is M–L and is the substantive engine change. Phase 3 (cap-class taxonomy, trace provenance, WASM parity, witnesses) is M.
 **Date**: 2026-05-20
@@ -219,4 +219,30 @@ Decomposed via `/spec-to-tickets` on 2026-05-20:
 - [`archive/tickets/185GRANTFLOWPI-003.md`](../archive/tickets/185GRANTFLOWPI-003.md) — Phase 2 — Generalized grant-flow continuation drive (covers §5.1–§5.3)
 - [`archive/tickets/185GRANTFLOWPI-004.md`](../archive/tickets/185GRANTFLOWPI-004.md) — Phase 3 — Exit-reason taxonomy and grant-flow trace provenance (covers §6.2)
 - [`archive/tickets/185GRANTFLOWPI-005.md`](../archive/tickets/185GRANTFLOWPI-005.md) — Phase 3 — WASM preview-drive parity or forced TS fallback (covers §6.3)
-- [`tickets/185GRANTFLOWPI-006.md`](../tickets/185GRANTFLOWPI-006.md) — Phase 3 — End-to-end witnesses (covers §6.4, §10 witness)
+- [`archive/tickets/185GRANTFLOWPI-006.md`](../archive/tickets/185GRANTFLOWPI-006.md) — Phase 3 — End-to-end witnesses (covers §6.4, §10 witness)
+
+## Outcome
+
+Completed: 2026-05-20
+
+Spec 185 landed across archived tickets `185GRANTFLOWPI-001` through `185GRANTFLOWPI-006`.
+
+What changed:
+- Preview status integrity now distinguishes grant-flow partial/cap outcomes from ordinary ready/depth-cap outcomes and prevents unresolved grant-flow refs from being counted as ready.
+- Grant-flow continuation now drives bounded generic outcome-grant/free-operation consequence chains through the real rules protocol, with cap-class configuration, trace provenance, and deterministic stop boundaries.
+- WASM preview-drive parity/fallback surfaces were aligned so WASM cannot report `ready` where TS reports grant-flow partial/capped status.
+- End-to-end witnesses were added for a generic FITL-like ordered/per-space free-operation pattern and the current ARVN May-17-equivalent opponent-preview regression surface.
+
+Deviations:
+- The final ARVN profile-quality witness records the current replay-window surface: ready NVA/VC opponent-margin refs and non-uniform opponent-margin contributions. The live fixture did not expose `grantedOperationSimulated`; effectful grant-flow completion is proven by the generic architecture fixture instead.
+- `pnpm -F @ludoforge/engine test:policy-profile-quality` remains red on an existing `fitl-march-dead-end-recovery` convergence witness before reaching the new witness; the new ARVN witness was run directly and passed.
+
+Verification:
+- `pnpm turbo build` — passed after the final marker correction.
+- `node --test packages/engine/dist/test/architecture/preview-post-grant/fitl-like-ordered-free-operation-preview.test.js` — passed, 2 tests.
+- `node --test packages/engine/dist/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.js` — passed, 1 test.
+- `node --test packages/engine/dist/test/unit/infrastructure/test-class-markers.test.js` — passed after correcting the profile-quality marker.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine test:all` — ran red only on `dist/test/unit/infrastructure/test-class-markers.test.js` before the marker correction; the affected marker test was rerun green afterward.
+- `pnpm run check:ticket-deps` — passed with 0 active tickets and 2459 archived tickets.

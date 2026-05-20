@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/` (policy-preview finalization status, policy-eval ref stats + summary), kernel types-core trace breakdown
-**Deps**: `specs/185-grant-flow-preview-integrity.md`
+**Deps**: `archive/specs/185-grant-flow-preview-integrity.md`
 
 ## Problem
 

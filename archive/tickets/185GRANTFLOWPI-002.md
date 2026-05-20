@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/` (compile-agents, validate-agents), kernel types-core (config type), `data/games/fire-in-the-lake/92-agents.md` (profile migration)
-**Deps**: `specs/185-grant-flow-preview-integrity.md`
+**Deps**: `archive/specs/185-grant-flow-preview-integrity.md`
 
 ## Problem
 

@@ -212,6 +212,14 @@ When a ticket is archived, independently grep the originating spec for the moved
 
 If review blocks archival because same-seam work remains, put the active ticket back at the front of the queue and continue through `implement-ticket` unless the review requires a user decision.
 
+Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text:
+
+- `post-ticket-review`: `invoked`, `manual late recovery: <reason>`, or `not_applicable: <reason>`
+- `Post-ticket review block`: `emitted` or `late recovery pending`
+- `archive eligibility`: `terminal and outcome-current` or `blocked`
+
+If the review was not invoked and there is no valid `manual late recovery` or `not_applicable` classification, stop before archival and run the child workflow.
+
 ### 4. Audit Post-Ticket Review When It Changes Handoff Surfaces
 
 If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, or same-family archive reference, run:
@@ -266,7 +274,9 @@ Required-visible-block checkpoint:
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
-Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, final state-file validation, and the full `Harness handoff`. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+
+If a required child skill audit block is missing and there is no visible evidence that the audit actually ran in the current observable context, run the child audit before committing or finalizing. Do not treat a late checkpoint as a substitute for an unrun or unobservable `$skill-audit`. After running it, emit the compact child-audit block and apply, reject, or defer evidence-backed suggestions under the normal child-audit rules.
 
 Manual review is not a substitute for a child-skill workflow unless it is explicitly classified in this checkpoint. If you manually perform any `post-ticket-review` step, still emit the `Post-ticket review:` block and classify it as `child-skill invocation`, `manual late recovery`, or `not_applicable`.
 
@@ -321,6 +331,14 @@ After committing state separately, revalidate the final handoff state before res
 3. Verify the recorded `last_work_commit` exactly matches the finalized work commit SHA. A compact recipe is: `git show --no-patch --format=%H <work-commit>` for the work commit you intend to record, then compare that full SHA to the state file. If the value is not `"none"`, also verify it is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git check.
 4. If the state-only commit was amended, rerun the same checks against the amended commit before finalizing.
 
+Use this compact state-file validation recipe whenever `.codex/run-state/implement-spec-tickets.json` changed before staging, committing, or finalizing:
+
+- parse/read the state file and verify `last_work_commit` is a full reachable commit SHA or `"none"`; never `"self"`
+- verify `last_state_commit` is a full reachable commit SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`
+- verify active paths exist, archived paths exist, queued paths exist, and final queues are empty when `phase: "completed"`
+- verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
+- if no retained script performs this validation, do the checks manually and record the result in the Required-visible-block checkpoint
+
 Print:
 
 ```text
@@ -365,7 +383,9 @@ When all originating-spec tickets are completed, reviewed, archived, and committ
 9. Run `pnpm run check:ticket-deps` and focused `git diff --check` over edited archive/spec/state files.
 10. Before committing the final spec archive, emit the same `Required-visible-block checkpoint` from `Commit The Iteration`, or an explicit `late harness recovery checkpoint` if any row was missed earlier. Mark rows `not_applicable` with reasons when the final archive did not exercise that surface.
 11. Commit the final spec archive unless already included in the last ticket-family commit for a documented reason.
-12. Update the state file with `archived_spec`, `next_target: null`, an empty queue, `blocked: false`, the final commit SHA, and clean dirty-state classification.
+12. Update the state file with `archived_spec`, `next_target: null`, an empty queue, `blocked: false`, the finalized final-archive work commit SHA, and clean dirty-state classification.
+13. Commit the updated state file as a state-file-only commit with `last_state_commit: "self"` when the finalized final-archive work SHA was not knowable at the time of the archive commit. Do not write `"self"` into `last_work_commit`.
+14. Revalidate the state file after the state-only commit before final response.
 
 ## Branch And Push
 

@@ -67,6 +67,13 @@ Keep the file small and machine-readable. Update it after intake, after every it
 }
 ```
 
+`dirty_state` must describe the final live worktree state, not only owned harness paths. Use compact strings when a structured field is unnecessary:
+
+- `"clean"` only when `git status --short` has no entries.
+- `"unrelated_untracked: reports/example.md"` when only unrelated untracked paths remain and they are intentionally left untouched.
+- `"owned_dirty: <paths>"` when owned paths remain dirty for a no-commit or blocked handoff.
+- `"mixed_dirty: owned=<paths>; unrelated=<paths>"` when both owned and unrelated paths remain.
+
 On resume, read this file first, then verify it against live repo state before invoking a child skill:
 
 - `originating_spec` still exists unless `archived_spec` is set
@@ -92,6 +99,7 @@ If an in-flight proof command or terminal session may still be running after int
 4. If staged unrelated entries exist, either leave them staged and do not commit, or unstage them only with explicit user approval while preserving working-tree content.
 5. If `.codex/run-state/implement-spec-tickets.json` already exists, validate it even on a first invocation. Trust live repo state over stale JSON.
 6. If unrelated dirty paths exist and this harness would need to commit, classify whether they can be safely excluded. Proceed without asking only when every unrelated path is unstaged, can remain unstaged, and has been explicitly recorded as out of scope for the harness commit. Stop and ask whether unrelated paths should be included only when ownership is ambiguous, an unrelated path is already staged, exclusion is not possible, or the user explicitly asks for a whole-worktree commit. Do not silently commit unrelated work.
+   - Do not delete, move, rewrite, or "clean up" unrelated untracked reports, generated artifacts, byproducts, or user files discovered during proof or status checks unless the user explicitly approves that destructive cleanup. Leaving them unstaged is the default.
 7. Resolve the first ticket:
    - if `ticket_path` is supplied, resolve it to exactly one active file under `tickets/`
    - otherwise inspect active `tickets/*.md` and choose the first ticket in lexical order whose filename, `Deps`, problem statement, or explicit spec reference ties it to the originating spec
@@ -234,11 +242,23 @@ Put any review-created follow-up ticket at the front of the queue. If review onl
 
 ### 5. Commit The Iteration
 
+Compact pre-commit visibility gate. This is a quick index for the longer rules below: do not commit until each required block has appeared in visible text, or has been emitted as a `late harness recovery checkpoint` with a reason:
+
+- child `implement-ticket` audit block
+- `Acceptance-to-command map`
+- `Post-ticket review` block, or `not_applicable` classification
+- `post-ticket-review` audit block when triggered, or `not_applicable` classification
+- generated-artifact provenance when triggered
+- state-file validation when the state file changed
+- `Required-visible-block checkpoint`
+- full `Harness handoff` readiness
+
 Before committing:
 
 1. Refresh `git status --short`.
 2. Inspect `git diff --cached --name-status` before staging. Pre-existing unrelated staged entries must not enter a harness commit.
 3. Verify every dirty path is owned by the iteration, explicitly approved, or intentionally left unstaged.
+   - Unrelated untracked files, reports, generated artifacts, and proof byproducts must remain untouched and unstaged unless the user explicitly approves deletion or inclusion. Do not remove them merely to make `git status --short` clean; instead, record them in `dirty_state` and the handoff as unrelated retained paths.
 4. Run whitespace/hygiene over owned files. For newly untracked files, use `git diff --no-index --check /dev/null <path>` or an equivalent trailing-whitespace check.
    - For any new generated fixture, witness, report, trace, or serialized-state artifact over 1 MB or over 10,000 lines, emit a generated-artifact provenance ledger before staging:
      - `artifact path`
@@ -339,6 +359,7 @@ Use this compact state-file validation recipe whenever `.codex/run-state/impleme
 - verify `last_state_commit` is a full reachable commit SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`
 - verify active paths exist, archived paths exist, queued paths exist, and final queues are empty when `phase: "completed"`
 - verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
+- if unrelated untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
 - if no retained script performs this validation, do the checks manually and record the result in the Required-visible-block checkpoint
 
 Print:

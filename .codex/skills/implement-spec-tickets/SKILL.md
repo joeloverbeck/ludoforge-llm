@@ -220,6 +220,18 @@ When a ticket is archived, independently grep the originating spec and `.codex/r
 
 If review blocks archival because same-seam work remains, put the active ticket back at the front of the queue and continue through `implement-ticket` unless the review requires a user decision.
 
+Manual late recovery is exceptional, not a normal substitute for the child workflow. Use `manual late recovery: <reason>` only when the live state already crossed a point where invoking `post-ticket-review` directly would be misleading, duplicative, or impossible to observe cleanly, and only after reconstructing the child workflow's checklist from live repo evidence. Before archival or finalization under manual late recovery, emit the reason and verify all of these surfaces in visible text:
+
+- why the normal child invocation is no longer the truthful path
+- completed-ticket status and outcome are current against the final diff
+- acceptance criteria and invariants are mapped to proof
+- archival eligibility is terminal, with no same-seam work left active
+- stale active-path references were swept in the originating spec, active sibling tickets, archived siblings when relevant, and the state file
+- follow-up creation/update decision is explicit
+- proof invalidation from any review-created edits is classified, with rerun/substitute proof named
+
+If any manual-recovery checklist item is unverified, stop before archival and either invoke `post-ticket-review` or leave the ticket active with a handoff naming the missing item.
+
 Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text:
 
 - `post-ticket-review`: `invoked`, `manual late recovery: <reason>`, or `not_applicable: <reason>`
@@ -281,6 +293,8 @@ Before committing:
 9. Emit the checkpoint below.
 10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
+Commit lock recipe: immediately before running `git commit`, print the required checkpoint below, then run `git diff --cached --name-status`, then run the commit. Treat this order as the normal path. The late-recovery rules are only for accidental misses discovered after the fact; if late recovery was needed, name that process miss in the final handoff or state-only handoff instead of implying the checkpoint was timely.
+
 Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 
 ```text
@@ -337,6 +351,8 @@ No-commit finalization is still a terminal handoff state. Before any final respo
 5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
 
 If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` should normally describe the final clean state after the state-only commit. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
+
+State-only clean-state example: after a work commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, when the only remaining dirty path is `.codex/run-state/implement-spec-tickets.json` and you are about to commit that state file, write `last_work_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, `last_state_commit: "self"`, `dirty_state: "clean"`, and an `owned_dirty_summary` that describes the post-state-commit repo as clean. Do not write `dirty_state: "state_file_only"` for that state commit; that describes the transient pre-commit moment and will be stale immediately after the commit.
 
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
 

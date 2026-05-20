@@ -36,6 +36,7 @@ import type {
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
+import { updatePlanExecutionLifecycle, type PlanExecutionStateStore } from './plan-execution.js';
 import {
   createPolicyAgentChooseNStepInnerPreview,
   createPolicyAgentChooseOneInnerPreview,
@@ -50,7 +51,6 @@ export interface PolicyAgentConfig {
   readonly fallbackOnError?: boolean;
   readonly disableGuidedChooser?: boolean;
 }
-
 interface FrontierCandidate {
   readonly decision: Decision;
   readonly stableMoveKey: string;
@@ -576,6 +576,7 @@ export class PolicyAgent implements Agent {
   private readonly fallbackOnError: boolean | undefined;
   private readonly disableGuidedChooser: boolean;
   private readonly previewWideningState: PreviewWideningState = new Map();
+  private readonly planExecutionState: PlanExecutionStateStore = new Map();
 
   constructor(config: PolicyAgentConfig = {}) {
     this.profileId = config.profileId;
@@ -583,7 +584,6 @@ export class PolicyAgent implements Agent {
     this.fallbackOnError = config.fallbackOnError;
     this.disableGuidedChooser = config.disableGuidedChooser ?? false;
   }
-
   chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
     if (input.microturn.legalActions.length === 0) {
       throw new Error('PolicyAgent.chooseDecision called with empty legalActions');
@@ -591,6 +591,7 @@ export class PolicyAgent implements Agent {
 
     policyChooseCallCount += 1;
     logPolicyOomTrace('choose:start', input);
+    updatePlanExecutionLifecycle(this.planExecutionState, input);
     const t0Eval = perfStart(input.profiler);
     const result = input.microturn.kind === 'actionSelection'
       ? this.chooseActionSelectionDecision(input)
@@ -598,7 +599,6 @@ export class PolicyAgent implements Agent {
     perfDynEnd(input.profiler, 'agent:evaluatePolicyExpression', t0Eval);
     return result;
   }
-
   private chooseActionSelectionDecision(
     input: AgentMicroturnDecisionInput,
   ): AgentMicroturnDecisionResult {

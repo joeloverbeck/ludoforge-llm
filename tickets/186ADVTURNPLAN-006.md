@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents` runtime (`policy-agent.ts`, `policy-eval.ts`, `policy-evaluation-core.ts`, `plan-trace.ts`)
-**Deps**: `tickets/186ADVTURNPLAN-004.md`, `tickets/186ADVTURNPLAN-005.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-004.md`, `tickets/186ADVTURNPLAN-005.md`
 
 ## Problem
 

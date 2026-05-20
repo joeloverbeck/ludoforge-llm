@@ -11,7 +11,7 @@
 - `archive/specs/164-continued-inner-preview-deepening.md` (cap-class registry pattern — model for the new `grantFlow` cap classes mandated by Foundation #10's cap-class-naming amendment)
 
 **Trigger reports**:
-- `reports/agent-evolution.md` (external ChatGPT-Pro deep-research proposal; this spec is the reassessed, scoped engine-integrity prerequisite carved out of that proposal — see §11)
+- `archive/reports/agent-evolution.md` (external ChatGPT-Pro deep-research proposal; this spec is the reassessed, scoped engine-integrity prerequisite carved out of that proposal — see §11)
 - `archive/reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (original witness: ARVN opponent-margin preview is uniform across candidates because effects land behind an un-driven grant chain)
 
 **Ticket namespace**: `185GRANTFLOWPI` (proposed; finalize during ticket decomposition)
@@ -198,7 +198,7 @@ No FOUNDATIONS.md amendment is required. Foundation #20 (added by Spec 162, exte
 
 ---
 
-## 11. Reassessment of the external proposal (`reports/agent-evolution.md`)
+## 11. Reassessment of the external proposal (`archive/reports/agent-evolution.md`)
 
 This spec is a scoped reassessment of the ChatGPT-Pro proposal, not a verbatim transcription. What was verified, kept, changed, or dropped:
 

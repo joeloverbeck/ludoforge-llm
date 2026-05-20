@@ -1,6 +1,7 @@
 # CI / ci Workflow — Default Lane Wall Time
 
 **Date**: 2026-05-19
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
 **Trigger**: `.github/workflows/ci.yml` `CI / ci` job consistently exceeds 10 minutes on GitHub-hosted runners. Question: is something hanging, or is a development-oriented test lane being too heavy for the main lane?
 **Measurement host**: Local WSL2 (Linux 6.6.114.1-microsoft-standard-WSL2), engine prebuilt via `pnpm -F @ludoforge/engine build`.
 **Scope**: Wall-time decomposition of `pnpm turbo test` in the `CI / ci` job — i.e., everything that runs after `pnpm turbo build` lands.

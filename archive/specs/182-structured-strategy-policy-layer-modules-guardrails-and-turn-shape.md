@@ -1,7 +1,7 @@
 # Spec 182 — Structured Strategy Policy Layer Phase 2/3/4: Modules, Guardrails, and Turn-Shape Evaluators
 
 **Status**: COMPLETED
-**Priority**: High — closes the remaining engine-layer authoring gaps documented in `reports/ai-agent-overhaul-proposal.md` after Spec 181 shipped the audit probe harness and first-class selectors. The cookbook migration that Spec 181 declared out-of-scope cannot proceed until profiles have a place to express named strategic intent (modules), tiered negative evidence (guardrails), and bounded chain-summary objectives (turn-shape evaluators).
+**Priority**: High — closes the remaining engine-layer authoring gaps documented in `archive/reports/ai-agent-overhaul-proposal.md` after Spec 181 shipped the audit probe harness and first-class selectors. The cookbook migration that Spec 181 declared out-of-scope cannot proceed until profiles have a place to express named strategic intent (modules), tiered negative evidence (guardrails), and bounded chain-summary objectives (turn-shape evaluators).
 **Complexity**: L — three phases, each independently mergeable. Phase 2 (modules) is M and unblocks Phases 3 and 4. Phase 3 (guardrails) is M and consumes module activations. Phase 4 (turn-shape evaluators) is M–L and consumes module-declared objectives plus Spec 181's probe harness for validation.
 **Date**: 2026-05-18
 **Dependencies**:
@@ -14,7 +14,7 @@
 - `archive/specs/104-unified-decision-context-considerations.md` (consideration scoping — modules and guardrails honor `scopes: [move, microturn]`)
 
 **Trigger reports**:
-- `reports/ai-agent-overhaul-proposal.md` (external ChatGPT-Pro deep-research proposal — §6.1 Strategic modules, §6.4 Guardrails, §6.5 Turn-shape evaluators, §7.4 No-impact handling, §7.5 chooseOne metadata, §7.6 chooseNStep set-level primitives, §8 Anti-blunder system, §10 Trace contract per-layer extensions, §14 FITL/ARVN application example, §17 Stage 1 lint + trace grouping)
+- `archive/reports/ai-agent-overhaul-proposal.md` (external ChatGPT-Pro deep-research proposal — §6.1 Strategic modules, §6.4 Guardrails, §6.5 Turn-shape evaluators, §7.4 No-impact handling, §7.5 chooseOne metadata, §7.6 chooseNStep set-level primitives, §8 Anti-blunder system, §10 Trace contract per-layer extensions, §14 FITL/ARVN application example, §17 Stage 1 lint + trace grouping)
 
 **Ticket namespace**: `182STRSTRPOL2`
 
@@ -471,7 +471,7 @@ Each phase is independently mergeable. Phase 2 lands first because Phases 3 and 
 
 ## 13. Reassessment of source proposal
 
-Per-recommendation disposition table for `reports/ai-agent-overhaul-proposal.md` sections that Spec 181 §11 deferred to this spec. Sections already covered by Spec 181 are not repeated. Sections deferred to Spec 183 are noted.
+Per-recommendation disposition table for `archive/reports/ai-agent-overhaul-proposal.md` sections that Spec 181 §11 deferred to this spec. Sections already covered by Spec 181 are not repeated. Sections deferred to Spec 183 are noted.
 
 | Proposal section / recommendation | Disposition | Notes |
 | --- | --- | --- |

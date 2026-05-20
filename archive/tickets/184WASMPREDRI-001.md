@@ -17,7 +17,7 @@ Phase 0 (data collection) and Phase 1 (classification annotation) are grouped he
 1. `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` is the live executable 15-seed rollup producer. It imports `packages/engine/scripts/profile-fitl-arvn-15-seed-report-rendering.mjs` to render markdown/CSV output that totals `wasmProductionPreviewDriveRouteCount`, `wasmProductionPreviewDriveUnsupportedCount`, and per-reason breakdowns across the 15-seed corpus. The earlier ticket draft named the renderer helper as the command; user approved correcting the proof lane to the executable producer on 2026-05-19.
 2. The FITL production tournament fixture (seed 1000, 4 seats, 80 decisions) is the minimum-required corpus per spec §4 Phase 0; the 15-seed multi-seed rollup widens shape coverage at zero extra tooling cost.
 3. The defensive fallback `previewFeatureRowsExerciseAggregate` at `packages/engine/src/agents/policy-wasm-score-routing.ts:412-427` (called from line 493) is currently in place. Inventory work runs against this state — the fallback diverts preview-aggregate features to TS evaluation, so the WASM drive's true unsupported-shape footprint must be measured with the fallback disabled or by inspecting per-reason counters directly.
-4. No prior report exists at `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`.
+4. No prior report exists at `archive/reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`.
 
 ## Architecture Check
 
@@ -36,7 +36,7 @@ Cross-reference each unsupported event against the divergence the `arvn-tourname
 
 ### 2. Author the report
 
-Create `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md` with one entry per divergence. Recommended per-entry shape:
+Create `archive/reports/184-phase-0-wasm-preview-drive-divergence-inventory.md` with one entry per divergence. Recommended per-entry shape:
 
 - Action id
 - Profile id (arvn-evolved, vc-baseline, us-baseline, etc.)
@@ -60,7 +60,7 @@ The inventory row count must match the `wasmProductionPreviewDriveUnsupportedCou
 
 ## Files to Touch
 
-- `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md` (new)
+- `archive/reports/184-phase-0-wasm-preview-drive-divergence-inventory.md` (new)
 
 ## Out of Scope
 
@@ -99,7 +99,7 @@ None — this ticket's deliverable is a markdown report, not test code.
 Completed: 2026-05-19
 
 What changed:
-- Created `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`.
+- Created `archive/reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`.
 - Corrected the active ticket and spec proof lane from the renderer helper `profile-fitl-arvn-15-seed-report-rendering.mjs` to the executable producer `profile-fitl-arvn-15-seed-decomposition.mjs` after user approval of option 1 on 2026-05-19.
 - Ran the 15-seed producer against commit `3b0bd9ff274840cce57bbea8c1dcab6845de2329`; the raw generated rollup/CSV were written under `/tmp/ludoforge-184/` and were not checked in.
 - Recorded 44 grouped unsupported preview-drive inventory rows that reconcile to the producer's `wasmProductionPreviewDriveUnsupportedCount = 2936`.

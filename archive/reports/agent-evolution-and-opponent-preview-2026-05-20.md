@@ -1,7 +1,7 @@
 # Agent Evolution Reliance & the Recurring Opponent-Margin Preview Gap
 
 **Date**: 2026-05-20
-**Status**: Decision + findings memo / deep-research brief.
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
 **Audience**: ChatGPT-Pro deep research (primary), and the next implementation session (secondary).
 **Author context**: Written after merging the structured-strategy policy layer (Specs 181/182) and the WASM preview-parity fix (Spec 184), while reassessing `specs/183-evolution-loop-overhaul.md` and the stalled `campaigns/fitl-arvn-agent-evolution` campaign.
 
@@ -49,7 +49,7 @@ Only `arvn-evolved` uses a turn-shape evaluator; only it and `us-baseline` use a
 
 ### 3.2 The architecture and Foundations keep evolution — the intended change is *structure-first mutation*, not abandoning evolution
 
-`reports/ai-agent-overhaul-proposal.md` (the external proposal that motivated Specs 181–183) lays out an 8-stage roadmap. Stages 1–7 build the structured layer (now merged). **Stage 8 *is* Spec 183** — the evolution-loop overhaul. The proposal explicitly *hard-rejects* hand-authoring game-specific logic and rejects "improve tooling only," and it frames the fix as: evolution should "mutate **structure first**, then numbers," so it "discovers strategies rather than tuning sludge." Foundation #2 (Evolution-First Design) reinforces this — the system exists to evolve YAML through optimization.
+`archive/reports/ai-agent-overhaul-proposal.md` (the external proposal that motivated Specs 181–183) lays out an 8-stage roadmap. Stages 1–7 build the structured layer (now merged). **Stage 8 *is* Spec 183** — the evolution-loop overhaul. The proposal explicitly *hard-rejects* hand-authoring game-specific logic and rejects "improve tooling only," and it frames the fix as: evolution should "mutate **structure first**, then numbers," so it "discovers strategies rather than tuning sludge." Foundation #2 (Evolution-First Design) reinforces this — the system exists to evolve YAML through optimization.
 
 So nothing in the design says "stop evolving agents." It says "stop *knob-tuning*; start *structure-mutating*." That is exactly the pain the operator described, and the answer to "should we keep evolving?" is **yes — but the mutation surface changes from weights to structure.** What's genuinely open is whether agent evolution should run *before* or *after* a hand-authored/bootstrapped structured baseline (Section 6).
 
@@ -150,7 +150,7 @@ The May-17 report already sketched three directions; deep research should pressu
 
 **Reports:**
 - `archive/reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md` (the detailed engine diagnosis + Directions A/B/C — primary prior art).
-- `reports/ai-agent-overhaul-proposal.md` (the external proposal; §11/§13/§17, 8-stage roadmap).
+- `archive/reports/ai-agent-overhaul-proposal.md` (the external proposal; §11/§13/§17, 8-stage roadmap).
 
 **Campaign:**
 - `campaigns/fitl-arvn-agent-evolution/results.tsv` (`baseline`/`exp-001`/`exp-002`/`arch-gap-003`), `lessons.jsonl`, `program.md`.

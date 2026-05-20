@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/scripts/test-lane-manifest.mjs`, `packages/engine/scripts/run-tests.mjs`, `packages/engine/package.json`. No production source changes.
-**Deps**: `reports/ci-default-lane-wall-time-2026-05-19.md`
+**Deps**: `archive/reports/ci-default-lane-wall-time-2026-05-19.md`
 
 ## Problem
 
@@ -13,7 +13,7 @@ The `CI / ci` workflow (`.github/workflows/ci.yml`) runs `pnpm turbo test`, whic
 - `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts` — "Spec 178 chooseOne inner-preview outcome parity"
 - Iterates `WITNESS_SEEDS = [1005, 1011, 1008, 1013, 1009]`, running a full ARVN production simulation per seed with `traceLevel: 'verbose'` and deep-equal comparison against `test/architecture/fixtures/178-outcome-parity-<seed>.json`.
 
-Measured locally (`reports/ci-default-lane-wall-time-2026-05-19.md`):
+Measured locally (`archive/reports/ci-default-lane-wall-time-2026-05-19.md`):
 
 - Engine `default` lane total: 297.45 s
 - `dist/test/architecture/**/*.test.js` glob: 177 s of that
@@ -235,7 +235,7 @@ After landing, verify on the first real `CI / ci` run that:
 - **Source-size decision**: not triggered. Final touched source sizes are `run-tests.mjs` 282 lines, `test-lane-manifest.mjs` 272 lines, and `engine-test-lane-taxonomy-policy.test.ts` 438 lines; no touched source file is near the 600-line checkpoint or 800-line cap.
 - **Untracked/touched-file hygiene**:
   - This ticket owns tracked edits to `.github/workflows/engine-tests.yml`, `packages/engine/package.json`, `packages/engine/scripts/run-tests.mjs`, `packages/engine/scripts/test-lane-manifest.mjs`, and `packages/engine/test/unit/lint/engine-test-lane-taxonomy-policy.test.ts`.
-  - This ticket owns untracked artifacts `reports/ci-default-lane-wall-time-2026-05-19.md` and, after post-review archival, `archive/tickets/CIENG-002-extract-policy-preview-parity-witness-from-default-lane.md`.
+  - This ticket owns untracked artifacts `archive/reports/ci-default-lane-wall-time-2026-05-19.md` and, after post-review archival, `archive/tickets/CIENG-002-extract-policy-preview-parity-witness-from-default-lane.md`.
   - Concurrent unrelated dirty paths observed after proof: `.claude/skills/brainstorm/SKILL.md`, `.claude/skills/brainstorm/references/approaches-and-design.md`, `.claude/skills/brainstorm/references/context-and-classification.md`, and `.claude/skills/brainstorm/references/output-artifacts.md`; this ticket did not touch them.
 - **Late-edit proof validity**: terminal status and proof transcription only; no source, command semantics, acceptance boundary, touched-file ownership, or follow-up ownership changed after the final proof lanes. Post-status dependency-check transcription was clerical and did not change graph-affecting facts.
 - **Post-review decision**: no must-fix cleanup, reopen item, or follow-up ticket found; archived at `archive/tickets/CIENG-002-extract-policy-preview-parity-witness-from-default-lane.md`. Post-archive `pnpm run check:ticket-deps` passed for 0 active tickets and 2447 archived tickets.

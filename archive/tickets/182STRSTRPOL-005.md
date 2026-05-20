@@ -13,7 +13,7 @@ Spec 182 Phase 2 acceptance (c) requires authoring one ARVN top-level action gro
 ## Assumption Reassessment (2026-05-18)
 
 1. `data/games/fire-in-the-lake/92-agents.md` currently declares 36 considerations, mostly flat action-tag-weighted (e.g., `preferGovernAction`, `preferTrainAction`); one consideration uses the `arvnMicroturnOptionProjectedMargin` selector — confirmed during reassessment.
-2. `reports/ai-agent-overhaul-proposal.md` §14.1 describes the `build-political-engine` intent; the spec's own §3.2 describes the shape.
+2. `archive/reports/ai-agent-overhaul-proposal.md` §14.1 describes the `build-political-engine` intent; the spec's own §3.2 describes the shape.
 3. `docs/agent-dsl-cookbook.md` exists and is the canonical authoring guide.
 4. The Spec 181 ARVN action-distribution probe (calibrated in 181STRSTRPOL-003) must continue to pass or improve after this module lands.
 

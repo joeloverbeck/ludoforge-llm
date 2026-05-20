@@ -187,7 +187,7 @@ Proof:
 2. `node --test packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — passed, including the decision-47 aggregate-fed preview-row canary.
 3. `pnpm -F @ludoforge/engine test:integration:policy-canaries` — passed.
 4. `pnpm -F @ludoforge/engine test:integration` — passed, `311/311` integration files.
-5. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — passed, `15/15` seeds; report written to `reports/fitl-arvn-15-seed-decomposition-2026-05-20.md` and `.csv`.
+5. `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs` — passed, `15/15` seeds; report written to `archive/reports/fitl-arvn-15-seed-decomposition-2026-05-20.md` and `.csv`.
 6. `pnpm turbo test` — passed, `5/5` tasks; engine default lane reported `159/159` files.
 7. `pnpm turbo lint` — passed, `2/2` tasks.
 8. `pnpm turbo typecheck` — passed, `3/3` tasks.
@@ -197,6 +197,6 @@ Proof:
 
 15-seed acceptance:
 
-- Baseline from `reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`: route count `3163`, unsupported count `2936`.
+- Baseline from `archive/reports/184-phase-0-wasm-preview-drive-divergence-inventory.md`: route count `3163`, unsupported count `2936`.
 - Current report: route count `4100`, unsupported count `3359`, row-local oracle fallback count `516`, batch count `4612`.
 - The unsupported count rises because deleting the broad aggregate bypass exposes already documented unsupported classes; the unsupported reason class set does not widen, and the row-local fallback count is now explicit.

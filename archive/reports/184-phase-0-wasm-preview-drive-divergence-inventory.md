@@ -1,7 +1,7 @@
 # Spec 184 Phase 0+1 WASM Preview-Drive Divergence Inventory
 
 **Date**: 2026-05-19
-**Status**: Phase 0+1 inventory and classification witness.
+**Status**: ✅ EXPLOITED — archived 2026-05-20.
 **Commit**: `3b0bd9ff274840cce57bbea8c1dcab6845de2329`
 **Command**: `pnpm -F @ludoforge/engine build && node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --output-dir /tmp/ludoforge-184 --date 2026-05-19`
 **Raw rollup**: `/tmp/ludoforge-184/fitl-arvn-15-seed-decomposition-2026-05-19.md`

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents` runtime (new `plan-proposal.ts`, new `plan-trace.ts`, `policy-eval.ts`/`policy-evaluation-core.ts`)
-**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`, `tickets/186ADVTURNPLAN-004.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`, `tickets/186ADVTURNPLAN-002A.md`, `tickets/186ADVTURNPLAN-004.md`
 
 ## Problem
 
@@ -16,6 +16,7 @@ Spec 186 §4.4 / §4.8: at a player's `actionSelection` frame the agent must enu
 2. Leaf scorers reuse existing machinery: selector quality (`policy-selector-eval.ts`) and the consideration-evaluation primitives (`policy-eval.ts` / `policy-evaluation-core.ts`) — re-homed, not rewritten.
 3. `PlanExecutionState` (`186ADVTURNPLAN-004`) is the sink for the selected plan.
 4. The posture hook in this ticket consumes only current-state and `ready`/non-`ready` preview status; deep posture-over-preview is Spec 187 (verified Non-Goal).
+5. Plan cap/max-step IR is owned by `186ADVTURNPLAN-002A`; this ticket consumes that generic metadata when enforcing proposer/evaluator caps.
 
 ## Architecture Check
 

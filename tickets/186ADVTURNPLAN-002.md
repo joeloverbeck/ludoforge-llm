@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl` validation (`validate-agents.ts`)
-**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`, `tickets/186ADVTURNPLAN-002A.md`
 
 ## Problem
 
@@ -15,6 +15,7 @@ The plan-template IR (`186ADVTURNPLAN-001`) needs static validation so authoring
 1. `validate-agents.ts` (658 lines) is the agent static-validation home; it currently validates the v2 buckets. Plan-template/role diagnostics are additive.
 2. The compiler is responsible for everything statically knowable (Foundation #12, verified); these checks do not require kernel state.
 3. Error-message quality is a spec requirement (§4.7 / source proposal §5.8): messages name the offending role/template (e.g. "`roles.governSpace` references role `trainSpace`, but `trainSpace` is not bound before this constraint").
+4. Boundary reset approved 2026-05-20: live `186ADVTURNPLAN-001` does not yet expose plan cap/max-step IR fields, so this ticket depends on `tickets/186ADVTURNPLAN-002A.md` before implementing the cap-class and max-step diagnostics required by Foundations #10/#12.
 
 ## Architecture Check
 

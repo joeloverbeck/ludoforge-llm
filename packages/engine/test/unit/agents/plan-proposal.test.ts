@@ -96,12 +96,12 @@ const strategyModule = (overrides: Partial<StrategyModuleDef> = {}): StrategyMod
   ...overrides,
 });
 
-const roleSelector = (): CompiledPolicySelector => ({
+const roleSelector = (maxItems = 1): CompiledPolicySelector => ({
   id: 'trainSpaceSelector' as never,
   scopes: ['move'],
   source: { kind: 'collection', collection: { kind: 'players' } },
   quality: { components: [{ id: 'leafQuality' as never, value: literal(7), weight: 1 }], order: 'qualityDesc' },
-  result: { maxItems: 1, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+  result: { maxItems, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
   costClass: 'state',
   dependencies: emptyDependencies,
 });
@@ -110,9 +110,11 @@ const createCatalog = (options: {
   readonly template?: CompiledPlanTemplate;
   readonly module?: StrategyModuleDef;
   readonly profilePlanTemplates?: readonly string[];
+  readonly selector?: CompiledPolicySelector;
 } = {}): AgentPolicyCatalog => {
   const template = options.template ?? planTemplate();
   const module = options.module ?? strategyModule();
+  const selector = options.selector ?? roleSelector();
   const profile: CompiledAgentProfile = {
     fingerprint: 'plan-proposal-profile',
     params: {},
@@ -156,7 +158,7 @@ const createCatalog = (options: {
         trainSpaceSelector: {
           scopes: ['move'],
           source: { kind: 'collection', collection: { kind: 'players' } },
-          result: { maxItems: 1, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
+          result: selector.result,
           costClass: 'state',
           dependencies: emptyDependencies,
         },
@@ -182,7 +184,7 @@ const createCatalog = (options: {
       stateFeatures: {},
       candidateFeatures: {},
       candidateAggregates: {},
-      selectors: { trainSpaceSelector: roleSelector() },
+      selectors: { trainSpaceSelector: selector },
       strategyModules: { 'doctrine.train': module },
       considerations: {},
       tieBreakers: {},
@@ -254,6 +256,51 @@ describe('plan proposal', () => {
     assert.equal(result.selected?.roleBindings.trainSpace?.quality, 7);
     assert.equal(result.selected?.score, 17);
     assert.equal(result.activeDoctrines[0], 'doctrine.train');
+  });
+
+  it('tries later role-selector candidates when an earlier candidate violates role constraints', () => {
+    const template = planTemplate({
+      roles: {
+        trainSpace: planTemplate().roles.trainSpace!,
+        governSpace: {
+          ...planTemplate().roles.trainSpace!,
+          constraints: [{ kind: 'notEqual', role: 'trainSpace' }],
+        },
+      },
+      steps: [
+        {
+          label: 'train',
+          role: 'trainSpace',
+          match: { decisionKind: 'actionSelection', targetKind: 'action', decisionPath: 'actionId', actionTag: 'train' },
+        },
+        {
+          label: 'govern',
+          role: 'governSpace',
+          match: { decisionKind: 'chooseNStep', targetKind: 'zone', decisionPath: 'targetSpaces', actionTag: 'govern' },
+        },
+      ],
+      caps: { capClass: 'standard256', maxSteps: 2 },
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({ template, selector: roleSelector(2) }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, '1');
+    assert.equal(result.selected?.roleBindings.governSpace?.selectedId, '2');
   });
 
   it('truncates alternatives deterministically by named cap class', () => {

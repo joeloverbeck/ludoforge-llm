@@ -269,6 +269,21 @@ agents:
           maxItems: 8
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
+      arvn.trainSpaceForControlOrPacification: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: controlOrPacificationOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
+      arvn.governPatronageSpace: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: patronageOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
+
+    planTemplates:
+      arvn.trainGovern:
+        traceLabel: "ARVN Train then Govern"
+        root: { actionTags: [train], compound: { specialTags: [govern], timing: after } }
+        roles:
+          trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
+          governSpace: { selector: arvn.governPatronageSpace, required: true, constraints: [{ notEqual: role.trainSpace }] }
+        steps:
+          - { label: train-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: govern-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
 
     strategyModules:
       arvnPursueProjectedMargin:

@@ -23,7 +23,7 @@ import {
   type PlanRoleBinding,
 } from './plan-execution.js';
 import { buildPlanProposalTrace } from './plan-trace.js';
-import { evaluateSelector, type SelectorEvalCandidate } from './policy-selector-eval.js';
+import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
 
 export const PLAN_CAP_CLASS_BUDGETS = {
   standard256: 256,
@@ -242,36 +242,25 @@ function bindPlanRoles(
   root: PlanProposalRootCandidate,
 ): Readonly<Record<string, PlanRoleBinding>> | null {
   const bindings: Record<string, PlanRoleBinding> = {};
-  for (const [roleName, role] of Object.entries(template.roles).sort(([left], [right]) => compareStable(left, right))) {
+  const selectorCandidates = selectorCandidatesFor(input.def, input.actionDecisions);
+  const rootCandidate = selectorCandidateFor(input.def, root);
+  for (const [roleName, role] of orderedPlanRoles(template)) {
     const selector = input.catalog.compiled.selectors?.[String(role.selectorId)];
-    const selected = selector === undefined
+    const selectedItems = selector === undefined
       ? undefined
       : evaluateSelector(selector, {
           def: input.def,
           state: input.state,
-          candidates: selectorCandidatesFor(input.def, input.actionDecisions),
-          candidate: selectorCandidateFor(input.def, root),
+          candidates: selectorCandidates,
+          candidate: rootCandidate,
           ...(input.catalog.compiled.selectors === undefined ? {} : { selectors: input.catalog.compiled.selectors }),
           evaluateExpr: (expr, candidate) => {
             const value = evaluatePlanExpr(expr, input.state, candidate);
             return Array.isArray(value) ? undefined : value;
           },
-        }).selected[0];
-    const selectedId = selector === undefined ? firstRoleSelection(role.selector.source, input.state) : selected?.key ?? null;
-    if (selectedId === null) {
-      if (role.required) {
-        return null;
-      }
-      continue;
-    }
-    const binding: PlanRoleBinding = {
-      role: roleName,
-      selectedId,
-      quality: selected?.quality ?? 0,
-      rank: selected?.rank ?? 0,
-      components: Object.fromEntries(selected?.components ?? []),
-    };
-    if (!constraintsSatisfied(binding, role.constraints, bindings)) {
+        }).selected;
+    const binding = selectRoleBinding(roleName, role, selectedItems, input.state, bindings);
+    if (binding === null) {
       if (role.required) {
         return null;
       }
@@ -280,6 +269,64 @@ function bindPlanRoles(
     bindings[roleName] = binding;
   }
   return bindings;
+}
+
+function orderedPlanRoles(
+  template: CompiledPlanTemplate,
+): readonly (readonly [string, CompiledPlanTemplate['roles'][string]])[] {
+  const remaining = Object.entries(template.roles).sort(([left], [right]) => compareStable(left, right));
+  const ordered: (readonly [string, CompiledPlanTemplate['roles'][string]])[] = [];
+  const emitted = new Set<string>();
+
+  while (remaining.length > 0) {
+    const index = remaining.findIndex(([, role]) =>
+      role.constraints.every((constraint) => emitted.has(constraint.role) || template.roles[constraint.role] === undefined),
+    );
+    const nextIndex = index === -1 ? 0 : index;
+    const [next] = remaining.splice(nextIndex, 1);
+    if (next === undefined) {
+      break;
+    }
+    ordered.push(next);
+    emitted.add(next[0]);
+  }
+
+  return ordered;
+}
+
+function selectRoleBinding(
+  roleName: string,
+  role: CompiledPlanTemplate['roles'][string],
+  selectedItems: readonly SelectedItem[] | undefined,
+  state: GameState,
+  existing: Readonly<Record<string, PlanRoleBinding>>,
+): PlanRoleBinding | null {
+  const candidates = selectedItems === undefined
+    ? fallbackRoleSelections(role, state)
+    : selectedItems;
+  for (const selected of candidates) {
+    const binding: PlanRoleBinding = {
+      role: roleName,
+      selectedId: selected.key,
+      quality: selected.quality,
+      rank: selected.rank,
+      components: Object.fromEntries(selected.components ?? []),
+    };
+    if (constraintsSatisfied(binding, role.constraints, existing)) {
+      return binding;
+    }
+  }
+  return null;
+}
+
+function fallbackRoleSelections(
+  role: CompiledPlanTemplate['roles'][string],
+  state: GameState,
+): readonly SelectedItem[] {
+  const selectedId = firstRoleSelection(role.selector.source, state);
+  return selectedId === null
+    ? []
+    : [{ key: selectedId, quality: 0, rank: 0, components: new Map() }];
 }
 
 function scorePlanLeafConsiderations(

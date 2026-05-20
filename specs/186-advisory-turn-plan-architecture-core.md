@@ -221,13 +221,13 @@ Decomposed via `/spec-to-tickets` on 2026-05-20:
 - [`archive/tickets/186ADVTURNPLAN-004.md`](../archive/tickets/186ADVTURNPLAN-004.md) — `PlanExecutionState` cross-microturn lifecycle (covers §4.3)
 - [`archive/tickets/186ADVTURNPLAN-005.md`](../archive/tickets/186ADVTURNPLAN-005.md) — Bounded plan proposer/evaluator + plan trace (covers §4.4, §4.8)
 - [`archive/tickets/186ADVTURNPLAN-006.md`](../archive/tickets/186ADVTURNPLAN-006.md) — Execution controller + fallback ladder + consideration demotion (covers §4.5, §4.6, Phase 2)
-- [`tickets/186ADVTURNPLAN-007.md`](../tickets/186ADVTURNPLAN-007.md) — ARVN Train+Govern proof slice (covers §8 Phase 3)
+- [`archive/tickets/186ADVTURNPLAN-007.md`](../archive/tickets/186ADVTURNPLAN-007.md) — ARVN Train+Govern proof slice (covers §8 Phase 3)
 
 Infrastructure (engine/compiler) commits split from any policy-YAML commits.
 
 ## Outcome
 
-In progress:
+Completed ticket outcomes:
 - `186ADVTURNPLAN-001` completed and archived on 2026-05-20. It landed the plan-template/role-binding IR, schemaVersion 3 migration, compiler lowering, schema artifact update, and regression coverage for deterministic compilation.
 - `186ADVTURNPLAN-002A` completed and archived on 2026-05-20. It landed the generic authored/compiled cap/max-step IR prerequisite before `186ADVTURNPLAN-002` validates the cap-class and max-step diagnostics required by Foundations #10/#12.
 - `186ADVTURNPLAN-002` completed and archived on 2026-05-20. It landed compiler validation diagnostics for plan-template role references, cap classes/max steps, fallback targets/cycles, stable ordering, and deterministic diagnostic replay coverage.
@@ -235,4 +235,4 @@ In progress:
 - `186ADVTURNPLAN-004` completed and archived on 2026-05-20. It landed the advisory `PlanExecutionState` lifecycle substrate, agent-owned state map, canonical serialization helpers, and focused lifecycle coverage.
 - `186ADVTURNPLAN-005` completed and archived on 2026-05-20. It landed the advisory plan proposer, proposal-side plan trace, selected-plan `PlanExecutionState` commit, deterministic cap coverage, and focused replay witnesses.
 - `186ADVTURNPLAN-006` completed and archived on 2026-05-20. It landed the generic microturn execution controller, live-legal-frontier matching, bounded fallback to primitive consideration policy / stable tie-break, per-microturn plan trace, schema artifact regeneration, v2-equivalence coverage, and focused legality/replay witnesses.
-- Remaining active ticket covers the FITL ARVN Train+Govern proof slice.
+- `186ADVTURNPLAN-007` completed and archived on 2026-05-20. It landed the FITL ARVN Train+Govern proof slice, warning-class profile-quality witnesses, and the approved generic constrained role-binding retry needed to bind valid second candidates without introducing FITL-specific engine logic.

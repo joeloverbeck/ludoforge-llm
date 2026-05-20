@@ -14,6 +14,15 @@ export interface PolicyPlanTraceAlternative {
   readonly stableKey: string;
 }
 
+export interface PolicyPlanMicroturnTrace {
+  readonly expectedStep: string | null;
+  readonly matchedRole: string | null;
+  readonly selectedLegalOption: string;
+  readonly match: 'exact' | 'reselected' | 'fallback';
+  readonly deviation?: string;
+  readonly fallbackReason?: string;
+}
+
 export interface PolicyPlanTrace {
   readonly status: 'selected' | 'noTemplate' | 'noRootMatch' | 'noRoleBinding';
   readonly capClass?: string;
@@ -29,4 +38,5 @@ export interface PolicyPlanTrace {
   readonly roleBindings: readonly PolicyPlanTraceRoleBinding[];
   readonly alternatives: readonly PolicyPlanTraceAlternative[];
   readonly postureStatus: 'notConfigured' | 'ready' | 'unavailable';
+  readonly microturns?: readonly PolicyPlanMicroturnTrace[];
 }

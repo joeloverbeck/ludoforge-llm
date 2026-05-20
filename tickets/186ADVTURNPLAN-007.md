@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — FITL game data (`92-agents.md`) + engine test fixtures only
-**Deps**: `tickets/186ADVTURNPLAN-006.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-006.md`
 
 ## Problem
 

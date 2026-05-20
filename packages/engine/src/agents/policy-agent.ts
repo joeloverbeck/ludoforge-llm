@@ -38,6 +38,7 @@ import type { PreviewOptionProjectedState } from './policy-runtime.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
 import { updatePlanExecutionLifecycle, type PlanExecutionStateStore } from './plan-execution.js';
 import { proposeAndCommitAdvisoryTurnPlan } from './plan-proposal.js';
+import { selectPlanControlledDecision } from './plan-controller.js';
 import {
   createPolicyAgentChooseNStepInnerPreview,
   createPolicyAgentChooseOneInnerPreview,
@@ -671,7 +672,44 @@ export class PolicyAgent implements Agent {
           resolvedProfile,
           innerPreview?.refsByOptionKey,
           innerPreview?.projectedStateByOptionKey,
-    );
+        );
+    const primitiveDecision = guidedChoice?.matchedDecision;
+    if (resolvedProfile !== null) {
+      const controlled = selectPlanControlledDecision({
+        def: input.def,
+        catalog: resolvedProfile.catalog,
+        store: this.planExecutionState,
+        turnId: input.microturn.turnId,
+        seatId: String(input.microturn.seatId),
+        legalActions: input.microturn.legalActions,
+        ...(primitiveDecision === undefined ? {} : { primitiveDecision }),
+      });
+      if (controlled !== undefined) {
+        const selectedStableMoveKey = frontierDecisionKey(input.def, controlled.decision);
+        const metadata: PolicyEvaluationMetadata = {
+          seatId: resolvedProfile.seatId,
+          requestedProfileId: this.profileId ?? null,
+          profileId: resolvedProfile.profileId,
+          profileFingerprint: resolvedProfile.profile.fingerprint,
+          canonicalOrder: input.microturn.legalActions.map((decision) => frontierDecisionKey(input.def, decision)),
+          candidates: [],
+          pruningSteps: [],
+          tieBreakChain: [],
+          previewUsage: innerPreview?.usage ?? emptyPreviewUsage('disabled'),
+          selectedStableMoveKey,
+          finalScore: null,
+          candidateParamFallbackFiredCount: 0,
+          plan: controlled.planTrace,
+          usedFallback: false,
+          failure: null,
+        };
+        return {
+          decision: controlled.decision,
+          rng: input.rng,
+          ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel) }),
+        };
+      }
+    }
     if (guidedChoice !== null) {
       const selectedStableMoveKey = frontierDecisionKey(input.def, guidedChoice.matchedDecision);
       const previewUsage = innerPreview?.usage ?? emptyPreviewUsage('disabled');

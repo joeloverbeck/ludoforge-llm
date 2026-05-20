@@ -220,7 +220,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-20:
 - [`archive/tickets/186ADVTURNPLAN-003.md`](../archive/tickets/186ADVTURNPLAN-003.md) — `routePairs` + `subset` selector sources (covers §4.2, Phase 1b)
 - [`archive/tickets/186ADVTURNPLAN-004.md`](../archive/tickets/186ADVTURNPLAN-004.md) — `PlanExecutionState` cross-microturn lifecycle (covers §4.3)
 - [`archive/tickets/186ADVTURNPLAN-005.md`](../archive/tickets/186ADVTURNPLAN-005.md) — Bounded plan proposer/evaluator + plan trace (covers §4.4, §4.8)
-- [`tickets/186ADVTURNPLAN-006.md`](../tickets/186ADVTURNPLAN-006.md) — Execution controller + fallback ladder + consideration demotion (covers §4.5, §4.6, Phase 2)
+- [`archive/tickets/186ADVTURNPLAN-006.md`](../archive/tickets/186ADVTURNPLAN-006.md) — Execution controller + fallback ladder + consideration demotion (covers §4.5, §4.6, Phase 2)
 - [`tickets/186ADVTURNPLAN-007.md`](../tickets/186ADVTURNPLAN-007.md) — ARVN Train+Govern proof slice (covers §8 Phase 3)
 
 Infrastructure (engine/compiler) commits split from any policy-YAML commits.
@@ -234,4 +234,5 @@ In progress:
 - `186ADVTURNPLAN-003` completed and archived on 2026-05-20. It landed bounded `routePairs` and `subset` selector-source support, cap diagnostics, deterministic runtime enumeration, schema artifact regeneration, and focused architectural-invariant coverage.
 - `186ADVTURNPLAN-004` completed and archived on 2026-05-20. It landed the advisory `PlanExecutionState` lifecycle substrate, agent-owned state map, canonical serialization helpers, and focused lifecycle coverage.
 - `186ADVTURNPLAN-005` completed and archived on 2026-05-20. It landed the advisory plan proposer, proposal-side plan trace, selected-plan `PlanExecutionState` commit, deterministic cap coverage, and focused replay witnesses.
-- Remaining active tickets cover execution controller/v2 retirement and FITL authoring.
+- `186ADVTURNPLAN-006` completed and archived on 2026-05-20. It landed the generic microturn execution controller, live-legal-frontier matching, bounded fallback to primitive consideration policy / stable tie-break, per-microturn plan trace, schema artifact regeneration, v2-equivalence coverage, and focused legality/replay witnesses.
+- Remaining active ticket covers the FITL ARVN Train+Govern proof slice.

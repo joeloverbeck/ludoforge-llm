@@ -1,6 +1,6 @@
 # 186ADVTURNPLAN-006: Microturn execution controller + fallback ladder + consideration demotion (v2 retirement)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents` runtime (`policy-agent.ts`, `policy-eval.ts`, `policy-evaluation-core.ts`, `plan-trace.ts`)
@@ -77,3 +77,49 @@ Emit per-microturn entries `{ expectedStep, matchedRole, selectedLegalOption, ma
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/architecture/plan-controller-legality-frontier.test.js dist/test/determinism/plan-v2-equivalence.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-20)
+
+Implemented the Phase 2 microturn execution controller slice for advisory turn plans:
+
+- Added `packages/engine/src/agents/plan-controller.ts` and exported it from the agent surface.
+- Wired `PolicyAgent` non-action microturn decisions through the controller after the primitive consideration scorer has selected its fallback candidate.
+- The controller reads committed `PlanExecutionState`, matches the next template step against the live `legalActions` frontier, selects only published legal decisions, advances plan state, and emits per-microturn plan trace entries.
+- The fallback ladder is bounded and single-pass for this slice: exact plan binding, reselected step-compatible frontier option, primitive consideration policy, then deterministic stable frontier tie-break.
+- Extended `PolicyPlanTrace` with `microturns` and regenerated `packages/engine/schemas/Trace.schema.json` from the canonical schema/types.
+- Added focused architectural-invariant coverage for exact selection, legal-frontier fallback, trace replay identity, and consideration-only v2 behavior preservation.
+
+Scope boundary:
+
+- This ticket lands the generic controller and v2-primary demotion seam. It does not author the FITL ARVN Train+Govern profile or quality witnesses; that remains `186ADVTURNPLAN-007`.
+- `packages/engine/src/agents/policy-eval.ts` and `packages/engine/src/agents/policy-evaluation-core.ts` did not need source edits because the existing consideration scorer is reused as the primitive policy candidate that feeds the controller.
+- `packages/engine/src/agents/plan-trace.ts` did not need source edits because the controller constructs the per-microturn trace through the shared `PolicyPlanTrace` type/schema surface.
+- `packages/engine/schemas/Trace.schema.json` is an expected generated artifact update from `PolicyPlanTraceSchema` / `PolicyPlanMicroturnTraceSchema`; generated with `pnpm -F @ludoforge/engine run schema:artifacts`.
+
+Acceptance-to-command map:
+
+- AC1, every selected microturn decision is a member of published `legalActions`: `packages/engine/test/architecture/plan-controller-legality-frontier.test.ts` via the focused `node --test` command and engine/root test lanes.
+- AC2, fallback ladder terminates and bottoms out inside the legal frontier: `packages/engine/test/architecture/plan-controller-legality-frontier.test.ts` fallback case, plus package/root suites.
+- AC3, consideration-only v2-equivalence: `packages/engine/test/determinism/plan-v2-equivalence.test.ts` via the focused `node --test` command and engine/root test lanes.
+- AC4, per-microturn plan trace is emitted and replay-identical: exact-selection replay assertion in `packages/engine/test/architecture/plan-controller-legality-frontier.test.ts`.
+- AC5, existing engine suite: `pnpm -F @ludoforge/engine test`.
+- Invariants, selected decision in legal frontier and no kernel `Decision` plan variant: focused legality test plus source diff; only agent trace schema/types changed, not kernel microturn decision variants.
+- Invariant, bounded fallback cannot loop indefinitely: focused fallback test plus single-pass controller ladder.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- From `packages/engine`: `node --test dist/test/architecture/plan-controller-legality-frontier.test.js dist/test/determinism/plan-v2-equivalence.test.js` — passed, 3 tests / 2 suites.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after regenerating `Trace.schema.json`.
+- `pnpm turbo schema:artifacts` — passed, 4 successful tasks.
+- `pnpm -F @ludoforge/engine test` — passed, `165/165 files passed`.
+- `pnpm turbo lint` — passed, 2 successful tasks.
+- `pnpm turbo typecheck` — passed, 3 successful tasks.
+- `pnpm turbo build` — passed, 3 successful tasks.
+- `pnpm turbo test` — passed, 5 successful tasks; engine `165/165 files passed`.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-agent.ts`: `942` lines before, `980` lines after; preexisting above the 800-line guidance, net +38 lines from this ticket. Per user-approved option 1 on 2026-05-20, the controller was added in a focused helper module with minimal `PolicyAgent` wiring instead of broad extraction.
+- `packages/engine/src/agents/plan-controller.ts`: new file, `186` lines, under guidance.
+- New tests are under guidance: `plan-controller-legality-frontier.test.ts` `186` lines; `plan-v2-equivalence.test.ts` `210` lines.

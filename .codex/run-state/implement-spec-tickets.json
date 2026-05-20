@@ -1,17 +1,23 @@
 {
-  "originating_spec": "specs/184-wasm-preview-drive-aggregate-coverage.md",
-  "archived_spec": "archive/specs/184-wasm-preview-drive-aggregate-coverage.md",
-  "last_ticket": "archive/tickets/184WASMPREDRI-004.md",
-  "last_result": "completed_archived_ticket_and_spec",
-  "last_work_commit": "self",
+  "originating_spec": "specs/185-grant-flow-preview-integrity.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/185GRANTFLOWPI-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "c96e66bcad4ba474dff145eeeb1d2908fe2ce62c",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/185GRANTFLOWPI-002.md",
+  "queue": [
+    "tickets/185GRANTFLOWPI-002.md",
+    "tickets/185GRANTFLOWPI-003.md",
+    "tickets/185GRANTFLOWPI-004.md",
+    "tickets/185GRANTFLOWPI-005.md",
+    "tickets/185GRANTFLOWPI-006.md"
+  ],
+  "phase": "ticket_iteration_complete",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 184 completed: 184WASMPREDRI-004 removed the broad aggregate preview fallback, added row-local oracle fallback telemetry, updated 15-seed reporting, archived the ticket, and archived the originating spec.",
+  "owned_dirty_summary": "Ticket 185GRANTFLOWPI-001 implemented and archived; next target is tickets/185GRANTFLOWPI-002.md. Source-size growth used user-approved 2026-05-20 Option 1 minimal-touch deferral.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "ready_to_commit",
+  "dirty_state": "clean",
   "updated_at": "2026-05-20"
 }

@@ -1,6 +1,6 @@
 # 186ADVTURNPLAN-003: routePairs + subset selector sources (Phase 1b)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl` (`game-spec-doc.ts`, `types-core.ts`, `compile-agent-role-selectors.ts`, `validate-agents.ts`), `agents` runtime (`policy-selector-eval.ts`)
@@ -77,3 +77,41 @@ Deterministic, capped enumeration of origin×destination pairs and bounded subse
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/role-selector-routepairs-subset.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-20)
+
+Completed.
+
+Implemented additive authored/compiled selector-source support for `routePairs` and `subset`, including:
+
+1. authored source types in `packages/engine/src/cnl/game-spec-doc.ts`;
+2. compiled IR/types and schema validation in `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/schemas/GameDef.schema.json`;
+3. compiler lowering and cap diagnostics in `packages/engine/src/cnl/compile-agent-selector-sources.ts`, called from the existing selector compilation path in `compile-agents.ts`;
+4. runtime deterministic enumeration in `packages/engine/src/agents/policy-selector-eval.ts`, with selector catalog threading from `policy-evaluation-core.ts`;
+5. focused architectural-invariant coverage in `packages/engine/test/unit/agents/role-selector-routepairs-subset.test.ts`.
+
+The ticket's draft file list named `compile-agent-role-selectors.ts` / `validate-agents.ts`; live selector-source compilation is currently rooted through `compile-agents.ts`. The cap-bounds diagnostics were implemented at source lowering so both compile and validation entry points receive the same named diagnostics through the existing compiler path.
+
+Generated artifact provenance:
+
+- Artifact: `packages/engine/schemas/GameDef.schema.json`
+- Canonical inputs: `packages/engine/src/kernel/schemas-core.ts` and the compiled selector-source schema/type changes.
+- Command: `pnpm -F @ludoforge/engine run schema:artifacts`
+- Reason checked in: `GameDef.schema.json` is a repository contract artifact and the engine schema-artifact tests require it to match compiled schema inputs.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/compile-agents.ts`: 5913 lines before, 5846 lines after; active growth `-67` via helper extraction.
+- `packages/engine/src/cnl/compile-agent-selector-sources.ts`: new 357-line helper, under the 800-line cap.
+- `packages/engine/src/agents/policy-selector-eval.ts`: 291 lines before, 376 lines after; active growth `+85`, under the 800-line cap.
+- Other touched preexisting large source files had small schema/type wiring deltas only: `game-spec-doc.ts` `+6`, `types-core.ts` `+7`, `schemas-core.ts` `+21`, `policy-evaluation-core.ts` `+1`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test dist/test/unit/agents/role-selector-routepairs-subset.test.js` — passed.
+3. `pnpm -F @ludoforge/engine test` — passed, `164/164 files passed`.
+4. `pnpm turbo build` — passed.
+5. `pnpm turbo lint` — passed.
+6. `pnpm turbo typecheck` — passed.
+7. `pnpm turbo test` — passed, `5 successful, 5 total`; engine summary `164/164 files passed`.

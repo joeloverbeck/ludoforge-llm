@@ -28,7 +28,6 @@ import type {
   AgentPreviewFallback,
   SurfaceVisibilityClass,
   AgentPolicyValueType,
-  CandidateParamRef,
   CompiledAgentPolicyRef,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
@@ -52,7 +51,6 @@ import type {
   ContinuedDeepeningConfig,
   QualitySpec,
   SelectorCostClass,
-  SelectorSource,
   DeepTrigger,
   AgentPreviewGrantFlowCapClass,
   AgentPreviewPostGrantCapClass,
@@ -90,14 +88,13 @@ import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibrary
 import {
   deriveSelectorCostClass,
   isSelectorCostClass,
-  isSelectorProductPairCapExceeded,
-  normalizeSelectorCollection,
   normalizeSelectorResult,
   normalizeSelectorScopes,
   parseSelectorRef,
   selectorCostClassLeq,
   selectorCostToPolicyCostClass,
 } from './compile-agent-selectors.js';
+import { lowerSelectorSource, type LoweredSelectorSource } from './compile-agent-selector-sources.js';
 import {
   compileStrategyModuleDefinition,
   moduleCostToPolicyCostClass,
@@ -2795,12 +2792,12 @@ class AgentLibraryCompiler {
       minImpact,
       ...(quality.components.map((component) => component.analysis)),
     ].filter((entry): entry is PolicyExprAnalysis => entry !== null);
-    const dependencies = mergeDependencies(analyses.map((entry) => entry.dependencies));
-    const costClass = deriveSelectorCostClass(source, analyses);
+    const dependencies = mergeDependencies([source.dependencies, ...analyses.map((entry) => entry.dependencies)]);
+    const costClass = maxSelectorCostClass(deriveSelectorCostClass(source.source, analyses), source.costClass);
     const compiled: AgentSelectorWithExpr = {
       id: selectorId as AgentSelectorWithExpr['id'],
       scopes,
-      source,
+      source: source.source,
       ...(where === null ? {} : { where: where.expr }),
       ...(quality.components.length === 0 ? {} : {
         quality: {
@@ -3373,82 +3370,14 @@ class AgentLibraryCompiler {
     }
   }
 
-  private lowerSelectorSource(source: GameSpecSelectorSource | undefined, path: string): SelectorSource | null {
-    if (source === undefined || source === null || typeof source !== 'object' || Array.isArray(source)) {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
-        path,
-        severity: 'error',
-        message: 'Selector source must be a supported finite source object.',
-        suggestion: 'Use source.collection, source.kind: product, source.kind: microturnOptions, or source.kind: candidateParams.',
-      });
-      return null;
-    }
-    if (source.kind === 'product') {
-      const left = normalizeSelectorCollection(source.left, `${path}.left`, this.diagnostics);
-      const right = normalizeSelectorCollection(source.right, `${path}.right`, this.diagnostics);
-      if (source.maxPairs === undefined) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MISSING_MAXPAIRS,
-          path: `${path}.maxPairs`,
-          severity: 'error',
-          message: 'Product selector source requires maxPairs.',
-          suggestion: `Set maxPairs to a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
-        });
-        return null;
-      }
-      if (isSelectorProductPairCapExceeded(source.maxPairs)) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_PRODUCT_MAXPAIRS_EXCEEDS_CAP,
-          path: `${path}.maxPairs`,
-          severity: 'error',
-          message: `Product selector maxPairs must be a positive integer <= ${MAX_SELECTOR_PRODUCT_PAIRS}.`,
-          suggestion: `Reduce maxPairs to ${MAX_SELECTOR_PRODUCT_PAIRS} or less.`,
-        });
-        return null;
-      }
-      return left === null || right === null ? null : { kind: 'product', left, right, maxPairs: source.maxPairs };
-    }
-    if (source.kind === 'microturnOptions') {
-      return { kind: 'microturnOptions' };
-    }
-    if (source.kind === 'candidateParams') {
-      if (typeof source.param !== 'string' || source.param.length === 0 || this.candidateParamDefs[source.param] === undefined) {
-        this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_SOURCE_UNKNOWN,
-          path: `${path}.param`,
-          severity: 'error',
-          message: `Selector candidateParams source references unknown candidate param "${String(source.param)}".`,
-          suggestion: 'Reference a declared doc.agents.candidateParams entry.',
-        });
-        return null;
-      }
-      return { kind: 'candidateParams', param: source.param as CandidateParamRef };
-    }
-    const collection = normalizeSelectorCollection(source.collection, `${path}.collection`, this.diagnostics);
-    if (collection === null) {
-      return null;
-    }
-    const sourceRecord = source as Readonly<Record<string, unknown>>;
-    const key = sourceRecord.key;
-    const keyFrom = key === null || typeof key !== 'object'
-      ? undefined
-      : (key as Readonly<Record<string, unknown>>).from;
-    if (key !== undefined && (typeof keyFrom !== 'string' || keyFrom.length === 0)) {
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_SELECTOR_BINDING_TYPE_MISMATCH,
-        path: `${path}.key.from`,
-        severity: 'error',
-        message: 'Selector source key.from must be a non-empty string when source.key is declared.',
-        suggestion: 'Use key: { from: <candidate field> } or omit source.key.',
-      });
-      return null;
-    }
-    return {
-      kind: 'collection',
-      collection,
-      ...(source.key?.from === undefined ? {} : { key: { from: source.key.from } }),
-    };
+  private lowerSelectorSource(source: GameSpecSelectorSource | undefined, path: string): LoweredSelectorSource | null {
+    return lowerSelectorSource({
+      source,
+      path,
+      diagnostics: this.diagnostics,
+      candidateParamDefs: this.candidateParamDefs,
+      compileSelector: (selectorId) => this.compileSelector(selectorId),
+    });
   }
 
   private lowerSelectorQuality(
@@ -5900,6 +5829,10 @@ function emptyDependencies(): CompiledAgentDependencyRefs {
 
 function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort();
+}
+
+function maxSelectorCostClass(left: SelectorCostClass, right: SelectorCostClass): SelectorCostClass {
+  return selectorCostClassLeq(left, right) ? right : left;
 }
 
 function maxCostClass(left: AgentPolicyCostClass, right: AgentPolicyCostClass): AgentPolicyCostClass {

@@ -1918,7 +1918,7 @@
                     "$ref": "#/definitions/anon_21b5f0ee"
                   },
                   "source": {
-                    "$ref": "#/definitions/anon_f09f78e6"
+                    "$ref": "#/definitions/anon_443b7dac"
                   },
                   "result": {
                     "$ref": "#/definitions/anon_e41001fb"
@@ -2137,7 +2137,7 @@
                               "$ref": "#/definitions/anon_21b5f0ee"
                             },
                             "source": {
-                              "$ref": "#/definitions/anon_f09f78e6"
+                              "$ref": "#/definitions/anon_443b7dac"
                             },
                             "result": {
                               "$ref": "#/definitions/anon_e41001fb"
@@ -2658,7 +2658,7 @@
                     }
                   },
                   "source": {
-                    "$ref": "#/definitions/anon_f09f78e6"
+                    "$ref": "#/definitions/anon_443b7dac"
                   },
                   "where": {
                     "allOf": [
@@ -6362,6 +6362,193 @@
             "name",
             "type",
             "init"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "anon_443b7dac": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "collection"
+            },
+            "collection": {
+              "$ref": "#/definitions/anon_ea56cb14"
+            },
+            "key": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "$ref": "#/definitions/anon_4682db72"
+                }
+              },
+              "required": [
+                "from"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "collection"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "product"
+            },
+            "left": {
+              "$ref": "#/definitions/anon_ea56cb14"
+            },
+            "right": {
+              "$ref": "#/definitions/anon_ea56cb14"
+            },
+            "maxPairs": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 256
+            }
+          },
+          "required": [
+            "kind",
+            "left",
+            "right",
+            "maxPairs"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "routePairs"
+            },
+            "originSelectorId": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "destinationSelectorId": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "maxPairs": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 256
+            }
+          },
+          "required": [
+            "kind",
+            "originSelectorId",
+            "destinationSelectorId",
+            "maxPairs"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "subset"
+            },
+            "of": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "collection"
+                    },
+                    "collection": {
+                      "$ref": "#/definitions/anon_ea56cb14"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "collection"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "selector"
+                    },
+                    "selectorId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "selectorId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 256
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 256
+            },
+            "beamWidth": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 256
+            }
+          },
+          "required": [
+            "kind",
+            "of",
+            "min",
+            "max",
+            "beamWidth"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "microturnOptions"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "candidateParams"
+            },
+            "param": {
+              "$ref": "#/definitions/anon_4682db72"
+            }
+          },
+          "required": [
+            "kind",
+            "param"
           ],
           "additionalProperties": false
         }
@@ -13469,96 +13656,6 @@
       "items": {
         "$ref": "#/definitions/anon_c2b32784"
       }
-    },
-    "anon_f09f78e6": {
-      "anyOf": [
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "collection"
-            },
-            "collection": {
-              "$ref": "#/definitions/anon_ea56cb14"
-            },
-            "key": {
-              "type": "object",
-              "properties": {
-                "from": {
-                  "$ref": "#/definitions/anon_4682db72"
-                }
-              },
-              "required": [
-                "from"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "required": [
-            "kind",
-            "collection"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "product"
-            },
-            "left": {
-              "$ref": "#/definitions/anon_ea56cb14"
-            },
-            "right": {
-              "$ref": "#/definitions/anon_ea56cb14"
-            },
-            "maxPairs": {
-              "type": "integer",
-              "exclusiveMinimum": 0,
-              "maximum": 256
-            }
-          },
-          "required": [
-            "kind",
-            "left",
-            "right",
-            "maxPairs"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "microturnOptions"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "candidateParams"
-            },
-            "param": {
-              "$ref": "#/definitions/anon_4682db72"
-            }
-          },
-          "required": [
-            "kind",
-            "param"
-          ],
-          "additionalProperties": false
-        }
-      ]
     },
     "anon_f3e2346a": {
       "anyOf": [

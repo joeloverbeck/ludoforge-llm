@@ -217,7 +217,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-20:
 - [`archive/tickets/186ADVTURNPLAN-001.md`](../archive/tickets/186ADVTURNPLAN-001.md) — Plan-template & role-binding selector IR + compilation (covers §4.1, §4.2, Phase 1)
 - [`archive/tickets/186ADVTURNPLAN-002A.md`](../archive/tickets/186ADVTURNPLAN-002A.md) — Plan cap/max-step IR prerequisite for static validation (covers §4.4 cap metadata needed by §4.7)
 - [`archive/tickets/186ADVTURNPLAN-002.md`](../archive/tickets/186ADVTURNPLAN-002.md) — Compiler validation diagnostics (covers §4.7)
-- [`tickets/186ADVTURNPLAN-003.md`](../tickets/186ADVTURNPLAN-003.md) — `routePairs` + `subset` selector sources (covers §4.2, Phase 1b)
+- [`archive/tickets/186ADVTURNPLAN-003.md`](../archive/tickets/186ADVTURNPLAN-003.md) — `routePairs` + `subset` selector sources (covers §4.2, Phase 1b)
 - [`tickets/186ADVTURNPLAN-004.md`](../tickets/186ADVTURNPLAN-004.md) — `PlanExecutionState` cross-microturn lifecycle (covers §4.3)
 - [`tickets/186ADVTURNPLAN-005.md`](../tickets/186ADVTURNPLAN-005.md) — Bounded plan proposer/evaluator + plan trace (covers §4.4, §4.8)
 - [`tickets/186ADVTURNPLAN-006.md`](../tickets/186ADVTURNPLAN-006.md) — Execution controller + fallback ladder + consideration demotion (covers §4.5, §4.6, Phase 2)
@@ -231,4 +231,5 @@ In progress:
 - `186ADVTURNPLAN-001` completed and archived on 2026-05-20. It landed the plan-template/role-binding IR, schemaVersion 3 migration, compiler lowering, schema artifact update, and regression coverage for deterministic compilation.
 - `186ADVTURNPLAN-002A` completed and archived on 2026-05-20. It landed the generic authored/compiled cap/max-step IR prerequisite before `186ADVTURNPLAN-002` validates the cap-class and max-step diagnostics required by Foundations #10/#12.
 - `186ADVTURNPLAN-002` completed and archived on 2026-05-20. It landed compiler validation diagnostics for plan-template role references, cap classes/max steps, fallback targets/cycles, stable ordering, and deterministic diagnostic replay coverage.
-- Remaining active tickets cover additional selector source kinds, plan execution state, proposer/evaluator, execution controller, and FITL authoring.
+- `186ADVTURNPLAN-003` completed and archived on 2026-05-20. It landed bounded `routePairs` and `subset` selector-source support, cap diagnostics, deterministic runtime enumeration, schema artifact regeneration, and focused architectural-invariant coverage.
+- Remaining active tickets cover plan execution state, proposer/evaluator, execution controller, and FITL authoring.

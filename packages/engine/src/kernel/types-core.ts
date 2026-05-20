@@ -387,6 +387,7 @@ export type GameAuthoredCollectionId = string & { readonly __brand: 'GameAuthore
 export type CandidateParamRef = string & { readonly __brand: 'CandidateParamRef' };
 export const MAX_SELECTOR_RESULT_ITEMS = 32;
 export const MAX_SELECTOR_PRODUCT_PAIRS = 256;
+export const MAX_SELECTOR_SUBSET_BEAM_WIDTH = 256;
 export const MAX_MODULE_PRIORITY_TIER = 100;
 export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
@@ -1078,8 +1079,14 @@ export interface CompiledAgentAggregate {
 export type SelectorSource =
   | { readonly kind: 'collection'; readonly collection: CollectionRef; readonly key?: KeyBinding }
   | { readonly kind: 'product'; readonly left: CollectionRef; readonly right: CollectionRef; readonly maxPairs: number }
+  | { readonly kind: 'routePairs'; readonly originSelectorId: SelectorId; readonly destinationSelectorId: SelectorId; readonly maxPairs: number }
+  | { readonly kind: 'subset'; readonly of: SelectorSubsetSource; readonly min: number; readonly max: number; readonly beamWidth: number }
   | { readonly kind: 'microturnOptions' }
   | { readonly kind: 'candidateParams'; readonly param: CandidateParamRef };
+
+export type SelectorSubsetSource =
+  | { readonly kind: 'collection'; readonly collection: CollectionRef }
+  | { readonly kind: 'selector'; readonly selectorId: SelectorId };
 
 export type CollectionRef =
   | { readonly kind: 'zones' }

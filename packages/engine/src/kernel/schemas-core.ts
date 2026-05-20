@@ -1273,6 +1273,14 @@ const SelectorCollectionRefSchema = z.union([
   z.object({ kind: z.literal('authoredFinite'), collectionId: StringSchema }).strict(),
 ]);
 
+const SelectorSubsetSourceSchema = z.union([
+  z.object({
+    kind: z.literal('collection'),
+    collection: SelectorCollectionRefSchema,
+  }).strict(),
+  z.object({ kind: z.literal('selector'), selectorId: StringSchema }).strict(),
+]);
+
 const SelectorSourceSchema = z.union([
   z.object({
     kind: z.literal('collection'),
@@ -1284,6 +1292,19 @@ const SelectorSourceSchema = z.union([
     left: SelectorCollectionRefSchema,
     right: SelectorCollectionRefSchema,
     maxPairs: z.number().int().positive().max(256),
+  }).strict(),
+  z.object({
+    kind: z.literal('routePairs'),
+    originSelectorId: StringSchema,
+    destinationSelectorId: StringSchema,
+    maxPairs: z.number().int().positive().max(256),
+  }).strict(),
+  z.object({
+    kind: z.literal('subset'),
+    of: SelectorSubsetSourceSchema,
+    min: z.number().int().nonnegative().max(256),
+    max: z.number().int().nonnegative().max(256),
+    beamWidth: z.number().int().positive().max(256),
   }).strict(),
   z.object({ kind: z.literal('microturnOptions') }).strict(),
   z.object({ kind: z.literal('candidateParams'), param: StringSchema }).strict(),

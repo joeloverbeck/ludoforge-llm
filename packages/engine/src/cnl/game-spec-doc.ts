@@ -712,8 +712,14 @@ export interface GameSpecStrategicConditionDef {
 export type GameSpecSelectorSource =
   | { readonly kind?: 'collection'; readonly collection: GameSpecSelectorCollectionRef; readonly key?: { readonly from: string } }
   | { readonly kind: 'product'; readonly left: GameSpecSelectorCollectionRef; readonly right: GameSpecSelectorCollectionRef; readonly maxPairs?: number }
+  | { readonly kind: 'routePairs'; readonly origin: string; readonly destination: string; readonly maxPairs?: number }
+  | { readonly kind: 'subset'; readonly of: GameSpecSelectorSubsetSource; readonly min?: number; readonly max?: number; readonly beamWidth?: number }
   | { readonly kind: 'microturnOptions' }
   | { readonly kind: 'candidateParams'; readonly param: string };
+
+export type GameSpecSelectorSubsetSource =
+  | { readonly kind?: 'collection'; readonly collection: GameSpecSelectorCollectionRef }
+  | { readonly kind: 'selector'; readonly selector: string };
 
 export type GameSpecSelectorCollectionRef =
   | { readonly kind: 'zones' }

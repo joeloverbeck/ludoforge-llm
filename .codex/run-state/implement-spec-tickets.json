@@ -1,17 +1,24 @@
 {
-  "originating_spec": "specs/185-grant-flow-preview-integrity.md",
-  "archived_spec": "archive/specs/185-grant-flow-preview-integrity.md",
-  "last_ticket": "archive/tickets/185GRANTFLOWPI-006.md",
+  "originating_spec": "specs/186-advisory-turn-plan-architecture-core.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/186ADVTURNPLAN-001.md",
   "last_result": "completed_archived",
-  "last_work_commit": "13be5ce6c77c47574bddd9c4de4101435cc9ca13",
+  "last_work_commit": "07cdbd03fa4932c7c99298e42d77fffae436f9b5",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/186ADVTURNPLAN-002.md",
+  "queue": [
+    "tickets/186ADVTURNPLAN-002.md",
+    "tickets/186ADVTURNPLAN-003.md",
+    "tickets/186ADVTURNPLAN-004.md",
+    "tickets/186ADVTURNPLAN-005.md",
+    "tickets/186ADVTURNPLAN-006.md",
+    "tickets/186ADVTURNPLAN-007.md"
+  ],
+  "phase": "in_progress",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 185 ticket family and originating spec archived in work commit 13be5ce6c77c47574bddd9c4de4101435cc9ca13.",
+  "owned_dirty_summary": "Spec 186 ticket 001 archived in work commit 07cdbd03fa4932c7c99298e42d77fffae436f9b5; remaining ticket queue starts at 002.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "state_file_only",
   "updated_at": "2026-05-20"
 }

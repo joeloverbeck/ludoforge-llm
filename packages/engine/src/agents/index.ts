@@ -6,6 +6,8 @@ export * from './policy-eval.js';
 export * from './preview-utility-classifier.js';
 export * from './microturn-option-eval.js';
 export * from './microturn-option-evaluator.js';
+export * from './plan-proposal.js';
+export * from './plan-trace.js';
 export * from './factory.js';
 export * from './policy-bytecode/index.js';
 export * from './policy-wasm-runtime.js';

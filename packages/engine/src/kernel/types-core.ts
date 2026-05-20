@@ -72,6 +72,7 @@ import type {
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
 import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
+import type { PolicyPlanTrace } from './types-plan-trace.js';
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
   readonly version: 1;
@@ -2614,14 +2615,13 @@ export interface PolicyAgentDecisionTrace {
   readonly guardrails?: PolicyGuardrailTrace;
   readonly turnShape?: PolicyTurnShapeTrace;
   readonly selection?: PolicySelectionTrace;
+  readonly plan?: PolicyPlanTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
-
 export type AgentDecisionTrace = PolicyAgentDecisionTrace;
-
 // ── Execution Options & Collector ─────────────────────────
 
 export interface ExecutionOptions {

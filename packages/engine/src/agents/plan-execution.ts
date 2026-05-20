@@ -55,6 +55,14 @@ export const beginPlanExecutionTurn = (
   return created;
 };
 
+export const commitPlanExecutionState = (
+  store: PlanExecutionStateStore,
+  state: PlanExecutionState,
+): PlanExecutionState => {
+  store.set(planExecutionKey(state.turnId, state.seatId), state);
+  return state;
+};
+
 export const clearPlanExecutionTurn = (
   store: PlanExecutionStateStore,
   turnId: TurnId | string | number,

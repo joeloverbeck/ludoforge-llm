@@ -1,6 +1,6 @@
 # 186ADVTURNPLAN-005: Bounded plan proposer/evaluator + plan trace contract
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents` runtime (new `plan-proposal.ts`, new `plan-trace.ts`, `policy-eval.ts`/`policy-evaluation-core.ts`)
@@ -75,3 +75,45 @@ Define the §4.8 trace contract and record the proposal-side section: selected/a
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/plan-proposal.test.js dist/test/determinism/plan-trace-replay.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-20)
+
+Implemented the proposal-side Phase 2 slice for advisory turn plans:
+
+- Added `packages/engine/src/agents/plan-proposal.ts` and `packages/engine/src/agents/plan-trace.ts`.
+- Added `PLAN_CAP_CLASS_BUDGETS` for `standard256` and `deep1024`, with deterministic proposal truncation.
+- Wired action-selection `PolicyAgent` decisions to build an advisory plan proposal, commit the selected template/roles/root into `PlanExecutionState`, and emit the proposal-side `agentDecision.plan` trace when policy tracing is enabled.
+- Added `PolicyPlanTrace` types in `packages/engine/src/kernel/types-plan-trace.ts` and exported the plan trace through the existing kernel/agent type surfaces.
+- Added unit and determinism coverage for proposal enumeration, role binding, cap truncation, `PolicyAgent` state commit/trace emission, and byte-identical plan trace replay.
+
+Scope boundary: this ticket lands the advisory proposal and trace/state write. It does not retire the existing v2 move-selection path or execute per-microturn plan steps; that remains `186ADVTURNPLAN-006`. Deep posture-over-preview and ally/rival posture metadata remain Spec 187. The landed leaf scoring uses the existing selector evaluator for selector quality and bounded current-state/candidate-intrinsic consideration terms for proposal-side scoring; deeper preview/posture leaf scoring remains outside this slice.
+
+Acceptance-to-command map:
+
+- AC1, proposer enumerates a matching template, binds roles, and writes selected plan state: `node --test dist/test/unit/agents/plan-proposal.test.js dist/test/determinism/plan-trace-replay.test.js` from `packages/engine` and `pnpm -F @ludoforge/engine test`.
+- AC2, named cap class truncates deterministically: `packages/engine/test/unit/agents/plan-proposal.test.ts` via the focused command and package/root suites.
+- AC3, proposal-side plan trace replay identity: `packages/engine/test/determinism/plan-trace-replay.test.ts` via the focused command and package/root suites.
+- AC4, existing engine suite: `pnpm -F @ludoforge/engine test`.
+- Invariants, bounded caps and deterministic ordering: focused plan proposal/replay tests plus `pnpm turbo test`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- From `packages/engine`: `node --test dist/test/unit/agents/plan-proposal.test.js dist/test/determinism/plan-trace-replay.test.js` — passed, 4 tests / 2 suites.
+- `pnpm -F @ludoforge/engine test` — passed, `164/164 files passed`.
+- `pnpm turbo build` — passed, 3 successful tasks.
+- `pnpm turbo test` — passed, 5 successful tasks; engine `164/164 files passed`, runner `205` files / `2019` tests passed.
+- `pnpm turbo lint` — passed, 2 successful tasks.
+- `pnpm turbo typecheck` — passed, 3 successful tasks.
+- `pnpm run check:ticket-deps` — passed for 3 active tickets and 2464 archived tickets.
+- `git diff --check` — passed.
+- Trailing-whitespace scan over new untracked source/test files — passed.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-agent.ts`: `942` lines before and after, no net growth.
+- `packages/engine/src/agents/policy-eval.ts`: `1730` lines before and after, no net growth.
+- `packages/engine/src/kernel/types-core.ts`: `2850` lines before and after, no net growth.
+- New source files are under the file-size guidance: `plan-proposal.ts` `532` lines, `plan-trace.ts` `40` lines, `types-plan-trace.ts` `32` lines.
+
+Generated artifacts: no generated artifacts were checked in; schema artifact verification ran through `pnpm -F @ludoforge/engine test` and `pnpm turbo test`.

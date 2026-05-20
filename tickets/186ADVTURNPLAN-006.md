@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents` runtime (`policy-agent.ts`, `policy-eval.ts`, `policy-evaluation-core.ts`, `plan-trace.ts`)
-**Deps**: `archive/tickets/186ADVTURNPLAN-004.md`, `tickets/186ADVTURNPLAN-005.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-004.md`, `archive/tickets/186ADVTURNPLAN-005.md`
 
 ## Problem
 
-This ticket completes the paradigm switch (Spec 186 §4.5–§4.6). It wires the execution controller into the per-microturn entry point: at `actionSelection` it commits a plan (via the proposer, `005`); at each subsequent microturn it matches the live `legalActions` frontier to the next plan role/step, re-selecting via the role selector and descending a bounded fallback ladder. It retires the v2 top-level consideration-scoring pass as the *primary* selector, demoting it to the **primitive consideration policy** at the bottom of the fallback ladder. The migration is **behavior-preserving**: a profile with no `planTemplates` matches no template and falls through to the primitive policy, which scores the published frontier exactly as v2 did.
+This ticket completes the paradigm switch (Spec 186 §4.5–§4.6). It wires the execution controller into the per-microturn entry point after `005`'s action-selection proposal commit: at each subsequent microturn it matches the live `legalActions` frontier to the next plan role/step, re-selecting via the role selector and descending a bounded fallback ladder. It retires the v2 top-level consideration-scoring pass as the *primary* selector, demoting it to the **primitive consideration policy** at the bottom of the fallback ladder. The migration is **behavior-preserving**: a profile with no `planTemplates` matches no template and falls through to the primitive policy, which scores the published frontier exactly as v2 did.
 
 ## Assumption Reassessment (2026-05-20)
 
@@ -27,7 +27,7 @@ This ticket completes the paradigm switch (Spec 186 §4.5–§4.6). It wires the
 
 ### 1. Execution controller (`policy-agent.ts`)
 
-In `chooseActionSelectionDecision`: run the proposer (`005`) and commit `PlanExecutionState`. In `chooseDecision` for subsequent microturns: identify the next expected step/open role from `PlanExecutionState`; match published `legalActions` to the role's `match` pattern (exact → re-run role selector → fallback ladder). The fallback ladder (bounded by a max-attempts cap): rebind uncommitted role → next-best selector candidate → skip optional step → alternate template (same doctrine) → fallback doctrine → **primitive consideration policy** → stable tie-break → authored `pass`.
+Consume the proposer output and committed `PlanExecutionState` from `005`. In `chooseDecision` for subsequent microturns: identify the next expected step/open role from `PlanExecutionState`; match published `legalActions` to the role's `match` pattern (exact → re-run role selector → fallback ladder). The fallback ladder (bounded by a max-attempts cap): rebind uncommitted role → next-best selector candidate → skip optional step → alternate template (same doctrine) → fallback doctrine → **primitive consideration policy** → stable tie-break → authored `pass`.
 
 ### 2. Demote the v2 primary path (`policy-eval.ts`, `policy-evaluation-core.ts`)
 

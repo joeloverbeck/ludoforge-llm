@@ -37,6 +37,7 @@ import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
 import { updatePlanExecutionLifecycle, type PlanExecutionStateStore } from './plan-execution.js';
+import { proposeAndCommitAdvisoryTurnPlan } from './plan-proposal.js';
 import {
   createPolicyAgentChooseNStepInnerPreview,
   createPolicyAgentChooseOneInnerPreview,
@@ -588,7 +589,6 @@ export class PolicyAgent implements Agent {
     if (input.microturn.legalActions.length === 0) {
       throw new Error('PolicyAgent.chooseDecision called with empty legalActions');
     }
-
     policyChooseCallCount += 1;
     logPolicyOomTrace('choose:start', input);
     updatePlanExecutionLifecycle(this.planExecutionState, input);
@@ -610,7 +610,6 @@ export class PolicyAgent implements Agent {
     if (actionDecisions.length === 0) {
       return this.chooseFrontierDecision(input);
     }
-
     const traceHeapDelta = shouldLogPolicyOomTrace();
     const evalHeapBefore = traceHeapDelta ? heapUsedMb() : 0;
     const evaluation = evaluatePolicyMove({
@@ -631,6 +630,7 @@ export class PolicyAgent implements Agent {
         seatId: String(input.microturn.seatId),
       },
     });
+    const planTrace = proposeAndCommitAdvisoryTurnPlan(input, this.planExecutionState, this.profileId)?.trace;
     logPolicyOomTrace(
       'actionSelection:evaluated',
       input,
@@ -649,7 +649,7 @@ export class PolicyAgent implements Agent {
       decision: selectedDecision,
       rng: evaluation.rng,
       ...(evaluation.metadata.selectedReason === undefined ? {} : { selectedByReason: evaluation.metadata.selectedReason }),
-      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(evaluation.metadata, this.traceLevel) }),
+      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(planTrace === undefined ? evaluation.metadata : { ...evaluation.metadata, plan: planTrace }, this.traceLevel) }),
     };
   }
 

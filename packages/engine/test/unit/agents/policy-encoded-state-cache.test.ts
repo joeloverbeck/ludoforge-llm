@@ -30,7 +30,7 @@ const phaseId = asPhaseId('main');
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-encoded-state-cache',
     surfaceVisibility: {
       globalVars: {},

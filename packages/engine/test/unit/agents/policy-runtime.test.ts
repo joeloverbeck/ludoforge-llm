@@ -59,7 +59,7 @@ function createMinimalCatalog(overrides?: {
     selection: { mode: 'argmax' as const },
   };
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'test-catalog',
     surfaceVisibility: {
       globalVars: {},

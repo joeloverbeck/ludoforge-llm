@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents` runtime (new `plan-execution.ts`, `policy-agent.ts`)
-**Deps**: `tickets/186ADVTURNPLAN-001.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`
 
 ## Problem
 

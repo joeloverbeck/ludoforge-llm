@@ -214,7 +214,7 @@ Same GameDef + state + seed + policy fingerprint yields a byte-identical plan tr
 
 Decomposed via `/spec-to-tickets` on 2026-05-20:
 
-- [`tickets/186ADVTURNPLAN-001.md`](../tickets/186ADVTURNPLAN-001.md) — Plan-template & role-binding selector IR + compilation (covers §4.1, §4.2, Phase 1)
+- [`archive/tickets/186ADVTURNPLAN-001.md`](../archive/tickets/186ADVTURNPLAN-001.md) — Plan-template & role-binding selector IR + compilation (covers §4.1, §4.2, Phase 1)
 - [`tickets/186ADVTURNPLAN-002.md`](../tickets/186ADVTURNPLAN-002.md) — Compiler validation diagnostics (covers §4.7)
 - [`tickets/186ADVTURNPLAN-003.md`](../tickets/186ADVTURNPLAN-003.md) — `routePairs` + `subset` selector sources (covers §4.2, Phase 1b)
 - [`tickets/186ADVTURNPLAN-004.md`](../tickets/186ADVTURNPLAN-004.md) — `PlanExecutionState` cross-microturn lifecycle (covers §4.3)
@@ -226,4 +226,6 @@ Infrastructure (engine/compiler) commits split from any policy-YAML commits.
 
 ## Outcome
 
-_Pending implementation._
+In progress:
+- `186ADVTURNPLAN-001` completed and archived on 2026-05-20. It landed the plan-template/role-binding IR, schemaVersion 3 migration, compiler lowering, schema artifact update, and regression coverage for deterministic compilation.
+- Remaining active tickets cover validation diagnostics, additional selector source kinds, plan execution state, proposer/evaluator, execution controller, and FITL authoring.

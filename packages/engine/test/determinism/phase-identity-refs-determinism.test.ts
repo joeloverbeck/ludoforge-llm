@@ -19,7 +19,7 @@ import {
 import { withCompiledPolicyCatalog } from '../helpers/policy-catalog-fixtures.js';
 
 const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
-  schemaVersion: 2,
+  schemaVersion: 3,
   catalogFingerprint: 'phase-identity-refs-determinism-test',
   surfaceVisibility: {
     globalVars: {},

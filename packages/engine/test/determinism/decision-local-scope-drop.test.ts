@@ -70,7 +70,7 @@ function createMinimalCatalog(): AgentPolicyCatalog {
   };
 
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'decision-local-scope-drop-catalog',
     surfaceVisibility: {
       globalVars: { score: PUBLIC_VISIBILITY },

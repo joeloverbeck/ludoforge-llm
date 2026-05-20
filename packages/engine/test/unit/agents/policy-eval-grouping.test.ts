@@ -37,7 +37,7 @@ function createCatalog(): AgentPolicyCatalog {
   };
 
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'grouping-test-catalog',
     surfaceVisibility: {
       globalVars: {},

@@ -68,7 +68,7 @@ function createProfile(): CompiledAgentProfile {
 function createCatalog(): AgentPolicyCatalog {
   const profile = createProfile();
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'preview-inner-hidden-info',
     surfaceVisibility: {
       globalVars: {},

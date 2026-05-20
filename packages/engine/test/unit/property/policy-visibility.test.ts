@@ -37,7 +37,7 @@ function moveConsiderations(
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'visibility-catalog',
     surfaceVisibility: {
       globalVars: {

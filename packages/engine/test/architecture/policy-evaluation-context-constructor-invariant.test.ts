@@ -35,7 +35,7 @@ interface StaticBuildCounts {
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-evaluation-context-constructor-invariant',
     surfaceVisibility: {
       globalVars: {},

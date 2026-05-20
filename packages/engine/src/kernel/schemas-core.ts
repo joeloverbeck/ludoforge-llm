@@ -1114,7 +1114,9 @@ const CompiledAgentDependencyRefsSchema = z
     aggregates: z.array(StringSchema),
     selectors: z.array(StringSchema).optional(),
     strategyModules: z.array(StringSchema).optional(),
+    planTemplates: z.array(StringSchema).optional(),
     guardrails: z.array(StringSchema).optional(),
+    turnShapeEvaluators: z.array(StringSchema).optional(),
     strategicConditions: z.array(StringSchema),
   })
   .strict();
@@ -1323,6 +1325,17 @@ const CompiledAgentSelectorSchema = z.object({
   dependencies: CompiledAgentDependencyRefsSchema,
 }).strict();
 
+const CompiledRoleSelectorSchema = CompiledAgentSelectorSchema.extend({
+  selectorId: StringSchema,
+  role: StringSchema,
+  refs: z.object({
+    id: StringSchema,
+    quality: StringSchema,
+    rank: StringSchema,
+    components: StringSchema,
+  }).strict(),
+}).strict();
+
 const ModuleAppliesSpecSchema = z.object({
   scopes: z.array(z.enum(['move', 'microturn'])),
   actionTags: z.array(StringSchema).optional(),
@@ -1376,6 +1389,48 @@ const CompiledAgentStrategyModuleSchema = z.object({
   guardrailIds: z.array(StringSchema),
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
+  dependencies: CompiledAgentDependencyRefsSchema,
+}).strict();
+
+const CompiledPlanRoleConstraintSchema = z.union([
+  z.object({ kind: z.literal('notEqual'), role: StringSchema }).strict(),
+  z.object({ kind: z.literal('locatedIn'), role: StringSchema }).strict(),
+]);
+
+const CompiledPlanTemplateSchema = z.object({
+  traceLabel: StringSchema,
+  root: z.object({
+    actionTags: z.array(StringSchema),
+    actionIds: z.array(StringSchema),
+    compound: z.object({
+      specialTags: z.array(StringSchema),
+      timing: z.enum(['before', 'during', 'after']),
+      interruptAfterStage: z.number().int().nonnegative().optional(),
+    }).strict().optional(),
+  }).strict(),
+  roles: z.record(StringSchema, z.object({
+    selectorId: StringSchema,
+    required: z.boolean(),
+    constraints: z.array(CompiledPlanRoleConstraintSchema),
+    selector: CompiledRoleSelectorSchema,
+  }).strict()),
+  steps: z.array(z.object({
+    label: StringSchema,
+    role: StringSchema,
+    match: z.object({
+      decisionKind: StringSchema,
+      targetKind: StringSchema,
+      decisionPath: StringSchema,
+      actionTag: StringSchema.optional(),
+      stageIndex: z.number().int().nonnegative().optional(),
+    }).strict(),
+  }).strict()),
+  postureHook: StringSchema.optional(),
+  fallback: z.object({
+    ifSpecialUnavailable: StringSchema.optional(),
+    ifRoleTargetUnavailable: StringSchema.optional(),
+    ifPreviewUnavailable: StringSchema.optional(),
+  }).strict(),
   dependencies: CompiledAgentDependencyRefsSchema,
 }).strict();
 
@@ -1476,6 +1531,7 @@ const CompiledAgentLibraryIndexSchema = z
     candidateAggregates: z.record(StringSchema, CompiledAgentAggregateSchema),
     selectors: z.record(StringSchema, CompiledAgentSelectorSchema).optional(),
     strategyModules: z.record(StringSchema, CompiledAgentStrategyModuleSchema).optional(),
+    planTemplates: z.record(StringSchema, CompiledPlanTemplateSchema).optional(),
     guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
@@ -1565,7 +1621,9 @@ const CompiledAgentProfileSchema = z
         candidateAggregates: z.array(StringSchema),
         selectors: z.array(StringSchema).optional(),
         strategyModules: z.array(StringSchema).optional(),
+        planTemplates: z.array(StringSchema).optional(),
         guardrails: z.array(StringSchema).optional(),
+        turnShapeEvaluators: z.array(StringSchema).optional(),
         considerations: z.array(StringSchema),
       })
       .strict(),
@@ -1577,7 +1635,7 @@ const CompiledAgentProfileSchema = z
 
 const AgentPolicyCatalogSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(3),
     catalogFingerprint: StringSchema,
     surfaceVisibility: CompiledSurfaceCatalogSchema,
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),

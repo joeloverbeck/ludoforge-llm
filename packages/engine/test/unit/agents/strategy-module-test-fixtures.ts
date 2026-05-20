@@ -98,7 +98,7 @@ export function createStrategyModuleGameDef(module: StrategyModuleDef = createSt
     selection: { mode: 'argmax' },
   };
   const agents = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'strategy-module-runtime-catalog',
     surfaceVisibility: {
       globalVars: {},

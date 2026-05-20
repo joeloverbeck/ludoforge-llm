@@ -1050,6 +1050,7 @@ export interface CompiledAgentDependencyRefs {
   readonly aggregates: readonly string[];
   readonly selectors?: readonly string[];
   readonly strategyModules?: readonly string[];
+  readonly planTemplates?: readonly string[];
   readonly guardrails?: readonly string[];
   readonly turnShapeEvaluators?: readonly string[];
   readonly strategicConditions: readonly string[];
@@ -1129,6 +1130,68 @@ export interface CompiledAgentSelector {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface CompiledRoleSelector extends CompiledAgentSelector {
+  readonly selectorId: SelectorId;
+  readonly role: string;
+  readonly refs: {
+    readonly id: string;
+    readonly quality: string;
+    readonly rank: string;
+    readonly components: string;
+  };
+}
+
+export interface CompiledPlanRoot {
+  readonly actionTags: readonly string[];
+  readonly actionIds: readonly string[];
+  readonly compound?: {
+    readonly specialTags: readonly string[];
+    readonly timing: 'before' | 'during' | 'after';
+    readonly interruptAfterStage?: number;
+  };
+}
+
+export type CompiledPlanRoleConstraint =
+  | { readonly kind: 'notEqual'; readonly role: string }
+  | { readonly kind: 'locatedIn'; readonly role: string };
+
+export interface CompiledPlanRole {
+  readonly selectorId: SelectorId;
+  readonly required: boolean;
+  readonly constraints: readonly CompiledPlanRoleConstraint[];
+  readonly selector: CompiledRoleSelector;
+}
+
+export interface CompiledPlanStepMatch {
+  readonly decisionKind: string;
+  readonly targetKind: string;
+  readonly decisionPath: string;
+  readonly actionTag?: string;
+  readonly stageIndex?: number;
+}
+
+export interface CompiledPlanStep {
+  readonly label: string;
+  readonly role: string;
+  readonly match: CompiledPlanStepMatch;
+}
+
+export interface CompiledPlanFallback {
+  readonly ifSpecialUnavailable?: string;
+  readonly ifRoleTargetUnavailable?: string;
+  readonly ifPreviewUnavailable?: string;
+}
+
+export interface CompiledPlanTemplate {
+  readonly traceLabel: string;
+  readonly root: CompiledPlanRoot;
+  readonly roles: Readonly<Record<string, CompiledPlanRole>>;
+  readonly steps: readonly CompiledPlanStep[];
+  readonly postureHook?: string;
+  readonly fallback: CompiledPlanFallback;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
 export interface CompiledAgentStrategyModule {
   readonly traceLabel: string;
   readonly applies: ModuleAppliesSpec;
@@ -1203,6 +1266,7 @@ export interface CompiledAgentLibraryIndex {
   readonly candidateAggregates: Readonly<Record<string, CompiledAgentAggregate>>;
   readonly selectors?: Readonly<Record<string, CompiledAgentSelector>>;
   readonly strategyModules?: Readonly<Record<string, CompiledAgentStrategyModule>>;
+  readonly planTemplates?: Readonly<Record<string, CompiledPlanTemplate>>;
   readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, CompiledAgentTurnShapeEvaluator>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
@@ -1307,6 +1371,7 @@ export interface CompiledAgentProfile {
     readonly candidateAggregates: readonly string[];
     readonly selectors?: readonly string[];
     readonly strategyModules?: readonly string[];
+    readonly planTemplates?: readonly string[];
     readonly guardrails?: readonly string[];
     readonly turnShapeEvaluators?: readonly string[];
     readonly considerations: readonly string[];
@@ -1314,7 +1379,7 @@ export interface CompiledAgentProfile {
 }
 
 export interface AgentPolicyCatalog {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly catalogFingerprint: string;
   readonly surfaceVisibility: CompiledSurfaceCatalog;
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;

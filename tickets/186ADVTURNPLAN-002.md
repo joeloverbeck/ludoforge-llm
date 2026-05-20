@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl` validation (`validate-agents.ts`)
-**Deps**: `tickets/186ADVTURNPLAN-001.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`
 
 ## Problem
 

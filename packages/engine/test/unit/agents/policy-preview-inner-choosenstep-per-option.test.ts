@@ -84,7 +84,7 @@ function createProfile(depthCap: number): CompiledAgentProfile {
 function createCatalog(depthCap = 3): AgentPolicyCatalog {
   const profile = createProfile(depthCap);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `preview-inner-choosenstep-per-option-${depthCap}`,
     surfaceVisibility: {
       globalVars: {},

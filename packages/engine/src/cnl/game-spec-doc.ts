@@ -776,6 +776,53 @@ export interface GameSpecStrategyModuleDef {
   };
 }
 
+export type GameSpecPlanRootTiming = 'before' | 'during' | 'after';
+
+export interface GameSpecPlanRootDef {
+  readonly actionTags?: readonly string[];
+  readonly actionIds?: readonly string[];
+  readonly compound?: {
+    readonly specialTags?: readonly string[];
+    readonly timing?: GameSpecPlanRootTiming;
+    readonly interruptAfterStage?: number;
+  };
+}
+
+export type GameSpecPlanRoleConstraint =
+  | { readonly notEqual: string }
+  | { readonly locatedIn: string };
+
+export interface GameSpecPlanRoleDef {
+  readonly selector: string;
+  readonly required?: boolean;
+  readonly constraints?: readonly GameSpecPlanRoleConstraint[];
+}
+
+export interface GameSpecPlanStepDef {
+  readonly label: string;
+  readonly role: string;
+  readonly match: {
+    readonly decisionKind: string;
+    readonly targetKind: string;
+    readonly decisionPath: string;
+    readonly actionTag?: string;
+    readonly stageIndex?: number;
+  };
+}
+
+export interface GameSpecPlanTemplateDef {
+  readonly traceLabel?: string;
+  readonly root: GameSpecPlanRootDef;
+  readonly roles: Readonly<Record<string, GameSpecPlanRoleDef>>;
+  readonly steps: readonly GameSpecPlanStepDef[];
+  readonly postureHook?: string;
+  readonly fallback?: {
+    readonly ifSpecialUnavailable?: string;
+    readonly ifRoleTargetUnavailable?: string;
+    readonly ifPreviewUnavailable?: string;
+  };
+}
+
 export interface GameSpecGuardrailDef {
   readonly traceLabel?: string;
   readonly scopes?: readonly string[];
@@ -815,6 +862,7 @@ export interface GameSpecAgentLibrary {
   readonly candidateAggregates?: Readonly<Record<string, GameSpecCandidateAggregateDef>>;
   readonly selectors?: Readonly<Record<string, GameSpecSelectorDef>>;
   readonly strategyModules?: Readonly<Record<string, GameSpecStrategyModuleDef>>;
+  readonly planTemplates?: Readonly<Record<string, GameSpecPlanTemplateDef>>;
   readonly guardrails?: Readonly<Record<string, GameSpecGuardrailDef>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, GameSpecTurnShapeEvaluatorDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;

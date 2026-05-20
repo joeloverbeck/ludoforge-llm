@@ -1,6 +1,6 @@
 # 186ADVTURNPLAN-001: Plan-template & role-binding selector IR + compilation (schemaVersion 3)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `cnl` compiler (`game-spec-doc.ts`, `compile-agents.ts`), kernel types (`types-core.ts`), two new compile modules
@@ -84,3 +84,40 @@ Invoke the new lowering passes; emit `schemaVersion: 3` and the `planTemplates` 
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/agent-plan-template-compile.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-20
+
+What changed:
+- Added authored `planTemplates` to `GameSpecAgentLibrary`, compiled `CompiledPlanTemplate`/`CompiledRoleSelector` IR, and `planTemplates` dependency/profile/library surfaces under `AgentPolicyCatalog.schemaVersion: 3`.
+- Added `compile-agent-plan-templates.ts` and `compile-agent-role-selectors.ts` for deterministic template lowering, role-selector ref exposure, cross-role constraint lowering, fallback/root/step preservation, and basic compiler diagnostics.
+- Wired plan-template compilation into `compile-agents.ts`, including schemaVersion 3 emission and profile plan dependency inclusion.
+- Regenerated `packages/engine/schemas/GameDef.schema.json` from `packages/engine/src/kernel/schemas-core.ts` via `pnpm -F @ludoforge/engine schema:artifacts`; only `GameDef.schema.json` changed because Trace/EvalReport inputs did not change.
+- Migrated engine test fixtures and policy-catalog golden headers from schemaVersion 2 to 3. A package-test failure exposed a stale compiled GameDef cache key, fixed by adding `dist/src/cnl/compile-agents.js` to `packages/engine/test/helpers/gamedef-cache.ts` compiler stamps.
+
+Acceptance-to-command map:
+- Plan-template fixture with two role-binding selectors, a `notEqual` constraint, resolved role refs, schemaVersion 3, and compile-twice byte identity: `node --test dist/test/unit/cnl/agent-plan-template-compile.test.js` from `packages/engine` via the targeted test and full package/root test lanes.
+- Existing agent/compiler regression surface: `pnpm -F @ludoforge/engine test` passed after the cache-stamp fix; `pnpm turbo test` passed with engine `164/164 files passed`.
+- Schema artifacts and schemaVersion 3 contract: `pnpm -F @ludoforge/engine run schema:artifacts:check` passed, and `pnpm turbo schema:artifacts` regenerated the artifact.
+- Root canonical lanes: `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck` all passed.
+
+Source-size ledger:
+- `packages/engine/src/cnl/compile-agents.ts` is pre-existing large (5913 lines after change). Net-new plan lowering logic was extracted to the new 155-line `compile-agent-plan-templates.ts` and 27-line `compile-agent-role-selectors.ts`; the compiler file kept only orchestration/dependency wiring.
+- `packages/engine/src/kernel/schemas-core.ts` and `packages/engine/src/kernel/types-core.ts` are pre-existing large contract files. This ticket changed their shared agent schema/type contracts in place to keep type and Zod surfaces synchronized; no helper extraction was useful for these declarations.
+
+Deviation from plan:
+- The ticket requested schemaVersion 3 migration; applying it truthfully required updating existing test fixtures and tracked policy-catalog golden JSON that still carried schemaVersion 2. No compatibility shim was added.
+- The initial package test exposed stale GameDef cache reuse. The test was kept intact and the cache stamp was corrected, then the failing Texas schema validation test and the full lanes were rerun.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/cnl/agent-plan-template-compile.test.js` (from `packages/engine`)
+- `pnpm -F @ludoforge/engine schema:artifacts`
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo schema:artifacts`

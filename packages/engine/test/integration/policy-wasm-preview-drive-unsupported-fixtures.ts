@@ -444,7 +444,7 @@ const createUnsupportedReasonEffects = (
 const createScoreParityCatalog = (
   ownerSlug: ScoreParityOwnerSlug,
 ): AgentPolicyCatalog => withCompiledPolicyCatalog({
-  schemaVersion: 2,
+  schemaVersion: 3,
   catalogFingerprint: `policy-wasm-preview-drive-equivalence-${ownerSlug}`,
   surfaceVisibility: {
     globalVars: {

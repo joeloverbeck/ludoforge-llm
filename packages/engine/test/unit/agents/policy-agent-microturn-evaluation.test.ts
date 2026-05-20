@@ -70,7 +70,7 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
 function createMicroturnGuidedCatalog(): AgentPolicyCatalog {
   const profile = createProfile(['preferRight', 'preferLeft']);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-agent-inner-frontier-contributions',
     surfaceVisibility: {
       globalVars: {},

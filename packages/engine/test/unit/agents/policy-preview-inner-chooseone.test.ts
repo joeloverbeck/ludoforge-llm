@@ -84,7 +84,7 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
 function createCatalog(): AgentPolicyCatalog {
   const profile = createProfile(['preferProjectedMargin']);
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'preview-inner-chooseone',
     surfaceVisibility: {
       globalVars: {},

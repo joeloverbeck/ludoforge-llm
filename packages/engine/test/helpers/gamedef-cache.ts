@@ -124,6 +124,7 @@ function currentCompilerStamp(): string {
 function compilerStampPaths(): readonly string[] {
   const root = resolveRepoRoot();
   return [
+    join(root, 'packages', 'engine', 'dist', 'src', 'cnl', 'compile-agents.js'),
     join(root, 'packages', 'engine', 'dist', 'src', 'cnl', 'staged-pipeline.js'),
     join(root, 'packages', 'engine', 'dist', 'src', 'cnl', 'validate-agents.js'),
     join(root, 'packages', 'engine', 'dist', 'src', 'contracts', 'policy-contract.js'),

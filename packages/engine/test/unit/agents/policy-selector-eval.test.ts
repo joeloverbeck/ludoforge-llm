@@ -48,7 +48,7 @@ function state(): GameState {
 
 function createSelectorCatalog(compiledSelector: CompiledPolicySelector): AgentPolicyCatalog {
   const base = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'selector-runtime-test',
     surfaceVisibility: {
       globalVars: {},

@@ -97,7 +97,7 @@ export function createChoosenStepPreviewCatalog(chooseNStep: ChoosenStepPreviewF
   const profile = createProfile(chooseNStep);
   const flagLabel = chooseNStep === 'omitted' ? 'omitted' : chooseNStep ? 'enabled' : 'disabled';
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: `${choosenStepPreviewWitnessId}-${flagLabel}`,
     surfaceVisibility: {
       globalVars: {},

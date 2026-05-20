@@ -95,7 +95,7 @@ export const createSyntheticPolicyGuidedDeps = (): {
     },
   };
   const catalog = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'synthetic-policy-guided',
     surfaceVisibility: {
       globalVars: {},

@@ -29,7 +29,7 @@ const expr: CompiledPolicyExpr = { kind: 'literal', value: 7 };
 
 function createCatalog(): AgentPolicyCatalog {
   return withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'policy-bytecode-cache',
     surfaceVisibility: {
       globalVars: {},

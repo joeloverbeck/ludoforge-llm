@@ -62,7 +62,7 @@ export function createGuardrailFallbackDef(): GameDef {
     selection: { mode: 'argmax' },
   };
   const agents = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'guardrail-fallback-catalog',
     surfaceVisibility: {
       globalVars: {},

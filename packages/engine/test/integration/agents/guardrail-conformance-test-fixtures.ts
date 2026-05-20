@@ -79,7 +79,7 @@ export function createGuardrailConformanceDef(guardrail: GuardrailDef): GameDef 
     selection: { mode: 'argmax' },
   };
   const agents = withCompiledPolicyCatalog({
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogFingerprint: 'guardrail-conformance-catalog',
     surfaceVisibility: {
       globalVars: {},

@@ -1,6 +1,6 @@
 # 186ADVTURNPLAN-002: Compiler validation diagnostics for plan templates & role selectors
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl` validation (`validate-agents.ts`)
@@ -65,3 +65,42 @@ Emit messages that name the offending role/template per §4.7.
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/agent-plan-template-validate.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-20
+
+What changed:
+- Added plan-template validation diagnostics for selector references, role binding/order constraints, role step references, required cap metadata, named cap classes, max-step bounds, fallback targets, unbounded fallback cycles, and stable role-selector ordering.
+- Registered `planTemplates` as a recognized agent policy library bucket so valid plan-template specs no longer trip the unknown-library-key validator.
+- Added `packages/engine/src/cnl/validate-agent-plan-templates.ts` as the focused validator module and wired it through `validate-agents.ts`.
+- Added the focused architectural-invariant corpus in `packages/engine/test/unit/cnl/agent-plan-template-validate.test.ts`, including valid pass-through and deterministic-diagnostic replay coverage.
+
+Acceptance-to-command map:
+- Authoring-error corpus with role/template-named messages: `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js` passed.
+- Valid plan-template spec passes validation unchanged and avoids unknown-library-key diagnostics: `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js` passed.
+- Existing engine suite: `pnpm -F @ludoforge/engine test` passed with `164/164 files passed`.
+- Root canonical lanes: `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck` all passed.
+
+Invariants:
+- Statically knowable plan-template defects now fail during compilation through deterministic compiler diagnostics.
+- The focused deterministic replay test compiles the same invalid spec twice and compares diagnostic code/message/path snapshots.
+
+Source-size ledger:
+- `packages/engine/src/cnl/validate-agents.ts`: 658 -> 661 lines.
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts`: new, 272 lines.
+- `packages/engine/test/unit/cnl/agent-plan-template-validate.test.ts`: new, 199 lines.
+
+Deviation from plan:
+- Validation was split into a new focused module instead of putting the full corpus in `validate-agents.ts`; this preserves the repo file-size guidance while keeping `validate-agents.ts` as the orchestrating static-validation home.
+- The implementation also touched `packages/engine/src/contracts/policy-contract.ts` to recognize `planTemplates` as a valid library bucket; without this, a valid plan-template spec still emitted an unknown-library-key diagnostic.
+- Fallback cycles are rejected as unbounded because the current IR does not yet expose explicit fallback max-attempt metadata; a future bounded fallback-attempt field can relax this safely.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`

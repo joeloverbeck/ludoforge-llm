@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl` (`game-spec-doc.ts`, `types-core.ts`, `compile-agent-role-selectors.ts`, `validate-agents.ts`), `agents` runtime (`policy-selector-eval.ts`)
-**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`, `tickets/186ADVTURNPLAN-002.md`
+**Deps**: `archive/tickets/186ADVTURNPLAN-001.md`, `archive/tickets/186ADVTURNPLAN-002.md`
 
 ## Problem
 

@@ -14,6 +14,27 @@ export interface PolicyPlanTraceAlternative {
   readonly stableKey: string;
 }
 
+export interface PolicyPlanTracePostureMustViolation {
+  readonly id: string;
+  readonly action: 'demote' | 'veto';
+  readonly penalty?: number;
+}
+
+export interface PolicyPlanTracePosturePreferContribution {
+  readonly id: string;
+  readonly status: string;
+  readonly value?: number;
+  readonly weight?: number;
+  readonly contribution: number;
+  readonly fallbackReason?: string;
+}
+
+export interface PolicyPlanTracePosture {
+  readonly status: string;
+  readonly mustViolations: readonly PolicyPlanTracePostureMustViolation[];
+  readonly preferContributions: readonly PolicyPlanTracePosturePreferContribution[];
+}
+
 export interface PolicyPlanMicroturnTrace {
   readonly expectedStep: string | null;
   readonly matchedRole: string | null;
@@ -37,6 +58,6 @@ export interface PolicyPlanTrace {
   }[];
   readonly roleBindings: readonly PolicyPlanTraceRoleBinding[];
   readonly alternatives: readonly PolicyPlanTraceAlternative[];
-  readonly postureStatus: 'notConfigured' | 'ready' | 'unavailable';
+  readonly posture: PolicyPlanTracePosture;
   readonly microturns?: readonly PolicyPlanMicroturnTrace[];
 }

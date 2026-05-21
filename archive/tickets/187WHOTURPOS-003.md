@@ -1,9 +1,9 @@
 # 187WHOTURPOS-003: Runtime posture evaluation + `PolicyPlanTrace.posture` block
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — `agents/plan-proposal.ts`, `agents/plan-controller.ts`, `kernel/types-plan-trace.ts`, `kernel/schemas-core.ts`, `agents/policy-evaluation-core.ts`
+**Engine Changes**: Yes — `agents/plan-proposal.ts`, `agents/plan-controller.ts`, `kernel/types-plan-trace.ts`, `kernel/schemas-core.ts`, `agents/policy-posture-eval.ts`
 **Deps**: `archive/tickets/187WHOTURPOS-001.md`, `archive/tickets/187WHOTURPOS-002.md`
 
 ## Problem
@@ -84,3 +84,37 @@ Grep `postureStatus` across `packages/engine/src` and `packages/engine/test`; mi
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/<posture-demotion>.test.js`
 2. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-05-21
+
+What changed:
+
+- Replaced the plan trace's standalone `postureStatus` field with a `posture` block containing `status`, `mustViolations[]`, and `preferContributions[]`; updated the runtime trace builders and `Trace.schema.json`.
+- Added `packages/engine/src/agents/policy-posture-eval.ts` for runtime posture evaluation. It evaluates compiled posture `must` terms, applies demote/veto effects, evaluates `prefer` terms, adds ready contributions to plan score, and applies declared fallback contributions when the plan-delta ref is non-ready.
+- Wired `proposeAdvisoryTurnPlan` to evaluate a template's `postureHook` against supplied `preview.plan.delta.*` statuses keyed by root stable move key. When no supplied plan preview exists, the trace records `noPreviewDecision` and uses the authored fallback contribution; it does not coerce a missing/non-ready preview to `ready`.
+- Migrated source and tests away from the `postureStatus` trace field. The remaining posture compile-state map was renamed so `postureStatus` no longer appears in `packages/engine/src` or `packages/engine/test`.
+- Added unit coverage in `packages/engine/test/unit/agents/plan-proposal.test.ts` for ready posture prefer ranking, replay-identical posture traces, non-ready fallback honesty, must demotion, veto pruning, and PolicyAgent trace emission.
+
+Deviations from original plan:
+
+- The proof lives in the existing plan-proposal unit surface rather than new `policy-profile-quality/` files. This is a proof-shape correction: the implemented behavior is the proposal/trace integration itself, and the unit tests exercise it directly with constructed supplied plan-delta statuses.
+- This ticket does not derive future role-step previews by executing later plan steps. It consumes the supplied plan-delta status surface delivered by `187WHOTURPOS-002`; absent supplied statuses remain `noPreviewDecision` with declared fallback contribution. That preserves Foundations #10/#20 and leaves relationship/ally weighting to `187WHOTURPOS-004`/`005`.
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Active growth | Crossed cap? | Resolution |
+| --- | ---: | ---: | ---: | --- | --- |
+| `packages/engine/src/agents/plan-proposal.ts` | 579 | 658 | +79 | no | Under 800; retained local hook wiring. |
+| `packages/engine/src/agents/policy-posture-eval.ts` | 0 | 105 | +105 | no | New focused module keeps posture logic out of oversized shared evaluator files. |
+| `packages/engine/src/cnl/compile-agents.ts` | 5864 | 5864 | 0 | no new growth | Rename-only migration away from `postureStatus`; no active size growth. |
+| `packages/engine/src/kernel/schemas-core.ts` | 3236 | 3236 | 0 | no new growth | One-for-one schema field replacement; no active size growth. |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js` — passed, 7 tests.
+- `rg -n "postureStatus" packages/engine/src packages/engine/test` — no matches.
+- `pnpm -F @ludoforge/engine run schema:artifacts` — passed; regenerated `packages/engine/schemas/Trace.schema.json`.
+- `pnpm -F @ludoforge/engine test` — passed, 165/165 files.

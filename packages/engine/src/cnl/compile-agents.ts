@@ -2240,7 +2240,7 @@ class AgentLibraryCompiler {
   private readonly planTemplateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly turnShapeStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
-  private readonly postureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly postureCompileState = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -2419,7 +2419,7 @@ class AgentLibraryCompiler {
         message: `Posture evaluator traceLabel "${evaluator.traceLabel}" is also used by "${priorId}".`,
         suggestion: 'Use unique posture evaluator trace labels for deterministic posture traces.',
       });
-      this.postureStatus.set(evaluatorId, 'failed');
+      this.postureCompileState.set(evaluatorId, 'failed');
       delete this.compiled.postureEvaluators[evaluatorId];
     }
   }
@@ -2904,7 +2904,7 @@ class AgentLibraryCompiler {
   }
 
   private compilePostureEvaluator(evaluatorId: string): AgentPostureEvaluatorWithExprInternal | null {
-    const status = this.postureStatus.get(evaluatorId);
+    const status = this.postureCompileState.get(evaluatorId);
     if (status === 'done') {
       return this.compiled.postureEvaluators[evaluatorId] ?? null;
     }
@@ -2913,18 +2913,18 @@ class AgentLibraryCompiler {
     }
     if (status === 'compiling') {
       this.reportPostureCycle(evaluatorId);
-      this.postureStatus.set(evaluatorId, 'failed');
+      this.postureCompileState.set(evaluatorId, 'failed');
       return null;
     }
 
     const def = this.authoredLibrary.postureEvaluators?.[evaluatorId];
     if (def === undefined) {
       this.reportPostureRefUnknown(`posture.${evaluatorId}`, `doc.agents.library.postureEvaluators.${evaluatorId}`);
-      this.postureStatus.set(evaluatorId, 'failed');
+      this.postureCompileState.set(evaluatorId, 'failed');
       return null;
     }
 
-    this.postureStatus.set(evaluatorId, 'compiling');
+    this.postureCompileState.set(evaluatorId, 'compiling');
     this.postureStack.push(evaluatorId);
     const context = this.createExprContext('postureEvaluator', true);
     const compiled = compilePostureEvaluatorDefinition({
@@ -2937,11 +2937,11 @@ class AgentLibraryCompiler {
     this.postureStack.pop();
 
     if (compiled === null) {
-      this.postureStatus.set(evaluatorId, 'failed');
+      this.postureCompileState.set(evaluatorId, 'failed');
       return null;
     }
     this.compiled.postureEvaluators[evaluatorId] = compiled;
-    this.postureStatus.set(evaluatorId, 'done');
+    this.postureCompileState.set(evaluatorId, 'done');
     return compiled;
   }
 

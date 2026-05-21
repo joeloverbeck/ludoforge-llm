@@ -2851,13 +2851,93 @@
                       "additionalProperties": false
                     }
                   },
-                  "postureStatus": {
-                    "type": "string",
-                    "enum": [
-                      "notConfigured",
-                      "ready",
-                      "unavailable"
-                    ]
+                  "posture": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      },
+                      "mustViolations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            },
+                            "action": {
+                              "type": "string",
+                              "enum": [
+                                "demote",
+                                "veto"
+                              ]
+                            },
+                            "penalty": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/anon_c0e4ebfe"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "action"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "preferContributions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            },
+                            "status": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            },
+                            "value": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/anon_c0e4ebfe"
+                                }
+                              ]
+                            },
+                            "weight": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/anon_c0e4ebfe"
+                                }
+                              ]
+                            },
+                            "contribution": {
+                              "$ref": "#/definitions/anon_c0e4ebfe"
+                            },
+                            "fallbackReason": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "contribution"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "mustViolations",
+                      "preferContributions"
+                    ],
+                    "additionalProperties": false
                   },
                   "microturns": {
                     "type": "array",
@@ -2926,7 +3006,7 @@
                   "rejectedDoctrines",
                   "roleBindings",
                   "alternatives",
-                  "postureStatus"
+                  "posture"
                 ],
                 "additionalProperties": false
               },

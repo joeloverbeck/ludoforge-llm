@@ -1502,7 +1502,7 @@ const PolicyPlanTraceSchema = z.object({
     priorityTier: NumberSchema,
     stableKey: StringSchema,
   }).strict()),
-  postureStatus: z.enum(['notConfigured', 'ready', 'unavailable']),
+  posture: z.object({ status: StringSchema, mustViolations: z.array(z.object({ id: StringSchema, action: z.enum(['demote', 'veto']), penalty: NumberSchema.optional() }).strict()), preferContributions: z.array(z.object({ id: StringSchema, status: StringSchema, value: NumberSchema.optional(), weight: NumberSchema.optional(), contribution: NumberSchema, fallbackReason: StringSchema.optional() }).strict()) }).strict(),
   microturns: z.array(PolicyPlanMicroturnTraceSchema).optional(),
 }).strict();
 

@@ -32,7 +32,7 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
     priorityTier: alternative.priorityTier,
     stableKey: alternative.stableKey,
   })),
-  postureStatus: result.postureStatus,
+  posture: result.posture,
 });
 
 function compareStable(left: string, right: string): number {

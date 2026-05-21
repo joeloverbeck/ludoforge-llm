@@ -89,6 +89,8 @@ The `arvn-evolved` flat-consideration terms that survive (projected-margin, lead
 
 Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the spec's earlier `FITLPLAN` suggestion was superseded by the user-supplied namespace). ARVN phase first; US/NVA/VC skeletons follow. The phase remains authored YAML-first, but live 004 proof identified a generic WASM guardrail-demotion parity prerequisite; that prerequisite must stay engine-agnostic and must not add FITL-specific runtime branches.
 
+Live 007 reassessment on 2026-05-21 identified that the test-only ARVN witness ticket could not truthfully prove every Phase 1 behavior because at least `arvn.governPatronageSpace` still used a constant selector quality component. The approved Foundations-aligned reset inserted 007A as the YAML-only prerequisite before 007.
+
 - [`archive/tickets/188FITLFOUFAC-001.md`](../archive/tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-002.md`](../archive/tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-003.md`](../archive/tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1) — completed 2026-05-21
@@ -96,6 +98,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the 
 - [`archive/tickets/188FITLFOUFAC-004.md`](../archive/tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-005.md`](../archive/tickets/188FITLFOUFAC-005.md) — ARVN posture evaluators + relationship wiring (covers §4.1) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-006.md`](../archive/tickets/188FITLFOUFAC-006.md) — ARVN legacy-consideration demotion + v2 primary-path deletion (covers §4.3) — completed 2026-05-21
+- [`tickets/188FITLFOUFAC-007A.md`](../tickets/188FITLFOUFAC-007A.md) — ARVN witnessable selector/posture semantics prerequisite (YAML-only reset before 007)
 - [`tickets/188FITLFOUFAC-007.md`](../tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6)
 - [`tickets/188FITLFOUFAC-008.md`](../tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2)
 - [`tickets/188FITLFOUFAC-009.md`](../tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)

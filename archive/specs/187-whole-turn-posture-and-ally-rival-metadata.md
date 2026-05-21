@@ -1,6 +1,6 @@
 # Spec 187 — Whole-Turn Posture Evaluation and Ally-as-Rival Relationship Metadata
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — completes the scoring half of the turn-plan architecture. Spec 186 makes the composed turn the *unit*; this spec makes it *scorable* against expected resulting board state and against contextual ally/rival incentives.
 **Complexity**: M–L. Phase 1 (posture evaluators over honest preview) is M. Phase 2 (relationship metadata + conditional ally weighting) is M.
 **Date**: 2026-05-20
@@ -111,10 +111,30 @@ Decomposed via `/spec-to-tickets` on 2026-05-21:
 - [`archive/tickets/187WHOTURPOS-002.md`](../archive/tickets/187WHOTURPOS-002.md) — `preview.plan.delta.*` ref namespace + bounded per-step composition (covers §4.1)
 - [`archive/tickets/187WHOTURPOS-003.md`](../archive/tickets/187WHOTURPOS-003.md) — Runtime posture evaluation + `PolicyPlanTrace.posture` block — completed 2026-05-21 (covers §4.1, §4.3, §5, §6)
 - [`archive/tickets/187WHOTURPOS-004.md`](../archive/tickets/187WHOTURPOS-004.md) — `relationships` library bucket + relationship refs — completed 2026-05-21 (covers §4.2)
-- [`tickets/187WHOTURPOS-005.md`](../tickets/187WHOTURPOS-005.md) — Conditional ally weighting + `allyWeightContext` trace (covers §4.2, §6, §8)
+- [`archive/tickets/187WHOTURPOS-005.md`](../archive/tickets/187WHOTURPOS-005.md) — Conditional ally weighting + `allyWeightContext` trace — completed 2026-05-21 (covers §4.2, §6, §8)
 
 Phase 1 (posture: 001–003) lands before Phase 2 (relationships: 004–005), since conditional ally weights (005) are authored as posture terms.
 
 ## Outcome
 
-_Pending implementation._
+Completed: 2026-05-21
+
+What changed:
+
+- Phase 1 posture evaluator work is complete and archived in `archive/tickets/187WHOTURPOS-001.md`, `archive/tickets/187WHOTURPOS-002.md`, and `archive/tickets/187WHOTURPOS-003.md`.
+- Phase 2 relationship metadata and conditional ally weighting are complete and archived in `archive/tickets/187WHOTURPOS-004.md` and `archive/tickets/187WHOTURPOS-005.md`.
+- The final ticket added generic conditional ally-weight posture scoring, `posture.allyWeightContext` trace output, posture-specific undeclared relationship-ref diagnostics, and the regenerated trace schema artifact.
+
+Deviations from original plan:
+
+- The final conditional ally-weight witness landed as an engine architectural plan-proposal test rather than a `policy-profile-quality/` advisory test, because the acceptance is now a deterministic engine trace/ranking invariant.
+- `plan-controller.ts` did not need a final edit; `allyWeightContext` is populated where posture terms are actually evaluated during plan proposal.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js packages/engine/dist/test/unit/cnl/agent-posture-evaluator-compile.test.js` — passed, 13 tests.
+- `pnpm -F @ludoforge/engine test` — passed after final implementation edits, 165/165 files.
+- `pnpm turbo lint` — passed, 2/2 tasks.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+- `pnpm run check:ticket-deps` — passed after ticket archival, 0 active tickets and 2472 archived tickets.

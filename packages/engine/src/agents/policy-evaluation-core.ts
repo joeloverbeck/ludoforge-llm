@@ -57,6 +57,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
+import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
@@ -1142,6 +1143,8 @@ export class PolicyEvaluationContext {
     return this.evaluateCompiledExprWithVm(expr, candidate);
   }
 
+  activeRelationshipRoles(): readonly ActivePolicyRelationshipRole[] { return activePolicyRelationshipRoles(this.relationshipEvalOptions()); }
+
   private evaluateCompiledExprWithVm(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     if (this.encodedState === undefined || this.requiresDirectLiteralSemantics(expr)) {
       return this.evaluateCompiledExprDirect(expr, candidate);
@@ -2126,22 +2129,18 @@ export class PolicyEvaluationContext {
     if (this.relationshipCache.has(cacheKey)) {
       return this.relationshipCache.get(cacheKey);
     }
-    const relationship = Object.entries(this.input.catalog.compiled.relationships ?? {})
-      .filter(([, entry]) => entry.role === role)
-      .sort((left, right) => left[1].priority - right[1].priority || (left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0))
-      .find(([, entry]) => entry.condition === undefined || this.resolveStrategicConditionRef(entry.condition, 'satisfied') === true)?.[1];
-    let value: PolicyValue;
-    if (relationship === undefined) {
-      value = undefined;
-    } else if (field === 'seat') {
-      value = relationship.standingRole === undefined
-        ? relationship.seat
-        : resolvePolicyStandingRoleSelector(this.input.def, this.activeState, relationship.standingRole, this.input.seatId);
-    } else {
-      value = relationship.gainValue === undefined ? undefined : this.evaluateCompiledExpr(relationship.gainValue, undefined);
-    }
+    const value = resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, field);
     this.relationshipCache.set(cacheKey, value);
     return value;
+  }
+
+  private relationshipEvalOptions(): Parameters<typeof activePolicyRelationshipRoles>[0] {
+    return {
+      def: this.input.def, state: this.activeState, seatId: this.input.seatId,
+      relationships: this.input.catalog.compiled.relationships ?? {},
+      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied') === true,
+      evaluateExpr: (expr) => this.evaluateCompiledExpr(expr, undefined),
+    };
   }
 
   private resolvePreviewOptionRef(

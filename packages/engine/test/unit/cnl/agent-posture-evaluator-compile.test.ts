@@ -74,6 +74,9 @@ function createDoc(postureEvaluator: Record<string, unknown>, postureHook = 'sus
           },
         },
         postureEvaluators: postureEvaluator as any,
+        relationships: {
+          ally: { role: 'nominalAlly', seat: 'p2', priority: 0, gainValue: 1 },
+        },
         considerations: {
           neutral: { scopes: ['move'], weight: 1, value: 0 },
         },
@@ -151,6 +154,28 @@ describe('agent posture-evaluator compiler bucket', () => {
         && diagnostic.path === 'doc.agents.library.planTemplates.posturePlan.postureHook'
       ),
       true,
+    );
+  });
+
+  it('rejects a posture term that references an undeclared relationship role', () => {
+    const result = compileGameSpecToGameDef(createDoc(validPostureEvaluator({
+      prefer: [{
+        id: 'missing-relationship-role',
+        when: { eq: [{ ref: 'relationship.nearWin.seat' }, { ref: 'relationship.nominalAlly.seat' }] },
+        value: { ref: 'relationship.nominalAlly.gainValue' },
+        weight: 1,
+        fallback: { contribution: 0 },
+      }],
+    })));
+
+    assert.equal(
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POSTURE_REF_UNKNOWN
+        && diagnostic.path.includes('postureEvaluators.sustain.prefer.0.when')
+        && diagnostic.message.includes('relationship.nearWin.seat')
+      ),
+      true,
+      `Expected undeclared relationship role diagnostic: ${JSON.stringify(result.diagnostics)}`,
     );
   });
 });

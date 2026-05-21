@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-evaluation-core.ts` (ref resolver / eval context), `contracts/policy-contract.ts` (ref-kind registry)
-**Deps**: `specs/187-whole-turn-posture-and-ally-rival-metadata.md`
+**Deps**: `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md`
 
 ## Problem
 

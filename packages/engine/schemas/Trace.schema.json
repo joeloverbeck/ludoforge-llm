@@ -2930,6 +2930,81 @@
                           ],
                           "additionalProperties": false
                         }
+                      },
+                      "allyWeightContext": {
+                        "type": "object",
+                        "properties": {
+                          "activeRoles": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "relationshipId": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "role": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "seat": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "priority": {
+                                  "$ref": "#/definitions/anon_e7c99bd4"
+                                },
+                                "gainValue": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/definitions/anon_c0e4ebfe"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "relationshipId",
+                                "role",
+                                "seat",
+                                "priority"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "flips": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "contributionId": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "allyRole": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "thresholdRole": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "seat": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "fired": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "contributionId",
+                                "allyRole",
+                                "thresholdRole",
+                                "seat",
+                                "fired"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "activeRoles",
+                          "flips"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [

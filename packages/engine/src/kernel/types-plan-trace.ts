@@ -29,10 +29,32 @@ export interface PolicyPlanTracePosturePreferContribution {
   readonly fallbackReason?: string;
 }
 
+export interface PolicyPlanTraceAllyWeightActiveRole {
+  readonly relationshipId: string;
+  readonly role: string;
+  readonly seat: string;
+  readonly priority: number;
+  readonly gainValue?: number;
+}
+
+export interface PolicyPlanTraceAllyWeightFlip {
+  readonly contributionId: string;
+  readonly allyRole: string;
+  readonly thresholdRole: string;
+  readonly seat: string;
+  readonly fired: boolean;
+}
+
+export interface PolicyPlanTraceAllyWeightContext {
+  readonly activeRoles: readonly PolicyPlanTraceAllyWeightActiveRole[];
+  readonly flips: readonly PolicyPlanTraceAllyWeightFlip[];
+}
+
 export interface PolicyPlanTracePosture {
   readonly status: string;
   readonly mustViolations: readonly PolicyPlanTracePostureMustViolation[];
   readonly preferContributions: readonly PolicyPlanTracePosturePreferContribution[];
+  readonly allyWeightContext?: PolicyPlanTraceAllyWeightContext;
 }
 
 export interface PolicyPlanMicroturnTrace {

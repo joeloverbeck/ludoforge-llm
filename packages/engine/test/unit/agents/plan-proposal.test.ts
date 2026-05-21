@@ -19,7 +19,9 @@ import {
   initialState,
   type AgentMicroturnDecisionInput,
   type AgentPolicyCatalog,
+  type CompiledAgentRelationship,
   type CompiledPostureEvaluator,
+  type CompiledPolicyRelationship,
   type CompiledPolicySelector,
   type CompiledAgentProfile,
   type CompiledPlanTemplate,
@@ -50,6 +52,13 @@ const previewPlanMarginSelf = {
   kind: 'ref' as const,
   ref: { kind: 'previewPlanRef' as const, refKind: 'deltaVictoryCurrentMarginSelf' as const, onMissing: 'unavailable' as const },
 };
+const relationshipRef = (
+  role: CompiledPolicyRelationship['role'],
+  field: 'seat' | 'gainValue',
+) => ({
+  kind: 'ref' as const,
+  ref: { kind: 'relationship' as const, role, field },
+});
 
 const planTemplate = (overrides: Partial<CompiledPlanTemplate> = {}): CompiledPlanTemplate => ({
   traceLabel: 'train-govern',
@@ -128,10 +137,24 @@ const createCatalog = (options: {
   readonly profilePlanTemplates?: readonly string[];
   readonly selector?: CompiledPolicySelector;
   readonly posture?: CompiledPostureEvaluator;
+  readonly relationships?: Readonly<Record<string, CompiledPolicyRelationship>>;
 } = {}): AgentPolicyCatalog => {
   const template = options.template ?? planTemplate();
   const module = options.module ?? strategyModule();
   const selector = options.selector ?? roleSelector();
+  const libraryRelationships: Readonly<Record<string, CompiledAgentRelationship>> | undefined = options.relationships === undefined
+    ? undefined
+    : Object.fromEntries(Object.entries(options.relationships).map(([id, relationship]) => [
+        id,
+        {
+          role: relationship.role,
+          ...(relationship.seat === undefined ? {} : { seat: relationship.seat }),
+          ...(relationship.standingRole === undefined ? {} : { standingRole: relationship.standingRole }),
+          ...(relationship.condition === undefined ? {} : { condition: relationship.condition }),
+          priority: relationship.priority,
+          hasGainValue: relationship.gainValue !== undefined,
+        },
+      ]));
   const profile: CompiledAgentProfile = {
     fingerprint: 'plan-proposal-profile',
     params: {},
@@ -193,6 +216,7 @@ const createCatalog = (options: {
         },
       },
       planTemplates: { trainGovern: template },
+      ...(libraryRelationships === undefined ? {} : { relationships: libraryRelationships }),
       ...(options.posture === undefined ? {} : {
         postureEvaluators: {
           [String(options.posture.id)]: {
@@ -222,6 +246,7 @@ const createCatalog = (options: {
       candidateAggregates: {},
       selectors: { trainSpaceSelector: selector },
       strategyModules: { 'doctrine.train': module },
+      ...(options.relationships === undefined ? {} : { relationships: options.relationships }),
       ...(options.posture === undefined ? {} : { postureEvaluators: { [String(options.posture.id)]: options.posture } }),
       considerations: {},
       tieBreakers: {},
@@ -456,6 +481,145 @@ describe('plan proposal', () => {
       contribution: -4,
       fallbackReason: 'noPreviewDecision',
     }]);
+  });
+
+  it('traces a conditional ally-weight flip when an ally is also near win', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [
+        {
+          id: 'ally-gain-base',
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(1),
+          fallback: { contribution: literal(0) },
+        },
+        {
+          id: 'ally-gain-near-win-flip',
+          when: {
+            kind: 'op',
+            op: 'eq',
+            args: [
+              relationshipRef('nearWin', 'seat'),
+              relationshipRef('nominalAlly', 'seat'),
+            ],
+          },
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(-2),
+          fallback: { contribution: literal(0) },
+        },
+      ],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({
+        template,
+        posture,
+        relationships: {
+          ally: { role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: literal(5) },
+          nearWin: { role: 'nearWin', seat: 'beta', priority: 0 },
+        },
+      }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+    const replay = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.score, 12);
+    assert.deepEqual(result.posture.preferContributions.map((entry) => [entry.id, entry.contribution]), [
+      ['ally-gain-base', 5],
+      ['ally-gain-near-win-flip', -10],
+    ]);
+    assert.deepEqual(result.posture.allyWeightContext, {
+      activeRoles: [
+        { relationshipId: 'ally', role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: 5 },
+        { relationshipId: 'nearWin', role: 'nearWin', seat: 'beta', priority: 0 },
+      ],
+      flips: [{
+        contributionId: 'ally-gain-near-win-flip',
+        allyRole: 'nominalAlly',
+        thresholdRole: 'nearWin',
+        seat: 'beta',
+        fired: true,
+      }],
+    });
+    assert.deepEqual(replay.posture, result.posture);
+  });
+
+  it('keeps base ally weight when no ally is near win', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [
+        {
+          id: 'ally-gain-base',
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(1),
+          fallback: { contribution: literal(0) },
+        },
+        {
+          id: 'ally-gain-near-win-flip',
+          when: {
+            kind: 'op',
+            op: 'eq',
+            args: [
+              relationshipRef('nearWin', 'seat'),
+              relationshipRef('nominalAlly', 'seat'),
+            ],
+          },
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(-2),
+          fallback: { contribution: literal(0) },
+        },
+      ],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({
+        template,
+        posture,
+        relationships: {
+          ally: { role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: literal(5) },
+          nearWin: { role: 'nearWin', seat: 'alpha', priority: 0 },
+        },
+      }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.score, 22);
+    assert.deepEqual(result.posture.preferContributions.map((entry) => [entry.id, entry.contribution]), [
+      ['ally-gain-base', 5],
+    ]);
+    assert.deepEqual(result.posture.allyWeightContext?.flips, []);
   });
 
   it('demotes a plan with a posture must violation and vetoes when requested', () => {

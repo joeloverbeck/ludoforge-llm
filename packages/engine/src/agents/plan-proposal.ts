@@ -517,6 +517,7 @@ function evaluatePlanPosture(
         status: result.status,
         mustViolations: result.mustViolations,
         preferContributions: result.preferContributions,
+        ...(result.allyWeightContext === undefined ? {} : { allyWeightContext: result.allyWeightContext }),
       },
       scoreDelta: result.scoreDelta,
       vetoed: result.vetoed,

@@ -3335,10 +3335,7 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private parseRelationshipRef(
-    refPath: string,
-    path: string,
-  ): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'seat' | 'gainValue' } | null {
+  private parseRelationshipRef(scope: LibraryRefScope, refPath: string, path: string): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'seat' | 'gainValue' } | null {
     const parsed = parseRelationshipRefPath(refPath);
     if (parsed === null) {
       this.reportUnknownLibraryRef(refPath, path);
@@ -3349,7 +3346,7 @@ class AgentLibraryCompiler {
       return relationship?.role === parsed.role;
     });
     if (!hasRole) {
-      this.reportUnknownLibraryRef(refPath, path);
+      (scope === 'postureEvaluator' ? this.reportPostureRefUnknown : this.reportUnknownLibraryRef).call(this, refPath, path);
       return null;
     }
     return parsed;
@@ -3792,7 +3789,7 @@ class AgentLibraryCompiler {
     }
 
     if (refPath.startsWith('relationship.')) {
-      const parsed = this.parseRelationshipRef(refPath, path);
+      const parsed = this.parseRelationshipRef(scope, refPath, path);
       if (parsed === null) {
         return null;
       }

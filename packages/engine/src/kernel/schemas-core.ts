@@ -1508,7 +1508,7 @@ const PolicyPlanTraceSchema = z.object({
     priorityTier: NumberSchema,
     stableKey: StringSchema,
   }).strict()),
-  posture: z.object({ status: StringSchema, mustViolations: z.array(z.object({ id: StringSchema, action: z.enum(['demote', 'veto']), penalty: NumberSchema.optional() }).strict()), preferContributions: z.array(z.object({ id: StringSchema, status: StringSchema, value: NumberSchema.optional(), weight: NumberSchema.optional(), contribution: NumberSchema, fallbackReason: StringSchema.optional() }).strict()) }).strict(),
+  posture: z.object({ status: StringSchema, mustViolations: z.array(z.object({ id: StringSchema, action: z.enum(['demote', 'veto']), penalty: NumberSchema.optional() }).strict()), preferContributions: z.array(z.object({ id: StringSchema, status: StringSchema, value: NumberSchema.optional(), weight: NumberSchema.optional(), contribution: NumberSchema, fallbackReason: StringSchema.optional() }).strict()), allyWeightContext: z.object({ activeRoles: z.array(z.object({ relationshipId: StringSchema, role: StringSchema, seat: StringSchema, priority: IntegerSchema, gainValue: NumberSchema.optional() }).strict()), flips: z.array(z.object({ contributionId: StringSchema, allyRole: StringSchema, thresholdRole: StringSchema, seat: StringSchema, fired: z.boolean() }).strict()) }).strict().optional() }).strict(),
   microturns: z.array(PolicyPlanMicroturnTraceSchema).optional(),
 }).strict();
 

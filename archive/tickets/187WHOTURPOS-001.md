@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `contracts/policy-contract.ts`, `cnl/game-spec-doc.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`, `cnl/lower-agent-considerations.ts`, `cnl/compile-agents.ts`
-**Deps**: `specs/187-whole-turn-posture-and-ally-rival-metadata.md`
+**Deps**: `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md`
 
 ## Problem
 

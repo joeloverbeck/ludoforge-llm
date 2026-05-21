@@ -1,12 +1,13 @@
 {
   "originating_spec": "specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/188FITLFOUFAC-007.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "a668b5c6e081bc03e41e814385f3251741d729de",
+  "last_ticket": "tickets/188FITLFOUFAC-008.md",
+  "last_result": "retargeted_to_prerequisite",
+  "last_work_commit": "a9db83963a30bc77a865cc3178be4c3761e3c483",
   "last_state_commit": "self",
-  "next_target": "tickets/188FITLFOUFAC-008.md",
+  "next_target": "tickets/188FITLFOUFAC-008A.md",
   "queue": [
+    "tickets/188FITLFOUFAC-008A.md",
     "tickets/188FITLFOUFAC-008.md",
     "tickets/188FITLFOUFAC-009.md",
     "tickets/188FITLFOUFAC-010.md"
@@ -16,6 +17,6 @@
   "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
-  "dirty_state": "mixed_dirty: owned=none; unrelated=reports/fitl-competent-agent-ai.md, reports/fitl-ai-agent-competence-remediation.md",
+  "dirty_state": "clean",
   "updated_at": "2026-05-21"
 }

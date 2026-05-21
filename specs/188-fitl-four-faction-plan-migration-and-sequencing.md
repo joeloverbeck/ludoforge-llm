@@ -9,7 +9,7 @@
 - `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md` (posture evaluators + relationship metadata used by every faction)
 
 **Trigger reports**:
-- `reports/fitl-competent-agent-ai.md` (the authoritative source for all four personalities, combinations, target features, errors-to-avoid, and the relationship model — this spec is its faithful encoding)
+- `reports/fitl-competent-agent-ai.md` (the **competence target** for all four personalities, combinations, errors-to-avoid, and the relationship model — this spec is *an implementation attempt to satisfy those competence requirements*. The report's strategic requirements are normative; its tactical "preferred combinations" are patterns to recognize, not mandatory templates. The report does not prescribe a scoring formula, DSL, selector, or plan-template schema — those are this spec's own implementation choices.)
 - `reports/ai-agent-policy-overhaul-first-iteration.md` (DPSA §7 FITL expressiveness check, §10.3 migration sequence — reassessed in §8)
 
 **Ticket namespace**: `FITLPLAN` (proposed)
@@ -38,7 +38,7 @@ Migrate **ARVN fully first** (the campaign's focus and the stress test), then US
 ## 3. Context (verified against codebase, 2026-05-20)
 
 - **Tier-1 surface.** `data/games/fire-in-the-lake/92-agents.md` is the mutable agent library; `arvn-evolved` is the current ARVN binding. As of Spec 186's ARVN plan slice (commit `a8fc17db8`), it already carries the `arvn.trainGovern` plan template plus its role selectors, and its flat-consideration layer is partially demoted: 1 strategy module (`buildPoliticalEngine`), 1 guardrail (`dropPassWhenOtherMovesExist`), 1 turn-shape evaluator (`currentTurnImpact`), and 10 considerations. It binds `grantFlowContinuation` preview, now made honest by Spec 185.
-- **Competence report mapping.** The report supplies, per faction: a priority stack, an action policy table, preferred combinations with target logic, target scoring features (weighted sums → leaf scorers / posture terms), errors-to-avoid (→ guardrails), and a final personality statement (→ doctrine intent strings). §5 supplies the relationship model (→ Spec 187 relationship wiring).
+- **Competence report mapping.** The report supplies, per faction: a priority stack, an action policy table, preferred combinations (tactical patterns to recognize), target-value requirements (prose strategic considerations → leaf scorers / posture terms; the report no longer prescribes formulas), errors-to-avoid (→ guardrails), and a final personality statement (→ doctrine intent strings). §5 supplies the relationship model (→ Spec 187 relationship wiring). The mapping from these competence requirements to plan templates, selectors, and scorers is this spec's implementation choice, not a structure mandated by the report.
 - **Combos to encode** (report §ARVN/US/NVA/VC "preferred combinations"): ARVN Train+Govern, Patrol+Govern, Sweep+Raid, Assault+Raid, Train+Transport, Assault+Transport+Assault; US Train+Advise, Patrol+Advise, Sweep+AirStrike, Assault+AirLift+Assault, AirLift+Train; NVA Rally+Infiltrate, March+Infiltrate, March+Ambush, Attack+Ambush, Terror→future-Rally, LoC-occupation-before-Coup; VC Rally+Subvert, March+Subvert, Terror+Subvert, Terror+Tax, March+Ambush-from-LoC, Rally-underground-reset→Terror.
 - **Generic encoding requirement.** Each combo is a generic plan template (root action tag + optional special tag + timing + role steps); the engine never sees "Sweep"/"Raid" — only authored action tags and selector filters.
 

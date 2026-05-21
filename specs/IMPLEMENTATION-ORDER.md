@@ -25,5 +25,5 @@ This series replaces the agent's primary decision paradigm: from **scoring indep
 
 - The composed-turn **unit** (186) is the load-bearing change; posture (187) and authoring (188) are meaningless without it.
 - Posture (187) must precede authoring (188) because the competence personalities are expressed largely as posture + relationship terms.
-- Authoring (188) precedes any evolution work because the competence report *specifies* the personalities — they should be authored directly, not rediscovered by a multi-hour campaign whose usual outcome was surfacing an architectural gap.
+- Authoring (188) precedes any evolution work because the competence report *describes the competence requirements* for each personality — they should be authored directly to satisfy those requirements, not rediscovered by a multi-hour campaign whose usual outcome was surfacing an architectural gap. (The report describes *what* competent play must prioritize; it does not mandate the plan-template architecture — that is 186–188's own Foundations-aligned implementation choice.)
 - Each spec is independently mergeable and independently testable, preserving determinism/replay proofs (Foundations #8/#16) at every step.

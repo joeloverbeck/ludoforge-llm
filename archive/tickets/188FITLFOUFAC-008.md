@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-008: US skeleton — doctrines/combos/selectors/guardrails/relationships + headline witnesses (pattern-setting)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
@@ -85,3 +85,35 @@ Rebind the US seat; add the Phase-2 headline witnesses in `policy-profile-qualit
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/us-avoids-airstrike-populated-support.test.js packages/engine/dist/test/policy-profile-quality/us-advise-airlift-force-multiplier.test.js`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed on 2026-05-21.
+
+What changed:
+- Authored the US Phase-2 skeleton in `data/games/fire-in-the-lake/92-agents.md`: US state/support, patrol/econ, sweep, assault, Advise, Air Lift, and Air Strike role selectors; five US signature plan templates; US doctrine carriers; US/ARVN relationship wiring; a US posture hook; and the `us-baseline` profile binding.
+- Added the two ticket-named US warning-class policy-profile-quality witnesses plus `us-plan-witness-helpers.ts` to keep production compilation and plan-proposal setup DRY.
+- Refreshed `packages/engine/test/architecture/fixtures/178-outcome-parity-1011.json` and `packages/engine/test/architecture/fixtures/178-outcome-parity-1013.json` after the US profile rebinding intentionally shifted full-game ARVN continued-deepening trajectory witnesses.
+- No engine/compiler production source or schema files changed.
+
+Command ledger:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/us-avoids-airstrike-populated-support.test.js packages/engine/dist/test/policy-profile-quality/us-advise-airlift-force-multiplier.test.js` — passed, 2 tests / 2 suites.
+- `node --test packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js` — initially failed for seeds 1011 and 1013 after the intentional US profile trajectory shift; passed after refreshing those two fixtures.
+- `pnpm -F @ludoforge/engine test:all` — initially failed only on `policy-preview-inner-outcome-parity.test.js`; passed after fixture refresh, 958 tests.
+
+Command substitutions:
+- Ticket command 1 was split into serial build and focused compiled witness commands so the `dist/` consumer ran after the producer.
+- Ticket command 2 (`pnpm turbo test`) was substituted by the ticket acceptance suite `pnpm -F @ludoforge/engine test:all`, which covers the engine package surface changed by this YAML/test ticket. No runner or non-engine package files changed.
+
+Generated artifact provenance:
+- artifact path(s): `packages/engine/test/architecture/fixtures/178-outcome-parity-1011.json`, `packages/engine/test/architecture/fixtures/178-outcome-parity-1013.json`
+- generation command: `node /tmp/refresh-178-outcome-parity.mjs 1011 1013`
+- canonical inputs: production FITL GameSpecDoc after US skeleton binding, existing fixture `maxTurns`, seeds 1011 and 1013, `arvn-evolved` profile capture logic from `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts`
+- expected refresh reason: the US seat now uses authored plan-template/doctrine behavior instead of the flat baseline, which intentionally shifts full-game state before later ARVN continued-deepening chooseOne decisions.
+- generator durability: ad hoc generator body recorded in this ticket outcome; it copied the test's `captureOutcomeParity` logic and wrote only the two failing seed fixtures.
+- hygiene proof: isolated parity test passed after refresh; full `pnpm -F @ludoforge/engine test:all` passed.
+
+Source-size notes:
+- `data/games/fire-in-the-lake/92-agents.md` is authored data and was already over source-file guidance; this ticket's growth is data-only YAML authoring explicitly required by Spec 188.
+- New TypeScript test/helper files are 52, 49, and 80 lines; no source-size hard gate triggered.

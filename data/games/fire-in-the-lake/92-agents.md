@@ -76,6 +76,10 @@ agents:
         type: number
         expr:
           ref: victory.currentMargin.us
+      arvnMargin:
+        type: number
+        expr:
+          ref: victory.currentMargin.arvn
       patronage:
         type: number
         expr:
@@ -166,6 +170,12 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.us }
             - { ref: feature.usMargin }
+      projectedArvnMargin:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.victory.currentMargin.arvn }
+            - { ref: feature.arvnMargin }
       projectedSelfMarginDelta:
         type: number
         expr:
@@ -258,6 +268,18 @@ agents:
           current:
             add:
               - { ref: feature.usMargin }
+              - 1
+          threshold: 1
+      arvnNearWin:
+        description: "ARVN is close enough to a Patronage/control win that US treats ARVN gains as rival gains."
+        target:
+          gte:
+            - { ref: feature.arvnMargin }
+            - -1
+        proximity:
+          current:
+            add:
+              - { ref: feature.arvnMargin }
               - 1
           threshold: 1
 
@@ -469,6 +491,176 @@ agents:
               weight: -1
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.trainSupportSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: pacificationPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: supportCanImprove
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeSupport
+              weight: 8
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.patrolEconLoc:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: econProtected
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: econ
+                  - 0
+              weight: 5
+            - id: cityControlRoute
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - city
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.sweepExposureSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: exposeBeforeAirStrike
+              value: 1
+              weight: 4
+            - id: valuableSupportOrControl
+              value:
+                ref: feature.coinControlPop
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.assaultTargetSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: nvaControlRemoval
+              value:
+                ref: feature.projectedNvaMargin
+              weight: -1
+            - id: vcBaseRemoval
+              value:
+                ref: feature.projectedVcMargin
+              weight: -1
+            - id: supportControlGain
+              value:
+                ref: feature.projectedUsMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.adviseTargetSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: indigenousForceMultiplier
+              value: 1
+              weight: 5
+            - id: aidAndRemovalSwing
+              value:
+                ref: feature.projectedUsMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftOrigin:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: overcommittedUSPresence
+              value: 1
+              weight: 4
+            - id: preserveSupportControl
+              value:
+                ref: feature.projectedUsMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftDestination:
+        scopes: [move]
+        source:
+          kind: routePairs
+          origin: us.airLiftOrigin
+          destination: us.assaultTargetSpace
+          maxPairs: 64
+        quality:
+          components:
+            - id: decisiveConcentration
+              value: 1
+              weight: 5
+            - id: targetSupportGain
+              value:
+                ref: feature.projectedUsMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airStrikeTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: zeroPopulationSafeStrike
+              value:
+                boolToNumber:
+                  eq:
+                    - coalesce:
+                        - zoneProp:
+                            zone: { ref: selector.item.key }
+                            prop: population
+                        - 0
+                    - 0
+              weight: 10
+            - id: activeOppositionAirStrike
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 4
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
 
     planTemplates:
       arvn.trainGovern:
@@ -547,6 +739,68 @@ agents:
           - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
         caps: { capClass: standard256, maxSteps: 3 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
+      us.trainAdvise:
+        traceLabel: "US Train then Advise"
+        root: { actionTags: [train], compound: { specialTags: [advise], timing: after } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          trainSpace: { selector: us.trainSupportSpace, required: true }
+          adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.trainSpace }] }
+        steps:
+          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: advise-force-multiplier, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      us.patrolAdvise:
+        traceLabel: "US Patrol then Advise"
+        root: { actionTags: [patrol], compound: { specialTags: [advise], timing: after } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          patrolSpace: { selector: us.patrolEconLoc, required: true }
+          adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.patrolSpace }] }
+        steps:
+          - { label: patrol-econ-loc, role: patrolSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetLoCs, actionTag: patrol } }
+          - { label: advise-force-multiplier, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      us.sweepAirStrike:
+        traceLabel: "US Sweep then Air Strike"
+        root: { actionTags: [sweep], compound: { specialTags: [air-strike], timing: after } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          sweepSpace: { selector: us.sweepExposureSpace, required: true }
+          airStrikeSpace: { selector: us.airStrikeTarget, required: true }
+        steps:
+          - { label: sweep-expose-space, role: sweepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: sweep } }
+          - { label: air-strike-space, role: airStrikeSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: air-strike } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      us.assaultAirLiftAssault:
+        traceLabel: "US Assault, Air Lift, Assault"
+        root: { actionTags: [assault], compound: { specialTags: [air-lift], timing: during, interruptAfterStage: 1 } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          firstAssaultSpace: { selector: us.assaultTargetSpace, required: true }
+          airLiftRoute: { selector: us.airLiftDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
+          secondAssaultSpace: { selector: us.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
+        steps:
+          - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
+          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
+          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
+        caps: { capClass: standard256, maxSteps: 3 }
+        fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
+      us.airLiftTrain:
+        traceLabel: "US Air Lift then Train"
+        root: { actionTags: [air-lift], compound: { specialTags: [train], timing: after } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          airLiftRoute: { selector: us.airLiftDestination, required: true }
+          trainSpace: { selector: us.trainSupportSpace, required: true }
+        steps:
+          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
+          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
 
     postureEvaluators:
       arvn.preserveAidAndMargin:
@@ -576,6 +830,33 @@ agents:
             weight: -25
             fallback:
               contribution: 0
+      us.preserveSupportAndAvailability:
+        traceLabel: "US preserve Support and US availability"
+        must:
+          - id: resource-floor
+            condition:
+              gte:
+                - { ref: feature.selfResources }
+                - 1
+            onViolation: demote
+            demotePenalty: -250
+        prefer:
+          - id: own-margin
+            value:
+              ref: preview.victory.currentMargin.self
+            weight: 30
+            fallback:
+              contribution: 0
+          - id: arvn-rival-risk
+            when:
+              eq:
+                - { ref: relationship.nearWin.seat }
+                - { ref: relationship.nominalAlly.seat }
+            value:
+              ref: relationship.nominalAlly.gainValue
+            weight: -20
+            fallback:
+              contribution: 0
 
     relationships:
       arvn.usNominalAlly:
@@ -591,6 +872,19 @@ agents:
         priority: 20
         gainValue:
           ref: victory.currentMargin.us
+      us.arvnNominalAlly:
+        role: nominalAlly
+        seat: arvn
+        priority: 10
+        gainValue:
+          ref: victory.currentMargin.arvn
+      us.arvnNearWin:
+        role: nearWin
+        seat: arvn
+        condition: arvnNearWin
+        priority: 20
+        gainValue:
+          ref: victory.currentMargin.arvn
 
     strategyModules:
       arvnPursueProjectedMargin:
@@ -783,6 +1077,82 @@ agents:
               - { id: stableTransport, weight: 4, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      us.blockImmediateWin:
+        traceLabel: "US win or block a win"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, assault, air-strike]
+        priority:
+          tier: 90
+        selectors:
+          - { role: supportTarget, selectorId: us.trainSupportSpace }
+          - { role: assaultTarget, selectorId: us.assaultTargetSpace }
+          - { role: airStrikeTarget, selectorId: us.airStrikeTarget }
+        scoreGroups:
+          - id: winBlock
+            summary: sum
+            terms:
+              - { id: supportOrDenial, weight: 8, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      us.createAndDefendSupport:
+        traceLabel: "US create and defend Support"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, patrol, sweep]
+        priority:
+          tier: 80
+        selectors:
+          - { role: trainTarget, selectorId: us.trainSupportSpace }
+          - { role: patrolTarget, selectorId: us.patrolEconLoc }
+          - { role: sweepTarget, selectorId: us.sweepExposureSpace }
+        scoreGroups:
+          - id: supportSecurity
+            summary: sum
+            terms:
+              - { id: pacificationSetup, weight: 6, value: 1 }
+              - { id: econProtection, weight: 4, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      us.forceMultiplier:
+        traceLabel: "US use Advise and Air Lift as force multipliers"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [advise, air-lift]
+        priority:
+          tier: 70
+        selectors:
+          - { role: adviseTarget, selectorId: us.adviseTargetSpace }
+          - { role: airLiftRoute, selectorId: us.airLiftDestination }
+        scoreGroups:
+          - id: forceMultiplier
+            summary: sum
+            terms:
+              - { id: adviseValue, weight: 7, value: 1 }
+              - { id: airLiftValue, weight: 7, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      us.preserveAvailability:
+        traceLabel: "US preserve availability"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, air-lift, assault]
+        priority:
+          tier: 60
+        selectors:
+          - { role: airLiftOrigin, selectorId: us.airLiftOrigin }
+          - { role: trainTarget, selectorId: us.trainSupportSpace }
+        scoreGroups:
+          - id: availability
+            summary: sum
+            terms:
+              - { id: temporaryDeployment, weight: 5, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
     guardrails:
       dropPassWhenOtherMovesExist:
@@ -887,6 +1257,18 @@ agents:
                 - 0
         severity: demote
         penalty: 300
+        onUnavailable: noFire
+      us.avoidPoliticalAirStrike:
+        traceLabel: "US avoid Air Strike in populated Support without decisive payoff"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.air-strike }
+            - lt:
+                - { ref: feature.projectedUsMarginDelta }
+                - 2
+        severity: demote
+        penalty: 700
         onUnavailable: noFire
 
     turnShapeEvaluators:
@@ -1135,8 +1517,18 @@ agents:
       use:
         guardrails:
           - dropPassWhenOtherMovesExist
+          - us.avoidPoliticalAirStrike
         strategyModules:
-          - arvnPursueProjectedMargin
+          - us.blockImmediateWin
+          - us.createAndDefendSupport
+          - us.forceMultiplier
+          - us.preserveAvailability
+        planTemplates:
+          - us.trainAdvise
+          - us.patrolAdvise
+          - us.sweepAirStrike
+          - us.assaultAirLiftAssault
+          - us.airLiftTrain
         considerations:
           - preferProjectedSelfMargin
           - preserveResources

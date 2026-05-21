@@ -300,16 +300,16 @@ Before committing:
      - `canonical inputs`
      - `why checked in instead of generated on demand`
      - `hygiene proof`
-     If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
+     The ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc and is not retained, record the exact command and script body in a durable repo artifact or the visible final handoff; a temporary path such as `/tmp/example.mjs` alone is not reproducible evidence. Otherwise stop for `1-3-1` before committing a large opaque artifact.
    - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner. The source-size ledger normally applies to implementation source and other repo-owned files governed by local size caps; for authored data or markdown/YAML GameSpecDoc support files, either emit the ledger when the child workflow triggered it or mark `not_applicable` with the reason, such as `authored data doc below cap` or `data-only growth, no source-size trigger`.
    - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, hash-only generated fixture output, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
      - `artifact path`
      - `generation command or retained script`
      - `canonical inputs`
      - `why the refresh is expected`
-     Record this in the ticket outcome, a report, or the final handoff before staging. If the generator was ad hoc, preserve the exact command text in that durable location.
+     Record this in the ticket outcome, a report, or the final handoff before staging. The lightweight ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc, preserve the exact command and script body in that durable location; a temporary path alone is not enough.
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
-5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
+5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
 8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
@@ -323,6 +323,7 @@ Required checkpoint. This is a hard stop: do not commit until every row below ha
 ```text
 Required-visible-block checkpoint:
 - implement-ticket audit block: <emitted | not_applicable: reason>
+- Acceptance-to-command map: <emitted | not_applicable: reason | blocked: reason>
 - pre-archive gate: <emitted before archive command | not_applicable: no ticket archive in this iteration | late_recovered: reason>
 - post-ticket-review block: <emitted | not_applicable: reason>
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
@@ -375,7 +376,7 @@ No-commit finalization is still a terminal handoff state. Before any final respo
 4. Emit the full `Harness handoff` block below with `Work commit: none` and `State commit: none` unless a state-only commit was actually created.
 5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
 
-If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` should normally describe the final clean state after the state-only commit. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
+If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` must be `"clean"` for the final post-commit state. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 State-only clean-state example: after a work commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, when the only remaining dirty path is `.codex/run-state/implement-spec-tickets.json` and you are about to commit that state file, write `last_work_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, `last_state_commit: "self"`, `dirty_state: "clean"`, and an `owned_dirty_summary` that describes the post-state-commit repo as clean. Do not write `dirty_state: "state_file_only"` for that state commit; that describes the transient pre-commit moment and will be stale immediately after the commit.
 

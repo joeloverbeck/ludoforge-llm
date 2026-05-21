@@ -129,7 +129,7 @@ import {
   type PhaseBoundaryValidationContext,
 } from './compile-phase-boundaries.js';
 
-type ProfileUseKey = keyof CompiledAgentProfile['use'];
+type ProfileUseKey = typeof AGENT_POLICY_PROFILE_USE_BUCKETS[number];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
@@ -775,7 +775,8 @@ function lowerProfile(
         diagnostics,
       ),
     ]),
-  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'guardrails' | 'strategyModules' | 'turnShapeEvaluators' | 'tieBreakers'>;
+  ) as Pick<CompiledAgentProfile['use'], 'considerations' | 'guardrails' | 'strategyModules' | 'turnShapeEvaluators' | 'tieBreakers'>
+    & { readonly planTemplates: readonly string[] };
   const use: CompiledAgentProfile['use'] = {
     considerations: loweredUse.considerations,
     ...(loweredUse.guardrails?.length === 0 ? {} : { guardrails: loweredUse.guardrails }),
@@ -783,13 +784,14 @@ function lowerProfile(
     ...(loweredUse.turnShapeEvaluators?.length === 0 ? {} : { turnShapeEvaluators: loweredUse.turnShapeEvaluators }),
     tieBreakers: loweredUse.tieBreakers,
   };
+  const authoredPlanTemplateUse = profileDef.use.planTemplates === undefined ? undefined : loweredUse.planTemplates;
   const preview = lowerPreviewConfig(profileId, profileDef, diagnostics);
   const selection = lowerSelectionConfig(profileId, profileDef, diagnostics);
   const selector = lowerSelectorProfileConfig(profileId, profileDef, diagnostics);
   const strategyModules = lowerStrategyModulesProfileConfig(profileId, profileDef, diagnostics);
   const guardrails = lowerGuardrailsProfileConfig(profileId, profileDef, diagnostics);
 
-  const plan = buildProfilePlan(profileId, use, library, diagnostics);
+  const plan = buildProfilePlan(profileId, use, authoredPlanTemplateUse, library, diagnostics);
   if (plan !== null && (plan.selectors?.length ?? 0) > 0) {
     validateProfileSelectorCostClass(profileId, selector?.maxCostClass ?? 'preview', plan.selectors ?? [], library, diagnostics);
   }
@@ -1887,6 +1889,7 @@ function validateProfileTurnShapeCostClass(
 function buildProfilePlan(
   profileId: string,
   use: CompiledAgentProfile['use'],
+  planTemplateUse: readonly string[] | undefined,
   library: CompiledAgentLibraryIndex,
   diagnostics: Diagnostic[],
 ): CompiledAgentProfile['plan'] | null {
@@ -2145,7 +2148,7 @@ function buildProfilePlan(
   for (const moduleId of Object.keys(library.strategyModules ?? {})) {
     visitModule(moduleId);
   }
-  for (const templateId of Object.keys(library.planTemplates ?? {})) {
+  for (const templateId of planTemplateUse ?? Object.keys(library.planTemplates ?? {})) {
     visitPlanTemplate(templateId);
   }
 

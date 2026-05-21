@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-008A: Generic profile plan-template isolation for authored faction skeletons
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — generic agent planner / compiler ownership only
@@ -77,3 +77,30 @@ The ARVN regression witness remains warning-class/profile-quality; any new archi
 
 1. `pnpm -F @ludoforge/engine build && node --test <focused compiled isolation test> packages/engine/dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js`
 2. `pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+Completed on 2026-05-21.
+
+What changed:
+- Added generic `use.planTemplates` authoring support for agent profiles and wired the compiler so explicitly listed plan templates are the only templates compiled into that profile's advisory plan.
+- Preserved historical all-template behavior for profiles that do not author `use.planTemplates`, avoiding a broad compatibility break.
+- Added explicit ARVN `use.planTemplates` entries for the already-authored ARVN templates so future US/NVA/VC skeleton templates cannot compete with ARVN plan proposal.
+- Updated the agent DSL cookbook to document `use.planTemplates`.
+- Extended `agent-plan-template-compile.test.ts` with a generic cross-profile fixture proving `baseline` and `rival` profiles compile only their own authored plan templates.
+
+Command ledger:
+- `pnpm -F @ludoforge/engine typecheck` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after rebuilding first; no generated schema diff remains.
+- Ticket focused command was stale as written because `packages/engine/dist/...` is interpreted from the engine package cwd under `pnpm -F`; substituted the focused compiled command from package cwd: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/agent-plan-template-compile.test.js dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js dist/test/architecture/policy-preview-inner-outcome-parity.test.js` — passed, 7 tests / 3 suites.
+- `pnpm -F @ludoforge/engine test:all` — passed, 957 tests.
+
+Deviations:
+- The regression landed in `packages/engine/test/unit/cnl/agent-plan-template-compile.test.ts` instead of `packages/engine/test/unit/agents/plan-proposal.test.ts`; the ownership gap was at compile-time profile/catalog construction, so the CNL compiler fixture is the narrower generic proof.
+- `packages/engine/test/policy-profile-quality/arvn-us-rival-risk-flip.test.ts` did not need modification; it remained green as the integration witness.
+- `packages/engine/src/kernel/types-core.ts` and schema mirrors were not changed because `use.planTemplates` is authoring-only and is not persisted in the compiled `GameDef` profile contract.
+
+Source-size / generated-artifact notes:
+- `packages/engine/src/cnl/compile-agents.ts` is pre-existing oversized at 5960 lines; this ticket's net change is +3 lines there, so no extraction was warranted in this prerequisite seam.
+- No generated artifacts were checked in; schema artifacts were verified byte-identical after the final rebuild and schema check.

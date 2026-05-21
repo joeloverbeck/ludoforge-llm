@@ -1221,6 +1221,13 @@ agents:
           - arvn.selectiveViolence
           - arvn.denyUSIfNearWin
           - arvn.preCoupRedeployDiscipline
+        planTemplates:
+          - arvn.trainGovern
+          - arvn.patrolGovern
+          - arvn.sweepRaid
+          - arvn.assaultRaid
+          - arvn.trainTransport
+          - arvn.assaultTransportAssault
         turnShapeEvaluators:
           - currentTurnImpact
         considerations:

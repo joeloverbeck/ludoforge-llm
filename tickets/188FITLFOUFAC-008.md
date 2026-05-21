@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `tickets/188FITLFOUFAC-008A.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-008A.md`
 
 ## Problem
 
@@ -15,7 +15,7 @@ Spec 188 §4.2 / Phase 2 authors the US faction personality as a correct *skelet
 1. `us-baseline` is the current US profile binding (`92-agents.md` ~line 756 region); this ticket authors the US skeleton constructs and rebinds the US seat to them.
 2. All required constructs (planTemplates, role selectors, strategyModules, guardrails, postureEvaluators, relationships) are landed (Spec 186/187) — Tier-1 YAML only.
 3. The US/ARVN relationship is the counterpart of the ARVN relationship in ticket 005; author the US-side per report §5.1 (`reports/fitl-competent-agent-ai.md` ~line 1140).
-4. Live 008 implementation proof on 2026-05-21 showed the generic planner currently lets newly authored US templates compete in ARVN plan proposal. Per `docs/FOUNDATIONS.md` #1, #2, and #15, this ticket now depends on `tickets/188FITLFOUFAC-008A.md` so the generic profile/template isolation contract is fixed before US YAML authoring resumes.
+4. Live 008 implementation proof on 2026-05-21 showed the generic planner currently lets newly authored US templates compete in ARVN plan proposal. Per `docs/FOUNDATIONS.md` #1, #2, and #15, this ticket now depends on `archive/tickets/188FITLFOUFAC-008A.md` so the generic profile/template isolation contract is fixed before US YAML authoring resumes.
 
 ## Architecture Check
 
@@ -57,7 +57,7 @@ Rebind the US seat; add the Phase-2 headline witnesses in `policy-profile-qualit
 
 - ARVN factions (003–007), NVA (009), VC (010).
 - Full US fidelity beyond the skeleton — deepening is a later effort (Spec 188 §2).
-- Generic planner/compiler profile-template isolation — owned by `tickets/188FITLFOUFAC-008A.md`.
+- Generic planner/compiler profile-template isolation — owned by `archive/tickets/188FITLFOUFAC-008A.md`.
 
 ## Acceptance Criteria
 

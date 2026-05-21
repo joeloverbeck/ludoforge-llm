@@ -207,7 +207,7 @@ planTemplates:
       ifRoleTargetUnavailable: primitivePolicy
 ```
 
-Profiles enable templates through their plan configuration. Doctrine carriers, usually `strategyModules`, keep the strategic intent and selector vocabulary visible while the template captures the composed turn shape instead of re-encoding the same target sequence in several flat considerations. If the turn shape needs posture scoring, add `postureHook: <postureEvaluatorId>` and define the evaluator in `postureEvaluators`.
+Profiles enable templates through `use.planTemplates`. Doctrine carriers, usually `use.strategyModules`, keep the strategic intent and selector vocabulary visible while the template captures the composed turn shape instead of re-encoding the same target sequence in several flat considerations. If the turn shape needs posture scoring, add `postureHook: <postureEvaluatorId>` and define the evaluator in `postureEvaluators`.
 
 ## Authoring a Posture Evaluator
 

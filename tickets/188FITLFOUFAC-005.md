@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `tickets/188FITLFOUFAC-003.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-003.md`
 
 ## Problem
 

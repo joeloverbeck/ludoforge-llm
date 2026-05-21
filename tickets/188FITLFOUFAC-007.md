@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `tickets/188FITLFOUFAC-003.md`, `tickets/188FITLFOUFAC-004.md`, `tickets/188FITLFOUFAC-005.md`, `tickets/188FITLFOUFAC-006.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-003.md`, `tickets/188FITLFOUFAC-004.md`, `tickets/188FITLFOUFAC-005.md`, `tickets/188FITLFOUFAC-006.md`
 
 ## Problem
 

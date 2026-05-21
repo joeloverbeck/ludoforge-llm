@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-003: ARVN plan structure — doctrines + plan templates + role selectors
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — Tier-1 YAML authoring only
@@ -76,3 +76,28 @@ Wire the new doctrine carriers into the `arvn-evolved` profile `use:` list (line
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed on 2026-05-21.
+
+What changed:
+
+- Added the seven ARVN role selectors in `data/games/fire-in-the-lake/92-agents.md`: `arvn.patrolLocOrCity`, `arvn.sweepToExposeSpace`, `arvn.raidRemovalTarget`, `arvn.transportOrigin`, `arvn.transportDestination`, `arvn.assaultTargetSpace`, and `arvn.pieceRemovalPriority`.
+- Added five net-new ARVN plan templates: `arvn.patrolGovern`, `arvn.sweepRaid`, `arvn.assaultRaid`, `arvn.trainTransport`, and `arvn.assaultTransportAssault`.
+- Added seven ARVN doctrine carriers: `arvn.blockImmediateWin`, `arvn.harvestPatronage`, `arvn.holdHighPopControl`, `arvn.protectAidEcon`, `arvn.selectiveViolence`, `arvn.denyUSIfNearWin`, and `arvn.preCoupRedeployDiscipline`.
+- Bound the new doctrine carriers into `arvn-evolved.use.strategyModules`.
+- Left the existing `arvn.trainGovern`, `arvn.trainSpaceForControlOrPacification`, and `arvn.governPatronageSpace` definitions unchanged.
+
+Deviations and boundary notes:
+
+- The live compiler assembles `profile.plan.planTemplates` and `profile.plan.strategyModules` from all library entries, not solely from `use.strategyModules`; the explicit `arvn-evolved.use.strategyModules` binding requested by this ticket is still present.
+- The doctrine carrier `scoreGroups` use constant authored weights rather than `selector.<id>...` score refs because selector IDs containing dots are not policy-ref addressable through that dotted ref grammar. The carrier `selectors` entries still provide the intended selector dependency and trace surface.
+- `arvn.transportDestination` keeps its route quality components at zero weight so the existing Train+Govern witness remains selected on bare Train roots; later ARVN behavior/deepening tickets own route-priority tuning.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js` — passed, 1 test.
+- `pnpm turbo test` — passed, 5 tasks successful; engine default lane reported 165/165 test files passed.
+- `pnpm -F @ludoforge/engine test:all` — passed, 957 tests.

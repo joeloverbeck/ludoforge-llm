@@ -271,6 +271,118 @@ agents:
           onEmpty: noContribution
       arvn.trainSpaceForControlOrPacification: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: controlOrPacificationOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
       arvn.governPatronageSpace: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: patronageOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
+      arvn.patrolLocOrCity:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: econProtection
+              value: 1
+              weight: 4
+            - id: cityControlRoute
+              value: 1
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.sweepToExposeSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: exposeUndergroundThreat
+              value: 1
+              weight: 4
+            - id: highPopControlSetup
+              value:
+                ref: feature.coinControlPop
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.raidRemovalTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: baseOrUndergroundRemoval
+              value: 1
+              weight: 5
+            - id: controlSwing
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.transportOrigin:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: overstackedSafeOrigin
+              value: 1
+              weight: 3
+            - id: preserveOriginControl
+              value:
+                ref: feature.coinControlPop
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.transportDestination:
+        scopes: [move]
+        source:
+          kind: routePairs
+          origin: arvn.transportOrigin
+          destination: arvn.assaultTargetSpace
+          maxPairs: 64
+        quality:
+          components:
+            - id: threatenedReinforcementRoute
+              value: 1
+              weight: 0
+            - id: destinationControlGain
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 0
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.assaultTargetSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: nvaControlRemoval
+              value:
+                ref: feature.projectedNvaMargin
+              weight: -1
+            - id: vcBaseOrOppositionThreat
+              value:
+                ref: feature.projectedVcMargin
+              weight: -1
+            - id: coinControlGain
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      arvn.pieceRemovalPriority:
+        scopes: [move]
+        source:
+          collection: { kind: tokens }
+        quality:
+          components:
+            - id: baseAndControlThreat
+              value: 1
+              weight: 5
+            - id: leaderDenial
+              value:
+                ref: feature.projectedCurrentLeaderMargin
+              weight: -1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
 
     planTemplates:
       arvn.trainGovern:
@@ -284,6 +396,65 @@ agents:
           - { label: govern-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.patrolGovern:
+        traceLabel: "ARVN Patrol then Govern"
+        root: { actionTags: [patrol], compound: { specialTags: [govern], timing: after } }
+        roles:
+          patrolSpace: { selector: arvn.patrolLocOrCity, required: true }
+          governSpace: { selector: arvn.governPatronageSpace, required: true, constraints: [{ notEqual: role.patrolSpace }] }
+        steps:
+          - { label: patrol-space, role: patrolSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetLoCs, actionTag: patrol } }
+          - { label: govern-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.sweepRaid:
+        traceLabel: "ARVN Sweep then Raid"
+        root: { actionTags: [sweep], compound: { specialTags: [raid], timing: after } }
+        roles:
+          sweepSpace: { selector: arvn.sweepToExposeSpace, required: true }
+          raidSpace: { selector: arvn.raidRemovalTarget, required: true }
+          removalPriority: { selector: arvn.pieceRemovalPriority, required: false }
+        steps:
+          - { label: sweep-space, role: sweepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: sweep } }
+          - { label: raid-space, role: raidSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: raid } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.assaultRaid:
+        traceLabel: "ARVN Assault then Raid"
+        root: { actionTags: [assault], compound: { specialTags: [raid], timing: after } }
+        roles:
+          assaultSpace: { selector: arvn.assaultTargetSpace, required: true }
+          raidSpace: { selector: arvn.raidRemovalTarget, required: true }
+          removalPriority: { selector: arvn.pieceRemovalPriority, required: false }
+        steps:
+          - { label: assault-space, role: assaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault } }
+          - { label: raid-space, role: raidSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: raid } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.trainTransport:
+        traceLabel: "ARVN Train then Transport"
+        root: { actionTags: [train], compound: { specialTags: [transport], timing: after } }
+        roles:
+          trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
+          transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.trainSpace }] }
+        steps:
+          - { label: train-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: transport-route, role: transportRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.assaultTransportAssault:
+        traceLabel: "ARVN Assault, Transport, Assault"
+        root: { actionTags: [assault], compound: { specialTags: [transport], timing: during, interruptAfterStage: 1 } }
+        roles:
+          firstAssaultSpace: { selector: arvn.assaultTargetSpace, required: true }
+          transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
+          secondAssaultSpace: { selector: arvn.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
+        steps:
+          - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
+          - { label: transport-route, role: transportRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
+          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
+        caps: { capClass: standard256, maxSteps: 3 }
+        fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
 
     strategyModules:
       arvnPursueProjectedMargin:
@@ -345,6 +516,137 @@ agents:
         fallback:
           ifInactive: noContribution
           ifSelectorEmpty: noContribution
+      arvn.blockImmediateWin:
+        traceLabel: "ARVN block immediate win"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [govern, patrol, sweep, assault]
+        priority:
+          tier: 95
+        selectors:
+          - { role: assaultTarget, selectorId: arvn.assaultTargetSpace }
+          - { role: raidTarget, selectorId: arvn.raidRemovalTarget }
+        scoreGroups:
+          - id: blockThreat
+            summary: sum
+            terms:
+              - { id: enemyMarginReduction, weight: 10, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.harvestPatronage:
+        traceLabel: "ARVN harvest Patronage"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, patrol]
+        priority:
+          tier: 80
+        selectors:
+          - { role: governTarget, selectorId: arvn.governPatronageSpace }
+        scoreGroups:
+          - id: patronageEngine
+            summary: sum
+            terms:
+              - { id: governQuality, weight: 12, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.holdHighPopControl:
+        traceLabel: "ARVN hold high-pop COIN control"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, patrol, assault, transport]
+        priority:
+          tier: 70
+        selectors:
+          - { role: controlTarget, selectorId: arvn.assaultTargetSpace }
+          - { role: patrolTarget, selectorId: arvn.patrolLocOrCity }
+        scoreGroups:
+          - id: controlStability
+            summary: sum
+            terms:
+              - { id: controlQuality, weight: 8, value: 1 }
+              - { id: patrolQuality, weight: 4, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.protectAidEcon:
+        traceLabel: "ARVN protect Aid and Econ"
+        when:
+          not: { ref: condition.militaryBoardCollapsing.satisfied }
+        applies:
+          scopes: [move]
+          actionTags: [patrol, train]
+        priority:
+          tier: 65
+        selectors:
+          - { role: econTarget, selectorId: arvn.patrolLocOrCity }
+          - { role: governTarget, selectorId: arvn.governPatronageSpace }
+        scoreGroups:
+          - id: resources
+            summary: sum
+            terms:
+              - { id: econPatrol, weight: 7, value: 1 }
+              - { id: aidGovern, weight: 3, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.selectiveViolence:
+        traceLabel: "ARVN selective violence"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [sweep, assault]
+        priority:
+          tier: 60
+        selectors:
+          - { role: exposeTarget, selectorId: arvn.sweepToExposeSpace }
+          - { role: removalTarget, selectorId: arvn.raidRemovalTarget }
+          - { role: assaultTarget, selectorId: arvn.assaultTargetSpace }
+        scoreGroups:
+          - id: surgicalForce
+            summary: sum
+            terms:
+              - { id: exposeBeforeRemoval, weight: 5, value: 1 }
+              - { id: removalQuality, weight: 6, value: 1 }
+              - { id: assaultQuality, weight: 6, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.denyUSIfNearWin:
+        traceLabel: "ARVN deny US if near win"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [govern]
+        priority:
+          tier: 55
+        selectors:
+          - { role: governTarget, selectorId: arvn.governPatronageSpace }
+        scoreGroups:
+          - id: allyRivalDenial
+            summary: sum
+            terms:
+              - { id: governWithoutUSGift, weight: 5, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      arvn.preCoupRedeployDiscipline:
+        traceLabel: "ARVN pre-Coup redeploy discipline"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [train, transport]
+        priority:
+          tier: 50
+        selectors:
+          - { role: trainTarget, selectorId: arvn.trainSpaceForControlOrPacification }
+          - { role: transportRoute, selectorId: arvn.transportDestination }
+        scoreGroups:
+          - id: redeployStability
+            summary: sum
+            terms:
+              - { id: stableTraining, weight: 4, value: 1 }
+              - { id: stableTransport, weight: 4, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
     guardrails:
       dropPassWhenOtherMovesExist:
@@ -737,6 +1039,13 @@ agents:
           - dropPassWhenOtherMovesExist
         strategyModules:
           - buildPoliticalEngine
+          - arvn.blockImmediateWin
+          - arvn.harvestPatronage
+          - arvn.holdHighPopControl
+          - arvn.protectAidEcon
+          - arvn.selectiveViolence
+          - arvn.denyUSIfNearWin
+          - arvn.preCoupRedeployDiscipline
         turnShapeEvaluators:
           - currentTurnImpact
         considerations:

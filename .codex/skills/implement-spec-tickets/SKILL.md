@@ -242,6 +242,8 @@ Before moving any ticket into `archive/tickets/`, perform this archive gate in v
 
 If the review was not invoked and there is no valid `manual late recovery` or `not_applicable` classification, stop before archival and run the child workflow.
 
+Immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move for the ticket, re-check that this pre-archive gate has already appeared in visible text. If it has not, emit it before the archive command rather than recovering it later.
+
 ### 4. Audit Post-Ticket Review When It Changes Handoff Surfaces
 
 If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, or same-family archive reference, run:
@@ -250,7 +252,7 @@ If `post-ticket-review` creates or materially updates a follow-up ticket, active
 $skill-audit .codex/skills/post-ticket-review
 ```
 
-Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
+Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
 
 Apply sound, evidence-backed suggestions under the same rules as the implement-ticket audit. Emit the same compact child-audit block and run focused hygiene over changed skill files.
 
@@ -262,6 +264,7 @@ Compact pre-commit visibility gate. This is a quick index for the longer rules b
 
 - child `implement-ticket` audit block
 - `Acceptance-to-command map`
+- pre-archive gate emitted before any ticket archive command, when archival is triggered
 - `Post-ticket review` block, or `not_applicable` classification
 - `post-ticket-review` audit block when triggered, or `not_applicable` classification
 - generated-artifact provenance when triggered
@@ -306,6 +309,7 @@ Required checkpoint. This is a hard stop: do not commit until every row below ha
 ```text
 Required-visible-block checkpoint:
 - implement-ticket audit block: <emitted | not_applicable: reason>
+- pre-archive gate: <emitted before archive command | not_applicable: no ticket archive in this iteration | late_recovered: reason>
 - post-ticket-review block: <emitted | not_applicable: reason>
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
 - state-file validity: <valid | not_changed | blocked: reason>

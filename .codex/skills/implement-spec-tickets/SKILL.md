@@ -74,6 +74,15 @@ Keep the file small and machine-readable. Update it after intake, after every it
 - `"owned_dirty: <paths>"` when owned paths remain dirty for a no-commit or blocked handoff.
 - `"mixed_dirty: owned=<paths>; unrelated=<paths>"` when both owned and unrelated paths remain.
 
+Use stable `last_result` values where possible so later resumes can distinguish implementation, retarget, and state-only handoffs. Current vocabulary:
+
+- `"completed_archived"` or `"implemented_archived"` when the ticket reached terminal status and was archived.
+- `"implemented_not_archived"` when implementation completed but review/archive did not run.
+- `"retargeted_to_prerequisite"` when the iteration only inserted or selected a prerequisite before returning to the original target.
+- `"blocked"` when no next owner exists or the current target remains blocked by an unresolved owner.
+- `"state_only"` when only the state file was refreshed and no work commit represents a new ticket/spec decision.
+- `"final_spec_archived"` when the originating spec was archived.
+
 On resume, read this file first, then verify it against live repo state before invoking a child skill:
 
 - `originating_spec` still exists unless `archived_spec` is set
@@ -145,6 +154,14 @@ When an approved `1-3-1` or Foundations reassessment turns the current implement
 5. Rerun the smallest proof that proves the restored safe path plus the ticket graph/integrity lanes, emit `post-ticket-review: not_applicable` in the required checkpoint, and commit the retarget as a blocked handoff rather than as implementation completion.
 6. Persist state with the new prerequisite at the front of the queue and the blocked ticket immediately after it.
 
+When the same approved reassessment happens before any source/test/schema implementation has landed, and the truthful result is a clean prerequisite insertion rather than a blocked landed slice:
+
+1. Keep the original ticket nonterminal unless its own durable outcome needs to record a landed partial.
+2. Create or update the prerequisite ticket with the narrow YAML/code/proof owner, dependencies, out-of-scope boundary, and proof lanes required before returning to the original ticket.
+3. Patch the original ticket, originating spec, and directly affected siblings so dependency lists, phase order, ticket-list prose, and proof expectations point at the prerequisite.
+4. Run the ticket graph/integrity lanes and focused hygiene for the artifact rewrite.
+5. Commit the retarget as a prerequisite handoff, not as `blocked` completion. Use `last_result: "retargeted_to_prerequisite"` and place the prerequisite immediately before the original target in the queue.
+
 If the blocker is resolved by a user-approved 1-3-1 option or other explicit boundary reset, do this before resuming implementation:
 
 1. Record the approved option and the user's confirmation in the active ticket, state file, or next visible checkpoint.
@@ -160,6 +177,8 @@ After each implementation phase, run:
 ```text
 $skill-audit .codex/skills/implement-ticket
 ```
+
+If the iteration stopped in a pre-implementation prerequisite insertion or pure retarget before `implement-ticket` exercised source/test edits, terminal status, proof closeout, or archival handoff behavior, the audit may be marked `not_applicable: retarget-only boundary reset`. The visible checkpoint must still name the exercised child surfaces, such as reassessment, 1-3-1 ranking, ticket graph updates, and state persistence. Do not use this exception when implementation edits landed, proof ran for a completed slice, terminal status changed, or any child workflow behavior was worked around.
 
 Apply every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. This skill is explicit authorization to apply those suggestions; do not wait for a separate "Implement suggestions" prompt.
 

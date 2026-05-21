@@ -1,6 +1,6 @@
 {
   "seed": 1005,
-  "maxTurns": 200,
+  "maxTurns": 100,
   "profileId": "arvn-evolved",
   "decisions": [
     {
@@ -18314,259 +18314,9 @@
     {
       "turnCount": null,
       "turnId": 52,
-      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@an-loc:none[0]",
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-saigon-can-tho:none[0]",
       "selectedValue": "guerrilla",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@an-loc:none[0]:\"guerrilla\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 2,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 2,
-            "distinctValueCount": 1,
-            "min": -1,
-            "max": -1,
-            "range": 0,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "constant",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 2,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownPostGrantCap": 0,
-          "unknownFreeOperationCap": 0,
-          "unknownGrantFlowPartial": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 2,
-          "readyRootOptionCount": 2,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@an-loc:none[0]:\"guerrilla\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@an-loc:none[0]:\"base\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 3,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              },
-              {
-                "depth": 2,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 52,
-      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]",
-      "selectedValue": "guerrilla",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]:\"guerrilla\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 2,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 2,
-            "distinctValueCount": 1,
-            "min": -1,
-            "max": -1,
-            "range": 0,
-            "allReadyValuesEqual": true
-          }
-        },
-        "utility": "constant",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 2,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownPostGrantCap": 0,
-          "unknownFreeOperationCap": 0,
-          "unknownGrantFlowPartial": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 2,
-          "readyRootOptionCount": 2,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": true,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]:\"guerrilla\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "tiebreakAfterPreviewNoSignal",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@ba-xuyen:none[1]:\"base\"",
-          "score": -300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": -300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 2,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": [
-              {
-                "depth": 1,
-                "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
-                "selectionReason": "microturnPolicy",
-                "score": 0,
-                "scoreContributions": [],
-                "completionPolicy": "policyGuided"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 52,
-      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]",
-      "selectedValue": "guerrilla",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-saigon-can-tho:none[0]:\"guerrilla\"",
       "previewUsage": {
         "mode": "exactWorld",
         "evaluatedCandidateCount": 1,
@@ -18579,8 +18329,8 @@
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 1,
             "distinctValueCount": 1,
-            "min": -1,
-            "max": -1,
+            "min": 0,
+            "max": 0,
             "range": 0,
             "allReadyValuesEqual": true
           }
@@ -18615,12 +18365,222 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-kontum-dak-to:none[2]:\"guerrilla\"",
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-saigon-can-tho:none[0]:\"guerrilla\"",
           "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 52,
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]",
+      "selectedValue": "guerrilla",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]:\"guerrilla\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 2,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 2,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]:\"guerrilla\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@saigon:none[1]:\"base\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]:\"guerrilla\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 52,
+      "decisionKey": "decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]",
+      "selectedValue": "guerrilla",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]:\"guerrilla\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 1,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 1,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 1,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 1,
+          "readyRootOptionCount": 1,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.117.shaded.effects.0.let.in.1.forEach.effects.0.let.in.0.let.in.0.let.in.0.if.then.0.chooseOne::$kwaPieceType@loc-hue-khe-sanh:none[2]:\"guerrilla\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -18692,9 +18652,9 @@
     {
       "turnCount": null,
       "turnId": 61,
-      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]",
+      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]",
       "selectedValue": "patronage",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]:\"patronage\"",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"patronage\"",
       "previewUsage": {
         "mode": "exactWorld",
         "evaluatedCandidateCount": 2,
@@ -18743,7 +18703,7 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]:\"aid\"",
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"aid\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -18762,7 +18722,7 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]:\"patronage\"",
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"patronage\"",
           "score": 300,
           "scoreContributions": [
             {

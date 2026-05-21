@@ -203,6 +203,7 @@ function projectZone(
       ownerPlayerIndex: zone.ownerPlayerIndex,
       properties: zone.attributes ?? {},
       variables: state.zoneVars[String(zone.id)] ?? {},
+      markers: state.markers[String(zone.id)] ?? {},
     },
   };
 }

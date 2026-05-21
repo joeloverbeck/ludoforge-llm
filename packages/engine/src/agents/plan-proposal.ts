@@ -264,8 +264,8 @@ function bindPlanRoles(
           candidates: selectorCandidates,
           candidate: rootCandidate,
           ...(input.catalog.compiled.selectors === undefined ? {} : { selectors: input.catalog.compiled.selectors }),
-          evaluateExpr: (expr, candidate) => {
-            const value = evaluatePlanExpr(expr, input.state, candidate);
+          evaluateExpr: (expr, candidate, _microturnOption, selectorItemKey) => {
+            const value = evaluatePlanExpr(expr, input.state, candidate, selectorItemKey, input.def);
             return Array.isArray(value) ? undefined : value;
           },
         }).selected;
@@ -615,6 +615,8 @@ function evaluatePlanExpr(
   expr: CompiledPolicyExpr | AgentPolicyExpr,
   state: GameState,
   candidate?: SelectorEvalCandidate,
+  selectorItemKey?: string,
+  def?: GameDef,
 ): string | number | boolean | readonly string[] | undefined {
   switch (expr.kind) {
     case 'literal':
@@ -622,19 +624,49 @@ function evaluatePlanExpr(
         ? expr.value
         : undefined;
     case 'op': {
-      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate));
+      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate, selectorItemKey, def));
       switch (expr.op) {
         case 'not':
           return values[0] !== true;
         case 'eq':
           return values[0] === values[1];
+        case 'gt':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] > values[1];
+        case 'gte':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] >= values[1];
+        case 'lt':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] < values[1];
+        case 'lte':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] <= values[1];
         case 'boolToNumber':
           return values[0] === true ? 1 : 0;
         case 'add':
           return values.reduce<number>((total, value) => total + (typeof value === 'number' ? value : 0), 0);
+        case 'mul':
+          return values.reduce<number>((total, value) => total * (typeof value === 'number' ? value : 0), 1);
+        case 'if':
+          return values[0] === true ? values[1] : values[2];
+        case 'coalesce':
+          return values.find((value) => value !== undefined);
         default:
           return undefined;
       }
+    }
+    case 'zoneProp': {
+      const zoneId = typeof expr.zone === 'string'
+        ? expr.zone
+        : evaluatePlanExpr(expr.zone, state, candidate, selectorItemKey, def);
+      if (typeof zoneId !== 'string' || def === undefined) {
+        return undefined;
+      }
+      const zone = def.zones.find((entry) => entry.id === zoneId);
+      if (zone === undefined) {
+        return undefined;
+      }
+      if (expr.prop === 'id') return zone.id;
+      if (expr.prop === 'category') return zone.category;
+      const value = zone.attributes?.[expr.prop];
+      return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined;
     }
     case 'ref':
       if (expr.ref.kind === 'candidateIntrinsic') {
@@ -646,6 +678,33 @@ function evaluatePlanExpr(
           default:
             return undefined;
         }
+      }
+      if (expr.ref.kind === 'selectorItemIntrinsic') {
+        return selectorItemKey;
+      }
+      if (expr.ref.kind === 'lookup') {
+        if (expr.ref.surface !== 'policyState' || expr.ref.collection !== 'zones') {
+          return undefined;
+        }
+        const key = evaluatePlanExpr(expr.ref.key, state, candidate, selectorItemKey, def);
+        if (typeof key !== 'string' || def?.zones.some((zone) => zone.id === key) !== true) {
+          return expr.ref.onMissing !== 'unavailable' ? expr.ref.onMissing.value : undefined;
+        }
+        const zone = def.zones.find((entry) => entry.id === key);
+        const root = {
+          properties: zone?.attributes ?? {},
+          markers: state.markers[key] ?? {},
+          variables: state.zoneVars[key] ?? {},
+        } as Readonly<Record<string, unknown>>;
+        const value = expr.ref.path.reduce<unknown>((current, segment) =>
+          current !== null && typeof current === 'object' && !Array.isArray(current)
+            ? (current as Readonly<Record<string, unknown>>)[segment]
+            : undefined, root);
+        return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+          ? value
+          : expr.ref.onMissing !== 'unavailable'
+            ? expr.ref.onMissing.value
+            : undefined;
       }
       return undefined;
     case 'param':

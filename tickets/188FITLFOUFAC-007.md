@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/188FITLFOUFAC-003.md`, `archive/tickets/188FITLFOUFAC-004.md`, `archive/tickets/188FITLFOUFAC-005.md`, `archive/tickets/188FITLFOUFAC-006.md`, `tickets/188FITLFOUFAC-007A.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-003.md`, `archive/tickets/188FITLFOUFAC-004.md`, `archive/tickets/188FITLFOUFAC-005.md`, `archive/tickets/188FITLFOUFAC-006.md`, `archive/tickets/188FITLFOUFAC-007A.md`
 
 ## Problem
 
@@ -15,7 +15,7 @@ Spec 188 §5 Phase 1 acceptance (b) and §6 require profile-quality witnesses pr
 1. `packages/engine/test/policy-profile-quality/` exists; tests there emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings and are warning-class non-blocking per the FOUNDATIONS Appendix (confirmed during Spec 188 reassessment).
 2. `arvn-train-govern-separation.test.ts` already passes (Spec 186); do not duplicate the Train+Govern-separation behavior.
 3. Tests are property-form where possible (e.g. "Govern target population ≥ alternative unless emergency") and witness-form (`@test-class: convergence-witness` + `@witness:`) where seed-specific, per `.claude/rules/testing.md`.
-4. Boundary reset approved on 2026-05-21: live `arvn.governPatronageSpace` still used a constant quality component, so the behavior-selective ARVN YAML prerequisite moved to `tickets/188FITLFOUFAC-007A.md`. This ticket remains test-only and must resume only after 007A is complete.
+4. Boundary reset approved on 2026-05-21: live `arvn.governPatronageSpace` still used a constant quality component, so the behavior-selective ARVN YAML prerequisite moved to `archive/tickets/188FITLFOUFAC-007A.md`. This ticket remains test-only and must resume only after 007A is complete.
 
 ## Architecture Check
 
@@ -53,7 +53,7 @@ Use constructed scenarios; property-form assertions where the property holds acr
 - Re-authoring `arvn-train-govern-separation.test.ts`.
 - US/NVA/VC witnesses (authored in tickets 008–010 alongside each faction).
 - No engine/compiler changes — these witnesses must pass against the YAML authored in 003–006 with no engine diff.
-- YAML prerequisite work now belongs to `tickets/188FITLFOUFAC-007A.md`; do not fold it into this test-only ticket without a new approved boundary reset.
+- YAML prerequisite work now belongs to `archive/tickets/188FITLFOUFAC-007A.md`; do not fold it into this test-only ticket without a new approved boundary reset.
 
 ## Acceptance Criteria
 

@@ -1,6 +1,6 @@
 {
   "seed": 1013,
-  "maxTurns": 200,
+  "maxTurns": 100,
   "profileId": "arvn-evolved",
   "decisions": [
     {
@@ -19262,8 +19262,8 @@
       "turnCount": null,
       "turnId": 91,
       "decisionKey": "decision:doc.eventDecks.0.cards.80.shaded.effects.0.let.in.0.if.then.0.chooseOne::$cidgHighlandSpace",
-      "selectedValue": "quang-tri-thua-thien:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.80.shaded.effects.0.let.in.0.if.then.0.chooseOne::$cidgHighlandSpace:\"quang-tri-thua-thien:none\"",
+      "selectedValue": "pleiku-darlac:none",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.80.shaded.effects.0.let.in.0.if.then.0.chooseOne::$cidgHighlandSpace:\"pleiku-darlac:none\"",
       "previewUsage": {
         "mode": "exactWorld",
         "evaluatedCandidateCount": 3,

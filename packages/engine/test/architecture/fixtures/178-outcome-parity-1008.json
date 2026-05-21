@@ -1,6 +1,6 @@
 {
   "seed": 1008,
-  "maxTurns": 200,
+  "maxTurns": 100,
   "profileId": "arvn-evolved",
   "decisions": [
     {

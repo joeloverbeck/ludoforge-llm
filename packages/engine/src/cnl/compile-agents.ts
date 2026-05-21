@@ -2648,7 +2648,7 @@ class AgentLibraryCompiler {
     const basePath = `doc.agents.library.selectors.${selectorId}`;
     this.selectorStatus.set(selectorId, 'compiling');
     this.selectorStack.push(selectorId);
-    const context = this.createExprContext('selector');
+    const context = this.createExprContext('selector', true);
     const source = this.lowerSelectorSource(def.source, `${basePath}.source`);
     const scopes = normalizeSelectorScopes(def.scopes, `${basePath}.scopes`, this.diagnostics);
     const result = normalizeSelectorResult(def.result, `${basePath}.result`, this.diagnostics);
@@ -3524,13 +3524,13 @@ class AgentLibraryCompiler {
     path: string,
     context: AnalyzePolicyExprContext,
   ): PolicyExprAnalysis | null {
-    if (scope !== 'consideration') {
+    if (scope !== 'consideration' && scope !== 'selector') {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
         path,
         severity: 'error',
-        message: 'lookup expressions are only supported in agent consideration values.',
-        suggestion: 'Move lookup refs into doc.agents.library.considerations.<id>.value.',
+        message: 'lookup expressions are only supported in agent consideration values and selector expressions.',
+        suggestion: 'Move lookup refs into doc.agents.library.considerations.<id>.value or selector quality/where expressions.',
       });
       return null;
     }
@@ -3734,6 +3734,14 @@ class AgentLibraryCompiler {
         ref: { kind: 'library', refKind: 'aggregate', id: aggregateId },
         dependency: { kind: 'aggregates', id: aggregateId },
       };
+    }
+
+    if (refPath === 'selector.item.key') {
+      if (scope !== 'selector') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'id', costClass: 'state', ref: { kind: 'selectorItemIntrinsic', intrinsic: 'key' } };
     }
 
     if (refPath.startsWith('selector.')) {

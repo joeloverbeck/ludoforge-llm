@@ -740,6 +740,10 @@ const CompiledAgentPolicyRefSchema = z.union([
     intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
   z.object({
+    kind: z.literal('selectorItemIntrinsic'),
+    intrinsic: z.literal('key'),
+  }).strict(),
+  z.object({
     kind: z.literal('selector'),
     selectorId: StringSchema,
     field: z.union([

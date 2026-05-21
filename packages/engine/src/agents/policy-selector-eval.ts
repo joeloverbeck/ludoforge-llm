@@ -48,7 +48,12 @@ export interface SelectorEvalContext {
   readonly observerProfile?: CompiledObserverProfile;
   readonly currentItemKey?: string;
   readonly selectors?: Readonly<Record<string, CompiledPolicySelector>>;
-  evaluateExpr(expr: AgentPolicyExpr, candidate: SelectorEvalCandidate | undefined, microturnOption?: SelectorEvalMicroturnOption): PolicyValue;
+  evaluateExpr(
+    expr: AgentPolicyExpr,
+    candidate: SelectorEvalCandidate | undefined,
+    microturnOption?: SelectorEvalMicroturnOption,
+    selectorItemKey?: string,
+  ): PolicyValue;
   onProductTruncated?(selectorId: string): void;
   onSelectorEmpty?(selectorId: string, reason: SelectedSelectorView['emptyReason']): void;
   onPreviewFallback?(fallback: {
@@ -310,7 +315,7 @@ function scoreItem(
   const components = new Map<string, number>();
   let quality = 0;
   for (const component of selector.quality?.components ?? []) {
-    const rawValue = context.evaluateExpr(component.value, item.candidate ?? context.candidate, item.microturnOption);
+    const rawValue = context.evaluateExpr(component.value, item.candidate ?? context.candidate, item.microturnOption, item.key);
     const value = typeof rawValue === 'number'
       ? rawValue
       : component.previewFallback?.onUnavailable === 'noContribution'

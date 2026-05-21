@@ -304,7 +304,48 @@ agents:
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
       arvn.trainSpaceForControlOrPacification: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: controlOrPacificationOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
-      arvn.governPatronageSpace: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: patronageOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
+      arvn.governPatronageSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: activeSupportGovern
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 20
+            - id: passiveSupportGovern
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - passiveSupport
+              weight: 10
+            - id: governPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       arvn.patrolLocOrCity:
         scopes: [move]
         source:
@@ -312,10 +353,21 @@ agents:
         quality:
           components:
             - id: econProtection
-              value: 1
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: econ
+                  - 0
               weight: 4
             - id: cityControlRoute
-              value: 1
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - city
               weight: 2
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }

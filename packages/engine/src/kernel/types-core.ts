@@ -546,6 +546,10 @@ export type CompiledAgentPolicyRef =
       readonly intrinsic: AgentPolicyCandidateIntrinsic;
     }
   | {
+      readonly kind: 'selectorItemIntrinsic';
+      readonly intrinsic: 'key';
+    }
+  | {
       readonly kind: 'candidateParam';
       readonly id: string;
       readonly onMissing: CompiledAgentPolicyRefOnMissing;

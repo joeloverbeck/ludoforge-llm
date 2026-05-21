@@ -112,6 +112,11 @@ import {
   compilePostureEvaluatorDefinition,
   type AgentPostureEvaluatorWithExpr,
 } from './compile-agent-posture-evaluators.js';
+import {
+  lowerRelationshipDefinition,
+  parseRelationshipRefPath,
+  type AgentRelationshipWithExpr,
+} from './compile-agent-relationships.js';
 import { compilePlanTemplateDefinition } from './compile-agent-plan-templates.js';
 import { stripAgentLibraryExpressions } from './strip-agent-library-expressions.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
@@ -128,7 +133,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'turnShapeEvaluator' | 'postureEvaluator' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'turnShapeEvaluator' | 'postureEvaluator' | 'relationship' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -2227,6 +2232,7 @@ class AgentLibraryCompiler {
     readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
     readonly turnShapeEvaluators: Record<string, AgentTurnShapeEvaluatorWithExprInternal>;
     readonly postureEvaluators: Record<string, AgentPostureEvaluatorWithExprInternal>;
+    readonly relationships: Record<string, AgentRelationshipWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
     readonly strategicConditions: Record<string, StrategicConditionWithExpr>;
@@ -2241,6 +2247,7 @@ class AgentLibraryCompiler {
   private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly turnShapeStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly postureCompileState = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly relationshipStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -2254,6 +2261,7 @@ class AgentLibraryCompiler {
   private readonly guardrailStack: string[] = [];
   private readonly turnShapeStack: string[] = [];
   private readonly postureStack: string[] = [];
+  private readonly relationshipStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -2275,6 +2283,7 @@ class AgentLibraryCompiler {
       guardrails: {},
       turnShapeEvaluators: {},
       postureEvaluators: {},
+      relationships: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -2315,6 +2324,9 @@ class AgentLibraryCompiler {
       this.compilePostureEvaluator(evaluatorId);
     }
     this.validatePostureTraceLabels();
+    for (const relationshipId of Object.keys(this.authoredLibrary.relationships ?? {})) {
+      this.compileRelationship(relationshipId);
+    }
     for (const considerationId of Object.keys(this.authoredLibrary.considerations ?? {})) {
       this.compileConsideration(considerationId);
     }
@@ -3279,6 +3291,70 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
+  private compileRelationship(relationshipId: string): AgentRelationshipWithExpr | null {
+    const status = this.relationshipStatus.get(relationshipId);
+    if (status === 'done') {
+      return this.compiled.relationships[relationshipId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('relationships', relationshipId, this.relationshipStack);
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.relationships?.[relationshipId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`relationship.${relationshipId}`, `doc.agents.library.relationships.${relationshipId}`);
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+
+    this.relationshipStatus.set(relationshipId, 'compiling');
+    this.relationshipStack.push(relationshipId);
+    const basePath = `doc.agents.library.relationships.${relationshipId}`;
+    const compiled = lowerRelationshipDefinition({
+      relationshipId,
+      def,
+      basePath,
+      diagnostics: this.diagnostics,
+      createExprContext: () => this.createExprContext('relationship'),
+      isKnownSeatToken: (seatToken, path, refPath) => this.isKnownSeatToken(seatToken, path, refPath),
+      compileStrategicCondition: (conditionId) => this.compileStrategicCondition(conditionId),
+      reportUnknownLibraryRef: (refPath, path) => this.reportUnknownLibraryRef(refPath, path),
+    });
+    this.relationshipStack.pop();
+    if (compiled === null) {
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+    this.compiled.relationships[relationshipId] = compiled;
+    this.relationshipStatus.set(relationshipId, 'done');
+    return compiled;
+  }
+
+  private parseRelationshipRef(
+    refPath: string,
+    path: string,
+  ): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'seat' | 'gainValue' } | null {
+    const parsed = parseRelationshipRefPath(refPath);
+    if (parsed === null) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+    const hasRole = Object.keys(this.authoredLibrary.relationships ?? {}).some((relationshipId) => {
+      const relationship = this.compileRelationship(relationshipId);
+      return relationship?.role === parsed.role;
+    });
+    if (!hasRole) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+    return parsed;
+  }
+
   private validateConsiderationScopeRefs(
     considerationId: string,
     consideration: AgentConsiderationWithExpr,
@@ -3712,6 +3788,18 @@ class AgentLibraryCompiler {
         costClass: 'state',
         ref: { kind: 'strategicCondition', conditionId: parsed.ref.conditionId, field: parsed.ref.field },
         dependency: { kind: 'strategicConditions', id: parsed.ref.conditionId },
+      };
+    }
+
+    if (refPath.startsWith('relationship.')) {
+      const parsed = this.parseRelationshipRef(refPath, path);
+      if (parsed === null) {
+        return null;
+      }
+      return {
+        type: parsed.field === 'seat' ? 'id' : 'number',
+        costClass: 'state',
+        ref: { kind: 'relationship', role: parsed.role, field: parsed.field },
       };
     }
 

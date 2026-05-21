@@ -5,6 +5,7 @@ import type {
   CompiledAgentGuardrail,
   CompiledAgentLibraryIndex,
   CompiledAgentPostureEvaluator,
+  CompiledAgentRelationship,
   CompiledAgentSelector,
   CompiledAgentStateFeature,
   CompiledAgentStrategyModule,
@@ -25,6 +26,7 @@ export function stripAgentLibraryExpressions(library: AgentPolicyLibraryWithExpr
   const guardrails: Record<string, CompiledAgentGuardrail> = {};
   const turnShapeEvaluators: Record<string, CompiledAgentTurnShapeEvaluator> = {};
   const postureEvaluators: Record<string, CompiledAgentPostureEvaluator> = {};
+  const relationships: Record<string, CompiledAgentRelationship> = {};
   const considerations: Record<string, CompiledAgentConsideration> = {};
   const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
   const strategicConditions: Record<string, CompiledStrategicCondition> = {};
@@ -125,6 +127,16 @@ export function stripAgentLibraryExpressions(library: AgentPolicyLibraryWithExpr
       dependencies: evaluator.dependencies,
     };
   }
+  for (const [id, relationship] of Object.entries(library.relationships ?? {})) {
+    relationships[id] = {
+      role: relationship.role,
+      ...(relationship.seat === undefined ? {} : { seat: relationship.seat }),
+      ...(relationship.standingRole === undefined ? {} : { standingRole: relationship.standingRole }),
+      ...(relationship.condition === undefined ? {} : { condition: relationship.condition }),
+      priority: relationship.priority,
+      hasGainValue: relationship.gainValue !== undefined,
+    };
+  }
   for (const [id, consideration] of Object.entries(library.considerations)) {
     considerations[id] = {
       ...(consideration.scopes === undefined ? {} : { scopes: consideration.scopes }),
@@ -163,6 +175,7 @@ export function stripAgentLibraryExpressions(library: AgentPolicyLibraryWithExpr
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
     ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     ...(Object.keys(postureEvaluators).length === 0 ? {} : { postureEvaluators }),
+    ...(Object.keys(relationships).length === 0 ? {} : { relationships }),
     considerations,
     tieBreakers,
     strategicConditions,

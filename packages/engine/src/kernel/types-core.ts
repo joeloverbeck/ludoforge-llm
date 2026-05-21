@@ -64,6 +64,7 @@ import type {
   AgentPolicyMicroturnOptionIntrinsic,
   AgentPolicyPreviewOptionRefKind,
   AgentPolicyPreviewPlanRefKind,
+  AgentPolicyRelationshipRole,
   AgentPolicySeatAggAvailability,
   AgentPolicyStandingRoleSelector,
   AgentPolicyZoneAggSource,
@@ -603,6 +604,11 @@ export type CompiledAgentPolicyRef =
       readonly field: 'satisfied' | 'proximity';
     }
   | {
+      readonly kind: 'relationship';
+      readonly role: AgentPolicyRelationshipRole;
+      readonly field: 'seat' | 'gainValue';
+    }
+  | {
       readonly kind: 'candidateTag';
       readonly tagName: string;
     }
@@ -941,6 +947,15 @@ export interface CompiledPolicyStrategicCondition {
   };
 }
 
+export interface CompiledPolicyRelationship {
+  readonly role: AgentPolicyRelationshipRole;
+  readonly seat?: string;
+  readonly standingRole?: AgentPolicyStandingRoleSelector;
+  readonly condition?: string;
+  readonly priority: number;
+  readonly gainValue?: CompiledPolicyExpr;
+}
+
 export interface CompiledPolicyCatalog {
   readonly stateFeatures: Readonly<Record<string, CompiledPolicyStateFeature>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledPolicyCandidateFeature>>;
@@ -950,6 +965,7 @@ export interface CompiledPolicyCatalog {
   readonly guardrails?: Readonly<Record<string, GuardrailDef>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly postureEvaluators?: Readonly<Record<string, CompiledPostureEvaluator>>;
+  readonly relationships?: Readonly<Record<string, CompiledPolicyRelationship>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledPolicyStrategicCondition>>;
@@ -1324,6 +1340,15 @@ export interface CompiledStrategicCondition {
   };
 }
 
+export interface CompiledAgentRelationship {
+  readonly role: AgentPolicyRelationshipRole;
+  readonly seat?: string;
+  readonly standingRole?: AgentPolicyStandingRoleSelector;
+  readonly condition?: string;
+  readonly priority: number;
+  readonly hasGainValue: boolean;
+}
+
 export interface CompiledAgentLibraryIndex {
   readonly stateFeatures: Readonly<Record<string, CompiledAgentStateFeature>>;
   readonly candidateFeatures: Readonly<Record<string, CompiledAgentCandidateFeature>>;
@@ -1334,6 +1359,7 @@ export interface CompiledAgentLibraryIndex {
   readonly guardrails?: Readonly<Record<string, CompiledAgentGuardrail>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, CompiledAgentTurnShapeEvaluator>>;
   readonly postureEvaluators?: Readonly<Record<string, CompiledAgentPostureEvaluator>>;
+  readonly relationships?: Readonly<Record<string, CompiledAgentRelationship>>;
   readonly considerations: Readonly<Record<string, CompiledAgentConsideration>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker>>;
   readonly strategicConditions: Readonly<Record<string, CompiledStrategicCondition>>;

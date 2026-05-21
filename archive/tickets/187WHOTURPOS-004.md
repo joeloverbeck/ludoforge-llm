@@ -1,6 +1,6 @@
 # 187WHOTURPOS-004: `relationships` library bucket + relationship refs
 
-**Status**: PENDING
+**Status**: IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `contracts/policy-contract.ts`, `cnl/game-spec-doc.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`, `cnl/lower-agent-considerations.ts`, `cnl/compile-agents.ts`, `agents/policy-evaluation-core.ts`
@@ -87,3 +87,43 @@ In `agents/policy-evaluation-core.ts`, resolve `relationship.<role>.seat` (the s
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/<relationship-compiler-test>.test.js`
 2. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed: 2026-05-21
+
+What changed:
+
+- Added the generic `relationships` library bucket to the agent policy contract without adding it to profile-use buckets.
+- Added authored, compiled, stripped-library, and schema support for relationship entries with generic roles, optional strategic-condition gates, deterministic priority, canonical seat or standing-role binding, and optional numeric `gainValue`.
+- Added runtime refs `relationship.<role>.seat` and `relationship.<role>.gainValue` in `PolicyEvaluationContext`. Same-role bindings resolve by authored priority and only condition-satisfied entries bind; standing-role bindings reuse the existing standing-role selector substrate.
+- Added focused compiler and runtime tests for deterministic relationship compilation, unknown-seat rejection, invalid role/standing-role rejection, condition-gated role binding, standing-role resolution, and `gainValue` evaluation.
+- Regenerated `packages/engine/schemas/GameDef.schema.json` for the new compiled relationship surface.
+
+Deviations from original plan:
+
+- Relationship lowering was extracted to `packages/engine/src/cnl/compile-agent-relationships.ts` after the source-size gate. This keeps the largest new compiler logic out of the already-oversize `compile-agents.ts` while preserving the same compiler orchestration path.
+- Runtime relationship seat refs evaluate as policy `id` values, which the compiled expression runtime encodes numerically in the same way other id-valued refs do. Tests assert the encoded id value rather than raw string output.
+- The posture cross-validation for undeclared `relationship.<role>` refs remains out of scope for this ticket and stays with `187WHOTURPOS-005`, as drafted.
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Active growth | Crossed cap? | Resolution |
+| --- | ---: | ---: | ---: | --- | --- |
+| `packages/engine/src/cnl/compile-agent-relationships.ts` | 0 | 143 | +143 | no | New focused helper created by user-approved Option 1. |
+| `packages/engine/src/cnl/compile-agents.ts` | 5864 | 5952 | +88 | preexisting oversize, still oversize | Largest new validation block extracted; remaining growth is narrow orchestration/ref dispatch for a ticket-named compiler surface. |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2832 | 2862 | +30 | preexisting oversize, still oversize | Narrow runtime ref dispatch/cache/resolution for ticket-named relationship refs. |
+| `packages/engine/src/kernel/types-core.ts` | 2901 | 2927 | +26 | preexisting oversize, still oversize | Contract type union additions for ticket-named public surface. |
+| `packages/engine/src/kernel/schemas-core.ts` | 3236 | 3266 | +30 | preexisting oversize, still oversize | Contract schema additions for ticket-named public surface. |
+| `packages/engine/src/cnl/game-spec-doc.ts` | 1078 | 1088 | +10 | preexisting oversize, still oversize | Authored GameSpec type addition for ticket-named public surface. |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/compile-agents-relationship.test.js packages/engine/dist/test/unit/agents/policy-eval-relationship.test.js` — passed, 5 tests.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed after regenerating `GameDef.schema.json`.
+- `pnpm -F @ludoforge/engine test` — passed, 165/165 files.
+- `pnpm turbo lint` — passed, 2/2 tasks.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2470 archived tickets.
+- `git diff --check -- <touched files>` — passed.

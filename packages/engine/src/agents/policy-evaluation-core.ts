@@ -425,6 +425,7 @@ export class PolicyEvaluationContext {
   private currentGuardrailRefView: GuardrailRefView | undefined;
   private readonly turnShapeEvaluationCache = new Map<string, TurnShapeEvaluatorResult>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
+  private readonly relationshipCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
@@ -483,6 +484,7 @@ export class PolicyEvaluationContext {
     this.currentGuardrailRefView = undefined;
     this.turnShapeEvaluationCache.clear();
     this.strategicConditionCache.clear();
+    this.relationshipCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
     this.transientStateFeatureCache = null;
@@ -1858,6 +1860,8 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'relationship':
+        return this.resolveRelationshipRef(ref.role, ref.field);
       case 'strategyModule':
         return this.resolveStrategyModuleRef(ref, candidate);
       case 'guardrail':
@@ -2111,6 +2115,32 @@ export class PolicyEvaluationContext {
     }
 
     this.strategicConditionCache.set(cacheKey, value);
+    return value;
+  }
+
+  private resolveRelationshipRef(
+    role: Extract<CompiledAgentPolicyRef, { readonly kind: 'relationship' }>['role'],
+    field: Extract<CompiledAgentPolicyRef, { readonly kind: 'relationship' }>['field'],
+  ): PolicyValue {
+    const cacheKey = `${role}.${field}`;
+    if (this.relationshipCache.has(cacheKey)) {
+      return this.relationshipCache.get(cacheKey);
+    }
+    const relationship = Object.entries(this.input.catalog.compiled.relationships ?? {})
+      .filter(([, entry]) => entry.role === role)
+      .sort((left, right) => left[1].priority - right[1].priority || (left[0] < right[0] ? -1 : left[0] > right[0] ? 1 : 0))
+      .find(([, entry]) => entry.condition === undefined || this.resolveStrategicConditionRef(entry.condition, 'satisfied') === true)?.[1];
+    let value: PolicyValue;
+    if (relationship === undefined) {
+      value = undefined;
+    } else if (field === 'seat') {
+      value = relationship.standingRole === undefined
+        ? relationship.seat
+        : resolvePolicyStandingRoleSelector(this.input.def, this.activeState, relationship.standingRole, this.input.seatId);
+    } else {
+      value = relationship.gainValue === undefined ? undefined : this.evaluateCompiledExpr(relationship.gainValue, undefined);
+    }
+    this.relationshipCache.set(cacheKey, value);
     return value;
   }
 

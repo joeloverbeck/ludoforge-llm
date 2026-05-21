@@ -887,6 +887,15 @@ export interface GameSpecPostureEvaluatorDef {
   }[];
 }
 
+export interface GameSpecRelationshipDef {
+  readonly role?: string;
+  readonly seat?: string;
+  readonly standingRole?: string;
+  readonly condition?: string;
+  readonly priority?: number;
+  readonly gainValue?: GameSpecPolicyExpr;
+}
+
 export interface GameSpecAgentLibrary {
   readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
   readonly candidateFeatures?: Readonly<Record<string, GameSpecCandidateFeatureDef>>;
@@ -897,6 +906,7 @@ export interface GameSpecAgentLibrary {
   readonly guardrails?: Readonly<Record<string, GameSpecGuardrailDef>>;
   readonly turnShapeEvaluators?: Readonly<Record<string, GameSpecTurnShapeEvaluatorDef>>;
   readonly postureEvaluators?: Readonly<Record<string, GameSpecPostureEvaluatorDef>>;
+  readonly relationships?: Readonly<Record<string, GameSpecRelationshipDef>>;
   readonly considerations?: Readonly<Record<string, GameSpecConsiderationDef>>;
   readonly tieBreakers?: Readonly<Record<string, GameSpecTieBreakerDef>>;
   readonly strategicConditions?: Readonly<Record<string, GameSpecStrategicConditionDef>>;

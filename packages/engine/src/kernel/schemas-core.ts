@@ -5,6 +5,7 @@ import {
   AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
   AGENT_POLICY_PREVIEW_OPTION_REF_KINDS,
   AGENT_POLICY_PREVIEW_PLAN_REF_KINDS,
+  AGENT_POLICY_RELATIONSHIP_ROLES,
   AGENT_POLICY_SEAT_AGG_AVAILABILITY_MODES,
   AGENT_POLICY_STANDING_ROLE_SELECTORS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
@@ -870,6 +871,11 @@ const CompiledAgentPolicyRefSchema = z.union([
     field: z.union([z.literal('satisfied'), z.literal('proximity')]),
   }).strict(),
   z.object({
+    kind: z.literal('relationship'),
+    role: z.enum(AGENT_POLICY_RELATIONSHIP_ROLES),
+    field: z.union([z.literal('seat'), z.literal('gainValue')]),
+  }).strict(),
+  z.object({
     kind: z.literal('candidateTag'),
     tagName: StringSchema,
   }).strict(),
@@ -1562,6 +1568,17 @@ const CompiledPolicyStrategicConditionSchema = z
   })
   .strict();
 
+const CompiledPolicyRelationshipSchema = z
+  .object({
+    role: z.enum(AGENT_POLICY_RELATIONSHIP_ROLES),
+    seat: StringSchema.optional(),
+    standingRole: z.enum(AGENT_POLICY_STANDING_ROLE_SELECTORS).optional(),
+    condition: StringSchema.optional(),
+    priority: NumberSchema,
+    gainValue: CompiledPolicyExprSchema.optional(),
+  })
+  .strict();
+
 const CompiledPostureEvaluatorSchema = z
   .object({
     id: StringSchema,
@@ -1595,6 +1612,7 @@ const CompiledPolicyCatalogSchema = z
     strategyModules: z.record(StringSchema, StrategyModuleSchema).optional(),
     guardrails: z.record(StringSchema, GuardrailSchema).optional(),
     postureEvaluators: z.record(StringSchema, CompiledPostureEvaluatorSchema).optional(),
+    relationships: z.record(StringSchema, CompiledPolicyRelationshipSchema).optional(),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledPolicyStrategicConditionSchema),
@@ -1618,6 +1636,17 @@ const CompiledStrategicConditionSchema = z
       })
       .strict()
       .optional(),
+  })
+  .strict();
+
+const CompiledAgentRelationshipSchema = z
+  .object({
+    role: z.enum(AGENT_POLICY_RELATIONSHIP_ROLES),
+    seat: StringSchema.optional(),
+    standingRole: z.enum(AGENT_POLICY_STANDING_ROLE_SELECTORS).optional(),
+    condition: StringSchema.optional(),
+    priority: NumberSchema,
+    hasGainValue: z.boolean(),
   })
   .strict();
 
@@ -1649,6 +1678,7 @@ const CompiledAgentLibraryIndexSchema = z
     planTemplates: z.record(StringSchema, CompiledPlanTemplateSchema).optional(),
     guardrails: z.record(StringSchema, CompiledAgentGuardrailSchema).optional(),
     postureEvaluators: z.record(StringSchema, CompiledAgentPostureEvaluatorSchema).optional(),
+    relationships: z.record(StringSchema, CompiledAgentRelationshipSchema).optional(),
     considerations: z.record(StringSchema, CompiledAgentConsiderationSchema),
     tieBreakers: z.record(StringSchema, CompiledAgentTieBreakerSchema),
     strategicConditions: z.record(StringSchema, CompiledStrategicConditionSchema),

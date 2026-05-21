@@ -13,6 +13,7 @@ import type {
   CompiledPolicyConsideration,
   CompiledPolicyExpr,
   CompiledPolicySelector,
+  CompiledPolicyRelationship,
   CompiledPostureEvaluator,
   CompiledPlanTemplate,
   CompiledPolicyStateFeature,
@@ -56,6 +57,7 @@ export interface AgentPolicyLibraryWithExpr {
   readonly guardrails: Readonly<Record<string, GuardrailDef>>;
   readonly turnShapeEvaluators: Readonly<Record<string, TurnShapeEvaluatorDef>>;
   readonly postureEvaluators: Readonly<Record<string, CompiledPostureEvaluator>>;
+  readonly relationships: Readonly<Record<string, CompiledPolicyRelationship>>;
   readonly considerations: Readonly<Record<string, {
     readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
@@ -102,6 +104,7 @@ export function lowerAgentConsiderations(
   const guardrails: Record<string, GuardrailDef> = {};
   const turnShapeEvaluators: Record<string, TurnShapeEvaluatorDef> = {};
   const postureEvaluators: Record<string, CompiledPostureEvaluator> = {};
+  const relationships: Record<string, CompiledPolicyRelationship> = {};
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   const tieBreakers: Record<string, CompiledPolicyTieBreaker> = {};
   const strategicConditions: Record<string, CompiledPolicyStrategicCondition> = {};
@@ -271,6 +274,17 @@ export function lowerAgentConsiderations(
     };
   }
 
+  for (const [relationshipId, relationship] of Object.entries(library.relationships)) {
+    const gainValue = relationship.gainValue === undefined ? null : lowerAgentPolicyExpr(relationship.gainValue);
+    if (relationship.gainValue !== undefined && gainValue === null) {
+      continue;
+    }
+    relationships[relationshipId] = {
+      ...relationship,
+      ...(gainValue === null ? {} : { gainValue }),
+    };
+  }
+
   for (const [considerationId, consideration] of Object.entries(library.considerations)) {
     const weight = lowerAgentPolicyExpr(consideration.weight);
     const value = lowerAgentPolicyExpr(consideration.value);
@@ -337,6 +351,7 @@ export function lowerAgentConsiderations(
     ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
     ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
     ...(Object.keys(postureEvaluators).length === 0 ? {} : { postureEvaluators }),
+    ...(Object.keys(relationships).length === 0 ? {} : { relationships }),
     considerations,
     tieBreakers,
     strategicConditions,

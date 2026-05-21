@@ -164,6 +164,7 @@ function mergePlanDependencies(
   const planTemplates = uniqueSorted(dependencies.flatMap((entry) => entry.planTemplates ?? []));
   const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
+  const postureEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.postureEvaluators ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -174,6 +175,7 @@ function mergePlanDependencies(
     ...(planTemplates.length === 0 ? {} : { planTemplates }),
     ...(guardrails.length === 0 ? {} : { guardrails }),
     ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
+    ...(postureEvaluators.length === 0 ? {} : { postureEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

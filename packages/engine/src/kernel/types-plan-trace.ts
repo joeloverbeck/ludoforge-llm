@@ -14,6 +14,49 @@ export interface PolicyPlanTraceAlternative {
   readonly stableKey: string;
 }
 
+export interface PolicyPlanTracePostureMustViolation {
+  readonly id: string;
+  readonly action: 'demote' | 'veto';
+  readonly penalty?: number;
+}
+
+export interface PolicyPlanTracePosturePreferContribution {
+  readonly id: string;
+  readonly status: string;
+  readonly value?: number;
+  readonly weight?: number;
+  readonly contribution: number;
+  readonly fallbackReason?: string;
+}
+
+export interface PolicyPlanTraceAllyWeightActiveRole {
+  readonly relationshipId: string;
+  readonly role: string;
+  readonly seat: string;
+  readonly priority: number;
+  readonly gainValue?: number;
+}
+
+export interface PolicyPlanTraceAllyWeightFlip {
+  readonly contributionId: string;
+  readonly allyRole: string;
+  readonly thresholdRole: string;
+  readonly seat: string;
+  readonly fired: boolean;
+}
+
+export interface PolicyPlanTraceAllyWeightContext {
+  readonly activeRoles: readonly PolicyPlanTraceAllyWeightActiveRole[];
+  readonly flips: readonly PolicyPlanTraceAllyWeightFlip[];
+}
+
+export interface PolicyPlanTracePosture {
+  readonly status: string;
+  readonly mustViolations: readonly PolicyPlanTracePostureMustViolation[];
+  readonly preferContributions: readonly PolicyPlanTracePosturePreferContribution[];
+  readonly allyWeightContext?: PolicyPlanTraceAllyWeightContext;
+}
+
 export interface PolicyPlanMicroturnTrace {
   readonly expectedStep: string | null;
   readonly matchedRole: string | null;
@@ -37,6 +80,6 @@ export interface PolicyPlanTrace {
   }[];
   readonly roleBindings: readonly PolicyPlanTraceRoleBinding[];
   readonly alternatives: readonly PolicyPlanTraceAlternative[];
-  readonly postureStatus: 'notConfigured' | 'ready' | 'unavailable';
+  readonly posture: PolicyPlanTracePosture;
   readonly microturns?: readonly PolicyPlanMicroturnTrace[];
 }

@@ -30,20 +30,16 @@ import type {
   AgentPolicyValueType,
   CompiledAgentPolicyRef,
   CompiledAgentAggregate,
+  CompiledAgentCandidateFeature,
   CompiledAgentCandidateParamDef,
   CompiledAgentConsideration,
-  CompiledAgentCandidateFeature,
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
   CompiledAgentPreviewBudgetConfig,
   CompiledAgentPreviewInnerConfig,
   CompiledAgentPreviewGrantFlowContinuationConfig,
-  CompiledAgentSelector,
   CompiledPlanTemplate,
-  CompiledAgentGuardrail,
-  CompiledAgentTurnShapeEvaluator,
-  CompiledAgentStrategyModule,
   CompiledPolicySelector,
   GuardrailCostClass,
   ModuleCostClass,
@@ -112,7 +108,17 @@ import {
   tagUnregisteredTurnShapePreviewRef,
   type AgentTurnShapeEvaluatorWithExpr,
 } from './compile-agent-turn-shape.js';
+import {
+  compilePostureEvaluatorDefinition,
+  type AgentPostureEvaluatorWithExpr,
+} from './compile-agent-posture-evaluators.js';
+import {
+  lowerRelationshipDefinition,
+  parseRelationshipRefPath,
+  type AgentRelationshipWithExpr,
+} from './compile-agent-relationships.js';
 import { compilePlanTemplateDefinition } from './compile-agent-plan-templates.js';
+import { stripAgentLibraryExpressions } from './strip-agent-library-expressions.js';
 import { collectPreviewSeatAggRefIds, warnImplicitPreviewSeatAggAvailability } from './preview-seat-agg-refs.js';
 import { asBoundaryId } from '../kernel/branded.js';
 import {
@@ -127,7 +133,7 @@ type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
 type ConsiderationScope = 'move' | 'microturn';
-type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'turnShapeEvaluator' | 'consideration' | 'tieBreaker' | 'strategicCondition';
+type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'selector' | 'strategyModule' | 'guardrail' | 'turnShapeEvaluator' | 'postureEvaluator' | 'relationship' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
 type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
@@ -140,6 +146,7 @@ type AgentSelectorWithExpr = CompiledPolicySelector;
 type AgentPlanTemplateWithExpr = CompiledPlanTemplate;
 type AgentGuardrailWithExprInternal = AgentGuardrailWithExpr;
 type AgentTurnShapeEvaluatorWithExprInternal = AgentTurnShapeEvaluatorWithExpr;
+type AgentPostureEvaluatorWithExprInternal = AgentPostureEvaluatorWithExpr;
 type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
@@ -248,141 +255,6 @@ export function lowerAgents(
     ...catalogWithoutFingerprint,
     catalogFingerprint: fingerprintPolicyIr(catalogWithoutFingerprint),
   } satisfies AgentPolicyCatalog;
-}
-
-function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAgentLibraryIndex {
-  const stateFeatures: Record<string, CompiledAgentStateFeature> = {};
-  const candidateFeatures: Record<string, CompiledAgentCandidateFeature> = {};
-  const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
-  const selectors: Record<string, CompiledAgentSelector> = {};
-  const strategyModules: Record<string, CompiledAgentStrategyModule> = {};
-  const planTemplates: Record<string, CompiledPlanTemplate> = {};
-  const guardrails: Record<string, CompiledAgentGuardrail> = {};
-  const turnShapeEvaluators: Record<string, CompiledAgentTurnShapeEvaluator> = {};
-  const considerations: Record<string, CompiledAgentConsideration> = {};
-  const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
-  const strategicConditions: Record<string, CompiledStrategicCondition> = {};
-
-  for (const [id, feature] of Object.entries(library.stateFeatures)) {
-    stateFeatures[id] = {
-      type: feature.type,
-      costClass: feature.costClass,
-      dependencies: feature.dependencies,
-    };
-  }
-  for (const [id, feature] of Object.entries(library.candidateFeatures)) {
-    candidateFeatures[id] = {
-      type: feature.type,
-      costClass: feature.costClass,
-      dependencies: feature.dependencies,
-    };
-  }
-  for (const [id, aggregate] of Object.entries(library.candidateAggregates)) {
-    candidateAggregates[id] = {
-      type: aggregate.type,
-      costClass: aggregate.costClass,
-      op: aggregate.op,
-      dependencies: aggregate.dependencies,
-    };
-  }
-  for (const [id, selector] of Object.entries(library.selectors ?? {})) {
-    selectors[id] = {
-      scopes: selector.scopes,
-      source: selector.source,
-      result: selector.result,
-      costClass: selector.costClass,
-      dependencies: selector.dependencies,
-    };
-  }
-  for (const [id, module] of Object.entries(library.strategyModules ?? {})) {
-    strategyModules[id] = {
-      traceLabel: module.traceLabel,
-      applies: module.applies,
-      selectors: module.selectors,
-      scoreGroups: module.scoreGroups.map((group) => ({
-        id: group.id,
-        summary: group.summary,
-      })),
-      guardrailIds: module.guardrailIds,
-      fallback: module.fallback,
-      costClass: module.costClass,
-      dependencies: module.dependencies,
-    };
-  }
-  for (const [id, template] of Object.entries(library.planTemplates ?? {})) {
-    planTemplates[id] = template;
-  }
-  for (const [id, guardrail] of Object.entries(library.guardrails ?? {})) {
-    guardrails[id] = {
-      traceLabel: guardrail.traceLabel,
-      scopes: guardrail.scopes,
-      severity: guardrail.severity,
-      costClass: guardrail.costClass,
-      dependencies: guardrail.dependencies,
-      ...(guardrail.safe === undefined ? {} : { safe: guardrail.safe }),
-      onUnavailable: guardrail.onUnavailable,
-      ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
-    };
-  }
-  for (const [id, evaluator] of Object.entries(library.turnShapeEvaluators ?? {})) {
-    turnShapeEvaluators[id] = {
-      traceLabel: evaluator.traceLabel,
-      source: evaluator.source,
-      bounds: evaluator.bounds,
-      objectives: evaluator.objectives.map((objective) => ({
-        id: objective.id,
-        hasValue: objective.value !== undefined,
-        hasDelta: objective.delta !== undefined,
-      })),
-      fallback: {
-        onPreviewUnavailable: evaluator.fallback.onPreviewUnavailable,
-        hasDemotePenalty: evaluator.fallback.demotePenalty !== undefined,
-      },
-      costClass: evaluator.costClass,
-      dependencies: evaluator.dependencies,
-    };
-  }
-  for (const [id, consideration] of Object.entries(library.considerations)) {
-    considerations[id] = {
-      ...(consideration.scopes === undefined ? {} : { scopes: consideration.scopes }),
-      costClass: consideration.costClass,
-      ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
-      ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
-      ...(consideration.lookupFallback === undefined ? {} : { lookupFallback: consideration.lookupFallback }),
-      ...(consideration.candidateParamFallback === undefined ? {} : { candidateParamFallback: consideration.candidateParamFallback }),
-      ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
-      dependencies: consideration.dependencies,
-    };
-  }
-  for (const [id, tieBreaker] of Object.entries(library.tieBreakers)) {
-    tieBreakers[id] = {
-      kind: tieBreaker.kind,
-      costClass: tieBreaker.costClass,
-      ...(tieBreaker.order === undefined ? {} : { order: tieBreaker.order }),
-      dependencies: tieBreaker.dependencies,
-    };
-  }
-  for (const [id, condition] of Object.entries(library.strategicConditions)) {
-    strategicConditions[id] = {
-      ...(condition.proximity === undefined
-        ? {}
-        : { proximity: { threshold: condition.proximity.threshold } }),
-    };
-  }
-
-  return {
-    stateFeatures,
-    candidateFeatures,
-    candidateAggregates,
-    ...(Object.keys(selectors).length === 0 ? {} : { selectors }),
-    ...(Object.keys(strategyModules).length === 0 ? {} : { strategyModules }),
-    ...(Object.keys(planTemplates).length === 0 ? {} : { planTemplates }),
-    ...(Object.keys(guardrails).length === 0 ? {} : { guardrails }),
-    ...(Object.keys(turnShapeEvaluators).length === 0 ? {} : { turnShapeEvaluators }),
-    considerations,
-    tieBreakers,
-    strategicConditions,
-  };
 }
 
 /**
@@ -2359,6 +2231,8 @@ class AgentLibraryCompiler {
     readonly planTemplates: Record<string, AgentPlanTemplateWithExpr>;
     readonly guardrails: Record<string, AgentGuardrailWithExprInternal>;
     readonly turnShapeEvaluators: Record<string, AgentTurnShapeEvaluatorWithExprInternal>;
+    readonly postureEvaluators: Record<string, AgentPostureEvaluatorWithExprInternal>;
+    readonly relationships: Record<string, AgentRelationshipWithExpr>;
     readonly considerations: Record<string, AgentConsiderationWithExpr>;
     readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
     readonly strategicConditions: Record<string, StrategicConditionWithExpr>;
@@ -2372,6 +2246,8 @@ class AgentLibraryCompiler {
   private readonly planTemplateStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly guardrailStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly turnShapeStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly postureCompileState = new Map<string, 'compiling' | 'done' | 'failed'>();
+  private readonly relationshipStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
   private readonly considerationStatus = new Map<string, 'done' | 'failed'>();
   private readonly tieBreakerStatus = new Map<string, 'done' | 'failed'>();
   private readonly strategicConditionStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -2384,6 +2260,8 @@ class AgentLibraryCompiler {
   private readonly planTemplateStack: string[] = [];
   private readonly guardrailStack: string[] = [];
   private readonly turnShapeStack: string[] = [];
+  private readonly postureStack: string[] = [];
+  private readonly relationshipStack: string[] = [];
   private readonly strategicConditionStack: string[] = [];
 
   constructor(
@@ -2404,6 +2282,8 @@ class AgentLibraryCompiler {
       planTemplates: {},
       guardrails: {},
       turnShapeEvaluators: {},
+      postureEvaluators: {},
+      relationships: {},
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -2440,6 +2320,13 @@ class AgentLibraryCompiler {
       this.compileTurnShapeEvaluator(evaluatorId);
     }
     this.validateTurnShapeTraceLabels();
+    for (const evaluatorId of Object.keys(this.authoredLibrary.postureEvaluators ?? {})) {
+      this.compilePostureEvaluator(evaluatorId);
+    }
+    this.validatePostureTraceLabels();
+    for (const relationshipId of Object.keys(this.authoredLibrary.relationships ?? {})) {
+      this.compileRelationship(relationshipId);
+    }
     for (const considerationId of Object.keys(this.authoredLibrary.considerations ?? {})) {
       this.compileConsideration(considerationId);
     }
@@ -2528,6 +2415,27 @@ class AgentLibraryCompiler {
       delete this.compiled.turnShapeEvaluators[evaluatorId];
     }
   }
+
+  private validatePostureTraceLabels(): void {
+    const seen = new Map<string, string>();
+    for (const [evaluatorId, evaluator] of Object.entries(this.compiled.postureEvaluators)) {
+      const priorId = seen.get(evaluator.traceLabel);
+      if (priorId === undefined) {
+        seen.set(evaluator.traceLabel, evaluatorId);
+        continue;
+      }
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POSTURE_TRACE_LABEL_DUPLICATE,
+        path: `doc.agents.library.postureEvaluators.${evaluatorId}.traceLabel`,
+        severity: 'error',
+        message: `Posture evaluator traceLabel "${evaluator.traceLabel}" is also used by "${priorId}".`,
+        suggestion: 'Use unique posture evaluator trace labels for deterministic posture traces.',
+      });
+      this.postureCompileState.set(evaluatorId, 'failed');
+      delete this.compiled.postureEvaluators[evaluatorId];
+    }
+  }
+
 
   private compileStateFeature(featureId: string): AgentStateFeatureWithExpr | null {
     const status = this.stateFeatureStatus.get(featureId);
@@ -2882,7 +2790,7 @@ class AgentLibraryCompiler {
 
     this.planTemplateStatus.set(templateId, 'compiling');
     this.planTemplateStack.push(templateId);
-    const compiled = compilePlanTemplateDefinition({
+    const compiledBase = compilePlanTemplateDefinition({
       templateId,
       def,
       diagnostics: this.diagnostics,
@@ -2890,9 +2798,31 @@ class AgentLibraryCompiler {
     });
     this.planTemplateStack.pop();
 
-    if (compiled === null) {
+    if (compiledBase === null) {
       this.planTemplateStatus.set(templateId, 'failed');
       return null;
+    }
+    let compiled = compiledBase;
+    if (def.postureHook !== undefined) {
+      const postureEvaluator = this.compilePostureEvaluator(def.postureHook);
+      if (postureEvaluator === null) {
+        this.reportPostureRefUnknown(
+          `posture.${def.postureHook}`,
+          `doc.agents.library.planTemplates.${templateId}.postureHook`,
+        );
+        this.planTemplateStatus.set(templateId, 'failed');
+        return null;
+      }
+      compiled = {
+        ...compiledBase,
+        dependencies: mergeDependencies([
+          compiledBase.dependencies,
+          {
+            ...emptyDependencies(),
+            postureEvaluators: [def.postureHook],
+          },
+        ]),
+      };
     }
     this.compiled.planTemplates[templateId] = compiled;
     this.planTemplateStatus.set(templateId, 'done');
@@ -2982,6 +2912,48 @@ class AgentLibraryCompiler {
     }
     this.compiled.turnShapeEvaluators[evaluatorId] = compiled;
     this.turnShapeStatus.set(evaluatorId, 'done');
+    return compiled;
+  }
+
+  private compilePostureEvaluator(evaluatorId: string): AgentPostureEvaluatorWithExprInternal | null {
+    const status = this.postureCompileState.get(evaluatorId);
+    if (status === 'done') {
+      return this.compiled.postureEvaluators[evaluatorId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportPostureCycle(evaluatorId);
+      this.postureCompileState.set(evaluatorId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.postureEvaluators?.[evaluatorId];
+    if (def === undefined) {
+      this.reportPostureRefUnknown(`posture.${evaluatorId}`, `doc.agents.library.postureEvaluators.${evaluatorId}`);
+      this.postureCompileState.set(evaluatorId, 'failed');
+      return null;
+    }
+
+    this.postureCompileState.set(evaluatorId, 'compiling');
+    this.postureStack.push(evaluatorId);
+    const context = this.createExprContext('postureEvaluator', true);
+    const compiled = compilePostureEvaluatorDefinition({
+      evaluatorId,
+      def,
+      context,
+      diagnostics: this.diagnostics,
+      reportPostureRefUnknown: (refPath, path) => this.reportPostureRefUnknown(refPath, path),
+    });
+    this.postureStack.pop();
+
+    if (compiled === null) {
+      this.postureCompileState.set(evaluatorId, 'failed');
+      return null;
+    }
+    this.compiled.postureEvaluators[evaluatorId] = compiled;
+    this.postureCompileState.set(evaluatorId, 'done');
     return compiled;
   }
 
@@ -3317,6 +3289,67 @@ class AgentLibraryCompiler {
     this.strategicConditionStack.pop();
     this.strategicConditionStatus.set(conditionId, 'done');
     return compiled;
+  }
+
+  private compileRelationship(relationshipId: string): AgentRelationshipWithExpr | null {
+    const status = this.relationshipStatus.get(relationshipId);
+    if (status === 'done') {
+      return this.compiled.relationships[relationshipId] ?? null;
+    }
+    if (status === 'failed') {
+      return null;
+    }
+    if (status === 'compiling') {
+      this.reportCycle('relationships', relationshipId, this.relationshipStack);
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+
+    const def = this.authoredLibrary.relationships?.[relationshipId];
+    if (def === undefined) {
+      this.reportUnknownLibraryRef(`relationship.${relationshipId}`, `doc.agents.library.relationships.${relationshipId}`);
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+
+    this.relationshipStatus.set(relationshipId, 'compiling');
+    this.relationshipStack.push(relationshipId);
+    const basePath = `doc.agents.library.relationships.${relationshipId}`;
+    const compiled = lowerRelationshipDefinition({
+      relationshipId,
+      def,
+      basePath,
+      diagnostics: this.diagnostics,
+      createExprContext: () => this.createExprContext('relationship'),
+      isKnownSeatToken: (seatToken, path, refPath) => this.isKnownSeatToken(seatToken, path, refPath),
+      compileStrategicCondition: (conditionId) => this.compileStrategicCondition(conditionId),
+      reportUnknownLibraryRef: (refPath, path) => this.reportUnknownLibraryRef(refPath, path),
+    });
+    this.relationshipStack.pop();
+    if (compiled === null) {
+      this.relationshipStatus.set(relationshipId, 'failed');
+      return null;
+    }
+    this.compiled.relationships[relationshipId] = compiled;
+    this.relationshipStatus.set(relationshipId, 'done');
+    return compiled;
+  }
+
+  private parseRelationshipRef(scope: LibraryRefScope, refPath: string, path: string): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'seat' | 'gainValue' } | null {
+    const parsed = parseRelationshipRefPath(refPath);
+    if (parsed === null) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+    const hasRole = Object.keys(this.authoredLibrary.relationships ?? {}).some((relationshipId) => {
+      const relationship = this.compileRelationship(relationshipId);
+      return relationship?.role === parsed.role;
+    });
+    if (!hasRole) {
+      (scope === 'postureEvaluator' ? this.reportPostureRefUnknown : this.reportUnknownLibraryRef).call(this, refPath, path);
+      return null;
+    }
+    return parsed;
   }
 
   private validateConsiderationScopeRefs(
@@ -3755,6 +3788,18 @@ class AgentLibraryCompiler {
       };
     }
 
+    if (refPath.startsWith('relationship.')) {
+      const parsed = this.parseRelationshipRef(scope, refPath, path);
+      if (parsed === null) {
+        return null;
+      }
+      return {
+        type: parsed.field === 'seat' ? 'id' : 'number',
+        costClass: 'state',
+        ref: { kind: 'relationship', role: parsed.role, field: parsed.field },
+      };
+    }
+
     if (refPath.startsWith('module.')) {
       const parsed = parseModuleRef(refPath);
       if (parsed === null) {
@@ -3936,6 +3981,11 @@ class AgentLibraryCompiler {
     const previewOptionResolved = this.resolvePreviewOptionRuntimeRef(scope, refPath, path);
     if (previewOptionResolved !== null) {
       return previewOptionResolved;
+    }
+
+    const previewPlanResolved = this.resolvePreviewPlanRuntimeRef(scope, refPath, path);
+    if (previewPlanResolved !== null) {
+      return previewPlanResolved;
     }
 
     const previewResolved = this.resolvePreviewRuntimeRef(scope, refPath, path);
@@ -4276,6 +4326,34 @@ class AgentLibraryCompiler {
     return null;
   }
 
+  private resolvePreviewPlanRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (!refPath.startsWith('preview.plan.')) {
+      return null;
+    }
+    if (scope === 'stateFeature') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED,
+        path,
+        severity: 'error',
+        message: `State features may not use preview-plan refs ("${refPath}").`,
+        suggestion: 'Use preview.plan.* refs only from plan/posture-scoped policy expressions.',
+      });
+      return null;
+    }
+
+    const planPath = refPath.slice('preview.plan.'.length);
+    switch (planPath) {
+      case 'delta.victory.currentMargin.self':
+        if (this.options.hasVictoryMargins === false) {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewPlanRef', refKind: 'deltaVictoryCurrentMarginSelf' } };
+      default:
+        return null;
+    }
+  }
+
   private resolvePreviewRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
     if (!refPath.startsWith('preview.')) {
       return null;
@@ -4605,6 +4683,16 @@ class AgentLibraryCompiler {
     });
   }
 
+  private reportPostureCycle(evaluatorId: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POSTURE_DEPENDENCY_CYCLE,
+      path: `doc.agents.library.postureEvaluators.${evaluatorId}`,
+      severity: 'error',
+      message: `Agent policy posture evaluator dependency cycle detected: ${[...this.postureStack, evaluatorId].join(' -> ')}.`,
+      suggestion: 'Break the cycle so each posture evaluator depends on an acyclic graph.',
+    });
+  }
+
   private reportModuleRefUnknown(refPath: string, path: string): void {
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
@@ -4632,6 +4720,16 @@ class AgentLibraryCompiler {
       severity: 'error',
       message: `Turn-shape evaluator references unknown or unsupported ref "${refPath}".`,
       suggestion: 'Use declared modules, objectives, preview refs, or supported turnShape fields.',
+    });
+  }
+
+  private reportPostureRefUnknown(refPath: string, path: string): void {
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POSTURE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Posture evaluator references unknown or unsupported ref "${refPath}".`,
+      suggestion: 'Use declared conditions, features, preview refs, or supported posture fields.',
     });
   }
 
@@ -5752,6 +5850,9 @@ function collectConsiderationRefKinds(
       case 'previewSurface':
         kinds.add('preview');
         return;
+      case 'previewPlanRef':
+        kinds.add('preview');
+        return;
       case 'microturnIntrinsic':
       case 'microturnOptionIntrinsic':
       case 'previewOptionRef':
@@ -5803,6 +5904,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
   const planTemplates = uniqueSorted(dependencies.flatMap((entry) => entry.planTemplates ?? []));
   const guardrails = uniqueSorted(dependencies.flatMap((entry) => entry.guardrails ?? []));
   const turnShapeEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.turnShapeEvaluators ?? []));
+  const postureEvaluators = uniqueSorted(dependencies.flatMap((entry) => entry.postureEvaluators ?? []));
   return {
     parameters: uniqueSorted(dependencies.flatMap((entry) => entry.parameters)),
     stateFeatures: uniqueSorted(dependencies.flatMap((entry) => entry.stateFeatures)),
@@ -5813,6 +5915,7 @@ function mergeDependencies(dependencies: readonly CompiledAgentDependencyRefs[])
     ...(planTemplates.length === 0 ? {} : { planTemplates }),
     ...(guardrails.length === 0 ? {} : { guardrails }),
     ...(turnShapeEvaluators.length === 0 ? {} : { turnShapeEvaluators }),
+    ...(postureEvaluators.length === 0 ? {} : { postureEvaluators }),
     strategicConditions: uniqueSorted(dependencies.flatMap((entry) => entry.strategicConditions)),
   };
 }

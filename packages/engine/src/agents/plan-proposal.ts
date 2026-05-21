@@ -23,6 +23,9 @@ import {
   type PlanRoleBinding,
 } from './plan-execution.js';
 import { buildPlanProposalTrace } from './plan-trace.js';
+import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from './policy-evaluation-core.js';
+import { evaluatePostureEvaluator } from './policy-posture-eval.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
 
 export const PLAN_CAP_CLASS_BUDGETS = {
@@ -47,6 +50,7 @@ export interface PlanProposalAlternative {
   readonly priorityTier: number;
   readonly stableKey: string;
   readonly roleBindings: Readonly<Record<string, PlanRoleBinding>>;
+  readonly posture: PolicyPlanTrace['posture'];
 }
 
 export interface SelectedPlanProposal extends PlanProposalAlternative {
@@ -65,7 +69,7 @@ export interface PlanProposalResult {
     readonly doctrineId: string;
     readonly reason: 'inactive' | 'noRootMatch';
   }[];
-  readonly postureStatus: PolicyPlanTrace['postureStatus'];
+  readonly posture: PolicyPlanTrace['posture'];
 }
 
 export interface ProposeAdvisoryTurnPlanInput {
@@ -76,12 +80,13 @@ export interface ProposeAdvisoryTurnPlanInput {
   readonly profile: CompiledAgentProfile;
   readonly catalog: AgentPolicyCatalog;
   readonly actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[];
+  readonly previewPlanRefsByRootStableMoveKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
 }
 
 export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): PlanProposalResult => {
   const templateIds = input.profile.plan.planTemplates ?? [];
   if (templateIds.length === 0) {
-    return emptyProposal('noTemplate', [], [], 'notConfigured');
+    return emptyProposal('noTemplate', [], [], notConfiguredPosture());
   }
 
   const rootCandidates = rootCandidatesFor(input.def, input.actionDecisions);
@@ -109,14 +114,19 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       const priorityTier = highestDoctrineTier(input, activeDoctrines, root);
       const roleScore = Object.values(roleBindings).reduce((total, binding) => total + binding.quality, 0);
       const considerationScore = scorePlanLeafConsiderations(input, root);
+      const posture = evaluatePlanPosture(input, template, root);
+      if (posture.vetoed) {
+        continue;
+      }
       const stableKey = `${priorityTier}:${templateId}:${root.stableMoveKey}`;
       alternatives.push({
         templateId,
         rootStableMoveKey: root.stableMoveKey,
-        score: priorityTier + roleScore + considerationScore,
+        score: priorityTier + roleScore + considerationScore + posture.scoreDelta,
         priorityTier,
         stableKey,
         roleBindings,
+        posture: posture.trace,
       });
       if (alternatives.length >= capLimitFor(template)) {
         break;
@@ -133,7 +143,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       hasAnyRootMatch ? 'noRoleBinding' : 'noRootMatch',
       activeDoctrines,
       rejectedDoctrines,
-      postureStatusFor(input, templateIds),
+      postureForTemplates(input, templateIds),
       capClass,
       capLimit,
     );
@@ -153,7 +163,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
     alternatives: ranked,
     activeDoctrines,
     rejectedDoctrines,
-    postureStatus: postureStatusFor(input, templateIds),
+    posture: selected.posture,
   };
 };
 
@@ -475,17 +485,87 @@ function moduleAppliesToRoot(module: StrategyModuleDef, root: PlanProposalRootCa
   return root.actionTags.some((tag) => moduleTags.has(String(tag)));
 }
 
-function postureStatusFor(
+function evaluatePlanPosture(
+  input: ProposeAdvisoryTurnPlanInput,
+  template: CompiledPlanTemplate,
+  root: PlanProposalRootCandidate,
+): { readonly trace: PolicyPlanTrace['posture']; readonly scoreDelta: number; readonly vetoed: boolean } {
+  if (template.postureHook === undefined) {
+    return { trace: notConfiguredPosture(), scoreDelta: 0, vetoed: false };
+  }
+  const evaluator = input.catalog.compiled.postureEvaluators?.[template.postureHook];
+  if (evaluator === undefined) {
+    return { trace: unavailablePosture('noPreviewDecision'), scoreDelta: 0, vetoed: false };
+  }
+  const candidate = evaluationCandidateFor(root);
+  const context = new PolicyEvaluationContext({
+    def: input.def,
+    state: input.state,
+    playerId: input.playerId,
+    seatId: String(input.seatId),
+    catalog: input.catalog,
+    parameterValues: input.profile.params,
+    trustedMoveIndex: new Map(),
+    previewPlan: {
+      resolvedRefs: input.previewPlanRefsByRootStableMoveKey?.get(root.stableMoveKey) ?? new Map(),
+    },
+  }, [candidate]);
+  try {
+    const result = evaluatePostureEvaluator(context, evaluator, candidate);
+    return {
+      trace: {
+        status: result.status,
+        mustViolations: result.mustViolations,
+        preferContributions: result.preferContributions,
+        ...(result.allyWeightContext === undefined ? {} : { allyWeightContext: result.allyWeightContext }),
+      },
+      scoreDelta: result.scoreDelta,
+      vetoed: result.vetoed,
+    };
+  } finally {
+    context.dispose();
+  }
+}
+
+function evaluationCandidateFor(root: PlanProposalRootCandidate): PolicyEvaluationCandidate {
+  return {
+    move: root.move,
+    stableMoveKey: root.stableMoveKey,
+    actionId: root.actionId,
+    previewRefIds: new Set(),
+    unknownPreviewRefs: new Map(),
+    unknownLookupRefs: new Map(),
+    unknownCandidateParamRefs: new Map(),
+  };
+}
+
+function postureForTemplates(
   input: ProposeAdvisoryTurnPlanInput,
   templateIds: readonly string[],
-): PolicyPlanTrace['postureStatus'] {
+): PolicyPlanTrace['posture'] {
   const hooks = templateIds
     .map((templateId) => input.catalog.library.planTemplates?.[templateId]?.postureHook)
     .filter((hook): hook is string => hook !== undefined);
   if (hooks.length === 0) {
-    return 'notConfigured';
+    return notConfiguredPosture();
   }
-  return 'unavailable';
+  return unavailablePosture('noPreviewDecision');
+}
+
+function notConfiguredPosture(): PolicyPlanTrace['posture'] {
+  return {
+    status: 'notConfigured',
+    mustViolations: [],
+    preferContributions: [],
+  };
+}
+
+function unavailablePosture(reason: string): PolicyPlanTrace['posture'] {
+  return {
+    status: reason,
+    mustViolations: [],
+    preferContributions: [],
+  };
 }
 
 function capLimitFor(template: CompiledPlanTemplate): number {
@@ -502,7 +582,7 @@ function emptyProposal(
   status: PolicyPlanTrace['status'],
   activeDoctrines: readonly string[],
   rejectedDoctrines: PlanProposalResult['rejectedDoctrines'],
-  postureStatus: PolicyPlanTrace['postureStatus'],
+  posture: PolicyPlanTrace['posture'],
   capClass?: string,
   capLimit?: number,
 ): PlanProposalResult {
@@ -513,7 +593,7 @@ function emptyProposal(
     alternatives: [],
     activeDoctrines,
     rejectedDoctrines,
-    postureStatus,
+    posture,
   };
 }
 

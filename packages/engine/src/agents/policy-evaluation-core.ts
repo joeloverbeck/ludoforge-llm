@@ -57,6 +57,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
+import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
@@ -113,6 +114,39 @@ export interface PolicyLookupFallbackFired {
   readonly kind: 'noContribution' | 'constant';
   readonly value?: number;
 }
+
+export interface PreviewPlanDeltaCompositionInput {
+  readonly stepStatuses: readonly PreviewOptionRefStatus[];
+  readonly stepCap: number;
+}
+
+export const previewPlanRefKey = (
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewPlanRef' }>,
+): string => {
+  switch (ref.refKind) {
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'preview.plan.delta.victory.currentMargin.self';
+  }
+};
+
+export const composePreviewPlanDelta = (
+  input: PreviewPlanDeltaCompositionInput,
+): PreviewOptionRefStatus => {
+  if (input.stepStatuses.length > input.stepCap) {
+    return { kind: 'unavailable', reason: 'depthCap' };
+  }
+  let total = 0;
+  for (const status of input.stepStatuses) {
+    if (status.kind === 'unavailable') {
+      return status;
+    }
+    if (typeof status.value !== 'number') {
+      return { kind: 'unavailable', reason: 'unresolved' };
+    }
+    total += status.value;
+  }
+  return { kind: 'ready', value: total };
+};
 
 export type PolicyScheduleFallbackKind =
   | 'useLowerBound'
@@ -212,6 +246,9 @@ export interface CreatePolicyEvaluationContextInput {
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
     readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
     readonly projectedState?: PreviewOptionProjectedState;
+  };
+  readonly previewPlan?: {
+    readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   };
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
@@ -389,6 +426,7 @@ export class PolicyEvaluationContext {
   private currentGuardrailRefView: GuardrailRefView | undefined;
   private readonly turnShapeEvaluationCache = new Map<string, TurnShapeEvaluatorResult>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
+  private readonly relationshipCache = new Map<string, PolicyValue>();
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
@@ -447,6 +485,7 @@ export class PolicyEvaluationContext {
     this.currentGuardrailRefView = undefined;
     this.turnShapeEvaluationCache.clear();
     this.strategicConditionCache.clear();
+    this.relationshipCache.clear();
     this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
     this.transientStateFeatureCache = null;
@@ -1103,6 +1142,8 @@ export class PolicyEvaluationContext {
   evaluateCompiledExpr(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     return this.evaluateCompiledExprWithVm(expr, candidate);
   }
+
+  activeRelationshipRoles(): readonly ActivePolicyRelationshipRole[] { return activePolicyRelationshipRoles(this.relationshipEvalOptions()); }
 
   private evaluateCompiledExprWithVm(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     if (this.encodedState === undefined || this.requiresDirectLiteralSemantics(expr)) {
@@ -1813,6 +1854,8 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
         return this.resolvePreviewOptionRef(ref, candidate);
+      case 'previewPlanRef':
+        return this.resolvePreviewPlanRef(ref, candidate);
       case 'lookup':
         return this.resolveLookupRef(ref, candidate);
       case 'currentSurface':
@@ -1820,6 +1863,8 @@ export class PolicyEvaluationContext {
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+      case 'relationship':
+        return this.resolveRelationshipRef(ref.role, ref.field);
       case 'strategyModule':
         return this.resolveStrategyModuleRef(ref, candidate);
       case 'guardrail':
@@ -2076,6 +2121,28 @@ export class PolicyEvaluationContext {
     return value;
   }
 
+  private resolveRelationshipRef(
+    role: Extract<CompiledAgentPolicyRef, { readonly kind: 'relationship' }>['role'],
+    field: Extract<CompiledAgentPolicyRef, { readonly kind: 'relationship' }>['field'],
+  ): PolicyValue {
+    const cacheKey = `${role}.${field}`;
+    if (this.relationshipCache.has(cacheKey)) {
+      return this.relationshipCache.get(cacheKey);
+    }
+    const value = resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, field);
+    this.relationshipCache.set(cacheKey, value);
+    return value;
+  }
+
+  private relationshipEvalOptions(): Parameters<typeof activePolicyRelationshipRoles>[0] {
+    return {
+      def: this.input.def, state: this.activeState, seatId: this.input.seatId,
+      relationships: this.input.catalog.compiled.relationships ?? {},
+      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied') === true,
+      evaluateExpr: (expr) => this.evaluateCompiledExpr(expr, undefined),
+    };
+  }
+
   private resolvePreviewOptionRef(
     ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>,
     candidate: PolicyEvaluationCandidate | undefined,
@@ -2086,6 +2153,23 @@ export class PolicyEvaluationContext {
     }
     const key = previewOptionRefKey(ref);
     const status = resolvedRefs.get(key);
+    if (status === undefined) {
+      this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
+      return undefined;
+    }
+    if (status.kind === 'unavailable') {
+      this.recordUnknownPreviewRef(candidate, key, status.reason);
+      return undefined;
+    }
+    return status.value;
+  }
+
+  private resolvePreviewPlanRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewPlanRef' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const key = previewPlanRefKey(ref);
+    const status = this.input.previewPlan?.resolvedRefs.get(key);
     if (status === undefined) {
       this.recordUnknownPreviewRef(candidate, key, 'noPreviewDecision');
       return undefined;

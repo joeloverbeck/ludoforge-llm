@@ -6,7 +6,7 @@
 **Date**: 2026-05-20
 **Dependencies**:
 - `specs/186-advisory-turn-plan-architecture-core.md` (plan templates, role selectors, execution controller, fallback)
-- `specs/187-whole-turn-posture-and-ally-rival-metadata.md` (posture evaluators + relationship metadata used by every faction)
+- `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md` (posture evaluators + relationship metadata used by every faction)
 
 **Trigger reports**:
 - `reports/fitl-competent-agent-ai.md` (the authoritative source for all four personalities, combinations, target features, errors-to-avoid, and the relationship model — this spec is its faithful encoding)

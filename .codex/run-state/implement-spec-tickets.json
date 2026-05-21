@@ -1,17 +1,17 @@
 {
-  "originating_spec": "specs/186-advisory-turn-plan-architecture-core.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/186ADVTURNPLAN-007.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "a8fc17db80971c243ca543b514c0e7630f79ecc3",
+  "originating_spec": "archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md",
+  "archived_spec": "archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md",
+  "last_ticket": "archive/tickets/187WHOTURPOS-005.md",
+  "last_result": "completed_archived_final_spec_archived",
+  "last_work_commit": "688028aaf37fb7c4f8062305c8aad2d2f60b4738",
   "last_state_commit": "self",
-  "next_target": "final_spec_archive",
+  "next_target": null,
   "queue": [],
-  "phase": "ready_for_final_spec_archive",
+  "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "186ADVTURNPLAN-007 completed, reviewed, archived, and committed; all Spec 186 tickets archived; next action final spec archive.",
+  "owned_dirty_summary": "Spec 187 family completed and archived; post-state-commit worktree expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-20"
+  "updated_at": "2026-05-21"
 }

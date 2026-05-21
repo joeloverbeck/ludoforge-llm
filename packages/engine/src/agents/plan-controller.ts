@@ -123,9 +123,13 @@ const traceForState = (
         quality: binding.quality,
         rank: binding.rank,
         components: binding.components,
-      })),
+    })),
     alternatives: [],
-    postureStatus: template.postureHook === undefined ? 'notConfigured' : 'unavailable',
+    posture: {
+      status: template.postureHook === undefined ? 'notConfigured' : 'noPreviewDecision',
+      mustViolations: [],
+      preferContributions: [],
+    },
     microturns: [microturn],
   };
   return {

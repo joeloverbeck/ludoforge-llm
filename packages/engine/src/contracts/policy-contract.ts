@@ -7,6 +7,8 @@ export const AGENT_POLICY_LIBRARY_BUCKETS = [
   'strategyModules',
   'guardrails',
   'turnShapeEvaluators',
+  'postureEvaluators',
+  'relationships',
   'considerations',
   'tieBreakers',
   'strategicConditions',
@@ -75,6 +77,12 @@ export const AGENT_POLICY_PREVIEW_OPTION_REF_KINDS = [
 
 export type AgentPolicyPreviewOptionRefKind = typeof AGENT_POLICY_PREVIEW_OPTION_REF_KINDS[number];
 
+export const AGENT_POLICY_PREVIEW_PLAN_REF_KINDS = [
+  'deltaVictoryCurrentMarginSelf',
+] as const;
+
+export type AgentPolicyPreviewPlanRefKind = typeof AGENT_POLICY_PREVIEW_PLAN_REF_KINDS[number];
+
 export const AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS = ['self', 'active', 'none'] as const;
 
 export type AgentPolicyZoneTokenAggOwnerKeyword = typeof AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS[number];
@@ -115,6 +123,23 @@ export type AgentPolicyStandingRoleSelector = typeof AGENT_POLICY_STANDING_ROLE_
 export function isAgentPolicyStandingRoleSelector(value: unknown): value is AgentPolicyStandingRoleSelector {
   return typeof value === 'string'
     && AGENT_POLICY_STANDING_ROLE_SELECTORS.includes(value as AgentPolicyStandingRoleSelector);
+}
+
+export const AGENT_POLICY_RELATIONSHIP_ROLES = [
+  'nominalAlly',
+  'sharedEnemy',
+  'rivalAlly',
+  'leader',
+  'nearWin',
+  'kingmakerRisk',
+  'cooperativeUntilThreshold',
+] as const;
+
+export type AgentPolicyRelationshipRole = typeof AGENT_POLICY_RELATIONSHIP_ROLES[number];
+
+export function isAgentPolicyRelationshipRole(value: unknown): value is AgentPolicyRelationshipRole {
+  return typeof value === 'string'
+    && AGENT_POLICY_RELATIONSHIP_ROLES.includes(value as AgentPolicyRelationshipRole);
 }
 
 export const AGENT_POLICY_ZONE_FILTER_OPS = ['eq', 'gt', 'gte', 'lt', 'lte'] as const;

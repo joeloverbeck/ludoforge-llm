@@ -19,6 +19,9 @@ import {
   initialState,
   type AgentMicroturnDecisionInput,
   type AgentPolicyCatalog,
+  type CompiledAgentRelationship,
+  type CompiledPostureEvaluator,
+  type CompiledPolicyRelationship,
   type CompiledPolicySelector,
   type CompiledAgentProfile,
   type CompiledPlanTemplate,
@@ -27,6 +30,7 @@ import {
   type MicroturnState,
   type StrategyModuleDef,
 } from '../../../src/kernel/index.js';
+import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { createSyntheticDecisionDef } from '../../helpers/synthetic-decision-fixture.js';
 
 interface PolicyAgentPlanProbe {
@@ -44,6 +48,17 @@ const emptyDependencies = {
 };
 
 const literal = (value: string | number | boolean) => ({ kind: 'literal' as const, value });
+const previewPlanMarginSelf = {
+  kind: 'ref' as const,
+  ref: { kind: 'previewPlanRef' as const, refKind: 'deltaVictoryCurrentMarginSelf' as const, onMissing: 'unavailable' as const },
+};
+const relationshipRef = (
+  role: CompiledPolicyRelationship['role'],
+  field: 'seat' | 'gainValue',
+) => ({
+  kind: 'ref' as const,
+  ref: { kind: 'relationship' as const, role, field },
+});
 
 const planTemplate = (overrides: Partial<CompiledPlanTemplate> = {}): CompiledPlanTemplate => ({
   traceLabel: 'train-govern',
@@ -96,6 +111,16 @@ const strategyModule = (overrides: Partial<StrategyModuleDef> = {}): StrategyMod
   ...overrides,
 });
 
+const postureEvaluator = (overrides: Partial<CompiledPostureEvaluator> = {}): CompiledPostureEvaluator => ({
+  id: 'sustain' as never,
+  traceLabel: 'sustain',
+  must: [],
+  prefer: [],
+  costClass: 'preview',
+  dependencies: emptyDependencies,
+  ...overrides,
+});
+
 const roleSelector = (maxItems = 1): CompiledPolicySelector => ({
   id: 'trainSpaceSelector' as never,
   scopes: ['move'],
@@ -111,10 +136,25 @@ const createCatalog = (options: {
   readonly module?: StrategyModuleDef;
   readonly profilePlanTemplates?: readonly string[];
   readonly selector?: CompiledPolicySelector;
+  readonly posture?: CompiledPostureEvaluator;
+  readonly relationships?: Readonly<Record<string, CompiledPolicyRelationship>>;
 } = {}): AgentPolicyCatalog => {
   const template = options.template ?? planTemplate();
   const module = options.module ?? strategyModule();
   const selector = options.selector ?? roleSelector();
+  const libraryRelationships: Readonly<Record<string, CompiledAgentRelationship>> | undefined = options.relationships === undefined
+    ? undefined
+    : Object.fromEntries(Object.entries(options.relationships).map(([id, relationship]) => [
+        id,
+        {
+          role: relationship.role,
+          ...(relationship.seat === undefined ? {} : { seat: relationship.seat }),
+          ...(relationship.standingRole === undefined ? {} : { standingRole: relationship.standingRole }),
+          ...(relationship.condition === undefined ? {} : { condition: relationship.condition }),
+          priority: relationship.priority,
+          hasGainValue: relationship.gainValue !== undefined,
+        },
+      ]));
   const profile: CompiledAgentProfile = {
     fingerprint: 'plan-proposal-profile',
     params: {},
@@ -176,6 +216,26 @@ const createCatalog = (options: {
         },
       },
       planTemplates: { trainGovern: template },
+      ...(libraryRelationships === undefined ? {} : { relationships: libraryRelationships }),
+      ...(options.posture === undefined ? {} : {
+        postureEvaluators: {
+          [String(options.posture.id)]: {
+            traceLabel: options.posture.traceLabel,
+            must: options.posture.must.map((entry) => ({
+              id: entry.id,
+              onViolation: entry.onViolation,
+              hasDemotePenalty: entry.demotePenalty !== undefined,
+            })),
+            prefer: options.posture.prefer.map((entry) => ({
+              id: entry.id,
+              hasWhen: entry.when !== undefined,
+              hasFallbackContribution: true,
+            })),
+            costClass: options.posture.costClass,
+            dependencies: options.posture.dependencies,
+          },
+        },
+      }),
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -186,6 +246,8 @@ const createCatalog = (options: {
       candidateAggregates: {},
       selectors: { trainSpaceSelector: selector },
       strategyModules: { 'doctrine.train': module },
+      ...(options.relationships === undefined ? {} : { relationships: options.relationships }),
+      ...(options.posture === undefined ? {} : { postureEvaluators: { [String(options.posture.id)]: options.posture } }),
       considerations: {},
       tieBreakers: {},
       strategicConditions: {},
@@ -213,6 +275,12 @@ const actionDecision = (actionId: string): Extract<Decision, { readonly kind: 'a
   kind: 'actionSelection',
   actionId: asActionId(actionId),
   move: { actionId: asActionId(actionId), params: {} },
+});
+
+const actionDecisionWithRank = (rank: number): Extract<Decision, { readonly kind: 'actionSelection' }> => ({
+  kind: 'actionSelection',
+  actionId: asActionId('branch'),
+  move: { actionId: asActionId('branch'), params: { rank } },
 });
 
 const actionSelectionInput = (def: GameDef): AgentMicroturnDecisionInput => {
@@ -324,6 +392,299 @@ describe('plan proposal', () => {
       result.alternatives.map((alternative) => alternative.stableKey),
       [...result.alternatives.map((alternative) => alternative.stableKey)].sort(),
     );
+  });
+
+  it('adds ready posture prefer contributions to plan rank and trace', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [{
+        id: 'margin-gain',
+        value: previewPlanMarginSelf,
+        weight: literal(2),
+        fallback: { contribution: literal(-4) },
+      }],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({ template, posture }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+    const low = actionDecisionWithRank(1);
+    const high = actionDecisionWithRank(2);
+    const lowKey = toMoveIdentityKey(def, low.move!);
+    const highKey = toMoveIdentityKey(def, high.move!);
+
+    const input: Parameters<typeof proposeAdvisoryTurnPlan>[0] = {
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [low, high],
+      previewPlanRefsByRootStableMoveKey: new Map([
+        [lowKey, new Map([['preview.plan.delta.victory.currentMargin.self', { kind: 'ready', value: 1 }]])],
+        [highKey, new Map([['preview.plan.delta.victory.currentMargin.self', { kind: 'ready', value: 4 }]])],
+      ]),
+    };
+
+    const result = proposeAdvisoryTurnPlan(input);
+    const replay = proposeAdvisoryTurnPlan(input);
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.rootStableMoveKey, highKey);
+    assert.equal(result.posture.status, 'ready');
+    assert.deepEqual(result.posture.preferContributions, [{
+      id: 'margin-gain',
+      status: 'ready',
+      value: 4,
+      weight: 2,
+      contribution: 8,
+    }]);
+    assert.deepEqual(replay.posture, result.posture);
+    assert.equal(replay.selected?.rootStableMoveKey, result.selected?.rootStableMoveKey);
+  });
+
+  it('applies declared posture fallback and records non-ready status when plan preview is absent', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [{
+        id: 'margin-gain',
+        value: previewPlanMarginSelf,
+        weight: literal(2),
+        fallback: { contribution: literal(-4) },
+      }],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({ template, posture }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.posture.status, 'noPreviewDecision');
+    assert.deepEqual(result.posture.preferContributions, [{
+      id: 'margin-gain',
+      status: 'noPreviewDecision',
+      contribution: -4,
+      fallbackReason: 'noPreviewDecision',
+    }]);
+  });
+
+  it('traces a conditional ally-weight flip when an ally is also near win', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [
+        {
+          id: 'ally-gain-base',
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(1),
+          fallback: { contribution: literal(0) },
+        },
+        {
+          id: 'ally-gain-near-win-flip',
+          when: {
+            kind: 'op',
+            op: 'eq',
+            args: [
+              relationshipRef('nearWin', 'seat'),
+              relationshipRef('nominalAlly', 'seat'),
+            ],
+          },
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(-2),
+          fallback: { contribution: literal(0) },
+        },
+      ],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({
+        template,
+        posture,
+        relationships: {
+          ally: { role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: literal(5) },
+          nearWin: { role: 'nearWin', seat: 'beta', priority: 0 },
+        },
+      }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+    const replay = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.score, 12);
+    assert.deepEqual(result.posture.preferContributions.map((entry) => [entry.id, entry.contribution]), [
+      ['ally-gain-base', 5],
+      ['ally-gain-near-win-flip', -10],
+    ]);
+    assert.deepEqual(result.posture.allyWeightContext, {
+      activeRoles: [
+        { relationshipId: 'ally', role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: 5 },
+        { relationshipId: 'nearWin', role: 'nearWin', seat: 'beta', priority: 0 },
+      ],
+      flips: [{
+        contributionId: 'ally-gain-near-win-flip',
+        allyRole: 'nominalAlly',
+        thresholdRole: 'nearWin',
+        seat: 'beta',
+        fired: true,
+      }],
+    });
+    assert.deepEqual(replay.posture, result.posture);
+  });
+
+  it('keeps base ally weight when no ally is near win', () => {
+    const template = planTemplate({ postureHook: 'sustain' });
+    const posture = postureEvaluator({
+      prefer: [
+        {
+          id: 'ally-gain-base',
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(1),
+          fallback: { contribution: literal(0) },
+        },
+        {
+          id: 'ally-gain-near-win-flip',
+          when: {
+            kind: 'op',
+            op: 'eq',
+            args: [
+              relationshipRef('nearWin', 'seat'),
+              relationshipRef('nominalAlly', 'seat'),
+            ],
+          },
+          value: relationshipRef('nominalAlly', 'gainValue'),
+          weight: literal(-2),
+          fallback: { contribution: literal(0) },
+        },
+      ],
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({
+        template,
+        posture,
+        relationships: {
+          ally: { role: 'nominalAlly', seat: 'beta', priority: 0, gainValue: literal(5) },
+          nearWin: { role: 'nearWin', seat: 'alpha', priority: 0 },
+        },
+      }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.score, 22);
+    assert.deepEqual(result.posture.preferContributions.map((entry) => [entry.id, entry.contribution]), [
+      ['ally-gain-base', 5],
+    ]);
+    assert.deepEqual(result.posture.allyWeightContext?.flips, []);
+  });
+
+  it('demotes a plan with a posture must violation and vetoes when requested', () => {
+    const demoteTemplate = planTemplate({ postureHook: 'demotePosture' });
+    const vetoTemplate = planTemplate({
+      traceLabel: 'veto-plan',
+      postureHook: 'vetoPosture',
+    });
+    const demotePosture = postureEvaluator({
+      id: 'demotePosture' as never,
+      must: [{ id: 'floor', condition: literal(false), onViolation: 'demote', demotePenalty: literal(-3) }],
+    });
+    const vetoPosture = postureEvaluator({
+      id: 'vetoPosture' as never,
+      must: [{ id: 'floor', condition: literal(false), onViolation: 'veto' }],
+    });
+    const catalog = createCatalog({
+      template: demoteTemplate,
+      posture: demotePosture,
+      profilePlanTemplates: ['trainGovern', 'vetoPlan'],
+    });
+    const def = {
+      ...createDef(),
+      agents: {
+        ...catalog,
+        library: {
+          ...catalog.library,
+          planTemplates: { trainGovern: demoteTemplate, vetoPlan: vetoTemplate },
+          postureEvaluators: {
+            ...catalog.library.postureEvaluators,
+            vetoPosture: {
+              traceLabel: vetoPosture.traceLabel,
+              must: [{ id: 'floor', onViolation: 'veto' as const, hasDemotePenalty: false }],
+              prefer: [],
+              costClass: 'preview' as const,
+              dependencies: emptyDependencies,
+            },
+          },
+        },
+        compiled: {
+          ...catalog.compiled,
+          postureEvaluators: {
+            ...catalog.compiled.postureEvaluators,
+            vetoPosture,
+          },
+        },
+      },
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.alternatives.length, 1);
+    assert.equal(result.selected?.templateId, 'trainGovern');
+    assert.deepEqual(result.posture.mustViolations, [{ id: 'floor', action: 'demote', penalty: -3 }]);
   });
 
   it('commits the selected plan state and emits proposal trace through PolicyAgent', () => {

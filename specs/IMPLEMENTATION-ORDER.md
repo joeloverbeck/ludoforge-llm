@@ -8,8 +8,8 @@ This series replaces the agent's primary decision paradigm: from **scoring indep
 
 ## Order
 
-1. **Spec 186 — Advisory Turn-Plan Architecture (Core)** — *foundational; build first.*
-   Plan-template IR (`schemaVersion: 3`), role selectors (extends Spec 181), `PlanExecutionState` across microturns, bounded plan proposer, microturn execution controller + fallback ladder, plan trace, compiler validation. Demotes flat considerations to leaf scorers. Proof slice: **ARVN Train+Govern**. Nothing else in the series can begin until the plan object and its atomic-execution contract exist and the proof slice passes.
+1. **Spec 186 — Advisory Turn-Plan Architecture (Core)** — ✅ COMPLETED 2026-05-20 (`archive/specs/186-advisory-turn-plan-architecture-core.md`).
+   Plan-template IR (`schemaVersion: 3`), role selectors (extends Spec 181), `PlanExecutionState` across microturns, bounded plan proposer, microturn execution controller + fallback ladder, plan trace, compiler validation. Demotes flat considerations to leaf scorers. Proof slice: **ARVN Train+Govern**. Landed across tickets `186ADVTURNPLAN-001`…`-007` (all archived). The plan object and its atomic-execution contract now exist and the proof slice passes; Specs 187/188 may proceed.
 
 2. **Spec 187 — Whole-Turn Posture Evaluation + Ally-as-Rival Metadata** — *depends on 186 + 185.*
    Fills Spec 186's `postureHook`: scores expected resulting board state over Spec 185's honest preview, and adds conditional ally-as-rival relationship weighting (competence report §5/§6.5). Required before faction authoring, because every competent FITL personality depends on posture + relationship scoring.

@@ -12,6 +12,7 @@ import type {
   CompiledAgentConsideration,
   CompiledAgentGuardrail,
   CompiledAgentLibraryIndex,
+  CompiledAgentRelationship,
   CompiledAgentStateFeature,
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
@@ -37,6 +38,7 @@ export type AgentPolicyCatalogFixtureLibrary = Omit<
     readonly value?: AgentPolicyExpr;
   }>>;
   readonly tieBreakers: Readonly<Record<string, CompiledAgentTieBreaker & { readonly value?: AgentPolicyExpr }>>;
+  readonly relationships?: Readonly<Record<string, CompiledAgentRelationship & { readonly gainValue?: AgentPolicyExpr }>>;
   readonly strategicConditions: Readonly<Record<string, Omit<CompiledStrategicCondition, 'proximity'> & {
     readonly target?: AgentPolicyExpr;
     readonly proximity?: {
@@ -64,6 +66,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     candidateFeatures: CompiledPolicyCatalog['candidateFeatures'];
     candidateAggregates: CompiledPolicyCatalog['candidateAggregates'];
     guardrails: NonNullable<CompiledPolicyCatalog['guardrails']>;
+    relationships: NonNullable<CompiledPolicyCatalog['relationships']>;
     considerations: CompiledPolicyCatalog['considerations'];
     tieBreakers: CompiledPolicyCatalog['tieBreakers'];
     strategicConditions: CompiledPolicyCatalog['strategicConditions'];
@@ -72,6 +75,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     candidateFeatures: {},
     candidateAggregates: {},
     guardrails: {},
+    relationships: {},
     considerations: {},
     tieBreakers: {},
     strategicConditions: {},
@@ -152,6 +156,20 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
       },
     };
   }
+  for (const [id, relationship] of Object.entries(catalog.library.relationships ?? {})) {
+    const gainValue = lowerExpr(relationship.gainValue);
+    compiled.relationships = {
+      ...compiled.relationships,
+      [id]: {
+        role: relationship.role,
+        ...(relationship.seat === undefined ? {} : { seat: relationship.seat }),
+        ...(relationship.standingRole === undefined ? {} : { standingRole: relationship.standingRole }),
+        ...(relationship.condition === undefined ? {} : { condition: relationship.condition }),
+        priority: relationship.priority,
+        ...(gainValue === undefined ? {} : { gainValue }),
+      },
+    };
+  }
   for (const [id, condition] of Object.entries(catalog.library.strategicConditions)) {
     const target = lowerExpr(condition.target);
     const current = lowerExpr(condition.proximity?.current);
@@ -173,7 +191,10 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     }
   }
 
-  return compiled;
+  return {
+    ...compiled,
+    ...(Object.keys(compiled.relationships).length === 0 ? {} : { relationships: compiled.relationships }),
+  };
 }
 
 function lowerExpr(expr: Parameters<typeof lowerAgentPolicyExpr>[0] | undefined): CompiledPolicyExpr | undefined {

@@ -194,6 +194,7 @@ export function computeDependenciesReadFootprint(dependencies: CompiledAgentDepe
     || dependencies.aggregates.length > 0
     || dependencies.strategicConditions.length > 0
     || (dependencies.strategyModules?.length ?? 0) > 0
+    || (dependencies.postureEvaluators?.length ?? 0) > 0
   ) {
     surfaces.push(withRead({ ...emptySurface(), variables: 'unknown', zones: 'unknown', tokens: 'unknown', scores: 'unknown' }));
   }
@@ -364,7 +365,7 @@ function surfaceForPolicyRef(ref: CompiledAgentPolicyRef): EffectFootprintSurfac
   if (ref.kind === 'library' && ref.refKind === 'previewStateFeature') {
     return { ...emptySurface(), variables: 'unknown', tokens: 'unknown', zones: 'unknown', scores: 'unknown' };
   }
-  if (ref.kind === 'previewOptionRef') {
+  if (ref.kind === 'previewOptionRef' || ref.kind === 'previewPlanRef') {
     return { ...emptySurface(), variables: 'unknown', tokens: 'unknown', zones: 'unknown', scores: 'unknown' };
   }
   return emptySurface();

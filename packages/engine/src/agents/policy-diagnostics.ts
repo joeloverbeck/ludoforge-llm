@@ -267,6 +267,10 @@ function collectSurfaceRefs(
       preview.add(previewOptionRefKey(ref));
       return;
     }
+    if (ref.kind === 'previewPlanRef') {
+      preview.add(previewPlanRefKey(ref));
+      return;
+    }
     if (ref.kind !== 'library') {
       return;
     }
@@ -411,6 +415,13 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
       return 'option.outcome';
     case 'driveDepth':
       return 'option.driveDepth';
+  }
+}
+
+function previewPlanRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewPlanRef' }>): string {
+  switch (ref.refKind) {
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'plan.delta.victory.currentMargin.self';
   }
 }
 

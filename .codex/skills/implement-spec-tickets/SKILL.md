@@ -199,6 +199,19 @@ Use this map to catch semantic gates that are not named as exact commands, such 
 
 Use the live `post-ticket-review` skill exactly. It owns closeout truthing, archival, dependency/path repairs, and warranted follow-up creation.
 
+Before the archive move or any finalization that depends on review, emit a compact child-review invocation marker so the harness can distinguish a real child workflow from manual reconstruction:
+
+```text
+post-ticket-review child workflow:
+- skill loaded: <yes | blocked: reason>
+- ticket reread: <Acceptance Criteria/Test Plan/Commands/Outcome current | blocked: reason>
+- current code/docs checked: <yes | blocked: reason>
+- reference sweep: <complete | blocked: reason>
+- action decision: <archive | keep active | follow-up | blocked>
+```
+
+This marker does not replace the `Post-ticket review:` block below. If the child workflow was not actually observable, use the `manual late recovery` path and say why normal invocation is no longer truthful.
+
 After review, print:
 
 ```text
@@ -288,13 +301,14 @@ Before committing:
      - `why checked in instead of generated on demand`
      - `hygiene proof`
      If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
-   - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner.
-   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
+   - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner. The source-size ledger normally applies to implementation source and other repo-owned files governed by local size caps; for authored data or markdown/YAML GameSpecDoc support files, either emit the ledger when the child workflow triggered it or mark `not_applicable` with the reason, such as `authored data doc below cap` or `data-only growth, no source-size trigger`.
+   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, hash-only generated fixture output, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
      - `artifact path`
      - `generation command or retained script`
      - `canonical inputs`
      - `why the refresh is expected`
      Record this in the ticket outcome, a report, or the final handoff before staging. If the generator was ad hoc, preserve the exact command text in that durable location.
+   - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.

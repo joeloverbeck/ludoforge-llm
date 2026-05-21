@@ -1,19 +1,18 @@
 {
   "originating_spec": "specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/188FITLFOUFAC-008B.md",
+  "last_ticket": "archive/tickets/188FITLFOUFAC-008.md",
   "last_result": "completed_archived",
-  "last_work_commit": "8fd4a9d4ade7b28b8629138d6d63133c5d61da74",
+  "last_work_commit": "738d9a389613e129b8bc3788810a14361a10c162",
   "last_state_commit": "self",
-  "next_target": "tickets/188FITLFOUFAC-008.md",
+  "next_target": "tickets/188FITLFOUFAC-009.md",
   "queue": [
-    "tickets/188FITLFOUFAC-008.md",
     "tickets/188FITLFOUFAC-009.md",
     "tickets/188FITLFOUFAC-010.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "post-state-commit repo clean; 008B archived and 008 is next",
+  "owned_dirty_summary": "post-state-commit repo clean; 008 archived and 009 is next",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

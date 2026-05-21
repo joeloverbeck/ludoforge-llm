@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `archive/tickets/188FITLFOUFAC-008.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-008.md`, `archive/tickets/188FITLFOUFAC-009.md`
 
 ## Problem
 
@@ -14,7 +14,7 @@ Spec 188 §4.2 / Phase 2 authors the VC faction personality as a correct skeleto
 
 1. `vc-baseline` is the current VC profile binding (`92-agents.md` ~line 778); this ticket authors the VC skeleton and rebinds the VC seat.
 2. The skeleton-authoring structure is established by ticket 008 — follow it verbatim, substituting VC content.
-3. The NVA/VC relationship (report §5.2) is the counterpart of NVA's wiring in ticket 009 — keep the two sides consistent.
+3. The NVA/VC relationship (report §5.2) is the counterpart of NVA's wiring completed in `archive/tickets/188FITLFOUFAC-009.md` — keep the two sides consistent.
 
 ## Architecture Check
 

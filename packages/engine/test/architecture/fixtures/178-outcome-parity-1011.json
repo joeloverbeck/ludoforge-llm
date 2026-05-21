@@ -18515,99 +18515,6 @@
     {
       "turnCount": null,
       "turnId": 61,
-      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]",
-      "selectedValue": "patronage",
-      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"patronage\"",
-      "previewUsage": {
-        "mode": "exactWorld",
-        "evaluatedCandidateCount": 2,
-        "completionPolicyFallbackCount": 0,
-        "refIds": [
-          "preview.option.delta.victory.currentMargin.self"
-        ],
-        "unknownRefs": [],
-        "readyRefStats": {
-          "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 2,
-            "distinctValueCount": 2,
-            "min": 0,
-            "max": 1,
-            "range": 1,
-            "allReadyValuesEqual": false
-          }
-        },
-        "utility": "differentiating",
-        "widenedBecauseUniform": false,
-        "outcomeBreakdown": {
-          "ready": 2,
-          "stochastic": 0,
-          "unknownRandom": 0,
-          "unknownHidden": 0,
-          "unknownUnresolved": 0,
-          "unknownDepthCap": 0,
-          "unknownPostGrantCap": 0,
-          "unknownFreeOperationCap": 0,
-          "unknownGrantFlowPartial": 0,
-          "unknownNoPreviewDecision": 0,
-          "unknownGated": 0,
-          "unknownFailed": 0
-        },
-        "coverage": {
-          "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 2,
-          "readyRootOptionCount": 2,
-          "unavailableRootOptionCount": 0,
-          "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
-          "strategy": "continuedDeepening",
-          "capClass": "deep1024"
-        }
-      },
-      "advisories": [],
-      "scoreContributionsByOption": [
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"aid\"",
-          "score": 0,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 0
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "gated",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        },
-        {
-          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"patronage\"",
-          "score": 300,
-          "scoreContributions": [
-            {
-              "termId": "preferOptionProjectedMargin",
-              "contribution": 300
-            }
-          ],
-          "unknownPreviewRefs": [],
-          "previewFallbackFired": null,
-          "selectionReason": "scored",
-          "previewOutcome": "ready",
-          "previewDrive": {
-            "depth": 1,
-            "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
-          }
-        }
-      ]
-    },
-    {
-      "turnCount": null,
-      "turnId": 65,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]",
       "selectedValue": "patronage",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]:\"patronage\"",
@@ -18700,7 +18607,7 @@
     },
     {
       "turnCount": null,
-      "turnId": 69,
+      "turnId": 65,
       "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]",
       "selectedValue": "patronage",
       "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]:\"patronage\"",
@@ -18793,13 +18700,13 @@
     },
     {
       "turnCount": null,
-      "turnId": 80,
-      "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]",
-      "selectedValue": "central-laos:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"central-laos:none\"",
+      "turnId": 69,
+      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]",
+      "selectedValue": "patronage",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]:\"patronage\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 5,
+        "evaluatedCandidateCount": 2,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -18807,18 +18714,18 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 5,
-            "distinctValueCount": 1,
-            "min": 3,
-            "max": 3,
-            "range": 0,
-            "allReadyValuesEqual": true
+            "readyCount": 2,
+            "distinctValueCount": 2,
+            "min": 0,
+            "max": 1,
+            "range": 1,
+            "allReadyValuesEqual": false
           }
         },
-        "utility": "constant",
+        "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 5,
+          "ready": 2,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -18833,8 +18740,101 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 5,
-          "readyRootOptionCount": 5,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": false,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]:\"aid\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@can-tho:none[0]:\"patronage\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "scored",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 80,
+      "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]",
+      "selectedValue": "central-laos:none",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"central-laos:none\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 7,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 7,
+            "distinctValueCount": 1,
+            "min": 1,
+            "max": 1,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 7,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 7,
+          "readyRootOptionCount": 7,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -18845,12 +18845,12 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"central-laos:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"central-laos:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -18864,8 +18864,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"da-nang:none\"",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -18885,12 +18885,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"da-nang:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"da-nang:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -18904,8 +18904,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -18925,12 +18925,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"hue:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"hue:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -18944,8 +18944,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -18965,12 +18965,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"quang-nam:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"loc-hue-da-nang:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -18984,8 +18984,8 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -19005,12 +19005,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"quang-tri-thua-thien:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"loc-hue-khe-sanh:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19024,8 +19024,88 @@
               {
                 "depth": 1,
                 "microturnKind": "chooseOne",
-                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"quang-nam:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][0]:\"quang-tri-thua-thien:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
                 "selectionReason": "microturnPolicy",
                 "score": 0,
                 "scoreContributions": [],
@@ -19049,12 +19129,12 @@
     {
       "turnCount": null,
       "turnId": 80,
-      "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
-      "selectedValue": "da-nang:none",
-      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"da-nang:none\"",
+      "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]",
+      "selectedValue": "central-laos:none",
+      "selectedStableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 4,
+        "evaluatedCandidateCount": 7,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -19062,10 +19142,10 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 4,
+            "readyCount": 7,
             "distinctValueCount": 1,
-            "min": 3,
-            "max": 3,
+            "min": 1,
+            "max": 1,
             "range": 0,
             "allReadyValuesEqual": true
           }
@@ -19073,7 +19153,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 4,
+          "ready": 7,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -19088,8 +19168,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 4,
-          "readyRootOptionCount": 4,
+          "evaluatedRootOptionCount": 7,
+          "readyRootOptionCount": 7,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -19100,12 +19180,12 @@
       "advisories": [],
       "scoreContributionsByOption": [
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"da-nang:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"central-laos:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19130,12 +19210,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"hue:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"da-nang:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19160,12 +19240,12 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"quang-nam:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"hue:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19190,12 +19270,102 @@
           }
         },
         {
-          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.then.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"quang-tri-thua-thien:none\"",
-          "score": 900,
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"loc-hue-da-nang:none\"",
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"loc-hue-khe-sanh:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"quang-nam:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.3.forEach.effects.0.if.else.0.chooseOne::$nguyenChanhThiVcDestination[1][1]:\"quang-tri-thua-thien:none\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19239,8 +19409,8 @@
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 2,
             "distinctValueCount": 2,
-            "min": -5,
-            "max": 3,
+            "min": -7,
+            "max": 1,
             "range": 8,
             "allReadyValuesEqual": false
           }
@@ -19276,11 +19446,11 @@
       "scoreContributionsByOption": [
         {
           "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"increase\"",
-          "score": 900,
+          "score": 300,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": 900
+              "contribution": 300
             }
           ],
           "unknownPreviewRefs": [],
@@ -19295,11 +19465,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.eventDecks.0.cards.86.shaded.effects.4.chooseOne::$nguyenChanhThiPatronageDirection[1][1]:\"decrease\"",
-          "score": -1500,
+          "score": -2100,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -1500
+              "contribution": -2100
             }
           ],
           "unknownPreviewRefs": [],

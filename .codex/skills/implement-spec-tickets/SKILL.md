@@ -110,9 +110,12 @@ Compact required-block ledger for recovered or late-stage iterations. Copy this 
 6. `post-ticket-review` audit classification: compact child audit block when triggered, or `not_applicable: routine archive/reference repair`.
 7. Generated-artifact provenance when triggered, otherwise a reasoned `not_applicable`.
 8. Source-size ledger when triggered by `implement-ticket`, otherwise a reasoned `not_applicable`.
-9. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
-10. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
-11. `Harness handoff:` before final response.
+9. Abandoned-probe cleanup proof when a retarget restores exploratory source/test/schema edits, otherwise a reasoned `not_applicable`.
+10. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
+11. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
+12. `Harness handoff:` before final response.
+
+Retarget-only visibility profile: when an iteration only inserts/selects a prerequisite and does not reach terminal ticket status, do not force terminal-ticket review blocks into misleading prose. Emit `Acceptance-to-command map: not_applicable: retarget-only prerequisite insertion`, `Post-ticket review: not_applicable: retarget-only prerequisite insertion`, and `post-ticket-review audit classification: not_applicable: no review/archive surface exercised`. Preserve the state/proof/handoff requirements, and when an exploratory probe was restored include an explicit `Abandoned-probe cleanup proof:` block naming the abandoned probe, restored/removed paths, and cleanup proof.
 
 The helper `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` prints the checkpoint/handoff scaffold and performs lightweight state/path checks. It is only a prompt and sanity check; it does not replace the child workflows or the required visible blocks.
 
@@ -171,13 +174,23 @@ When an approved `1-3-1` or Foundations reassessment turns the current implement
 5. Rerun the smallest proof that proves the restored safe path plus the ticket graph/integrity lanes, emit `post-ticket-review: not_applicable` in the required checkpoint, and commit the retarget as a blocked handoff rather than as implementation completion.
 6. Persist state with the new prerequisite at the front of the queue and the blocked ticket immediately after it.
 
+Use the blocked handoff classification when implementation edits remain landed, a partial behavioral slice is retained, terminal status is blocked by unresolved ownership, or no concrete next owner exists. If source/test/schema edits were only exploratory, are fully restored before commit, and the durable diff is limited to ticket/spec/state or other workflow artifacts, use the clean prerequisite insertion path below with `last_result: "retargeted_to_prerequisite"` instead of `blocked`. In that case, still record the abandoned probe and cleanup proof in the visible checkpoint.
+
 When the same approved reassessment happens before any source/test/schema implementation has landed, and the truthful result is a clean prerequisite insertion rather than a blocked landed slice:
 
 1. Keep the original ticket nonterminal unless its own durable outcome needs to record a landed partial.
 2. Create or update the prerequisite ticket with the narrow YAML/code/proof owner, dependencies, out-of-scope boundary, and proof lanes required before returning to the original ticket.
 3. Patch the original ticket, originating spec, and directly affected siblings so dependency lists, phase order, ticket-list prose, and proof expectations point at the prerequisite.
-4. Run the ticket graph/integrity lanes and focused hygiene for the artifact rewrite. The default proof set for a clean prerequisite insertion is `pnpm run check:ticket-deps`, `git diff --check` over edited tracked files, a no-index or equivalent whitespace check for any new untracked ticket/spec file, and an old/new id/path sweep covering the original ticket, prerequisite ticket, originating spec, and directly affected siblings.
-5. Commit the retarget as a prerequisite handoff, not as `blocked` completion. Use `last_result: "retargeted_to_prerequisite"` and place the prerequisite immediately before the original target in the queue.
+4. Emit a dependent classification ledger for active same-family tickets that were inspected for retarget impact:
+
+   ```text
+   Dependent classification:
+   - <path>: <relation to original/prerequisite>; <edit | no edit>; <rationale>
+   ```
+
+   Use `no edit` when a sibling correctly continues to depend on the original ticket rather than the new prerequisite, and cite that rationale instead of silently leaving it out.
+5. Run the ticket graph/integrity lanes and focused hygiene for the artifact rewrite. The default proof set for a clean prerequisite insertion is `pnpm run check:ticket-deps`, `git diff --check` over edited tracked files, a no-index or equivalent whitespace check for any new untracked ticket/spec file, and an old/new id/path sweep covering the original ticket, prerequisite ticket, originating spec, and directly affected siblings.
+6. Commit the retarget as a prerequisite handoff, not as `blocked` completion. Use `last_result: "retargeted_to_prerequisite"` and place the prerequisite immediately before the original target in the queue.
 
 If the blocker is resolved by a user-approved 1-3-1 option or other explicit boundary reset, do this before resuming implementation:
 
@@ -196,6 +209,8 @@ $skill-audit .codex/skills/implement-ticket
 ```
 
 If the iteration stopped in a pre-implementation prerequisite insertion or pure retarget before `implement-ticket` exercised source/test edits, terminal status, proof closeout, or archival handoff behavior, the audit may be marked `not_applicable: retarget-only boundary reset`. The visible checkpoint must still name the exercised child surfaces, such as reassessment, 1-3-1 ranking, ticket graph updates, and state persistence. If source/test/schema edits were made only as an exploratory probe, then fully restored before the retarget commit, this exception may still apply, but the checkpoint must name the abandoned probe, classify it as fully removed, and cite the cleanup proof that no source/test/schema diff remains. Do not use this exception when implementation edits landed, proof ran for a completed slice, terminal status changed, retained source/test/schema edits remain, or any child workflow behavior was worked around.
+
+For retarget-only iterations, prefer the visibility profile above over terminal-ticket review wording. The child-audit exception is valid only when the final durable work is a prerequisite/queue/state rewrite, not when `implement-ticket` behavior was materially exercised and then manually reconstructed by the harness.
 
 Apply every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. This skill is explicit authorization to apply those suggestions; do not wait for a separate "Implement suggestions" prompt.
 
@@ -387,11 +402,13 @@ Required-visible-block checkpoint:
 - state-file validity: <valid | not_changed | blocked: reason>
 - generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
 - source-size ledger: <emitted | not_applicable: reason | blocked: reason>
+- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>
+- dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
-Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, abandoned-probe cleanup proof when triggered, dependent classification when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
 
 If a required child skill audit block is missing and there is no visible evidence that the audit actually ran in the current observable context, run the child audit before committing or finalizing. Do not treat a late checkpoint as a substitute for an unrun or unobservable `$skill-audit`. After running it, emit the compact child-audit block and apply, reject, or defer evidence-backed suggestions under the normal child-audit rules.
 

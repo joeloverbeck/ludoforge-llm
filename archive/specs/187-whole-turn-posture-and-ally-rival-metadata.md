@@ -107,11 +107,11 @@ Plan proposer (Spec 186 §4.4) → for each candidate plan, evaluate `postureHoo
 
 Decomposed via `/spec-to-tickets` on 2026-05-21:
 
-- [`archive/tickets/187WHOTURPOS-001.md`](../archive/tickets/187WHOTURPOS-001.md) — `postureEvaluators` library bucket (compiler) — completed 2026-05-21 (covers §4.1)
-- [`archive/tickets/187WHOTURPOS-002.md`](../archive/tickets/187WHOTURPOS-002.md) — `preview.plan.delta.*` ref namespace + bounded per-step composition (covers §4.1)
-- [`archive/tickets/187WHOTURPOS-003.md`](../archive/tickets/187WHOTURPOS-003.md) — Runtime posture evaluation + `PolicyPlanTrace.posture` block — completed 2026-05-21 (covers §4.1, §4.3, §5, §6)
-- [`archive/tickets/187WHOTURPOS-004.md`](../archive/tickets/187WHOTURPOS-004.md) — `relationships` library bucket + relationship refs — completed 2026-05-21 (covers §4.2)
-- [`archive/tickets/187WHOTURPOS-005.md`](../archive/tickets/187WHOTURPOS-005.md) — Conditional ally weighting + `allyWeightContext` trace — completed 2026-05-21 (covers §4.2, §6, §8)
+- [`archive/tickets/187WHOTURPOS-001.md`](../tickets/187WHOTURPOS-001.md) — `postureEvaluators` library bucket (compiler) — completed 2026-05-21 (covers §4.1)
+- [`archive/tickets/187WHOTURPOS-002.md`](../tickets/187WHOTURPOS-002.md) — `preview.plan.delta.*` ref namespace + bounded per-step composition (covers §4.1)
+- [`archive/tickets/187WHOTURPOS-003.md`](../tickets/187WHOTURPOS-003.md) — Runtime posture evaluation + `PolicyPlanTrace.posture` block — completed 2026-05-21 (covers §4.1, §4.3, §5, §6)
+- [`archive/tickets/187WHOTURPOS-004.md`](../tickets/187WHOTURPOS-004.md) — `relationships` library bucket + relationship refs — completed 2026-05-21 (covers §4.2)
+- [`archive/tickets/187WHOTURPOS-005.md`](../tickets/187WHOTURPOS-005.md) — Conditional ally weighting + `allyWeightContext` trace — completed 2026-05-21 (covers §4.2, §6, §8)
 
 Phase 1 (posture: 001–003) lands before Phase 2 (relationships: 004–005), since conditional ally weights (005) are authored as posture terms.
 

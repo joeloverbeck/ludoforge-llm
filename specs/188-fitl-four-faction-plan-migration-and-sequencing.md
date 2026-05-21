@@ -93,6 +93,8 @@ Live 007 reassessment on 2026-05-21 identified that the test-only ARVN witness t
 
 Live 008 reassessment on 2026-05-21 identified that adding US plan templates as YAML-only data currently lets those templates compete in ARVN plan proposal. The approved Foundations-aligned reset inserted 008A as a generic profile/template isolation prerequisite before US/NVA/VC skeleton authoring continues.
 
+Live 008 follow-up reassessment on 2026-05-21 identified a second generic planner/profile isolation gap for `strategyModules`: US doctrine carriers could perturb an ARVN golden canary, while an attempted `seat.self` authoring gate did not activate correctly for US plan proposal. The approved Foundations-aligned reset inserted 008B as the generic strategy-module profile/seat isolation prerequisite before US/NVA/VC skeleton authoring continues.
+
 - [`archive/tickets/188FITLFOUFAC-001.md`](../archive/tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-002.md`](../archive/tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-003.md`](../archive/tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1) — completed 2026-05-21
@@ -103,6 +105,7 @@ Live 008 reassessment on 2026-05-21 identified that adding US plan templates as 
 - [`archive/tickets/188FITLFOUFAC-007A.md`](../archive/tickets/188FITLFOUFAC-007A.md) — ARVN witnessable selector/posture semantics prerequisite (generic selector-item support + YAML reset before 007) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-007.md`](../archive/tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-008A.md`](../archive/tickets/188FITLFOUFAC-008A.md) — Generic profile plan-template isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 YAML-only and engine-agnostic) — completed 2026-05-21
+- [`tickets/188FITLFOUFAC-008B.md`](../tickets/188FITLFOUFAC-008B.md) — Generic strategy-module profile/seat isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 doctrine carriers YAML-only and engine-agnostic)
 - [`tickets/188FITLFOUFAC-008.md`](../tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2)
 - [`tickets/188FITLFOUFAC-009.md`](../tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
 - [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)

@@ -255,13 +255,14 @@ Before the archive move or any finalization that depends on review, emit a compa
 ```text
 post-ticket-review child workflow:
 - skill loaded: <yes | blocked: reason>
+- child workflow checklist executed: <yes | manual late recovery: reason | blocked: reason>
 - ticket reread: <Acceptance Criteria/Test Plan/Commands/Outcome current | blocked: reason>
 - current code/docs checked: <yes | blocked: reason>
 - reference sweep: <complete | blocked: reason>
 - action decision: <archive | keep active | follow-up | blocked>
 ```
 
-This marker does not replace the `Post-ticket review:` block below. If the child workflow was not actually observable, use the `manual late recovery` path and say why normal invocation is no longer truthful.
+This marker does not replace the `Post-ticket review:` block below. For the normal archive path, `child workflow checklist executed` must be `yes`, meaning the live `post-ticket-review` required reads and Phase 1/2/3 checklist were used as the active workflow for this review slice. If the child workflow was not actually observable, use the `manual late recovery` path and say why normal invocation is no longer truthful.
 
 After review, print:
 
@@ -380,6 +381,7 @@ Before committing:
      - generator durability: <retained generator: repo path | ad hoc generator body recorded in: ticket/report/handoff section>
      - hygiene proof: <git diff --check/schema check/focused consumer proof>
      ```
+     Before staging any generated artifact with `generator durability: ad hoc generator body recorded in: ...`, re-open the named durable ticket, report, or handoff section and verify it preserves the exact script body plus command needed to rerun the generator. A prose summary of copied logic is not enough. If the exact body is absent and no retained repo script exists, stop before commit and either record the exact body durably or run `1-3-1` for how to handle the opaque refresh.
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first. For a state-file-only follow-up commit where the only live dirty path is `.codex/run-state/implement-spec-tickets.json`, validate both views deliberately: the retained validator may reject a staged state that truthfully says post-commit `dirty_state: "clean"` because the state file is still dirty pre-commit; in that case, validate the staged state file's paths, queue, SHA reachability, and vocabulary manually, record the retained-validator transient-state limitation in the checkpoint, then revalidate live `git status --short` and the committed state after the state commit.
 6. Stage only owned and approved paths.
@@ -401,6 +403,7 @@ Required-visible-block checkpoint:
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
 - state-file validity: <valid | not_changed | blocked: reason>
 - generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
+- generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>
 - source-size ledger: <emitted | not_applicable: reason | blocked: reason>
 - abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>
 - dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>
@@ -453,6 +456,20 @@ No-commit finalization is still a terminal handoff state. Before any final respo
 If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` must be `"clean"` for the final post-commit state. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 State-only clean-state example: after a work commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, when the only remaining dirty path is `.codex/run-state/implement-spec-tickets.json` and you are about to commit that state file, write `last_work_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, `last_state_commit: "self"`, `dirty_state: "clean"`, and an `owned_dirty_summary` that describes the post-state-commit repo as clean. Do not write `dirty_state: "state_file_only"` for that state commit; that describes the transient pre-commit moment and will be stale immediately after the commit.
+
+Before a state-file-only commit, emit this lightweight checkpoint in visible text:
+
+```text
+State-only commit checkpoint:
+- staged state file: <yes | blocked: reason>
+- recorded work commit: <full sha | none>
+- recorded state commit: <self | full sha | none>
+- transient validator limitation: <not_applicable | classified: reason>
+- post-commit dirty-state expectation: <clean | unrelated_dirty/untracked paths | blocked: reason>
+- planned revalidation: <retained validator + git status | manual state checks + git status>
+```
+
+This checkpoint does not replace the final `Harness handoff`; it records why the state-only commit is scoped to harness state and how the post-commit validation will be proven.
 
 If unrelated dirty paths appear or change after a state-only commit but before final response, refresh the state file once when the committed state would make the handoff false. Use `unrelated_dirty: <paths>` for unrelated tracked modifications, unrelated untracked files, or both. If unrelated paths keep changing after that refresh, stop chasing state-only commits; report the latest live `git status --short`, identify the state file as stale because of concurrent unrelated work, and do not commit unrelated paths. Continue only after the user confirms how to handle the volatile unrelated worktree.
 

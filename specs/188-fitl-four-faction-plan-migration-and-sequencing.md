@@ -5,7 +5,7 @@
 **Complexity**: M–L, but **Tier-1 YAML authoring only** — no engine or compiler changes. Phased by faction: ARVN (full) → US/NVA/VC (skeletons).
 **Date**: 2026-05-20
 **Dependencies**:
-- `specs/186-advisory-turn-plan-architecture-core.md` (plan templates, role selectors, execution controller, fallback)
+- `archive/specs/186-advisory-turn-plan-architecture-core.md` (plan templates, role selectors, execution controller, fallback)
 - `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md` (posture evaluators + relationship metadata used by every faction)
 
 **Trigger reports**:
@@ -32,12 +32,12 @@ Migrate **ARVN fully first** (the campaign's focus and the stress test), then US
 
 - **No engine, compiler, or kernel changes.** Everything here is authored in `data/games/fire-in-the-lake/`. If a personality cannot be expressed, that is a gap in Spec 186/187 to be raised explicitly via the 1-3-1 rule — not patched with FITL-specific engine code (Foundations #1, #2).
 - **No new combinations beyond the competence report.** The sequencing library encodes exactly the report's combos (§ per-faction "preferred combinations"); no speculative templates (YAGNI).
-- **No evolution campaign.** This spec *authors* competence directly. Structure-first evolution (deferred Spec 183 revival) is a separate effort; this spec does not run `campaigns/`.
+- **No evolution campaign.** This spec *authors* competence directly. Structure-first evolution (reviving rejected Spec 183's idea) is a separate future effort; this spec does not run `campaigns/`.
 - **No four-faction parity in one phase.** ARVN is authored to full fidelity; US/NVA/VC land as correct skeletons (doctrine + signature combos + key guardrails), to be deepened later.
 
 ## 3. Context (verified against codebase, 2026-05-20)
 
-- **Tier-1 surface.** `data/games/fire-in-the-lake/92-agents.md` is the mutable agent library; `arvn-evolved` is the current ARVN binding (3 modules, 6 guardrails, 2 turn-shape evaluators, ~14 flat considerations dominating scoring weight). It binds `outcomeGrantContinuation` preview now made honest by Spec 185.
+- **Tier-1 surface.** `data/games/fire-in-the-lake/92-agents.md` is the mutable agent library; `arvn-evolved` is the current ARVN binding. As of Spec 186's ARVN plan slice (commit `a8fc17db8`), it already carries the `arvn.trainGovern` plan template plus its role selectors, and its flat-consideration layer is partially demoted: 1 strategy module (`buildPoliticalEngine`), 1 guardrail (`dropPassWhenOtherMovesExist`), 1 turn-shape evaluator (`currentTurnImpact`), and 10 considerations. It binds `grantFlowContinuation` preview, now made honest by Spec 185.
 - **Competence report mapping.** The report supplies, per faction: a priority stack, an action policy table, preferred combinations with target logic, target scoring features (weighted sums → leaf scorers / posture terms), errors-to-avoid (→ guardrails), and a final personality statement (→ doctrine intent strings). §5 supplies the relationship model (→ Spec 187 relationship wiring).
 - **Combos to encode** (report §ARVN/US/NVA/VC "preferred combinations"): ARVN Train+Govern, Patrol+Govern, Sweep+Raid, Assault+Raid, Train+Transport, Assault+Transport+Assault; US Train+Advise, Patrol+Advise, Sweep+AirStrike, Assault+AirLift+Assault, AirLift+Train; NVA Rally+Infiltrate, March+Infiltrate, March+Ambush, Attack+Ambush, Terror→future-Rally, LoC-occupation-before-Coup; VC Rally+Subvert, March+Subvert, Terror+Subvert, Terror+Tax, March+Ambush-from-LoC, Rally-underground-reset→Terror.
 - **Generic encoding requirement.** Each combo is a generic plan template (root action tag + optional special tag + timing + role steps); the engine never sees "Sweep"/"Raid" — only authored action tags and selector filters.
@@ -47,8 +47,8 @@ Migrate **ARVN fully first** (the campaign's focus and the stress test), then US
 ### 4.1 ARVN (full fidelity)
 
 - **Doctrines**: `arvn.blockImmediateWin`, `arvn.harvestPatronage`, `arvn.holdHighPopControl`, `arvn.protectAidEcon`, `arvn.selectiveViolence`, `arvn.denyUSIfNearWin`, `arvn.preCoupRedeployDiscipline` — `when`/priority/intent from report §ARVN priority stack + final statement.
-- **Plan templates**: `arvn.trainGovern` (Train+Govern, Govern space ≠ Train space), `arvn.patrolGovern`, `arvn.sweepRaid`, `arvn.assaultRaid`, `arvn.trainTransport`, `arvn.assaultTransportAssault`.
-- **Role selectors**: `arvn.governPatronageSpace`, `arvn.trainSpaceForControlOrPacification`, `arvn.patrolLocOrCity`, `arvn.sweepToExposeSpace`, `arvn.raidRemovalTarget`, `arvn.transportOrigin`/`Destination` (routePairs), `arvn.assaultTargetSpace`, `arvn.pieceRemovalPriority` — quality components from report §ARVN target scoring features.
+- **Plan templates**: `arvn.trainGovern` (Train+Govern, Govern space ≠ Train space — **already authored by Spec 186's ARVN slice; extend, do not re-author**), `arvn.patrolGovern`, `arvn.sweepRaid`, `arvn.assaultRaid`, `arvn.trainTransport`, `arvn.assaultTransportAssault`.
+- **Role selectors**: `arvn.governPatronageSpace` and `arvn.trainSpaceForControlOrPacification` (**both already authored by Spec 186's ARVN slice**), plus net-new `arvn.patrolLocOrCity`, `arvn.sweepToExposeSpace`, `arvn.raidRemovalTarget`, `arvn.transportOrigin`/`Destination` (routePairs), `arvn.assaultTargetSpace`, `arvn.pieceRemovalPriority` — quality components from report §ARVN target scoring features.
 - **Guardrails** (report §ARVN errors to avoid): `arvn.doNotServeUSWin`, `arvn.preserveAidEconFloor`, `arvn.doNotGovernAwaySupportEverywhere`, `arvn.doNotLoseOriginControlByTransport`, `arvn.doNotOvercommitTroopsPreCoupWithoutBase`, `arvn.doNotFightLowYieldHighlands`.
 - **Posture + relationships** (Spec 187): resource-floor `must`; `prefer` own-margin and conditional US-rival denial (`relationship.nominalAlly = US`, flip when `us.nearWin`).
 
@@ -62,15 +62,16 @@ The `arvn-evolved` flat-consideration terms that survive (projected-margin, lead
 
 ## 5. Phases & acceptance criteria
 
-**Phase 1 — ARVN full.** Acceptance: (a) all §4.1 doctrines/templates/selectors/guardrails compile and bind to the ARVN seat; (b) the competence-report ARVN witnesses pass (`policy-profile-quality/`): Train+Govern separation; Govern prefers high-pop Active Support before low-pop Passive Support except emergency; US rival-risk flip when US near win; Patrol+Govern beats Train+Govern when LoCs/Econ threatened; Sweep+Raid exposes before removal; Transport refuses origin-control loss; pre-Coup posture avoids redeploy-undone Troop placement. (c) no engine/compiler diff in the ARVN phase.
+**Phase 1 — ARVN full.** Acceptance: (a) all §4.1 doctrines/templates/selectors/guardrails compile and bind to the ARVN seat; (b) the competence-report ARVN witnesses pass (`policy-profile-quality/`): Train+Govern separation (**`arvn-train-govern-separation.test.ts` already exists and passes from Spec 186; extend coverage to the remaining behaviors**); Govern prefers high-pop Active Support before low-pop Passive Support except emergency; US rival-risk flip when US near win; Patrol+Govern beats Train+Govern when LoCs/Econ threatened; Sweep+Raid exposes before removal; Transport refuses origin-control loss; pre-Coup posture avoids redeploy-undone Troop placement. (c) no engine/compiler diff in the ARVN phase.
 
 **Phase 2 — US/NVA/VC skeletons.** Acceptance: per faction, doctrine set + signature combos compile and bind; at least the report's headline witnesses pass (US avoids Air Strike in populated Support unless blocking a win / uses Advise+Air Lift as force multipliers; NVA March+Infiltrate when VC base stealable and VC near win / protects Trail before Coup; VC avoids conventional Attack unless Ambush payoff / protects bases from NVA Infiltrate).
 
 ## 6. Test plan
 
-- Profile-quality witnesses (`packages/engine/test/policy-profile-quality/`, warning-class per Appendix) for each accepted faction behavior above — constructed scenarios, property-form where possible (e.g. "Govern target population ≥ alternative unless emergency"), witness-form where seed-specific.
+- Profile-quality witnesses (`packages/engine/test/policy-profile-quality/`, warning-class per Appendix) for each accepted faction behavior above — constructed scenarios, property-form where possible (e.g. "Govern target population ≥ alternative unless emergency"), witness-form where seed-specific. The Train+Govern separation witness (`arvn-train-govern-separation.test.ts`) already exists from Spec 186; add the remaining faction-behavior witnesses alongside it.
 - Compile/determinism: the FITL GameDef compiles byte-identically with the v3 ARVN library; no `node --test` engine regressions.
-- Engine-agnosticism guard: grep assertion that no faction/action identifiers leaked into `packages/engine/` as a result of this spec (Foundation #1).
+- Engine-agnosticism guard: grep assertion that no faction/action identifiers leaked into `packages/engine/src/` as a result of this spec (Foundation #1). Follow the existing lint-test convention at `packages/engine/test/unit/lint/` (e.g. `engine-agnostic-visual-config-import-boundary-policy.test.ts`).
+- Docs: extend `docs/agent-dsl-cookbook.md` with authoring sections for `planTemplates`, `postureEvaluators`, and `relationships` — their first production use lands in this spec.
 
 ## 7. Foundation alignment
 
@@ -82,11 +83,22 @@ The `arvn-evolved` flat-consideration terms that survive (projected-margin, lead
 
 **Corrected:** DPSA presents these as evidence the engine must be replaced; here they are evidence the *authoring* layer (186/187) is sufficient — this spec adds no engine code. The migration demotes (not deletes) ARVN's evolved terms.
 
-**Rejected:** running a fresh evolution campaign to "discover" these personalities — the competence report already specifies them; authoring is the correct path. Evolution (deferred Spec 183) tunes structure *after* the authored baseline exists.
+**Rejected:** running a fresh evolution campaign to "discover" these personalities — the competence report already specifies them; authoring is the correct path. Evolution (rejected Spec 183's structure-first idea, revived later) tunes structure *after* the authored baseline exists.
 
 ## Tickets
 
-To be decomposed under `FITLPLAN` after 186+187 land. ARVN phase first; US/NVA/VC skeletons follow. Pure-YAML commits; no infrastructure split needed.
+Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the spec's earlier `FITLPLAN` suggestion was superseded by the user-supplied namespace). ARVN phase first; US/NVA/VC skeletons follow. Pure-YAML commits; no infrastructure split needed.
+
+- [`tickets/188FITLFOUFAC-001.md`](../tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs)
+- [`tickets/188FITLFOUFAC-002.md`](../tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard)
+- [`tickets/188FITLFOUFAC-003.md`](../tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1)
+- [`tickets/188FITLFOUFAC-004.md`](../tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1)
+- [`tickets/188FITLFOUFAC-005.md`](../tickets/188FITLFOUFAC-005.md) — ARVN posture evaluators + relationship wiring (covers §4.1)
+- [`tickets/188FITLFOUFAC-006.md`](../tickets/188FITLFOUFAC-006.md) — ARVN legacy-consideration demotion + v2 primary-path deletion (covers §4.3)
+- [`tickets/188FITLFOUFAC-007.md`](../tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6)
+- [`tickets/188FITLFOUFAC-008.md`](../tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2)
+- [`tickets/188FITLFOUFAC-009.md`](../tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
+- [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
 
 ## Outcome
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `tickets/188FITLFOUFAC-008B.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-008B.md`
 
 ## Problem
 
@@ -16,7 +16,7 @@ Spec 188 §4.2 / Phase 2 authors the US faction personality as a correct *skelet
 2. All required constructs (planTemplates, role selectors, strategyModules, guardrails, postureEvaluators, relationships) are landed (Spec 186/187) — Tier-1 YAML only.
 3. The US/ARVN relationship is the counterpart of the ARVN relationship in ticket 005; author the US-side per report §5.1 (`reports/fitl-competent-agent-ai.md` ~line 1140).
 4. Live 008 implementation proof on 2026-05-21 showed the generic planner let newly authored US templates compete in ARVN plan proposal. That prerequisite is now completed in `archive/tickets/188FITLFOUFAC-008A.md`; the generic profile/template isolation contract must stay green before US YAML authoring resumes.
-5. A later live 008 probe on 2026-05-21 showed a second generic isolation gap for `strategyModules`: US doctrine carriers could perturb an ARVN golden canary, while an attempted `seat.self` YAML gate did not activate correctly in plan proposal. Per the user-approved Foundations-aligned reassessment, this ticket now depends on `tickets/188FITLFOUFAC-008B.md` before US skeleton authoring resumes.
+5. A later live 008 probe on 2026-05-21 showed a second generic isolation gap for `strategyModules`: US doctrine carriers could perturb an ARVN golden canary, while an attempted `seat.self` YAML gate did not activate correctly in plan proposal. Per the user-approved Foundations-aligned reassessment, this ticket now depends on `archive/tickets/188FITLFOUFAC-008B.md` before US skeleton authoring resumes.
 
 ## Architecture Check
 
@@ -59,7 +59,7 @@ Rebind the US seat; add the Phase-2 headline witnesses in `policy-profile-qualit
 - ARVN factions (003–007), NVA (009), VC (010).
 - Full US fidelity beyond the skeleton — deepening is a later effort (Spec 188 §2).
 - Generic planner/compiler profile-template isolation — owned by `archive/tickets/188FITLFOUFAC-008A.md`.
-- Generic planner/compiler strategy-module profile/seat isolation — owned by `tickets/188FITLFOUFAC-008B.md`.
+- Generic planner/compiler strategy-module profile/seat isolation — owned by `archive/tickets/188FITLFOUFAC-008B.md`.
 
 ## Acceptance Criteria
 

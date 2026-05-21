@@ -35,6 +35,11 @@ export const PLAN_CAP_CLASS_BUDGETS = {
 
 type PlanCapClass = keyof typeof PLAN_CAP_CLASS_BUDGETS;
 
+interface PlanExprContext {
+  readonly def?: GameDef;
+  readonly seatId: string;
+}
+
 export interface PlanProposalRootCandidate {
   readonly decision: Extract<Decision, { readonly kind: 'actionSelection' }>;
   readonly move: Move;
@@ -265,7 +270,7 @@ function bindPlanRoles(
           candidate: rootCandidate,
           ...(input.catalog.compiled.selectors === undefined ? {} : { selectors: input.catalog.compiled.selectors }),
           evaluateExpr: (expr, candidate, _microturnOption, selectorItemKey) => {
-            const value = evaluatePlanExpr(expr, input.state, candidate, selectorItemKey, input.def);
+            const value = evaluatePlanExpr(expr, input.state, candidate, selectorItemKey, planExprContextFor(input));
             return Array.isArray(value) ? undefined : value;
           },
         }).selected;
@@ -349,11 +354,11 @@ function scorePlanLeafConsiderations(
     if (consideration === undefined) {
       return total;
     }
-    if (consideration.when !== undefined && evaluatePlanExpr(consideration.when, input.state, candidate) !== true) {
+    if (consideration.when !== undefined && evaluatePlanExpr(consideration.when, input.state, candidate, undefined, planExprContextFor(input)) !== true) {
       return total;
     }
-    const weight = numericExpr(consideration.weight, input.state, candidate);
-    const value = numericExpr(consideration.value, input.state, candidate);
+    const weight = numericExpr(consideration.weight, input.state, candidate, planExprContextFor(input));
+    const value = numericExpr(consideration.value, input.state, candidate, planExprContextFor(input));
     return total + (weight * value);
   }, 0);
 }
@@ -436,7 +441,7 @@ function activeDoctrineIds(input: ProposeAdvisoryTurnPlanInput): readonly string
   return (input.profile.plan.strategyModules ?? [])
     .filter((moduleId) => {
       const module = input.catalog.compiled.strategyModules?.[moduleId];
-      return module !== undefined && evaluateBooleanExpr(module.when, input.state);
+      return module !== undefined && evaluateBooleanExpr(module.when, input.state, planExprContextFor(input));
     })
     .sort(compareStable);
 }
@@ -468,7 +473,7 @@ function highestDoctrineTier(
   for (const doctrineId of doctrineIds) {
     const module = input.catalog.compiled.strategyModules?.[doctrineId];
     if (module !== undefined && moduleAppliesToRoot(module, root)) {
-      tier = Math.max(tier, module.priority.tier + numericExpr(module.priority.value, input.state));
+      tier = Math.max(tier, module.priority.tier + numericExpr(module.priority.value, input.state, undefined, planExprContextFor(input)));
     }
   }
   return tier;
@@ -597,8 +602,8 @@ function emptyProposal(
   };
 }
 
-function evaluateBooleanExpr(expr: CompiledPolicyExpr | AgentPolicyExpr, state: GameState): boolean {
-  const value = evaluatePlanExpr(expr, state);
+function evaluateBooleanExpr(expr: CompiledPolicyExpr | AgentPolicyExpr, state: GameState, context: PlanExprContext): boolean {
+  const value = evaluatePlanExpr(expr, state, undefined, undefined, context);
   return value === true || value === 1;
 }
 
@@ -606,9 +611,14 @@ function numericExpr(
   expr: CompiledPolicyExpr | AgentPolicyExpr | undefined,
   state: GameState,
   candidate?: SelectorEvalCandidate,
+  context?: PlanExprContext,
 ): number {
-  const value = expr === undefined ? 0 : evaluatePlanExpr(expr, state, candidate);
+  const value = expr === undefined ? 0 : evaluatePlanExpr(expr, state, candidate, undefined, context);
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function planExprContextFor(input: ProposeAdvisoryTurnPlanInput): PlanExprContext {
+  return { def: input.def, seatId: String(input.seatId) };
 }
 
 function evaluatePlanExpr(
@@ -616,7 +626,7 @@ function evaluatePlanExpr(
   state: GameState,
   candidate?: SelectorEvalCandidate,
   selectorItemKey?: string,
-  def?: GameDef,
+  context?: PlanExprContext,
 ): string | number | boolean | readonly string[] | undefined {
   switch (expr.kind) {
     case 'literal':
@@ -624,7 +634,7 @@ function evaluatePlanExpr(
         ? expr.value
         : undefined;
     case 'op': {
-      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate, selectorItemKey, def));
+      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate, selectorItemKey, context));
       switch (expr.op) {
         case 'not':
           return values[0] !== true;
@@ -655,11 +665,11 @@ function evaluatePlanExpr(
     case 'zoneProp': {
       const zoneId = typeof expr.zone === 'string'
         ? expr.zone
-        : evaluatePlanExpr(expr.zone, state, candidate, selectorItemKey, def);
-      if (typeof zoneId !== 'string' || def === undefined) {
+        : evaluatePlanExpr(expr.zone, state, candidate, selectorItemKey, context);
+      if (typeof zoneId !== 'string' || context?.def === undefined) {
         return undefined;
       }
-      const zone = def.zones.find((entry) => entry.id === zoneId);
+      const zone = context.def.zones.find((entry) => entry.id === zoneId);
       if (zone === undefined) {
         return undefined;
       }
@@ -682,15 +692,21 @@ function evaluatePlanExpr(
       if (expr.ref.kind === 'selectorItemIntrinsic') {
         return selectorItemKey;
       }
+      if (expr.ref.kind === 'seatIntrinsic') {
+        if (expr.ref.intrinsic === 'self') {
+          return context?.seatId;
+        }
+        return context?.def?.seats?.[state.activePlayer]?.id;
+      }
       if (expr.ref.kind === 'lookup') {
         if (expr.ref.surface !== 'policyState' || expr.ref.collection !== 'zones') {
           return undefined;
         }
-        const key = evaluatePlanExpr(expr.ref.key, state, candidate, selectorItemKey, def);
-        if (typeof key !== 'string' || def?.zones.some((zone) => zone.id === key) !== true) {
+        const key = evaluatePlanExpr(expr.ref.key, state, candidate, selectorItemKey, context);
+        if (typeof key !== 'string' || context?.def?.zones.some((zone) => zone.id === key) !== true) {
           return expr.ref.onMissing !== 'unavailable' ? expr.ref.onMissing.value : undefined;
         }
-        const zone = def.zones.find((entry) => entry.id === key);
+        const zone = context.def.zones.find((entry) => entry.id === key);
         const root = {
           properties: zone?.attributes ?? {},
           markers: state.markers[key] ?? {},

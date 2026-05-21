@@ -105,7 +105,7 @@ Live 008 follow-up reassessment on 2026-05-21 identified a second generic planne
 - [`archive/tickets/188FITLFOUFAC-007A.md`](../archive/tickets/188FITLFOUFAC-007A.md) — ARVN witnessable selector/posture semantics prerequisite (generic selector-item support + YAML reset before 007) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-007.md`](../archive/tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-008A.md`](../archive/tickets/188FITLFOUFAC-008A.md) — Generic profile plan-template isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 YAML-only and engine-agnostic) — completed 2026-05-21
-- [`tickets/188FITLFOUFAC-008B.md`](../tickets/188FITLFOUFAC-008B.md) — Generic strategy-module profile/seat isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 doctrine carriers YAML-only and engine-agnostic)
+- [`archive/tickets/188FITLFOUFAC-008B.md`](../archive/tickets/188FITLFOUFAC-008B.md) — Generic strategy-module profile/seat isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 doctrine carriers YAML-only and engine-agnostic) — completed 2026-05-21
 - [`tickets/188FITLFOUFAC-008.md`](../tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2)
 - [`tickets/188FITLFOUFAC-009.md`](../tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
 - [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)

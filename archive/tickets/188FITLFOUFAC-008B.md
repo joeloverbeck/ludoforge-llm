@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-008B: Generic strategy-module profile isolation prerequisite exposed by US skeleton authoring
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — generic agent planner / compiler ownership only
@@ -79,3 +79,41 @@ Add a generic unit or architecture test proving that another profile's strategy 
 
 1. `pnpm -F @ludoforge/engine build && node --test <focused compiled strategy-module isolation test> packages/engine/dist/test/unit/policy-guided-fitl-canary.golden.test.js`
 2. `pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+Completed on 2026-05-21.
+
+What changed:
+- Threaded the acting plan-proposal seat into the generic plan-expression evaluator and taught that evaluator to resolve `seat.self` / `seat.active` intrinsics for plan-time strategy-module activation.
+- Preserved the existing generic profile boundary: `proposeAdvisoryTurnPlan` still reads only `profile.plan.strategyModules`, so catalog/library modules owned by another profile cannot affect the active profile's proposal.
+- Added `packages/engine/test/unit/agents/plan-proposal-strategy-module-isolation.test.ts` with generic regression coverage for cross-profile strategy-module isolation and authored `seat.self` gates.
+
+Touched-file ledger:
+- `packages/engine/src/agents/plan-proposal.ts` — modified; generic seat-intrinsic support for plan-time expressions.
+- `packages/engine/test/unit/agents/plan-proposal-strategy-module-isolation.test.ts` — added as the architecture-equivalent focused test instead of growing the near-cap `plan-proposal.test.ts`.
+- `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/kernel/types-core.ts`, and schema mirrors — verified no edit needed; `seat.self` already compiled to the generic `seatIntrinsic` ref and no compiled contract field was added.
+- `packages/engine/test/unit/policy-guided-fitl-canary.golden.test.ts` — verified no edit needed; the existing canary stayed green from the engine package cwd.
+
+Command ledger:
+- `pnpm -F @ludoforge/engine build` — passed.
+- Root-cwd focused command `node --test packages/engine/dist/test/unit/agents/plan-proposal-strategy-module-isolation.test.js packages/engine/dist/test/unit/policy-guided-fitl-canary.golden.test.js` — new isolation test passed; FITL canary failed before behavior with `ENOENT` because that canary resolves fixtures from `process.cwd()/test/...`.
+- Substituted canary cwd-correct proof: from `packages/engine`, `node --test dist/test/unit/policy-guided-fitl-canary.golden.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine test:all` — passed, 958 tests, 0 failures.
+
+Acceptance / invariants:
+- Cross-profile strategy modules cannot affect an active profile unless listed in that profile's plan module list.
+- Authored `seat.self` gates activate for the acting seat and stay inactive for other seats during plan proposal.
+- No FITL-specific identifiers or faction allowlists were added to engine/compiler implementation logic.
+- US/NVA/VC skeleton tickets can remain Tier-1 YAML authoring after this prerequisite lands.
+
+Source-size / generated-artifact notes:
+- `source-size ledger`: `packages/engine/src/agents/plan-proposal.ts | before 718 | after 734 | crossed cap? no | active growth +16 net lines | extraction/defer rationale: under 800-line cap and the change is local to the existing plan-expression evaluator | successor if any: none`.
+- New focused test file is 215 lines; `plan-proposal.test.ts` stayed untouched at 757 lines.
+- No schema or generated artifact changes were needed or checked in.
+
+Late-edit proof validity:
+- Terminal status and outcome transcription happened after the final proof lanes. No-invalidation: status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.
+
+Archive status:
+- Archived to `archive/tickets/188FITLFOUFAC-008B.md` after post-ticket review.

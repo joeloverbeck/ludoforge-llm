@@ -869,11 +869,6 @@ agents:
           param: projectedMarginWeight
         value:
           ref: feature.projectedSelfMargin
-      preferProjectedRank:
-        scopes: [move]
-        weight: -300
-        value:
-          ref: feature.projectedSelfRank
       preserveResources:
         scopes: [move]
         weight:
@@ -1033,16 +1028,6 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.govern
-      trainWhenControlLow:
-        scopes: [move]
-        when:
-          lt:
-            - { ref: feature.coinControlPop }
-            - 25
-        weight: 500
-        value:
-          boolToNumber:
-            ref: candidate.tag.train
       preferNormalizedMargin:
         scopes: [move]
         weight: 500
@@ -1056,42 +1041,6 @@ agents:
                 - sub:
                     - { ref: aggregate.maxMarginScore }
                     - { ref: aggregate.minMarginScore }
-      preferStrongNormalizedMargin:
-        scopes: [move]
-        weight: 800
-        value:
-          div:
-            - sub:
-                - { ref: feature.projectedSelfMargin }
-                - { ref: aggregate.minMarginScore }
-            - max:
-                - 1
-                - sub:
-                    - { ref: aggregate.maxMarginScore }
-                    - { ref: aggregate.minMarginScore }
-      penalizeOpponentMargin:
-        scopes: [move]
-        weight: -200
-        value:
-          add:
-            - { ref: feature.projectedNvaMargin }
-            - { ref: feature.projectedVcMargin }
-      hurtCurrentLeader:
-        scopes: [move]
-        weight: 600
-        value:
-          neg:
-            ref: feature.projectedCurrentLeaderMargin
-        previewFallback:
-          onUnavailable: noContribution
-      reduceNearestThreat:
-        scopes: [move]
-        weight: 600
-        value:
-          neg:
-            ref: feature.projectedNearestThreatMargin
-        previewFallback:
-          onUnavailable: noContribution
       valueCapabilityGain:
         scopes: [move]
         weight: 300
@@ -1120,12 +1069,6 @@ agents:
         weight: 300
         value:
           ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
-      applyBuildPoliticalEngineModule:
-        scopes: [move]
-        weight: 1
-        value:
-          ref: module.buildPoliticalEngine.contribution
-
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -1229,15 +1172,6 @@ agents:
         turnShapeEvaluators:
           - currentTurnImpact
         considerations:
-          - preferProjectedSelfMargin
-          - preferProjectedRank
-          - preferStrongNormalizedMargin
-          - penalizeOpponentMargin
-          - hurtCurrentLeader
-          - reduceNearestThreat
-          - preferGovernWeighted
-          - trainWhenControlLow
-          - applyBuildPoliticalEngineModule
           - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey

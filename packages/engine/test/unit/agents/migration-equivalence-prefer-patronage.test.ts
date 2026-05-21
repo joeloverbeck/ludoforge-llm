@@ -151,7 +151,7 @@ describe('preferPatronageMode migration equivalence', () => {
       state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
     }
 
-    assert.deepEqual(selected, ['patronage', 'patronage']);
+    assert.deepEqual(selected, ['patronage', 'patronage', 'patronage', 'patronage']);
     assert.deepEqual(selectedGovernModes, []);
   });
 });

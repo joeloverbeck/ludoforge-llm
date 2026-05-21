@@ -1,30 +1,30 @@
 {
-  "seed": 1,
-  "maxTurns": 10,
+  "seed": 2,
+  "maxTurns": 80,
   "playerCount": 4,
-  "decisionIndex": 9,
+  "decisionIndex": 296,
   "profileId": "policy-preview-inner-choosenstep-fitl-canary",
   "decision": {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces",
     "command": "add",
-    "value": "quang-tri-thua-thien:none"
+    "value": "binh-dinh:none"
   },
-  "selectedStableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tri-thua-thien:none\"",
+  "selectedStableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"binh-dinh:none\"",
   "previewUsage": {
     "mode": "exactWorld",
-    "evaluatedCandidateCount": 18,
-    "completionPolicyFallbackCount": 9,
+    "evaluatedCandidateCount": 6,
+    "completionPolicyFallbackCount": 3,
     "refIds": [
       "preview.option.delta.victory.currentMargin.self"
     ],
     "unknownRefs": [],
     "readyRefStats": {
       "preview.option.delta.victory.currentMargin.self": {
-        "readyCount": 9,
-        "distinctValueCount": 3,
-        "min": 0,
-        "max": 2,
+        "readyCount": 3,
+        "distinctValueCount": 2,
+        "min": 7,
+        "max": 9,
         "range": 2,
         "allReadyValuesEqual": false
       }
@@ -32,7 +32,7 @@
     "utility": "differentiating",
     "widenedBecauseUniform": false,
     "outcomeBreakdown": {
-      "ready": 9,
+      "ready": 3,
       "stochastic": 0,
       "unknownRandom": 0,
       "unknownHidden": 0,
@@ -47,8 +47,8 @@
     },
     "coverage": {
       "requestedRefCount": 1,
-      "evaluatedRootOptionCount": 9,
-      "readyRootOptionCount": 9,
+      "evaluatedRootOptionCount": 3,
+      "readyRootOptionCount": 3,
       "unavailableRootOptionCount": 0,
       "allRootsUnavailable": false,
       "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -58,40 +58,16 @@
   },
   "options": [
     {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"binh-dinh:none\"",
-      "projectedMarginValue": 0
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"binh-dinh:none\"",
+      "projectedMarginValue": 9
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"binh-tuy-binh-thuan:none\"",
-      "projectedMarginValue": 0
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"pleiku-darlac:none\"",
+      "projectedMarginValue": 7
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"kien-giang-an-xuyen:none\"",
-      "projectedMarginValue": 0
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"kien-phong:none\"",
-      "projectedMarginValue": 0
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"pleiku-darlac:none\"",
-      "projectedMarginValue": 1
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-duc-long-khanh:none\"",
-      "projectedMarginValue": 0
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tin-quang-ngai:none\"",
-      "projectedMarginValue": 0
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"quang-tri-thua-thien:none\"",
-      "projectedMarginValue": 2
-    },
-    {
-      "stableMoveKey": "chooseNStep:decision:doc.actionPipelines.15.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:\"tay-ninh:none\"",
-      "projectedMarginValue": 0
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"quang-nam:none\"",
+      "projectedMarginValue": 7
     }
   ]
 }

@@ -100,6 +100,22 @@ If an in-flight proof command or terminal session may still be running after int
 
 If resuming after compaction, interruption, or a long handoff near proof, closeout, commit, or final response time, reread `### 5. Commit The Iteration` before committing or finalizing. Emit the required visible blocks or an explicit `late harness recovery checkpoint` before any commit/final response: child audit blocks, `Acceptance-to-command map`, `Post-ticket review` block, generated-artifact provenance when triggered, state-file validation when changed, `Required-visible-block checkpoint`, and full `Harness handoff` readiness. A recovered checkpoint can repair conversation visibility, but it is not a substitute for an unrun or unobservable child workflow.
 
+Compact required-block ledger for recovered or late-stage iterations. Copy this order into the visible conversation as each surface becomes applicable; do not wait until after archive or commit to reconstruct it:
+
+1. `Child skill audit:` for `.codex/skills/implement-ticket`, or `not_applicable` with the allowed retarget-only reason.
+2. `Acceptance-to-command map:` before invoking review/archive for a terminal ticket.
+3. `post-ticket-review child workflow:` before archive eligibility is trusted.
+4. `Pre-archive gate:` immediately before any archive move.
+5. `Post-ticket review:` after review/archive or manual late recovery.
+6. `post-ticket-review` audit classification: compact child audit block when triggered, or `not_applicable: routine archive/reference repair`.
+7. Generated-artifact provenance when triggered, otherwise a reasoned `not_applicable`.
+8. Source-size ledger when triggered by `implement-ticket`, otherwise a reasoned `not_applicable`.
+9. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
+10. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
+11. `Harness handoff:` before final response.
+
+The helper `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` prints the checkpoint/handoff scaffold and performs lightweight state/path checks. It is only a prompt and sanity check; it does not replace the child workflows or the required visible blocks.
+
 ## Intake
 
 1. Resolve `spec_path` to exactly one live file under `specs/`. If it is missing, ambiguous, or already archived, stop and ask for the exact active spec path.
@@ -267,6 +283,8 @@ Manual late recovery is exceptional, not a normal substitute for the child workf
 
 If any manual-recovery checklist item is unverified, stop before archival and either invoke `post-ticket-review` or leave the ticket active with a handoff naming the missing item.
 
+Normal archive path hard rule: before any ticket archive move, if the ticket is not already archived and no visible `post-ticket-review child workflow:` invocation marker exists for the current review slice, run `$post-ticket-review <completed-ticket>` now. Do not use manual late recovery simply because manual review checks have already been performed; reserve it for already-crossed states where a normal child invocation would be misleading, duplicative, or impossible to observe cleanly.
+
 Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
 
 ```text
@@ -317,7 +335,7 @@ Compact pre-commit visibility gate. This is a quick index for the longer rules b
 Before committing:
 
 1. Refresh `git status --short`.
-2. Inspect `git diff --cached --name-status` before staging. Pre-existing unrelated staged entries must not enter a harness commit.
+2. Inspect `git diff --cached --name-status` before staging only to detect pre-existing staged entries. Pre-existing unrelated staged entries must not enter a harness commit.
 3. Verify every dirty path is owned by the iteration, explicitly approved, or intentionally left unstaged.
    - Unrelated untracked files, reports, generated artifacts, and proof byproducts must remain untouched and unstaged unless the user explicitly approves deletion or inclusion. Do not remove them merely to make `git status --short` clean; instead, record them in `dirty_state` and the handoff as unrelated retained paths.
 4. Run whitespace/hygiene over owned files. For newly untracked files, use `git diff --no-index --check /dev/null <path>` or an equivalent trailing-whitespace check.
@@ -350,7 +368,7 @@ Before committing:
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first. For a state-file-only follow-up commit where the only live dirty path is `.codex/run-state/implement-spec-tickets.json`, validate both views deliberately: the retained validator may reject a staged state that truthfully says post-commit `dirty_state: "clean"` because the state file is still dirty pre-commit; in that case, validate the staged state file's paths, queue, SHA reachability, and vocabulary manually, record the retained-validator transient-state limitation in the checkpoint, then revalidate live `git status --short` and the committed state after the state commit.
 6. Stage only owned and approved paths.
-7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
+7. Re-run `git diff --cached --name-status` after staging and immediately before commit; confirm the staged set is scoped to the iteration.
 8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
 9. Emit the checkpoint below.
 10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.

@@ -94,7 +94,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the 
 - [`archive/tickets/188FITLFOUFAC-003.md`](../archive/tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-004A.md`](../archive/tickets/188FITLFOUFAC-004A.md) — Generic WASM guardrail demotion parity prerequisite exposed by ARVN guardrails (covers §6 Engine-agnosticism / Foundations alignment) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-004.md`](../archive/tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1) — completed 2026-05-21
-- [`tickets/188FITLFOUFAC-005.md`](../tickets/188FITLFOUFAC-005.md) — ARVN posture evaluators + relationship wiring (covers §4.1)
+- [`archive/tickets/188FITLFOUFAC-005.md`](../archive/tickets/188FITLFOUFAC-005.md) — ARVN posture evaluators + relationship wiring (covers §4.1) — completed 2026-05-21
 - [`tickets/188FITLFOUFAC-006.md`](../tickets/188FITLFOUFAC-006.md) — ARVN legacy-consideration demotion + v2 primary-path deletion (covers §4.3)
 - [`tickets/188FITLFOUFAC-007.md`](../tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6)
 - [`tickets/188FITLFOUFAC-008.md`](../tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2)

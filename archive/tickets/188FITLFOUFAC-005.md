@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-005: ARVN posture evaluators + relationship wiring (US-rival flip)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
@@ -68,3 +68,33 @@ Wire the posture evaluator and relationship into the `arvn-evolved` profile.
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-05-21
+
+Implemented the ARVN posture/relationship authoring slice in `data/games/fire-in-the-lake/92-agents.md`:
+
+- Added `strategicConditions.usNearWin` for the authored US near-win threshold.
+- Added `postureEvaluators.arvn.preserveAidAndMargin` with a resource-floor `must`, an own-margin `prefer`, and an explicit fallback-bearing US ally/rival risk `prefer`.
+- Added ARVN relationship entries for `nominalAlly` and conditional `nearWin` binding to the US seat.
+- Attached `postureHook: arvn.preserveAidAndMargin` to each ARVN plan template authored by ticket 003.
+
+Generated/artifact fallout:
+
+- `packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/game-def-hash.txt` was refreshed because the intentional FITL agent-library YAML change changed the compiled GameDef hash.
+- Generation command: `node packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/regenerate.mjs`
+- Canonical inputs: current production FITL GameSpecDoc plus seed 1001 fixture generator.
+- Persisted diff: `game-def-hash.txt` only; `initial-state.json` and `decision-sequence.json` stayed byte-identical.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- Initial package-relative focused proof exposed the expected fixture hash drift in `fitl-march-dead-end-recovery.test.js`; after regenerating the retained fixture hash, `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js` passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/agents/compiled-policy-determinism.test.js dist/test/policy-profile-quality/*.test.js` — passed, 21 tests / 14 suites.
+- `pnpm -F @ludoforge/engine test:all` — passed, 957 tests.
+- `pnpm turbo test` — passed.
+
+Deviations:
+
+- The ticket's command used a root-relative `node --test packages/engine/dist/...` path after an engine package build. The final focused proof used package-relative built paths through `pnpm -F @ludoforge/engine exec node --test dist/...`, which exercises the same built artifacts under the package context.

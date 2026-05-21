@@ -248,6 +248,18 @@ agents:
               - 1
               - { ref: feature.selfResources }
           threshold: 1
+      usNearWin:
+        description: "US is close enough to a Support win that ARVN treats US gains as rival gains."
+        target:
+          gte:
+            - { ref: feature.usMargin }
+            - -1
+        proximity:
+          current:
+            add:
+              - { ref: feature.usMargin }
+              - 1
+          threshold: 1
 
     selectors:
       # Spec 181 migration: preferOptionProjectedMargin previously read
@@ -410,6 +422,7 @@ agents:
       arvn.trainGovern:
         traceLabel: "ARVN Train then Govern"
         root: { actionTags: [train], compound: { specialTags: [govern], timing: after } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
           governSpace: { selector: arvn.governPatronageSpace, required: true, constraints: [{ notEqual: role.trainSpace }] }
@@ -421,6 +434,7 @@ agents:
       arvn.patrolGovern:
         traceLabel: "ARVN Patrol then Govern"
         root: { actionTags: [patrol], compound: { specialTags: [govern], timing: after } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           patrolSpace: { selector: arvn.patrolLocOrCity, required: true }
           governSpace: { selector: arvn.governPatronageSpace, required: true, constraints: [{ notEqual: role.patrolSpace }] }
@@ -432,6 +446,7 @@ agents:
       arvn.sweepRaid:
         traceLabel: "ARVN Sweep then Raid"
         root: { actionTags: [sweep], compound: { specialTags: [raid], timing: after } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           sweepSpace: { selector: arvn.sweepToExposeSpace, required: true }
           raidSpace: { selector: arvn.raidRemovalTarget, required: true }
@@ -444,6 +459,7 @@ agents:
       arvn.assaultRaid:
         traceLabel: "ARVN Assault then Raid"
         root: { actionTags: [assault], compound: { specialTags: [raid], timing: after } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           assaultSpace: { selector: arvn.assaultTargetSpace, required: true }
           raidSpace: { selector: arvn.raidRemovalTarget, required: true }
@@ -456,6 +472,7 @@ agents:
       arvn.trainTransport:
         traceLabel: "ARVN Train then Transport"
         root: { actionTags: [train], compound: { specialTags: [transport], timing: after } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
           transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.trainSpace }] }
@@ -467,6 +484,7 @@ agents:
       arvn.assaultTransportAssault:
         traceLabel: "ARVN Assault, Transport, Assault"
         root: { actionTags: [assault], compound: { specialTags: [transport], timing: during, interruptAfterStage: 1 } }
+        postureHook: arvn.preserveAidAndMargin
         roles:
           firstAssaultSpace: { selector: arvn.assaultTargetSpace, required: true }
           transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
@@ -477,6 +495,50 @@ agents:
           - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
         caps: { capClass: standard256, maxSteps: 3 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
+
+    postureEvaluators:
+      arvn.preserveAidAndMargin:
+        traceLabel: "ARVN preserve Aid/resources and projected margin"
+        must:
+          - id: resource-floor
+            condition:
+              gte:
+                - { ref: feature.selfResources }
+                - 1
+            onViolation: demote
+            demotePenalty: -500
+        prefer:
+          - id: own-margin
+            value:
+              ref: preview.victory.currentMargin.self
+            weight: 25
+            fallback:
+              contribution: 0
+          - id: us-rival-risk
+            when:
+              eq:
+                - { ref: relationship.nearWin.seat }
+                - { ref: relationship.nominalAlly.seat }
+            value:
+              ref: relationship.nominalAlly.gainValue
+            weight: -25
+            fallback:
+              contribution: 0
+
+    relationships:
+      arvn.usNominalAlly:
+        role: nominalAlly
+        seat: us
+        priority: 10
+        gainValue:
+          ref: victory.currentMargin.us
+      arvn.usNearWin:
+        role: nearWin
+        seat: us
+        condition: usNearWin
+        priority: 20
+        gainValue:
+          ref: victory.currentMargin.us
 
     strategyModules:
       arvnPursueProjectedMargin:

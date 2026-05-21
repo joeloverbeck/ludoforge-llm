@@ -87,12 +87,13 @@ The `arvn-evolved` flat-consideration terms that survive (projected-margin, lead
 
 ## Tickets
 
-Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the spec's earlier `FITLPLAN` suggestion was superseded by the user-supplied namespace). ARVN phase first; US/NVA/VC skeletons follow. Pure-YAML commits; no infrastructure split needed.
+Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the spec's earlier `FITLPLAN` suggestion was superseded by the user-supplied namespace). ARVN phase first; US/NVA/VC skeletons follow. The phase remains authored YAML-first, but live 004 proof identified a generic WASM guardrail-demotion parity prerequisite; that prerequisite must stay engine-agnostic and must not add FITL-specific runtime branches.
 
 - [`archive/tickets/188FITLFOUFAC-001.md`](../archive/tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-002.md`](../archive/tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-003.md`](../archive/tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1) — completed 2026-05-21
-- [`tickets/188FITLFOUFAC-004.md`](../tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1)
+- [`archive/tickets/188FITLFOUFAC-004A.md`](../archive/tickets/188FITLFOUFAC-004A.md) — Generic WASM guardrail demotion parity prerequisite exposed by ARVN guardrails (covers §6 Engine-agnosticism / Foundations alignment) — completed 2026-05-21
+- [`archive/tickets/188FITLFOUFAC-004.md`](../archive/tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1) — completed 2026-05-21
 - [`tickets/188FITLFOUFAC-005.md`](../tickets/188FITLFOUFAC-005.md) — ARVN posture evaluators + relationship wiring (covers §4.1)
 - [`tickets/188FITLFOUFAC-006.md`](../tickets/188FITLFOUFAC-006.md) — ARVN legacy-consideration demotion + v2 primary-path deletion (covers §4.3)
 - [`tickets/188FITLFOUFAC-007.md`](../tickets/188FITLFOUFAC-007.md) — ARVN profile-quality witnesses (covers §5 Phase 1, §6)

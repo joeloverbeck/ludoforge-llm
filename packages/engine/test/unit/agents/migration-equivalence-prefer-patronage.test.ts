@@ -126,7 +126,7 @@ describe('preferPatronageMode migration equivalence', () => {
     });
   });
 
-  it('reproduces the captured four govern-mode patronage choices on a fixed FITL seed', () => {
+  it('reproduces the captured govern-mode patronage choices on a fixed FITL seed', () => {
     const def = withPreferPatronageMode(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
     const fixtureDecisions = readDecisionSequence();
@@ -151,7 +151,7 @@ describe('preferPatronageMode migration equivalence', () => {
       state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
     }
 
-    assert.deepEqual(selected, ['patronage', 'patronage', 'patronage', 'patronage']);
+    assert.deepEqual(selected, ['patronage', 'patronage']);
     assert.deepEqual(selectedGovernModes, []);
   });
 });

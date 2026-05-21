@@ -72,6 +72,10 @@ agents:
         type: number
         expr:
           ref: victory.currentMargin.vc
+      usMargin:
+        type: number
+        expr:
+          ref: victory.currentMargin.us
       patronage:
         type: number
         expr:
@@ -156,6 +160,24 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.vc }
             - { ref: feature.vcMargin }
+      projectedUsMargin:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.victory.currentMargin.us }
+            - { ref: feature.usMargin }
+      projectedSelfMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedSelfMargin }
+            - { ref: feature.selfMargin }
+      projectedUsMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedUsMargin }
+            - { ref: feature.usMargin }
       projectedCapabilityGain:
         type: number
         expr:
@@ -662,6 +684,96 @@ agents:
           actionId: pass
           traceLabel: "fallback: pass action when no other moves"
         onUnavailable: noFire
+      arvn.doNotServeUSWin:
+        traceLabel: "ARVN do not serve a US win"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.govern }
+            - gt:
+                - { ref: feature.projectedUsMarginDelta }
+                - 0
+            - gte:
+                - { ref: feature.projectedUsMargin }
+                - -1
+        severity: demote
+        penalty: 600
+        onUnavailable: noFire
+      arvn.preserveAidEconFloor:
+        traceLabel: "ARVN preserve Aid/Econ floor"
+        scopes: [move]
+        when:
+          and:
+            - lte:
+                - { ref: feature.selfResources }
+                - 2
+            - or:
+                - { ref: candidate.tag.train }
+                - { ref: candidate.tag.govern }
+                - { ref: candidate.tag.assault }
+                - { ref: candidate.tag.transport }
+                - { ref: candidate.tag.raid }
+        severity: demote
+        penalty: 350
+        onUnavailable: noFire
+      arvn.doNotGovernAwaySupportEverywhere:
+        traceLabel: "ARVN do not Govern away Support everywhere"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.govern }
+            - lte:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 0
+            - gte:
+                - { ref: feature.patronage }
+                - 30
+        severity: demote
+        penalty: 450
+        onUnavailable: noFire
+      arvn.doNotLoseOriginControlByTransport:
+        traceLabel: "ARVN do not lose origin control by Transport"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.transport }
+            - lt:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 0
+        severity: demote
+        penalty: 550
+        onUnavailable: noFire
+      arvn.doNotOvercommitTroopsPreCoupWithoutBase:
+        traceLabel: "ARVN do not overcommit Troops pre-Coup without a Base"
+        scopes: [move]
+        when:
+          and:
+            - lte:
+                - { ref: schedule.distance.toBoundary.coupEntry.cards }
+                - 1
+            - or:
+                - { ref: candidate.tag.train }
+                - { ref: candidate.tag.transport }
+            - lte:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 0
+        severity: demote
+        penalty: 400
+        onUnavailable: noFire
+      arvn.doNotFightLowYieldHighlands:
+        traceLabel: "ARVN do not fight low-yield Highlands"
+        scopes: [move]
+        when:
+          and:
+            - or:
+                - { ref: candidate.tag.assault }
+                - { ref: candidate.tag.sweep }
+            - lte:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 0
+        severity: demote
+        penalty: 300
+        onUnavailable: noFire
 
     turnShapeEvaluators:
       currentTurnImpact:
@@ -1037,6 +1149,12 @@ agents:
       use:
         guardrails:
           - dropPassWhenOtherMovesExist
+          - arvn.doNotServeUSWin
+          - arvn.preserveAidEconFloor
+          - arvn.doNotGovernAwaySupportEverywhere
+          - arvn.doNotLoseOriginControlByTransport
+          - arvn.doNotOvercommitTroopsPreCoupWithoutBase
+          - arvn.doNotFightLowYieldHighlands
         strategyModules:
           - buildPoliticalEngine
           - arvn.blockImmediateWin

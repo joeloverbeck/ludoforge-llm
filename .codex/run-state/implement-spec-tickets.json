@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/188FITLFOUFAC-002.md",
+  "last_ticket": "archive/tickets/188FITLFOUFAC-003.md",
   "last_result": "completed_archived",
-  "last_work_commit": "0f844f62cd06b0ddd7df872532020ef840483eec",
+  "last_work_commit": "8dba1c8cca0f3cb95a6e6d2b250fd24b01f7a6bb",
   "last_state_commit": "self",
-  "next_target": "tickets/188FITLFOUFAC-003.md",
+  "next_target": "tickets/188FITLFOUFAC-004.md",
   "queue": [
-    "tickets/188FITLFOUFAC-003.md",
     "tickets/188FITLFOUFAC-004.md",
     "tickets/188FITLFOUFAC-005.md",
     "tickets/188FITLFOUFAC-006.md",
@@ -18,9 +17,9 @@
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "188FITLFOUFAC-002 implemented/archived and state persisted; next active target is 188FITLFOUFAC-003. Only unrelated .claude/skills/spec-to-tickets/SKILL.md and .claude/skills/skill-audit/SKILL.md remain dirty.",
+  "owned_dirty_summary": "188FITLFOUFAC-003 implemented and archived in work commit 8dba1c8cca0f3cb95a6e6d2b250fd24b01f7a6bb; next active target is 188FITLFOUFAC-004. After this state-only commit, the worktree is expected to be clean.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_dirty: .claude/skills/spec-to-tickets/SKILL.md .claude/skills/skill-audit/SKILL.md",
+  "dirty_state": "clean",
   "updated_at": "2026-05-21"
 }

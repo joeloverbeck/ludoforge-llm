@@ -28,7 +28,7 @@ The announcement format depends on which confidence path you're on. Use the row 
 | Path / Confidence | Example announcement |
 |---|---|
 | Standard interview reaches ≥95% | `I'm at 95% confidence. Moving to approaches.` |
-| High-Confidence Start at 80–94% with terminal gaps (compound-move) | `Confidence: 88% — gaps: <list>, both addressable in the design itself.` Then proceed directly to compound-move presentation. |
+| Compound-move at 80–94% with terminal gaps (High-Confidence Start, stacked-trigger Decision-requiring-design, or directive-driven) | `Confidence: 88% — gaps: <list>, both addressable in the design itself.` Then proceed directly to compound-move presentation. The percentage announcement is required on *every* compound-move entry — including stacked-trigger external-LLM flows that reach compound-move without an explicitly-labeled high-confidence-start announcement — not only the cases named in this row's left cell. |
 | High-Confidence Start at 80–94% with non-terminal gaps | `Confidence: 88% — gap: <single specific gap>. One question left.` Then ask the question. |
 | <80% under Pre-Set Directives "no clarifying questions" | `Confidence: 65% before investigation; investigating <topic>.` Then post-investigation: `Confidence: 80% after <findings> — gap narrows to user intent.` |
 

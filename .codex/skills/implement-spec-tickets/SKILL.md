@@ -1,6 +1,6 @@
 ---
 name: implement-spec-tickets
-description: "Run the Ludoforge spec-ticket implementation loop for a spec: select active same-family tickets, invoke implement-ticket with the originating spec as authority, review/archive completed tickets with post-ticket-review, apply evidence-backed skill-audit hardening when child workflows expose it, persist resume state, archive the originating spec when all owned tickets are done, and optionally create/push a final branch."
+description: "Run the Ludoforge spec-ticket implementation loop for a spec: select active same-family tickets, invoke implement-ticket with the originating spec as authority, review/archive completed tickets with post-ticket-review, surface evidence-backed skill-audit hardening proposals when child workflows expose them, persist resume state, archive the originating spec when all owned tickets are done, and optionally create/push a final branch."
 ---
 
 # Implement Spec Tickets
@@ -17,9 +17,9 @@ Prefer a fresh context boundary between unrelated ticket iterations. After each 
 
 This harness intentionally narrows `skill-audit` output when auditing child workflow skills during an implementation loop. Use the live `skill-audit` criteria to identify evidence-backed issues, improvements, and features, but emit the compact child-audit block required below instead of the full report template.
 
-This harness also grants explicit authorization to patch child skills when a child-audit suggestion is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. That authorization applies only inside this orchestrated loop; a standalone `$skill-audit` request remains report-only unless the user separately asks to implement suggestions.
+This harness does not grant implicit authorization to patch child skills. When a child-audit suggestion is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow, propose the skill update in the compact child-audit block and wait for explicit user confirmation before editing any skill or rules file. A standalone `$skill-audit` request remains report-only unless the user separately asks to implement suggestions.
 
-For any nonzero child-audit finding count, include enough evidence in the compact block to justify each apply, reject, or defer decision. Do not collapse nonzero findings into unexplained counts.
+For any nonzero child-audit finding count, include enough evidence in the compact block to justify each proposed, rejected, or deferred decision. Do not collapse nonzero findings into unexplained counts.
 
 For a zero-finding child audit, the `Evidence basis` line must still name at least two concrete exercised surfaces that were checked, such as boundary reset handling, archival/reference repair, proof invalidation, ticket graph updates, state persistence, or terminal-status gating. Do not emit a bare "no findings" audit without saying which parts of the child workflow were actually exercised.
 
@@ -212,22 +212,22 @@ If the iteration stopped in a pre-implementation prerequisite insertion or pure 
 
 For retarget-only iterations, prefer the visibility profile above over terminal-ticket review wording. The child-audit exception is valid only when the final durable work is a prerequisite/queue/state rewrite, not when `implement-ticket` behavior was materially exercised and then manually reconstructed by the harness.
 
-Apply every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. This skill is explicit authorization to apply those suggestions; do not wait for a separate "Implement suggestions" prompt.
+Propose every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. Do not apply child-skill edits during the implementation loop unless the user explicitly confirms the proposed skill/rules-file update.
 
 Reject or defer suggestions that are speculative, duplicate existing guidance, weaken proof/closeout guardrails, or import assumptions from another repository.
 
-Before applying or rejecting suggestions, print:
+Before proposing, applying, or rejecting suggestions, print:
 
 ```text
 Child skill audit:
 - Target skill: .codex/skills/implement-ticket
 - Findings: <N issues, N improvements, N features>
 - Evidence basis: <one-line session evidence checked>
-- Apply: <specific suggestions to patch, or "none">
+- Apply: <specific user-confirmed suggestions to patch, or "none">
 - Reject/defer: <specific suggestions and reason, or "none">
 ```
 
-If no skill files change, record `Apply: none`. If skill files change, run focused hygiene such as `git diff --check -- .codex/skills/implement-ticket`.
+If no skill files change, record `Apply: none`. If the user explicitly confirms a child-skill edit and skill files change, run focused hygiene such as `git diff --check -- .codex/skills/implement-ticket`.
 
 ### 3. Review Completed Tickets
 
@@ -327,9 +327,9 @@ If `post-ticket-review` creates or materially updates a follow-up ticket, active
 $skill-audit .codex/skills/post-ticket-review
 ```
 
-Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, changing future verification behavior, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, corrects stale proof commands or verification lanes in active sibling tickets, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
+Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, changes only `Deps` from `tickets/<id>.md` to `archive/tickets/<id>.md`, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, changing future verification behavior, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, corrects stale proof commands or verification lanes in active sibling tickets, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
 
-Apply sound, evidence-backed suggestions under the same rules as the implement-ticket audit. Emit the same compact child-audit block and run focused hygiene over changed skill files.
+Handle sound, evidence-backed suggestions under the same confirmation rules as the implement-ticket audit. Emit the same compact child-audit block. If the user explicitly confirms a child-skill edit and skill files change, run focused hygiene over changed skill files.
 
 Put any review-created follow-up ticket at the front of the queue. If review only truthed dependencies, specs, or archive references and created no follow-up, recompute dependency order but keep the existing queue where still valid.
 

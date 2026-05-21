@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-002: Engine-agnosticism guard test — no faction/action identifiers in packages/engine/src
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
@@ -63,3 +63,23 @@ Per `.claude/rules/testing.md`, mark the file `// @test-class: architectural-inv
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/lint/engine-agnostic-faction-identifier-boundary-policy.test.js`
 2. `pnpm turbo test`
+
+## Outcome
+
+Completed on 2026-05-21.
+
+What changed:
+
+- Added `packages/engine/test/unit/lint/engine-agnostic-faction-identifier-boundary-policy.test.ts` with the required `// @test-class: architectural-invariant` marker.
+- The guard scans `packages/engine/src/{agents,cnl,kernel,sim}` using the TypeScript AST so comments and substring matches inside generic diagnostic names do not create false positives.
+- The guard fails on hardcoded FITL faction identifiers in code identifiers and exact FITL action-tag string literals in agnostic engine source.
+
+Deviations from original plan:
+
+- The final broad verification used the package-local ticket lane `pnpm -F @ludoforge/engine test:all`, matching the ticket acceptance criterion, instead of root `pnpm turbo test`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/lint/engine-agnostic-faction-identifier-boundary-policy.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine test:all` — passed, 957 tests.

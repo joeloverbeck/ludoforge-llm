@@ -67,5 +67,5 @@ Add Phase-2 VC headline witnesses: VC avoids conventional Attack unless Ambush p
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js packages/engine/dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js`
 2. `pnpm turbo test`

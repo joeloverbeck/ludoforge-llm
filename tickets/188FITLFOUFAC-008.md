@@ -79,5 +79,5 @@ Rebind the US seat; add the Phase-2 headline witnesses in `policy-profile-qualit
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/us-avoids-airstrike-populated-support.test.js packages/engine/dist/test/policy-profile-quality/us-advise-airlift-force-multiplier.test.js`
 2. `pnpm turbo test`

@@ -67,5 +67,5 @@ Add Phase-2 NVA headline witnesses: March+Infiltrate when VC base stealable and 
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-steal-vc-base.test.js packages/engine/dist/test/policy-profile-quality/nva-protects-trail-before-coup.test.js`
 2. `pnpm turbo test`

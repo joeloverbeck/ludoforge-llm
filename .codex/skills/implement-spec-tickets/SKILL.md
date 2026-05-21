@@ -266,8 +266,16 @@ Manual late recovery is exceptional, not a normal substitute for the child workf
 
 If any manual-recovery checklist item is unverified, stop before archival and either invoke `post-ticket-review` or leave the ticket active with a handoff naming the missing item.
 
-Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text:
+Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
 
+```text
+Pre-archive gate:
+- post-ticket-review: <invoked | manual late recovery: reason | not_applicable: reason>
+- Post-ticket review block: <emitted | late recovery pending>
+- archive eligibility: <terminal and outcome-current | blocked: reason>
+```
+
+The rows mean:
 - `post-ticket-review`: `invoked`, `manual late recovery: <reason>`, or `not_applicable: <reason>`
 - `Post-ticket review block`: `emitted` or `late recovery pending`
 - `archive eligibility`: `terminal and outcome-current` or `blocked`
@@ -327,6 +335,17 @@ Before committing:
      - `canonical inputs`
      - `why the refresh is expected`
      Record this in the ticket outcome, a report, or the final handoff before staging. The lightweight ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc, preserve the exact command and script body in that durable location; a temporary path alone is not enough.
+     Use this compact ledger when several small generated fixtures moved together:
+
+     ```text
+     Generated artifact provenance:
+     - artifact path(s): <paths or glob plus exact files>
+     - generation command: <command or retained script path>
+     - canonical inputs: <spec/scenario/seed/profile/hash inputs>
+     - expected refresh reason: <intentional trajectory/schema/witness shift>
+     - generator durability: <retained generator: repo path | ad hoc generator body recorded in: ticket/report/handoff section>
+     - hygiene proof: <git diff --check/schema check/focused consumer proof>
+     ```
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
 5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first.
 6. Stage only owned and approved paths.
@@ -422,6 +441,14 @@ Use this compact state-file validation recipe whenever `.codex/run-state/impleme
 - verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
 - if unrelated untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
 - if no retained script performs this validation, do the checks manually and record the result in the Required-visible-block checkpoint
+
+When a retained validator is not available, this shell-safe validation shape is acceptable to run from the repo root and cite in the checkpoint:
+
+```bash
+node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.codex/run-state/implement-spec-tickets.json','utf8')); if(s.last_work_commit==='self') throw new Error('last_work_commit cannot be self'); for (const key of ['originating_spec','last_ticket','next_target']) { const value=s[key]; if (typeof value==='string' && !['blocked','final_spec_archive'].includes(value) && !fs.existsSync(value)) throw new Error(key+' missing: '+value); } for (const value of s.queue || []) if (!fs.existsSync(value)) throw new Error('queue missing: '+value); if (!['clean'].includes(s.dirty_state) && !/^unrelated_untracked: |^owned_dirty: |^mixed_dirty: /.test(s.dirty_state || '')) throw new Error('dirty_state vocabulary: '+s.dirty_state); console.log('state validation ok')"
+```
+
+Also verify any non-`"none"` `last_work_commit` is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git command.
 
 Print:
 

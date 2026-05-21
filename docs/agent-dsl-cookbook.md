@@ -159,6 +159,130 @@ strategyModules:
       ifSelectorEmpty: noContribution
 ```
 
+## Authoring a Plan Template
+
+Use `planTemplates` when a profile needs to describe an authored compound turn shape, such as a root action followed by a special activity and one or more role-bound target choices. A plan template is still declarative policy data: it does not create legal moves, and it does not add game-specific engine behavior. It names the action tags to recognize, the role selectors that rank candidate targets, the microturn steps that bind those roles, and the bounded caps that keep the plan finite.
+
+The root can match action tags or action ids. Compound metadata describes optional special tags and their timing relative to the root. Each role references an existing `selectors:` entry; constraints can relate one role to another. Each step states the decision kind, target kind, decision path, and optional action tag or stage index that should receive the selected role value.
+
+Worked FITL data example:
+
+```yaml
+planTemplates:
+  arvn.trainGovern:
+    traceLabel: "ARVN Train then Govern"
+    root:
+      actionTags: [train]
+      compound:
+        specialTags: [govern]
+        timing: after
+    roles:
+      trainSpace:
+        selector: arvn.trainSpaceForControlOrPacification
+        required: true
+      governSpace:
+        selector: arvn.governPatronageSpace
+        required: true
+        constraints:
+          - notEqual: role.trainSpace
+    steps:
+      - label: train-space
+        role: trainSpace
+        match:
+          decisionKind: chooseNStep
+          targetKind: zone
+          decisionPath: targetSpaces
+          actionTag: train
+      - label: govern-space
+        role: governSpace
+        match:
+          decisionKind: chooseNStep
+          targetKind: zone
+          decisionPath: targetSpaces
+          actionTag: govern
+    caps:
+      capClass: standard256
+      maxSteps: 2
+    fallback:
+      ifRoleTargetUnavailable: primitivePolicy
+```
+
+Profiles enable templates through their plan configuration. Doctrine carriers, usually `strategyModules`, keep the strategic intent and selector vocabulary visible while the template captures the composed turn shape instead of re-encoding the same target sequence in several flat considerations. If the turn shape needs posture scoring, add `postureHook: <postureEvaluatorId>` and define the evaluator in `postureEvaluators`.
+
+## Authoring a Posture Evaluator
+
+Use `postureEvaluators` when a plan template needs a whole-turn posture check after roles and preview evidence are available. `must` clauses are hard posture requirements that demote or veto a plan when violated. `prefer` clauses add weighted posture score under an optional `when` condition.
+
+Every `prefer` term must declare `fallback.contribution`. This is the Foundation 20 guardrail: unavailable, hidden, capped, stochastic, or otherwise non-ready preview signal must not be silently coerced into a numeric contribution.
+
+Example:
+
+```yaml
+postureEvaluators:
+  arvn.preserveAidAndMargin:
+    traceLabel: "ARVN preserve Aid and projected margin"
+    must:
+      - id: aid-floor
+        condition:
+          gte:
+            - { ref: preview.var.global.aid }
+            - 15
+        onViolation: demote
+        demotePenalty: -1000
+    prefer:
+      - id: own-margin
+        when:
+          ref: condition.selfPoliticalEngineBehind.satisfied
+        value:
+          ref: preview.victory.currentMargin.self
+        weight: 25
+        fallback:
+          contribution: 0
+```
+
+Attach it from a template:
+
+```yaml
+planTemplates:
+  arvn.trainGovern:
+    postureHook: arvn.preserveAidAndMargin
+```
+
+`postureEvaluators` are separate from preview budget configuration. The FITL `grantFlowContinuation` preview option can make post-grant or free-operation projection available to posture scoring, while `outcomeGrantContinuation` controls a different post-grant continuation surface. Do not use either preview option as a substitute for explicit posture `fallback.contribution`.
+
+## Authoring Relationships
+
+Use `relationships` to name generic standing between the active profile and another seat or standing role. Relationships are compiled into generic policy refs such as `relationship.nominalAlly.seat` and `relationship.nominalAlly.gainValue`; profile logic can then consume those refs without hardcoding faction-specific branches in the engine.
+
+A relationship must declare exactly one binding target: either `seat` for a direct seat id, or `standingRole` for a generic standing selector. Current standing roles are `currentLeader`, `nearestThreat`, `closestAhead`, and `closestBehind`. Current relationship roles are `nominalAlly`, `sharedEnemy`, `rivalAlly`, `leader`, `nearWin`, `kingmakerRisk`, and `cooperativeUntilThreshold`.
+
+Use `condition` to gate a relationship through an existing `strategicConditions:` id. Use `priority` to make same-role selection deterministic, and `gainValue` when downstream scoring needs a numeric relationship-strength signal.
+
+Example:
+
+```yaml
+relationships:
+  arvn.usNominalAlly:
+    role: nominalAlly
+    seat: us
+    priority: 10
+    gainValue:
+      ref: victory.currentMargin.us
+  arvn.usRivalWhenNearWin:
+    role: kingmakerRisk
+    seat: us
+    condition: usNearWin
+    priority: 20
+    gainValue:
+      ref: victory.currentMargin.us
+  arvn.closestThreat:
+    role: nearWin
+    standingRole: closestAhead
+    priority: 30
+```
+
+Prefer relationships when a profile needs ally/rival vocabulary that may flip with state. Keep the flip condition authored in `strategicConditions` and the effect in scoring data; do not add relationship-specific runtime logic.
+
 ## Recommended Reference Paths
 
 ### Current-State Refs

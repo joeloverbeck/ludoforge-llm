@@ -89,7 +89,7 @@ The `arvn-evolved` flat-consideration terms that survive (projected-margin, lead
 
 Decomposed via `/spec-to-tickets` on 2026-05-21 (namespace `188FITLFOUFAC`; the spec's earlier `FITLPLAN` suggestion was superseded by the user-supplied namespace). ARVN phase first; US/NVA/VC skeletons follow. Pure-YAML commits; no infrastructure split needed.
 
-- [`tickets/188FITLFOUFAC-001.md`](../tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs)
+- [`archive/tickets/188FITLFOUFAC-001.md`](../archive/tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs) — completed 2026-05-21
 - [`tickets/188FITLFOUFAC-002.md`](../tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard)
 - [`tickets/188FITLFOUFAC-003.md`](../tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1)
 - [`tickets/188FITLFOUFAC-004.md`](../tickets/188FITLFOUFAC-004.md) — ARVN guardrails (errors-to-avoid) (covers §4.1)

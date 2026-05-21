@@ -1,6 +1,6 @@
 # 188FITLFOUFAC-001: Agent-DSL cookbook — document planTemplates / postureEvaluators / relationships authoring
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs only
@@ -68,3 +68,22 @@ Document the relationship role kinds (`nominalAlly`, `rival`, etc.), seat bindin
 
 1. Manual review of `docs/agent-dsl-cookbook.md` diff.
 2. `pnpm turbo lint` (markdown/link hygiene if configured).
+
+## Outcome
+
+Completed: 2026-05-21
+
+What changed:
+- Added generic cookbook authoring sections for `planTemplates`, `postureEvaluators`, and `relationships` in `docs/agent-dsl-cookbook.md`.
+- Used the existing `arvn.trainGovern` plan template as the worked plan-template example and kept the posture/relationship examples on current compiler field names.
+- Documented Foundation #20 posture fallback discipline and clarified that `grantFlowContinuation` and `outcomeGrantContinuation` are distinct preview configuration surfaces, not substitutes for `fallback.contribution`.
+
+Deviations from original plan:
+- No code, schema, or `data/games/fire-in-the-lake/92-agents.md` edits were needed; the cookbook now documents the generic construct surface only.
+- The acceptance section's `pnpm turbo test` existing-suite lane and the command section's `pnpm turbo lint` lane were both run.
+
+Verification:
+- Manual diff review of `docs/agent-dsl-cookbook.md`.
+- `pnpm turbo lint` — passed, 2 tasks successful from cache.
+- `pnpm run check:ticket-deps` — passed for 10 active tickets and 2472 archived tickets.
+- `pnpm turbo test` — passed, 5 tasks successful, 2 cached, 5 total.

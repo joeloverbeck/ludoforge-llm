@@ -16,6 +16,6 @@
   "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/fitl-ai-agent-competence-remediation.md",
+  "dirty_state": "mixed_dirty: owned=none; unrelated=reports/fitl-competent-agent-ai.md, reports/fitl-ai-agent-competence-remediation.md",
   "updated_at": "2026-05-21"
 }

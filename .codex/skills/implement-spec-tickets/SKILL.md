@@ -71,6 +71,7 @@ Keep the file small and machine-readable. Update it after intake, after every it
 
 - `"clean"` only when `git status --short` has no entries.
 - `"unrelated_untracked: reports/example.md"` when only unrelated untracked paths remain and they are intentionally left untouched.
+- `"unrelated_dirty: <paths>"` when unrelated tracked modifications, unrelated untracked paths, or both remain and they are intentionally left untouched.
 - `"owned_dirty: <paths>"` when owned paths remain dirty for a no-commit or blocked handoff.
 - `"mixed_dirty: owned=<paths>; unrelated=<paths>"` when both owned and unrelated paths remain.
 
@@ -271,13 +272,13 @@ Before moving any ticket into `archive/tickets/`, perform this archive gate in v
 ```text
 Pre-archive gate:
 - post-ticket-review: <invoked | manual late recovery: reason | not_applicable: reason>
-- Post-ticket review block: <emitted | late recovery pending>
+- Post-ticket review block: <emitted | pending: review in progress | late recovery pending>
 - archive eligibility: <terminal and outcome-current | blocked: reason>
 ```
 
 The rows mean:
 - `post-ticket-review`: `invoked`, `manual late recovery: <reason>`, or `not_applicable: <reason>`
-- `Post-ticket review block`: `emitted` or `late recovery pending`
+- `Post-ticket review block`: `emitted`, `pending: review in progress`, or `late recovery pending`; use `pending: review in progress` for the normal pre-archive moment when review has been invoked but the final review block naturally cannot be emitted until after review/archive, and reserve `late recovery pending` for an actual missed-block recovery.
 - `archive eligibility`: `terminal and outcome-current` or `blocked`
 
 If the review was not invoked and there is no valid `manual late recovery` or `not_applicable` classification, stop before archival and run the child workflow.
@@ -286,13 +287,13 @@ Immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any o
 
 ### 4. Audit Post-Ticket Review When It Changes Handoff Surfaces
 
-If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, or same-family archive reference, run:
+If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, active sibling proof command, active sibling verification lane, or same-family archive reference, run:
 
 ```text
 $skill-audit .codex/skills/post-ticket-review
 ```
 
-Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
+Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, changing future verification behavior, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, corrects stale proof commands or verification lanes in active sibling tickets, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
 
 Apply sound, evidence-backed suggestions under the same rules as the implement-ticket audit. Emit the same compact child-audit block and run focused hygiene over changed skill files.
 
@@ -347,7 +348,7 @@ Before committing:
      - hygiene proof: <git diff --check/schema check/focused consumer proof>
      ```
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
-5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first.
+5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
 8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
@@ -418,6 +419,8 @@ If the state file must record the finalized work commit SHA and changes after th
 
 State-only clean-state example: after a work commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, when the only remaining dirty path is `.codex/run-state/implement-spec-tickets.json` and you are about to commit that state file, write `last_work_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, `last_state_commit: "self"`, `dirty_state: "clean"`, and an `owned_dirty_summary` that describes the post-state-commit repo as clean. Do not write `dirty_state: "state_file_only"` for that state commit; that describes the transient pre-commit moment and will be stale immediately after the commit.
 
+If unrelated dirty paths appear or change after a state-only commit but before final response, refresh the state file once when the committed state would make the handoff false. Use `unrelated_dirty: <paths>` for unrelated tracked modifications, unrelated untracked files, or both. If unrelated paths keep changing after that refresh, stop chasing state-only commits; report the latest live `git status --short`, identify the state file as stale because of concurrent unrelated work, and do not commit unrelated paths. Continue only after the user confirms how to handle the volatile unrelated worktree.
+
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
 
 Do not write `"self"` into `last_work_commit`. When the state file is included in the same commit as the work and the finalized work SHA is not yet knowable, choose one of these valid patterns:
@@ -439,13 +442,13 @@ Use this compact state-file validation recipe whenever `.codex/run-state/impleme
 - verify `last_state_commit` is a full reachable commit SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`
 - verify active paths exist, archived paths exist, queued paths exist, and final queues are empty when `phase: "completed"`
 - verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
-- if unrelated untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
-- if no retained script performs this validation, do the checks manually and record the result in the Required-visible-block checkpoint
+- if unrelated tracked or untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
+- prefer the retained validator at `.codex/skills/implement-spec-tickets/scripts/validate-state.mjs`; if it is unavailable, do the checks manually and record the result in the Required-visible-block checkpoint
 
 When a retained validator is not available, this shell-safe validation shape is acceptable to run from the repo root and cite in the checkpoint:
 
 ```bash
-node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.codex/run-state/implement-spec-tickets.json','utf8')); if(s.last_work_commit==='self') throw new Error('last_work_commit cannot be self'); for (const key of ['originating_spec','last_ticket','next_target']) { const value=s[key]; if (typeof value==='string' && !['blocked','final_spec_archive'].includes(value) && !fs.existsSync(value)) throw new Error(key+' missing: '+value); } for (const value of s.queue || []) if (!fs.existsSync(value)) throw new Error('queue missing: '+value); if (!['clean'].includes(s.dirty_state) && !/^unrelated_untracked: |^owned_dirty: |^mixed_dirty: /.test(s.dirty_state || '')) throw new Error('dirty_state vocabulary: '+s.dirty_state); console.log('state validation ok')"
+node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.codex/run-state/implement-spec-tickets.json','utf8')); if(s.last_work_commit==='self') throw new Error('last_work_commit cannot be self'); for (const key of ['originating_spec','last_ticket','next_target']) { const value=s[key]; if (typeof value==='string' && !['blocked','final_spec_archive'].includes(value) && !fs.existsSync(value)) throw new Error(key+' missing: '+value); } for (const value of s.queue || []) if (!fs.existsSync(value)) throw new Error('queue missing: '+value); if (!['clean'].includes(s.dirty_state) && !/^unrelated_untracked: |^unrelated_dirty: |^owned_dirty: |^mixed_dirty: /.test(s.dirty_state || '')) throw new Error('dirty_state vocabulary: '+s.dirty_state); console.log('state validation ok')"
 ```
 
 Also verify any non-`"none"` `last_work_commit` is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git command.

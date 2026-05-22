@@ -1,6 +1,6 @@
 # RUNBOOTFIX-001: Decide and Refresh Runner Bootstrap Fixture Drift
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None expected — fixture/tooling decision only unless reassessment proves generator drift comes from engine compilation changes
@@ -102,3 +102,30 @@ If the generated output is not correct, patch the smallest generator/compiler/to
 2. `pnpm -F @ludoforge/runner bootstrap:fixtures`
 3. `pnpm -F @ludoforge/runner test test/bootstrap/bootstrap-fixtures-script.test.ts test/bootstrap/runner-bootstrap.test.ts`
 4. `pnpm -F @ludoforge/engine build`
+
+## Outcome
+
+- Completion date: 2026-05-22.
+- Drift classification:
+  - `packages/runner/src/bootstrap/fitl-game-def.json`: stale canonical fixture output. Regeneration adds current compiler-owned `phaseBoundaries` and effect `footprint` data plus the previously scoped FITL profile-key cleanup through the canonical generator.
+  - `packages/runner/src/bootstrap/texas-game-def.json`: stale canonical fixture output. Regeneration adds current compiler-owned effect `footprint` data through the canonical generator.
+  - `packages/runner/src/bootstrap/fitl-game-metadata.json`: verified-no-edit; canonical regeneration left it byte-identical.
+  - `packages/runner/src/bootstrap/texas-game-metadata.json`: verified-no-edit; canonical regeneration left it byte-identical.
+  - `packages/runner/scripts/bootstrap-fixtures.mjs`: verified-no-edit; the existing check mode reported the generated fixtures current after regeneration, so no tooling instability was found.
+  - `packages/engine/src/cnl/**`: verified-no-edit; the drift matches already-landed compiler output rather than a newly discovered compiler instability.
+- Applied decision: blessed the current canonical generator output by running `pnpm -F @ludoforge/runner bootstrap:fixtures`.
+- Generated fallout: two runner bootstrap game-def JSON artifacts changed; metadata artifacts were checked and unchanged; no schema artifacts changed.
+- Invariants:
+  - Runner bootstrap fixtures must match canonical generation output.
+  - No production code may accept `arvn-evolved` as a compatibility alias.
+  - FITL and Texas game-def fixture changes are intentionally explained as generated fixture refreshes, not authored gameplay changes.
+- Verification plan:
+  - `pnpm -F @ludoforge/runner bootstrap:fixtures:check` passed; bootstrap fixtures are current for 2 targets.
+  - `pnpm -F @ludoforge/runner test test/bootstrap/bootstrap-fixtures-script.test.ts test/bootstrap/runner-bootstrap.test.ts` passed; 2 files and 14 tests passed.
+  - `pnpm -F @ludoforge/engine build` passed.
+  - `rg -n 'arvn-evolved|arvn_evolved|arvn.*evolved' packages data docs .github --glob '!node_modules'` returned zero production/doc hits outside this ticket.
+  - `pnpm run check:ticket-deps` passed before terminal status and passed again after terminal status; 1 active ticket and 2487 archived tickets checked.
+- Source-size decision: not triggered; this ticket changed generated JSON fixtures and ticket prose only, not source files.
+- Untracked/touched-file hygiene: `git status --short` shows only the two generated game-def fixtures and this ticket; `git diff --check` passed after proof-ledger transcription.
+- Late-edit proof validity: no-invalidation after terminal status/proof transcription; this edit records status and exact proof results only, with no scope, command, fixture, dependency, or acceptance-boundary change.
+- Post-ticket review: no must-fix-now cleanup and no follow-up ticket required; ready for archival.

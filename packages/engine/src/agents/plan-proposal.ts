@@ -86,6 +86,7 @@ export interface ProposeAdvisoryTurnPlanInput {
   readonly catalog: AgentPolicyCatalog;
   readonly actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[];
   readonly previewPlanRefsByRootStableMoveKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
+  readonly runtime?: import('../kernel/gamedef-runtime.js').GameDefRuntime;
 }
 
 export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): PlanProposalResult => {
@@ -199,6 +200,7 @@ export const proposeAndCommitAdvisoryTurnPlan = (
     profile: resolved.profile,
     catalog: input.def.agents,
     actionDecisions,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   if (result.selected !== undefined) {
     commitPlanExecutionState(store, planExecutionStateFromProposal(input, result.selected));
@@ -511,6 +513,7 @@ function evaluatePlanPosture(
     catalog: input.catalog,
     parameterValues: input.profile.params,
     trustedMoveIndex: new Map(),
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     previewPlan: {
       resolvedRefs: input.previewPlanRefsByRootStableMoveKey?.get(root.stableMoveKey) ?? new Map(),
     },

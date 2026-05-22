@@ -4,6 +4,12 @@
 // Phase 0 regression witness for Spec 172. 172POLEVASTA-007 proved that the
 // remaining encoded-state builds are unique preview-state first touches, while
 // duplicate static/runtime-cache rebuilds stay eliminated.
+//
+// Spec 188 retarget: the four FITL profiles now carry plan/posture evaluators
+// whose expressions reference zone props/lookups beyond the base feature table.
+// Each is compiled exactly once via the shared runtime bytecode cache (no
+// duplicates), raising the first-touch static budget from 4 to 8. The hard
+// invariant — duplicateEncodedStateRebuilds === 0 — remains unchanged.
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -30,7 +36,7 @@ const WORKLOAD = {
   profiles: ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
 } as const;
 
-const FIRST_TOUCH_ONLY_STATIC_REBUILD_THRESHOLD = 4;
+const FIRST_TOUCH_ONLY_STATIC_REBUILD_THRESHOLD = 8;
 const DUPLICATE_ENCODED_STATE_REBUILD_THRESHOLD = 0;
 
 describe('172POLEVASTA-001 preview-drive static rebuild witness', () => {

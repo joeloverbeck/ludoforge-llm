@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
+**Deps**: `archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
 
 ## Problem
 

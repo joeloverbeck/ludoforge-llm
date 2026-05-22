@@ -50,7 +50,7 @@ Add a generic unit or architecture test proving that another profile's strategy 
 ## Out of Scope
 
 - Authoring the US skeleton itself; that returns to `tickets/188FITLFOUFAC-008.md`.
-- NVA/VC skeleton authoring (`tickets/188FITLFOUFAC-009.md`, `tickets/188FITLFOUFAC-010.md`).
+- NVA/VC skeleton authoring (`archive/tickets/188FITLFOUFAC-009.md`, `archive/tickets/188FITLFOUFAC-010.md`).
 - FITL-specific planner branches, faction-id allowlists, or YAML priority workarounds.
 
 ## Acceptance Criteria

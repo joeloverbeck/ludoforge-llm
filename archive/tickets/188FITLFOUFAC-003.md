@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
+**Deps**: `archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
 
 ## Problem
 

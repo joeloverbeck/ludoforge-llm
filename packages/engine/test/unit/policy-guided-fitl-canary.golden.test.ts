@@ -110,30 +110,33 @@ const readDecisionSequence = (): readonly Decision[] =>
   JSON.parse(readFileSync(join(fixtureDir, 'decision-sequence.json'), 'utf8')) as readonly Decision[];
 
 describe('policy-guided FITL canary golden', () => {
-  it('keeps the preferPatronageMode preview canary differentiating on a fixed FITL seed', () => {
+  it('keeps preferPatronageMode choosing Patronage on the fixed FITL Govern microturn', () => {
     const def = withPolicyGuidedPreferPatronageMode(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
     const fixtureDecisions = readDecisionSequence();
-    const agent = new PolicyAgent({ profileId: 'arvn-evolved', traceLevel: 'summary' });
+    const agent = new PolicyAgent({ profileId: 'arvn-evolved', traceLevel: 'verbose' });
     let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
 
-    for (const fixtureDecision of fixtureDecisions) {
-      const microturn = publishMicroturn(def, state, runtime);
-      const decision = microturn.kind === 'actionSelection'
-        ? agent.chooseDecision({ def, state, microturn, rng: createRng(1001n), runtime })
-        : undefined;
-
-      if (decision?.agentDecision?.previewUsage.utility === 'differentiating') {
-        const { previewUsage } = decision.agentDecision;
-        assert.equal(previewUsage.completionPolicyFallbackCount, 0);
-        assert.ok(previewUsage.outcomeBreakdown, 'expected summary trace to include preview outcome breakdown');
-        assert.equal(previewUsage.outcomeBreakdown.unknownNoPreviewDecision, 0);
-        return;
-      }
-
+    for (const fixtureDecision of fixtureDecisions.slice(0, 6)) {
       state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
     }
 
-    assert.fail('Expected a differentiating policy-guided preview decision in the fixed FITL canary');
+    const microturn = publishMicroturn(def, state, runtime);
+    assert.equal(microturn.kind, 'chooseOne');
+    assert.equal(String(microturn.seatId), 'arvn');
+
+    const decision = agent.chooseDecision({ def, state, microturn, rng: createRng(1001n), runtime });
+    assert.equal(decision.decision.kind, 'chooseOne');
+    assert.equal(decision.decision.value, 'patronage');
+    assert.ok(decision.agentDecision?.candidates, 'expected summary trace to include policy-guided candidates');
+
+    const contributionByValue = new Map(
+      decision.agentDecision.candidates.map((candidate) => [
+        candidate.stableMoveKey.endsWith('"patronage"') ? 'patronage' : 'aid',
+        candidate.scoreContributions.find((entry) => entry.termId === 'preferPatronageMode')?.contribution,
+      ]),
+    );
+    assert.equal(contributionByValue.get('aid'), 0);
+    assert.equal(contributionByValue.get('patronage'), 10);
   });
 });

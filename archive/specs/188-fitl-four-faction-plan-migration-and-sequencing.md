@@ -111,8 +111,12 @@ Live 010 reassessment on 2026-05-22 identified that the VC skeleton could be aut
 - [`archive/tickets/188FITLFOUFAC-008.md`](../archive/tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-009.md`](../archive/tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2) — completed 2026-05-22
 - [`archive/tickets/188FITLFOUFAC-010A.md`](../archive/tickets/188FITLFOUFAC-010A.md) — Generic parity-witness performance prerequisite exposed by VC skeleton authoring (keeps 010 YAML-only and broad-lane provable) — completed 2026-05-22
-- [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
+- [`archive/tickets/188FITLFOUFAC-010.md`](../archive/tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2) — completed 2026-05-22
 
 ## Outcome
 
-_Pending implementation._
+Completed 2026-05-22.
+
+Spec 188's staged FITL four-faction plan migration is fully implemented and archived through `archive/tickets/188FITLFOUFAC-001.md` through `archive/tickets/188FITLFOUFAC-010.md`, including prerequisite resets `004A`, `007A`, `008A`, `008B`, and `010A` that kept the final implementation aligned with `docs/FOUNDATIONS.md`.
+
+The final VC skeleton closeout landed as Tier-1 YAML authoring plus warning-class witnesses, with no engine/compiler production changes. Final proof for the terminal ticket included `pnpm -F @ludoforge/engine build`, focused VC witnesses, refreshed generic proof anchors, and `pnpm -F @ludoforge/engine test:all` passing 958/958 tests.

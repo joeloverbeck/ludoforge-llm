@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — generic agent planner / compiler ownership only
-**Deps**: `specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
+**Deps**: `archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md`
 
 ## Problem
 

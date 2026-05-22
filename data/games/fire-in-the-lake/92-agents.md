@@ -819,6 +819,151 @@ agents:
               weight: 8
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.rallyBaseOrUndergroundSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: baseProtection
+              value:
+                coalesce:
+                  - { ref: feature.projectedVcMargin }
+                  - 0
+              weight: 2
+            - id: undergroundReset
+              value: 1
+              weight: 6
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.marchPoliticalCellSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: supportInfiltration
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+            - id: undergroundCellSpread
+              value: 1
+              weight: 5
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.terrorAgitationSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: oppositionPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: supportDenial
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 6
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.subvertArvnControlSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: arvnCubeDisruption
+              value:
+                coalesce:
+                  - { ref: feature.projectedArvnMargin }
+                  - 0
+              weight: -2
+            - id: controlBreak
+              value: 1
+              weight: 7
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.taxFundingSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: locTaxSafe
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - loc
+              weight: 8
+            - id: resourceYield
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: econ
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.ambushSurgicalTargetSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: surgicalControlRemoval
+              value:
+                ref: feature.projectedVcMargin
+              weight: 1
+            - id: coinPieceThreat
+              value: 1
+              weight: 6
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.locAmbushPlatform:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: locPlatform
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - loc
+              weight: 8
+            - id: adjacentPoliticalThreat
+              value: 1
+              weight: 4
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
 
     planTemplates:
       arvn.trainGovern:
@@ -1031,6 +1176,78 @@ agents:
           - { label: loc-ambush-threat, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-nva } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallySubvert:
+        traceLabel: "VC Rally then Subvert"
+        root: { actionTags: [rally], compound: { specialTags: [subvert], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          rallySpace: { selector: vc.rallyBaseOrUndergroundSpace, required: true }
+          subvertSpace: { selector: vc.subvertArvnControlSpace, required: true }
+        steps:
+          - { label: rally-political-network, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+          - { label: subvert-arvn-control, role: subvertSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: subvert } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.marchSubvert:
+        traceLabel: "VC March then Subvert"
+        root: { actionTags: [march], compound: { specialTags: [subvert], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          marchSpace: { selector: vc.marchPoliticalCellSpace, required: true }
+          subvertSpace: { selector: vc.subvertArvnControlSpace, required: true }
+        steps:
+          - { label: march-underground-cell, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+          - { label: subvert-arvn-control, role: subvertSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: subvert } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.terrorSubvert:
+        traceLabel: "VC Terror then Subvert"
+        root: { actionTags: [terror], compound: { specialTags: [subvert], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
+          subvertSpace: { selector: vc.subvertArvnControlSpace, required: true }
+        steps:
+          - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
+          - { label: subvert-arvn-control, role: subvertSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: subvert } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.terrorTax:
+        traceLabel: "VC Terror then Tax"
+        root: { actionTags: [terror], compound: { specialTags: [tax], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
+          taxSpace: { selector: vc.taxFundingSpace, required: true }
+        steps:
+          - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
+          - { label: tax-safe-funding, role: taxSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: tax } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.marchAmbushFromLoc:
+        traceLabel: "VC March then Ambush from LoC"
+        root: { actionTags: [march], compound: { specialTags: [ambush-vc], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          locPlatform: { selector: vc.locAmbushPlatform, required: true }
+          ambushSpace: { selector: vc.ambushSurgicalTargetSpace, required: true }
+        steps:
+          - { label: loc-ambush-platform, role: locPlatform, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+          - { label: surgical-ambush, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-vc } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallyResetTerror:
+        traceLabel: "VC Rally reset then Terror"
+        root: { actionTags: [rally], compound: { specialTags: [terror], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          rallySpace: { selector: vc.rallyBaseOrUndergroundSpace, required: true }
+          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
+        steps:
+          - { label: rally-underground-reset, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+          - { label: future-terror-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
 
     postureEvaluators:
       arvn.preserveAidAndMargin:
@@ -1114,6 +1331,33 @@ agents:
             weight: -20
             fallback:
               contribution: 0
+      vc.protectOppositionAndBases:
+        traceLabel: "VC protect Opposition, Bases, and NVA ally-rival leverage"
+        must:
+          - id: resource-floor
+            condition:
+              gte:
+                - { ref: feature.selfResources }
+                - 1
+            onViolation: demote
+            demotePenalty: -250
+        prefer:
+          - id: own-margin
+            value:
+              ref: preview.victory.currentMargin.self
+            weight: 30
+            fallback:
+              contribution: 0
+          - id: nva-rival-risk
+            when:
+              eq:
+                - { ref: relationship.nearWin.seat }
+                - { ref: relationship.nominalAlly.seat }
+            value:
+              ref: relationship.nominalAlly.gainValue
+            weight: -20
+            fallback:
+              contribution: 0
 
     relationships:
       arvn.usNominalAlly:
@@ -1155,6 +1399,19 @@ agents:
         priority: 20
         gainValue:
           ref: victory.currentMargin.vc
+      vc.nvaNominalAlly:
+        role: nominalAlly
+        seat: nva
+        priority: 10
+        gainValue:
+          ref: victory.currentMargin.nva
+      vc.nvaNearWin:
+        role: nearWin
+        seat: nva
+        condition: nvaNearWin
+        priority: 20
+        gainValue:
+          ref: victory.currentMargin.nva
 
     strategyModules:
       arvnPursueProjectedMargin:
@@ -1498,6 +1755,82 @@ agents:
               - { id: vcBaseTakeover, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.buildPoliticalNetwork:
+        traceLabel: "VC build hidden political network"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [rally, march, terror]
+        priority:
+          tier: 85
+        selectors:
+          - { role: rallyTarget, selectorId: vc.rallyBaseOrUndergroundSpace }
+          - { role: marchTarget, selectorId: vc.marchPoliticalCellSpace }
+          - { role: terrorTarget, selectorId: vc.terrorAgitationSpace }
+        scoreGroups:
+          - id: politicalNetwork
+            summary: sum
+            terms:
+              - { id: undergroundCells, weight: 6, value: 1 }
+              - { id: oppositionPressure, weight: 8, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.subvertRegimeSecurity:
+        traceLabel: "VC hollow out ARVN security"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [subvert, terror, march]
+        priority:
+          tier: 75
+        selectors:
+          - { role: subvertTarget, selectorId: vc.subvertArvnControlSpace }
+          - { role: terrorTarget, selectorId: vc.terrorAgitationSpace }
+        scoreGroups:
+          - id: regimeDisruption
+            summary: sum
+            terms:
+              - { id: subvertControlBreak, weight: 8, value: 1 }
+              - { id: pacificationDenial, weight: 5, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.fundAndAmbushCarefully:
+        traceLabel: "VC tax carefully and ambush surgically"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [tax, ambush-vc, attack]
+        priority:
+          tier: 65
+        selectors:
+          - { role: taxTarget, selectorId: vc.taxFundingSpace }
+          - { role: ambushTarget, selectorId: vc.ambushSurgicalTargetSpace }
+        scoreGroups:
+          - id: carefulViolence
+            summary: sum
+            terms:
+              - { id: locTaxSafety, weight: 6, value: 1 }
+              - { id: surgicalRemoval, weight: 7, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.denyNvaIfNearWin:
+        traceLabel: "VC deny NVA if near win"
+        when: true
+        applies:
+          scopes: [move]
+          actionTags: [march, ambush-vc, subvert]
+        priority:
+          tier: 55
+        selectors:
+          - { role: ambushTarget, selectorId: vc.ambushSurgicalTargetSpace }
+          - { role: marchTarget, selectorId: vc.marchPoliticalCellSpace }
+        scoreGroups:
+          - id: allyRivalDenial
+            summary: sum
+            terms:
+              - { id: avoidNvaDominance, weight: 6, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
     guardrails:
       dropPassWhenOtherMovesExist:
@@ -1652,6 +1985,44 @@ agents:
             - lte:
                 - { ref: feature.projectedSelfMarginDelta }
                 - 0
+        severity: demote
+        penalty: 350
+        onUnavailable: noFire
+      vc.avoidConventionalAttackWithoutAmbush:
+        traceLabel: "VC avoid conventional Attack without Ambush payoff"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.attack }
+            - lte:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 0
+        severity: demote
+        penalty: 550
+        onUnavailable: noFire
+      vc.protectBasesFromNvaInfiltrate:
+        traceLabel: "VC protect Bases from NVA Infiltrate"
+        scopes: [move]
+        when:
+          and:
+            - or:
+                - { ref: candidate.tag.rally }
+                - { ref: candidate.tag.march }
+            - gte:
+                - { ref: feature.nvaMargin }
+                - -2
+        severity: demote
+        penalty: 400
+        onUnavailable: noFire
+      vc.avoidHighPopTaxWithoutPoliticalPlan:
+        traceLabel: "VC avoid high-pop Tax without political offset"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.tax }
+            - lt:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 1
         severity: demote
         penalty: 350
         onUnavailable: noFire
@@ -2056,12 +2427,33 @@ agents:
       params:
         projectedMarginWeight: 500
         rallyWeight: 500
+        taxWeight: 200
       use:
         guardrails:
           - dropPassWhenOtherMovesExist
+          - vc.avoidConventionalAttackWithoutAmbush
+          - vc.protectBasesFromNvaInfiltrate
+          - vc.avoidHighPopTaxWithoutPoliticalPlan
+        strategyModules:
+          - vc.buildPoliticalNetwork
+          - vc.subvertRegimeSecurity
+          - vc.fundAndAmbushCarefully
+          - vc.denyNvaIfNearWin
+        planTemplates:
+          - vc.rallySubvert
+          - vc.marchSubvert
+          - vc.terrorSubvert
+          - vc.terrorTax
+          - vc.marchAmbushFromLoc
+          - vc.rallyResetTerror
         considerations:
           - preferNormalizedMargin
           - preferRallyWeighted
+          - preferMarchAction
+          - preferTerrorAction
+          - preferSubvertAction
+          - preferTaxWeighted
+          - preferAttackAction
           - valueCapabilityGain
         tieBreakers:
           - stableMoveKey

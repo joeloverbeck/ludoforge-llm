@@ -1,6 +1,6 @@
 # Spec 189 — PolicyEvaluationContext Cache-Eligibility Is Structural, Not Opt-In Per Call Site
 
-**Status**: 📋 PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: Medium — closes a silent-degradation class that already cost one CI regression (PR #275 / Spec 188). Not user-facing; bounded engine refactor.
 **Complexity**: Option-dependent — Option C is S (lint/grep guard only, no migration). Options A/B change the `PolicyEvaluationContext` constructor input contract and therefore ripple to **all 4 src construction sites + 26 test construction sites** (several routed through shared test helpers), plus a guard test; Option A is M–L. No DSL, schema, or data changes.
 **Date**: 2026-05-22
@@ -136,8 +136,27 @@ No replay or hash impact. Encoded state from the cache is byte-identical to the 
 Decomposed via `/spec-to-tickets` on 2026-05-22:
 
 - [`archive/tickets/189POLEVALCACHE-001.md`](../archive/tickets/189POLEVALCACHE-001.md) — Make cache-eligibility structural via required `PolicyEvalCacheBinding` (atomic cut: union + constructor contract + all 4 src + 26 test construction sites) (covers §4 Option A, §6 migration)
-- [`tickets/189POLEVALCACHE-002.md`](../tickets/189POLEVALCACHE-002.md) — Distilled cache-dedup architectural-invariant test + isolated-binding negative test (covers §6 test plan)
+- [`archive/tickets/189POLEVALCACHE-002.md`](../archive/tickets/189POLEVALCACHE-002.md) — Distilled cache-dedup architectural-invariant test + isolated-binding negative test (covers §6 test plan)
 
 ## Outcome
 
-_Pending._
+Completed: 2026-05-22
+
+Spec 189 closed with both tickets implemented and archived:
+
+- `archive/tickets/189POLEVALCACHE-001.md` made `PolicyEvaluationContext` cache eligibility structural by replacing the old optional `runtime` / `encodedStateLayout` / `encodedState` constructor fields with the required `cacheBinding` contract.
+- `archive/tickets/189POLEVALCACHE-002.md` added `packages/engine/test/architecture/policy-eval-cache-binding-dedup.test.ts`, a distilled architectural-invariant test proving runtime-bound construction deduplicates encoded-state builds and bytecode compiles while explicit isolated binding still evaluates correctly through the uncached path.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js` — passed, 2 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` — passed during `189POLEVALCACHE-001`; `duplicateEncodedStateRebuilds=0`, `total=57`, `threshold=8`, `staticOnlyTotal=8`.
+- `pnpm turbo typecheck` — passed during `189POLEVALCACHE-001`.
+- `pnpm turbo lint` — passed during `189POLEVALCACHE-001`.
+- `pnpm run check:ticket-deps` — passed after ticket archival/reference repair.
+
+Known broad-suite residuals:
+
+- `pnpm -F @ludoforge/engine test:all` remains red in the current repo snapshot. This run passed the new ticket-owned architecture test and failed the same two broad integration files recorded by `189POLEVALCACHE-001`: `dist/test/integration/diagnose-parity-runGame.test.js` and `dist/test/integration/policy-bytecode-equivalence.test.js`.
+- Focused reruns reproduced those residuals after `189POLEVALCACHE-002`: `diagnose-parity-runGame` state-hash parity mismatches for seeds `1001`, `1020`, `1049`, and `1054`; `policy-bytecode-equivalence` has no supported move considerations for `arvn-baseline`.

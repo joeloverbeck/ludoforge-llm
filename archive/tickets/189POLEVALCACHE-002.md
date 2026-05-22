@@ -1,6 +1,6 @@
 # 189POLEVALCACHE-002: Distilled cache-dedup architectural-invariant test + isolated-binding negative test
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
@@ -70,3 +70,24 @@ Mark the file `// @test-class: architectural-invariant` per `.claude/rules/testi
 
 1. `pnpm turbo build && node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js`
 2. `pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+Completed: 2026-05-22
+
+What changed:
+- Added `packages/engine/test/architecture/policy-eval-cache-binding-dedup.test.ts`.
+- The new architectural-invariant test constructs two runtime-bound `PolicyEvaluationContext` instances over the same `GameState` and asserts the second context does not trigger another encoded-state build, feature-table build, or expression feature-table/bytecode compile.
+- The same file constructs an explicit isolated-binding context and proves it returns the same value as the runtime-bound context while taking the uncached encoded-state and per-context bytecode path.
+
+Deviations:
+- None for the ticket-owned test surface.
+- The broad `pnpm -F @ludoforge/engine test:all` lane is not green in the current repo snapshot. The failures reproduce in focused reruns and are outside this test-only change:
+  - `node --test packages/engine/dist/test/integration/policy-bytecode-equivalence.test.js` fails because `profile arvn-baseline should have supported move considerations`.
+  - `node --test packages/engine/dist/test/integration/diagnose-parity-runGame.test.js` fails on diagnostic/direct runGame state-hash parity for seeds `1001`, `1020`, `1049`, and `1054`.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js` — passed, 2 tests.
+- `pnpm -F @ludoforge/engine test:all` — red, 957/959 pass; ticket-owned new architecture test passed inside the lane; residual failures listed above.
+- Source-size ledger: `packages/engine/test/architecture/policy-eval-cache-binding-dedup.test.ts` is 218 lines; no source-size cap issue.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/` (`PolicyEvaluationContext` constructor contract + all construction sites)
-**Deps**: `specs/189-policy-eval-context-cache-eligibility.md`
+**Deps**: `archive/specs/189-policy-eval-context-cache-eligibility.md`
 
 ## Problem
 
@@ -102,7 +102,7 @@ Tests (26 construction sites across 20 files):
 
 ## Out of Scope
 
-- The new distilled cache-dedup architectural-invariant test and the isolated-binding negative test — owned by `tickets/189POLEVALCACHE-002.md` (kept separate so this atomic-cut diff stays focused on the contract change + mechanical migration).
+- The new distilled cache-dedup architectural-invariant test and the isolated-binding negative test — owned by `archive/tickets/189POLEVALCACHE-002.md` (kept separate so this atomic-cut diff stays focused on the contract change + mechanical migration).
 - Auditing whether other engine constructors share this opt-in-cache shape (e.g., projection caches) — Spec 189 §8 defers these as sibling specs if found during decomposition.
 - Any change to perf-lane sharding or the `172POLEVASTA-001` witness budget.
 - No new caches: this reuses `runtime.policyEncodedStateCache`, `runtime.policyEncodedStateProjectionCache`, and `runtime.policyBytecodeCache` exactly as they exist.
@@ -125,7 +125,7 @@ Tests (26 construction sites across 20 files):
 
 ### New/Modified Tests
 
-1. The 20 test files listed in Files to Touch — migrated to the `cacheBinding` contract (mechanical; behavior unchanged). New behavioral assertions are deferred to `tickets/189POLEVALCACHE-002.md`.
+1. The 20 test files listed in Files to Touch — migrated to the `cacheBinding` contract (mechanical; behavior unchanged). New behavioral assertions are deferred to `archive/tickets/189POLEVALCACHE-002.md`.
 
 ### Commands
 
@@ -156,4 +156,4 @@ Verification:
 - `pnpm run check:ticket-deps` — PASS.
 - `pnpm -F @ludoforge/engine test:all` — RAN, still RED with `958` tests, `956` pass, `2` fail. The failing files are `dist/test/integration/diagnose-parity-runGame.test.js` and `dist/test/integration/policy-bytecode-equivalence.test.js`. Both failures were reproduced from clean `HEAD` in `/tmp/ludoforge-189-baseline`, so they are repo-preexisting broad-suite blockers, not regressions introduced by this ticket.
 
-Ticket `189POLEVALCACHE-002` remains active for the distilled cache-dedup architectural-invariant and isolated-binding negative tests.
+Ticket `189POLEVALCACHE-002` was later completed and archived for the distilled cache-dedup architectural-invariant and isolated-binding negative tests.

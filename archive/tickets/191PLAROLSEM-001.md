@@ -1,6 +1,6 @@
 # 191PLAROLSEM-001: Role-constraint runtime/compile parity (registry; compile-reject `locatedIn`)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents` (plan-proposal constraint evaluator), `cnl` (plan-template validator)
@@ -70,3 +70,35 @@ In `validate-agent-plan-templates.ts`, reject any authored role constraint whose
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/agent-plan-template-validate.test.js dist/test/unit/agents/plan-proposal.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-22.
+
+What changed:
+- Added `packages/engine/src/kernel/plan-role-constraints.ts` as the shared supported-kind registry, currently `['notEqual']`.
+- Updated `packages/engine/src/cnl/validate-agent-plan-templates.ts` to reject authored role constraints whose kind is not supported by the runtime, with a role/constraint-named `CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED` diagnostic.
+- Updated `packages/engine/src/agents/plan-proposal.ts` so unsupported compiled constraints fail closed with an internal error instead of silently returning `true`.
+- Added focused coverage for compile-rejecting `locatedIn`, preserving `notEqual` binding behavior, and proving runtime fail-closed behavior if unsupported compiled metadata reaches proposal evaluation.
+
+Deviations:
+- `types-core.ts` was not modified; the registry was placed in a small kernel module so the CNL validator and agent runtime can share it without co-locating policy in the type union.
+- `locatedIn` remains representable in the type surface for future implementation, but is compile-rejected by the validator until runtime support exists. The production FITL profile still authors `locatedIn` zero times.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed after final source/test edits.
+- `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js dist/test/unit/agents/plan-proposal.test.js` — passed after final source/test edits (16 tests, 0 failures).
+- `pnpm -F @ludoforge/engine test:all` — passed before the final test-size shrink and diagnostic-label cleanup (959 tests, 0 failures); those later edits changed only focused unit test setup and diagnostic label construction, and the affected focused lane was rerun.
+- `pnpm turbo build` — passed before the final test-size shrink and diagnostic-label cleanup; the affected engine build was rerun afterward via `pnpm -F @ludoforge/engine build`.
+- `pnpm turbo test` — passed before the final test-size shrink and diagnostic-label cleanup (5 tasks successful, 166/166 engine default files passed); no production behavior changed afterward.
+- `pnpm turbo lint` — passed after final source/test edits.
+- `pnpm turbo typecheck` — passed after final source/test edits.
+- `pnpm turbo schema:artifacts` — passed; generated schema artifacts remained unchanged.
+
+Source-size ledger:
+- `packages/engine/src/agents/plan-proposal.ts`: 736 before, 742 after, +6 active lines, remains under 800.
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts`: 269 before, 297 after, +28 active lines, remains under 800.
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts`: 456 before, 457 after, +1 active line, remains under 800.
+- `packages/engine/src/kernel/plan-role-constraints.ts`: new 9-line source module, under 800.
+- `packages/engine/test/unit/agents/plan-proposal.test.ts`: 757 before, 790 after, +33 active lines; the first draft crossed 800 and was shrunk before closeout.
+- `packages/engine/test/unit/cnl/agent-plan-template-validate.test.ts`: 199 before, 218 after, +19 active lines, remains under 800.

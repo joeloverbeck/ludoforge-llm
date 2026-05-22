@@ -1,4 +1,8 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
+import {
+  isSupportedPlanRoleConstraintKind,
+  SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS,
+} from '../kernel/plan-role-constraints.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { isNonEmptyString, isRecord } from './validate-spec-shared.js';
 
@@ -65,9 +69,17 @@ function validatePlanTemplateRoles(
       if (!isRecord(constraint)) {
         continue;
       }
-      const ref = typeof constraint.notEqual === 'string'
-        ? constraint.notEqual
-        : (typeof constraint.locatedIn === 'string' ? constraint.locatedIn : undefined);
+      const parsed = parsePlanRoleConstraint(constraint);
+      if (parsed !== undefined && !isSupportedPlanRoleConstraintKind(parsed.kind)) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED,
+          path: `${rolePath}.constraints.${index}.${parsed.kind}`,
+          severity: 'error',
+          message: `Plan template "${templateId}" role "${roleName}" constraint "${parsed.kind}" has no runtime implementation.`,
+          suggestion: `Use one of ${SUPPORTED_PLAN_ROLE_CONSTRAINT_KIND_LABEL} or implement runtime support before authoring "${parsed.kind}".`,
+        });
+      }
+      const ref = parsed?.ref;
       if (ref === undefined) {
         continue;
       }
@@ -84,6 +96,22 @@ function validatePlanTemplateRoles(
     }
     boundRoles.add(roleName);
   }
+}
+
+const SUPPORTED_PLAN_ROLE_CONSTRAINT_KIND_LABEL = SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS
+  .map((kind) => `"${kind}"`)
+  .join(', ');
+
+function parsePlanRoleConstraint(
+  constraint: Record<string, unknown>,
+): { readonly kind: string; readonly ref: string } | undefined {
+  if (typeof constraint.notEqual === 'string') {
+    return { kind: 'notEqual', ref: constraint.notEqual };
+  }
+  if (typeof constraint.locatedIn === 'string') {
+    return { kind: 'locatedIn', ref: constraint.locatedIn };
+  }
+  return undefined;
 }
 
 function validatePlanRoleSelectorOrder(

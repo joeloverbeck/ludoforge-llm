@@ -6,6 +6,7 @@ import {
   PLAN_CAP_CLASS_BUDGETS,
   proposeAdvisoryTurnPlan,
 } from '../../../src/agents/plan-proposal.js';
+import { SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS } from '../../../src/kernel/plan-role-constraints.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { planExecutionKey, serializePlanExecutionState, type PlanExecutionStateStore } from '../../../src/agents/plan-execution.js';
 import {
@@ -370,6 +371,38 @@ describe('plan proposal', () => {
     assert.equal(result.status, 'selected');
     assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, '1');
     assert.equal(result.selected?.roleBindings.governSpace?.selectedId, '2');
+  });
+
+  it('fails closed if an unsupported role constraint reaches runtime evaluation', () => {
+    assert.deepEqual(SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS, ['notEqual']);
+    const template = planTemplate({
+      roles: {
+        trainSpace: planTemplate().roles.trainSpace!,
+        governSpace: {
+          ...planTemplate().roles.trainSpace!,
+          constraints: [{ kind: 'locatedIn', role: 'trainSpace' }],
+        },
+      },
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({ template, selector: roleSelector(2) }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    assert.throws(
+      () => proposeAdvisoryTurnPlan({
+        def,
+        state,
+        seatId: 'alpha',
+        playerId: asPlayerId(0),
+        profile,
+        catalog: def.agents!,
+        actionDecisions: [actionDecision('branch')],
+      }),
+      /Unsupported plan role constraint kind "locatedIn"/u,
+    );
   });
 
   it('scores plan role selector items with the current selector item key', () => {

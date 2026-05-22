@@ -153,6 +153,25 @@ describe('agent plan-template validation diagnostics', () => {
     );
   });
 
+  it('rejects role constraint kinds without runtime support', () => {
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          roles: {
+            trainSpace: { selector: 'trainSpace', required: true },
+            governSpace: {
+              selector: 'governSpace',
+              required: true,
+              constraints: [{ locatedIn: 'role.trainSpace' }],
+            },
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED,
+      /trainGovern.*governSpace.*locatedIn.*no runtime implementation/u,
+    );
+  });
+
   it('reports fallback target, fallback cycle, cap class, and stable ordering diagnostics', () => {
     assertCode(
       createDoc({ trainGovern: validTemplate({ fallback: { ifRoleTargetUnavailable: 'missingTemplate' } }) }),

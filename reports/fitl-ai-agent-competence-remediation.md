@@ -5,7 +5,7 @@
 > - **Rejected** — creating a second `reports/fitl-ai-policy-implementation-implications.md`. It is redundant against the already-landed `archive/specs/186` + `187` and the DPSA report (`ai-agent-policy-overhaul-first-iteration.md`), and a drift risk (YAGNI). The superseded sketches were **deleted**, not relocated; the report now points to those artifacts for implementation.
 > - **Rejected** — treating this as spec-worthy. Per FOUNDATIONS, specs govern engine/compiler/kernel/runtime code and GameSpecDoc; this work touched neither, so it was done as direct documentation edits (no spec, no tickets).
 > - **Not done** — the optional `*-legacy-draft.md` archive; git history already preserves the prior version.
-> - **Downstream** — Spec 188 and `specs/IMPLEMENTATION-ORDER.md` were relabeled ("authoritative source / faithful encoding" → "competence target / implementation attempt"); the landed 186/187 architecture and 188's plan were left intact. The §3 rule "corrections" here were mostly already-correct in the original report; only the two genuinely-missing caveats were added.
+> - **Downstream** — Spec 188 and `archive/specs/IMPLEMENTATION-ORDER-2026-05-22.md` were relabeled ("authoritative source / faithful encoding" → "competence target / implementation attempt"); the landed 186/187 architecture and 188's plan were left intact. The §3 rule "corrections" here were mostly already-correct in the original report; only the two genuinely-missing caveats were added.
 
 ## **1. Executive verdict**
 
@@ -37,7 +37,7 @@ I inspected the required current files and relevant active downstream docs:
 | Design constitution | `docs/FOUNDATIONS.md` | Non-negotiable architectural constraints: engine agnosticism, one rules protocol, bounded computation, rule-valid legality, observer discipline, determinism, preview integrity. |
 | Current draft report | `reports/fitl-competent-agent-ai.md` | Audited for strategic value, rule correctness, implementation contamination, DSL assumptions, faction logic. |
 | FITL rules | `rules/fire-in-the-lake/fire-in-the-lake-rules-section-1.md` through `section-8.md`, `fire-in-the-lake-factions-guide.md`, `fire-in-the-lake-rules-non-player-factions.md` | Used as implementation source of truth for victory, operations, special activities, Monsoon, Coup phases, Support/Agitation, Resource phase, Redeploy, Trail, LoCs, bases/tunnels, control, eligibility, events. |
-| Active downstream docs | `specs/IMPLEMENTATION-ORDER.md`, `specs/188-fitl-four-faction-plan-migration-and-sequencing.md`, `reports/ai-agent-policy-overhaul-first-iteration.md` | Checked whether implementation assumptions from the report have leaked into active planning. They have. |
+| Archived downstream docs | `archive/specs/IMPLEMENTATION-ORDER-2026-05-22.md`, `archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md`, `reports/ai-agent-policy-overhaul-first-iteration.md` | Checked whether implementation assumptions from the report had leaked into planning. They had. |
 | Archive | Not broadly inspected | Active docs mention archived Specs 186/187, but archive material was not used as authority. |
 
 I treated the repo rules as source of truth. Where online strategy commentary or the existing report conflicted with the rules, the rules win.
@@ -529,7 +529,7 @@ This is the clean split that preserves useful implementation thinking without le
 | File | Required change |
 | ----- | ----- |
 | `specs/188-fitl-four-faction-plan-migration-and-sequencing.md` | Remove “authoritative source for target features” language. Replace “faithful encoding” with “implementation attempt to satisfy pure competence requirements.” Treat target features as non-normative. |
-| `specs/IMPLEMENTATION-ORDER.md` | Stop saying the competence report requires a specific composed-turn architecture. It may say the requirements motivate whole-turn consequence reasoning, but not that AdvisoryTurnPlan is mandated by faction competence. |
+| `archive/specs/IMPLEMENTATION-ORDER-2026-05-22.md` | Stop saying the competence report requires a specific composed-turn architecture. It may say the requirements motivate whole-turn consequence reasoning, but not that AdvisoryTurnPlan is mandated by faction competence. |
 | `reports/ai-agent-policy-overhaul-first-iteration.md` | Reclassify DPSA as an implementation proposal, not a requirements consequence. Its syntax examples should cite the implementation-implications doc, not the pure competence doc. |
 
 ### **Exact replacement section: “Non-requirements”**

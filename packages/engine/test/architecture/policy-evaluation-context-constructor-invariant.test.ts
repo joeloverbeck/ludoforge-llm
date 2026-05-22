@@ -123,7 +123,7 @@ function createContext(
       catalog: def.agents as AgentPolicyCatalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime,
+      cacheBinding: { kind: 'runtime', runtime },
     },
     [],
   );

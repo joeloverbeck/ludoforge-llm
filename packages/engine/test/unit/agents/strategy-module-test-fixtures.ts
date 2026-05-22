@@ -274,5 +274,6 @@ export function createStrategyModuleTraceContext(modules: readonly StrategyModul
     catalog: def.agents,
     parameterValues: {},
     trustedMoveIndex: new Map(),
+    cacheBinding: { kind: 'isolated' },
   }, []);
 }

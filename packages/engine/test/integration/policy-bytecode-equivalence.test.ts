@@ -369,9 +369,11 @@ const captureWasmPrecomputedRows = (
     catalog: def.agents!,
     parameterValues: profile.params,
     trustedMoveIndex: new Map(),
-    runtime: createGameDefRuntime(def),
-    encodedStateLayout: layout,
-    encodedState: buildEncodedState(corpusState.state, layout),
+    cacheBinding: {
+      kind: 'runtime',
+      runtime: createGameDefRuntime(def),
+      preEncoded: { layout, encoded: buildEncodedState(corpusState.state, layout) },
+    },
   }, candidates);
   try {
     const candidateFeatureRows = profile.plan.candidateFeatures.map((id) => {
@@ -706,9 +708,7 @@ describe('policy bytecode equivalence harness', () => {
       catalog: scheduleDef.agents!,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime: scheduleRuntime,
-      encodedStateLayout: scheduleLayout,
-      encodedState: encoded,
+      cacheBinding: { kind: 'runtime', runtime: scheduleRuntime, preEncoded: { layout: scheduleLayout, encoded } },
     }, evaluationCandidateRows);
     try {
       const consideration = scheduleScoreConsideration();
@@ -761,9 +761,7 @@ describe('policy bytecode equivalence harness', () => {
       catalog: scheduleDef.agents!,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime: scheduleRuntime,
-      encodedStateLayout: scheduleLayout,
-      encodedState: encoded,
+      cacheBinding: { kind: 'runtime', runtime: scheduleRuntime, preEncoded: { layout: scheduleLayout, encoded } },
     }, evaluationCandidateRows);
     try {
       const expr = schedulePreviewCandidateFeatureExpr();

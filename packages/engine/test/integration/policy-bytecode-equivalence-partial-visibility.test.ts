@@ -80,9 +80,7 @@ describe('policy bytecode equivalence for partial-visibility schedule refs', () 
         catalog: def.agents!,
         parameterValues: {},
         trustedMoveIndex: new Map(),
-        runtime,
-        encodedStateLayout: layout,
-        encodedState: encoded,
+        cacheBinding: { kind: 'runtime', runtime, preEncoded: { layout, encoded } },
       }, evaluationRows);
       try {
         const tsScores = evaluationRows.map((candidate) =>
@@ -189,9 +187,7 @@ describe('policy bytecode equivalence for partial-visibility schedule refs', () 
       catalog: def.agents!,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime,
-      encodedStateLayout: layout,
-      encodedState: encoded,
+      cacheBinding: { kind: 'runtime', runtime, preEncoded: { layout, encoded } },
     }, evaluationRows);
     try {
       for (const testCase of cases) {

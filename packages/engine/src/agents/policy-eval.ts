@@ -63,6 +63,7 @@ import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 import { resolveAllPrunedGuardrailFallback } from './policy-guardrail-fallback.js';
 import { dispatchGuardrails } from './policy-guardrail-eval.js';
+import { createPolicyEvalCacheBinding } from './policy-evaluation-cache-binding.js';
 
 export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
@@ -698,8 +699,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         trustedMoveIndex: input.trustedMoveIndex,
         ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
         previewDependencies,
-        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-        ...(encodedView === undefined ? {} : { encodedStateLayout: encodedView.layout, encodedState: encodedView.encoded }),
+        cacheBinding: createPolicyEvalCacheBinding(input.runtime, encodedView),
         ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
       }, candidates);
       evaluationForDispose = evaluation;

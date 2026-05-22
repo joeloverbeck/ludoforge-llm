@@ -34,6 +34,7 @@ describe('strategy module activation caching', () => {
       catalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     }, candidates);
 
     try {

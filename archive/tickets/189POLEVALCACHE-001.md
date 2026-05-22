@@ -1,6 +1,6 @@
 # 189POLEVALCACHE-001: Make cache-eligibility structural via required PolicyEvalCacheBinding (atomic cut)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/` (`PolicyEvaluationContext` constructor contract + all construction sites)
@@ -131,3 +131,29 @@ Tests (26 construction sites across 20 files):
 
 1. `pnpm turbo build && node --test packages/engine/dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js`
 2. `pnpm -F @ludoforge/engine test:all && pnpm turbo lint typecheck`
+
+## Outcome (2026-05-22)
+
+Implemented. `CreatePolicyEvaluationContextInput` now requires `cacheBinding`; the old independent optional `runtime`, `encodedStateLayout`, and `encodedState` constructor fields were removed. `PolicyEvaluationContext` derives its runtime, encoded-state layout, encoded state, and bytecode-cache selection from that binding, and spawned selector-item contexts reuse the same binding.
+
+The binding type and helpers live in `packages/engine/src/agents/policy-evaluation-cache-binding.ts` so the atomic constructor migration does not add active size to the already oversized policy-evaluation source files. Source-size ledger after extraction:
+
+- `packages/engine/src/agents/policy-evaluation-cache-binding.ts`: new 56-line helper module.
+- `packages/engine/src/agents/policy-evaluation-core.ts`: 19 additions / 19 deletions.
+- `packages/engine/src/agents/policy-eval.ts`: 2 additions / 2 deletions.
+- `packages/engine/src/agents/microturn-option-eval.ts`: 1 addition / 1 deletion.
+- `packages/engine/src/agents/plan-proposal.ts`: 1 addition / 1 deletion.
+
+Migrated all listed source and test/helper construction sites to explicit `cacheBinding` variants. Runtime callers use `{ kind: 'runtime', runtime }`, runtime callers with precomputed encoded state use `preEncoded`, and uncached/ad-hoc sites now use explicit `{ kind: 'isolated' }`. No schemas, data files, golden artifacts, or generated artifacts changed.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- Focused migrated-file bundle via `pnpm -F @ludoforge/engine exec node --test ...` — PASS (`74` tests, `74` pass).
+- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` — PASS; `duplicateEncodedStateRebuilds=0`, `total=57`, `threshold=8`, `staticOnlyTotal=8`.
+- `pnpm turbo typecheck` — PASS.
+- `pnpm turbo lint` — PASS.
+- `pnpm run check:ticket-deps` — PASS.
+- `pnpm -F @ludoforge/engine test:all` — RAN, still RED with `958` tests, `956` pass, `2` fail. The failing files are `dist/test/integration/diagnose-parity-runGame.test.js` and `dist/test/integration/policy-bytecode-equivalence.test.js`. Both failures were reproduced from clean `HEAD` in `/tmp/ludoforge-189-baseline`, so they are repo-preexisting broad-suite blockers, not regressions introduced by this ticket.
+
+Ticket `189POLEVALCACHE-002` remains active for the distilled cache-dedup architectural-invariant and isolated-binding negative tests.

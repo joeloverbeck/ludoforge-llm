@@ -298,7 +298,7 @@ function createEvaluationContext(
     catalog,
     parameterValues: profile.params,
     trustedMoveIndex: new Map(),
-    runtime: createGameDefRuntime(def),
+    cacheBinding: { kind: 'runtime', runtime: createGameDefRuntime(def) },
   }, []);
 }
 

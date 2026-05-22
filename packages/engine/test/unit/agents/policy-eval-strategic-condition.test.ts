@@ -157,6 +157,7 @@ function createContext(
       catalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     },
     [],
   );

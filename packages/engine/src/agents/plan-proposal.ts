@@ -513,7 +513,7 @@ function evaluatePlanPosture(
     catalog: input.catalog,
     parameterValues: input.profile.params,
     trustedMoveIndex: new Map(),
-    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    cacheBinding: input.runtime === undefined ? { kind: 'isolated' } : { kind: 'runtime', runtime: input.runtime },
     previewPlan: {
       resolvedRefs: input.previewPlanRefsByRootStableMoveKey?.get(root.stableMoveKey) ?? new Map(),
     },

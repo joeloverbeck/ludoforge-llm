@@ -151,6 +151,7 @@ function createContext(allyReady: number): PolicyEvaluationContext {
       catalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     },
     [],
   );

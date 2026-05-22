@@ -135,7 +135,7 @@ No replay or hash impact. Encoded state from the cache is byte-identical to the 
 
 Decomposed via `/spec-to-tickets` on 2026-05-22:
 
-- [`tickets/189POLEVALCACHE-001.md`](../tickets/189POLEVALCACHE-001.md) — Make cache-eligibility structural via required `PolicyEvalCacheBinding` (atomic cut: union + constructor contract + all 4 src + 26 test construction sites) (covers §4 Option A, §6 migration)
+- [`archive/tickets/189POLEVALCACHE-001.md`](../archive/tickets/189POLEVALCACHE-001.md) — Make cache-eligibility structural via required `PolicyEvalCacheBinding` (atomic cut: union + constructor contract + all 4 src + 26 test construction sites) (covers §4 Option A, §6 migration)
 - [`tickets/189POLEVALCACHE-002.md`](../tickets/189POLEVALCACHE-002.md) — Distilled cache-dedup architectural-invariant test + isolated-binding negative test (covers §6 test plan)
 
 ## Outcome

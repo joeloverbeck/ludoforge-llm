@@ -369,8 +369,7 @@ describe('policy bytecode fallback completeness', () => {
           catalog,
           parameterValues: {},
           trustedMoveIndex: new Map(),
-          encodedStateLayout: layout,
-          encodedState: encoded,
+          cacheBinding: { kind: 'preEncoded', layout, encoded },
           previewOption: {
             resolvedRefs: new Map([['preview.option.driveDepth', { kind: 'ready', value: 21 }]]),
           },

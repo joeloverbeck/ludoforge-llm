@@ -60,6 +60,7 @@ import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-su
 import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
+import { resolvePolicyEvalCacheBinding, type PolicyEvalCacheBinding } from './policy-evaluation-cache-binding.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 import { evaluateSelector, type SelectedSelectorView, type SelectorEvalMicroturnOption } from './policy-selector-eval.js';
@@ -231,9 +232,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
   readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly previewDependencies?: PolicyPreviewDependencies;
-  readonly runtime?: GameDefRuntime;
-  readonly encodedStateLayout?: EncodedStateLayout;
-  readonly encodedState?: EncodedState;
+  readonly cacheBinding: PolicyEvalCacheBinding;
   readonly traceLevel?: 'none' | 'summary' | 'verbose' | 'debug';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
@@ -431,6 +430,7 @@ export class PolicyEvaluationContext {
   private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
+  private readonly runtime: GameDefRuntime | undefined;
   private readonly encodedStateLayout: EncodedStateLayout;
   private readonly usesCanonicalEncodedStateLayout: boolean;
   private readonly encodedState: EncodedState | undefined;
@@ -454,9 +454,11 @@ export class PolicyEvaluationContext {
     this.currentCandidates = candidates;
     this.activeState = input.state;
     const canonicalEncodedStateLayout = getPolicyEncodedStateLayout(input.def);
-    this.encodedStateLayout = input.encodedStateLayout ?? canonicalEncodedStateLayout;
+    const { runtime, preEncoded } = resolvePolicyEvalCacheBinding(input.cacheBinding);
+    this.runtime = runtime;
+    this.encodedStateLayout = preEncoded?.layout ?? canonicalEncodedStateLayout;
     this.usesCanonicalEncodedStateLayout = this.encodedStateLayout === canonicalEncodedStateLayout;
-    this.encodedState = input.encodedState ?? this.resolveEncodedState(input.state);
+    this.encodedState = preEncoded?.encoded ?? this.resolveEncodedState(input.state);
     this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
@@ -468,7 +470,7 @@ export class PolicyEvaluationContext {
       catalog: input.catalog,
       ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
-      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(this.runtime === undefined ? {} : { runtime: this.runtime }),
       ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
       encodedStateLayout: this.encodedStateLayout,
       ...(this.encodedState === undefined ? {} : { encodedState: this.encodedState }),
@@ -1186,15 +1188,15 @@ export class PolicyEvaluationContext {
   }
 
   private resolvePolicyBytecodeCache(): WeakMap<CompiledPolicyExpr, PolicyBytecode> {
-    if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
-      return this.input.runtime.policyBytecodeCache;
+    if (this.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
+      return this.runtime.policyBytecodeCache;
     }
     return this.fallbackPolicyBytecodeCache;
   }
 
   private resolveEncodedState(state: GameState): EncodedState | undefined {
-    if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
-      return resolvePolicyEncodedState(this.input.runtime, state, this.encodedStateLayout, tryBuildEncodedState);
+    if (this.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
+      return resolvePolicyEncodedState(this.runtime, state, this.encodedStateLayout, tryBuildEncodedState);
     }
     return tryBuildEncodedState(state, this.encodedStateLayout);
   }
@@ -1656,7 +1658,7 @@ export class PolicyEvaluationContext {
     if (anchorZoneId === undefined) {
       return undefined;
     }
-    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
+    const adjacencyGraph = this.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
     const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
     const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
@@ -2051,9 +2053,7 @@ export class PolicyEvaluationContext {
       trustedMoveIndex: this.input.trustedMoveIndex,
       ...(this.input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: this.input.phase1ActionPreviewIndex }),
       ...(this.input.previewDependencies === undefined ? {} : { previewDependencies: this.input.previewDependencies }),
-      ...(this.input.runtime === undefined ? {} : { runtime: this.input.runtime }),
-      ...(this.input.encodedStateLayout === undefined ? {} : { encodedStateLayout: this.input.encodedStateLayout }),
-      ...(this.input.encodedState === undefined ? {} : { encodedState: this.input.encodedState }),
+      cacheBinding: this.input.cacheBinding,
       ...(this.input.traceLevel === undefined ? {} : { traceLevel: this.input.traceLevel }),
       ...(this.input.completion === undefined || microturnOption === undefined
         ? {}
@@ -2663,19 +2663,19 @@ export class PolicyEvaluationContext {
       return this.transientZoneReadContext.context;
     }
     const resources = createEvalRuntimeResources(
-      this.input.runtime === undefined ? undefined : {
-        tokenStateIndexCache: this.input.runtime.tokenStateIndexCache,
-        compiledQueryPlanCache: this.input.runtime.compiledQueryPlanCache,
+      this.runtime === undefined ? undefined : {
+        tokenStateIndexCache: this.runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: this.runtime.compiledQueryPlanCache,
       },
     );
     const context = createEvalContext({
       def: this.input.def,
-      adjacencyGraph: this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones),
+      adjacencyGraph: this.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones),
       state: currentState,
       activePlayer: currentState.activePlayer,
       actorPlayer: this.input.playerId,
       bindings: {},
-      runtimeTableIndex: this.input.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def),
+      runtimeTableIndex: this.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def),
       resources,
     });
     this.transientZoneReadContext = { stateHash: currentState.stateHash, context };

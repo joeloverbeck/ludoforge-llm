@@ -140,7 +140,7 @@ export function scoreMicroturnOptionWithContributions(
     scheduleOption: { scheduleFallbackFired, scheduleInputRefs },
     candidateParamOption: { unknownCandidateParamRefs, candidateParamFallbackFired },
     selectorMicroturnOptions: selectorOptionsForRequest(request),
-    ...(runtime === undefined ? {} : { runtime }),
+    cacheBinding: runtime === undefined ? { kind: 'isolated' } : { kind: 'runtime', runtime },
   }, []);
 
   try {

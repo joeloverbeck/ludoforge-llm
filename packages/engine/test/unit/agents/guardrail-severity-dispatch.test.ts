@@ -262,6 +262,7 @@ describe('guardrail severity dispatch', () => {
       catalog: def.agents!,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
       previewOption: {
         resolvedRefs: new Map([['preview.option.driveDepth', { kind: 'unavailable', reason: 'hidden' }]]),
       },
@@ -328,6 +329,7 @@ describe('guardrail severity dispatch', () => {
       catalog: def.agents!,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     }, [
       ...Array.from({ length: 20 }, (_entry, index) => createCandidate('goodMove', index)),
       createCandidate('badMove', 20),
@@ -361,6 +363,7 @@ describe('guardrail severity dispatch', () => {
         catalog: def.agents!,
         parameterValues: {},
         trustedMoveIndex: new Map(),
+        cacheBinding: { kind: 'isolated' },
         previewOption: {
           resolvedRefs: new Map([['preview.option.driveDepth', { kind: 'unavailable', reason: 'hidden' }]]),
         },

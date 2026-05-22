@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `tickets/189POLEVALCACHE-001.md`
+**Deps**: `archive/tickets/189POLEVALCACHE-001.md`
 
 ## Problem
 
@@ -14,7 +14,7 @@ Spec 189 §6 calls for distilling the duplicate-rebuild half of `172POLEVASTA-00
 
 ## Assumption Reassessment (2026-05-22)
 
-1. Depends on `tickets/189POLEVALCACHE-001.md`, which introduces `PolicyEvalCacheBinding` and the required `cacheBinding` input — this test asserts the contract that ticket establishes.
+1. Depends on `archive/tickets/189POLEVALCACHE-001.md`, which introduces `PolicyEvalCacheBinding` and the required `cacheBinding` input — this test asserts the contract that ticket establishes.
 2. `tryBuildEncodedState` (`policy-evaluation-core.ts:92`) is the encoded-state builder; `compilePolicyBytecode` (`packages/engine/src/cnl/policy-bytecode/compile.ts:39`) compiles bytecode. The shared caches live on `GameDefRuntime` (`packages/engine/src/kernel/gamedef-runtime.ts`): `policyEncodedStateCache`, `policyBytecodeCache`. Confirmed this session via `/reassess-spec`.
 3. An existing architectural-invariant test already covers the constructor: `packages/engine/test/architecture/policy-evaluation-context-constructor-invariant.test.ts`. The new dedup/negative assertions are distinct (they prove the *caching contract*, not constructor field handling), so a dedicated sibling file under `test/architecture/` matches the established placement convention for architectural-invariant tests.
 4. The existing `policy-encoded-state-cache.test.ts` and `policy-bytecode-cache.test.ts` (unit/agents) test the caches in isolation; this test proves the higher-level guarantee that a `runtime` binding deduplicates across two `PolicyEvaluationContext` constructions on the same state.
@@ -44,7 +44,7 @@ Mark the file `// @test-class: architectural-invariant` per `.claude/rules/testi
 
 ## Out of Scope
 
-- The contract change and construction-site migration — owned by `tickets/189POLEVALCACHE-001.md`.
+- The contract change and construction-site migration — owned by `archive/tickets/189POLEVALCACHE-001.md`.
 - Modifying or removing the `172POLEVASTA-001` perf witness — it remains as the cross-profile aggregate guard; this ticket adds a fast unit-level complement, it does not supersede the perf lane.
 
 ## Acceptance Criteria

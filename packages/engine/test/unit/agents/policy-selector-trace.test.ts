@@ -140,6 +140,7 @@ function createContext(selectors: readonly CompiledPolicySelector[]): PolicyEval
     catalog,
     parameterValues: {},
     trustedMoveIndex: new Map(),
+    cacheBinding: { kind: 'isolated' },
   }, []);
 }
 

@@ -110,7 +110,7 @@ Live 010 reassessment on 2026-05-22 identified that the VC skeleton could be aut
 - [`archive/tickets/188FITLFOUFAC-008B.md`](../archive/tickets/188FITLFOUFAC-008B.md) — Generic strategy-module profile/seat isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 doctrine carriers YAML-only and engine-agnostic) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-008.md`](../archive/tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-009.md`](../archive/tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2) — completed 2026-05-22
-- [`tickets/188FITLFOUFAC-010A.md`](../tickets/188FITLFOUFAC-010A.md) — Generic parity-witness performance prerequisite exposed by VC skeleton authoring (keeps 010 YAML-only and broad-lane provable)
+- [`archive/tickets/188FITLFOUFAC-010A.md`](../archive/tickets/188FITLFOUFAC-010A.md) — Generic parity-witness performance prerequisite exposed by VC skeleton authoring (keeps 010 YAML-only and broad-lane provable) — completed 2026-05-22
 - [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
 
 ## Outcome

@@ -106,6 +106,25 @@ function compilePlanDoc() {
               ifPreviewUnavailable: 'traceOnly',
             },
           },
+          rivalTrainAdvise: {
+            traceLabel: 'rival-train-advise',
+            root: {
+              actionTags: ['rival-operation'],
+              compound: { specialTags: ['rival-special'], timing: 'after' },
+            },
+            roles: {
+              trainSpace: { selector: 'trainSpace', required: true },
+            },
+            steps: [
+              {
+                label: 'select-rival-train-space',
+                role: 'trainSpace',
+                match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'operation.target' },
+              },
+            ],
+            caps: { capClass: 'standard256', maxSteps: 1 },
+            fallback: { ifRoleTargetUnavailable: 'primitivePolicy' },
+          },
         },
         considerations: {
           neutral: { scopes: ['move'], weight: 1, value: 0 },
@@ -116,10 +135,25 @@ function compilePlanDoc() {
         baseline: {
           observer: 'testObserver',
           params: {},
-          use: { considerations: ['neutral'], guardrails: [], tieBreakers: ['stableMoveKey'] },
+          use: {
+            considerations: ['neutral'],
+            guardrails: [],
+            planTemplates: ['trainGovern'],
+            tieBreakers: ['stableMoveKey'],
+          },
+        },
+        rival: {
+          observer: 'testObserver',
+          params: {},
+          use: {
+            considerations: ['neutral'],
+            guardrails: [],
+            planTemplates: ['rivalTrainAdvise'],
+            tieBreakers: ['stableMoveKey'],
+          },
         },
       },
-      bindings: { p1: 'baseline' },
+      bindings: { p1: 'baseline', p2: 'rival' },
     },
   });
 }
@@ -144,6 +178,7 @@ describe('agent plan-template IR compilation', () => {
     assert.equal(template?.steps[1]?.match.actionTag, 'specialActivity');
     assert.deepEqual(template?.caps, { capClass: 'standard256', maxSteps: 2 });
     assert.deepEqual(first.gameDef?.agents?.profiles.baseline?.plan.planTemplates, ['trainGovern']);
+    assert.deepEqual(first.gameDef?.agents?.profiles.rival?.plan.planTemplates, ['rivalTrainAdvise']);
 
     assert.equal(JSON.stringify(first.gameDef), JSON.stringify(second.gameDef));
   });

@@ -35,6 +35,11 @@ export const PLAN_CAP_CLASS_BUDGETS = {
 
 type PlanCapClass = keyof typeof PLAN_CAP_CLASS_BUDGETS;
 
+interface PlanExprContext {
+  readonly def?: GameDef;
+  readonly seatId: string;
+}
+
 export interface PlanProposalRootCandidate {
   readonly decision: Extract<Decision, { readonly kind: 'actionSelection' }>;
   readonly move: Move;
@@ -81,6 +86,7 @@ export interface ProposeAdvisoryTurnPlanInput {
   readonly catalog: AgentPolicyCatalog;
   readonly actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[];
   readonly previewPlanRefsByRootStableMoveKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
+  readonly runtime?: import('../kernel/gamedef-runtime.js').GameDefRuntime;
 }
 
 export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): PlanProposalResult => {
@@ -194,6 +200,7 @@ export const proposeAndCommitAdvisoryTurnPlan = (
     profile: resolved.profile,
     catalog: input.def.agents,
     actionDecisions,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   if (result.selected !== undefined) {
     commitPlanExecutionState(store, planExecutionStateFromProposal(input, result.selected));
@@ -264,8 +271,8 @@ function bindPlanRoles(
           candidates: selectorCandidates,
           candidate: rootCandidate,
           ...(input.catalog.compiled.selectors === undefined ? {} : { selectors: input.catalog.compiled.selectors }),
-          evaluateExpr: (expr, candidate) => {
-            const value = evaluatePlanExpr(expr, input.state, candidate);
+          evaluateExpr: (expr, candidate, _microturnOption, selectorItemKey) => {
+            const value = evaluatePlanExpr(expr, input.state, candidate, selectorItemKey, planExprContextFor(input));
             return Array.isArray(value) ? undefined : value;
           },
         }).selected;
@@ -349,11 +356,11 @@ function scorePlanLeafConsiderations(
     if (consideration === undefined) {
       return total;
     }
-    if (consideration.when !== undefined && evaluatePlanExpr(consideration.when, input.state, candidate) !== true) {
+    if (consideration.when !== undefined && evaluatePlanExpr(consideration.when, input.state, candidate, undefined, planExprContextFor(input)) !== true) {
       return total;
     }
-    const weight = numericExpr(consideration.weight, input.state, candidate);
-    const value = numericExpr(consideration.value, input.state, candidate);
+    const weight = numericExpr(consideration.weight, input.state, candidate, planExprContextFor(input));
+    const value = numericExpr(consideration.value, input.state, candidate, planExprContextFor(input));
     return total + (weight * value);
   }, 0);
 }
@@ -436,7 +443,7 @@ function activeDoctrineIds(input: ProposeAdvisoryTurnPlanInput): readonly string
   return (input.profile.plan.strategyModules ?? [])
     .filter((moduleId) => {
       const module = input.catalog.compiled.strategyModules?.[moduleId];
-      return module !== undefined && evaluateBooleanExpr(module.when, input.state);
+      return module !== undefined && evaluateBooleanExpr(module.when, input.state, planExprContextFor(input));
     })
     .sort(compareStable);
 }
@@ -468,7 +475,7 @@ function highestDoctrineTier(
   for (const doctrineId of doctrineIds) {
     const module = input.catalog.compiled.strategyModules?.[doctrineId];
     if (module !== undefined && moduleAppliesToRoot(module, root)) {
-      tier = Math.max(tier, module.priority.tier + numericExpr(module.priority.value, input.state));
+      tier = Math.max(tier, module.priority.tier + numericExpr(module.priority.value, input.state, undefined, planExprContextFor(input)));
     }
   }
   return tier;
@@ -506,6 +513,7 @@ function evaluatePlanPosture(
     catalog: input.catalog,
     parameterValues: input.profile.params,
     trustedMoveIndex: new Map(),
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     previewPlan: {
       resolvedRefs: input.previewPlanRefsByRootStableMoveKey?.get(root.stableMoveKey) ?? new Map(),
     },
@@ -597,8 +605,8 @@ function emptyProposal(
   };
 }
 
-function evaluateBooleanExpr(expr: CompiledPolicyExpr | AgentPolicyExpr, state: GameState): boolean {
-  const value = evaluatePlanExpr(expr, state);
+function evaluateBooleanExpr(expr: CompiledPolicyExpr | AgentPolicyExpr, state: GameState, context: PlanExprContext): boolean {
+  const value = evaluatePlanExpr(expr, state, undefined, undefined, context);
   return value === true || value === 1;
 }
 
@@ -606,15 +614,22 @@ function numericExpr(
   expr: CompiledPolicyExpr | AgentPolicyExpr | undefined,
   state: GameState,
   candidate?: SelectorEvalCandidate,
+  context?: PlanExprContext,
 ): number {
-  const value = expr === undefined ? 0 : evaluatePlanExpr(expr, state, candidate);
+  const value = expr === undefined ? 0 : evaluatePlanExpr(expr, state, candidate, undefined, context);
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function planExprContextFor(input: ProposeAdvisoryTurnPlanInput): PlanExprContext {
+  return { def: input.def, seatId: String(input.seatId) };
 }
 
 function evaluatePlanExpr(
   expr: CompiledPolicyExpr | AgentPolicyExpr,
   state: GameState,
   candidate?: SelectorEvalCandidate,
+  selectorItemKey?: string,
+  context?: PlanExprContext,
 ): string | number | boolean | readonly string[] | undefined {
   switch (expr.kind) {
     case 'literal':
@@ -622,19 +637,49 @@ function evaluatePlanExpr(
         ? expr.value
         : undefined;
     case 'op': {
-      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate));
+      const values = expr.args.map((arg) => evaluatePlanExpr(arg, state, candidate, selectorItemKey, context));
       switch (expr.op) {
         case 'not':
           return values[0] !== true;
         case 'eq':
           return values[0] === values[1];
+        case 'gt':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] > values[1];
+        case 'gte':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] >= values[1];
+        case 'lt':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] < values[1];
+        case 'lte':
+          return typeof values[0] === 'number' && typeof values[1] === 'number' && values[0] <= values[1];
         case 'boolToNumber':
           return values[0] === true ? 1 : 0;
         case 'add':
           return values.reduce<number>((total, value) => total + (typeof value === 'number' ? value : 0), 0);
+        case 'mul':
+          return values.reduce<number>((total, value) => total * (typeof value === 'number' ? value : 0), 1);
+        case 'if':
+          return values[0] === true ? values[1] : values[2];
+        case 'coalesce':
+          return values.find((value) => value !== undefined);
         default:
           return undefined;
       }
+    }
+    case 'zoneProp': {
+      const zoneId = typeof expr.zone === 'string'
+        ? expr.zone
+        : evaluatePlanExpr(expr.zone, state, candidate, selectorItemKey, context);
+      if (typeof zoneId !== 'string' || context?.def === undefined) {
+        return undefined;
+      }
+      const zone = context.def.zones.find((entry) => entry.id === zoneId);
+      if (zone === undefined) {
+        return undefined;
+      }
+      if (expr.prop === 'id') return zone.id;
+      if (expr.prop === 'category') return zone.category;
+      const value = zone.attributes?.[expr.prop];
+      return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined;
     }
     case 'ref':
       if (expr.ref.kind === 'candidateIntrinsic') {
@@ -646,6 +691,39 @@ function evaluatePlanExpr(
           default:
             return undefined;
         }
+      }
+      if (expr.ref.kind === 'selectorItemIntrinsic') {
+        return selectorItemKey;
+      }
+      if (expr.ref.kind === 'seatIntrinsic') {
+        if (expr.ref.intrinsic === 'self') {
+          return context?.seatId;
+        }
+        return context?.def?.seats?.[state.activePlayer]?.id;
+      }
+      if (expr.ref.kind === 'lookup') {
+        if (expr.ref.surface !== 'policyState' || expr.ref.collection !== 'zones') {
+          return undefined;
+        }
+        const key = evaluatePlanExpr(expr.ref.key, state, candidate, selectorItemKey, context);
+        if (typeof key !== 'string' || context?.def?.zones.some((zone) => zone.id === key) !== true) {
+          return expr.ref.onMissing !== 'unavailable' ? expr.ref.onMissing.value : undefined;
+        }
+        const zone = context.def.zones.find((entry) => entry.id === key);
+        const root = {
+          properties: zone?.attributes ?? {},
+          markers: state.markers[key] ?? {},
+          variables: state.zoneVars[key] ?? {},
+        } as Readonly<Record<string, unknown>>;
+        const value = expr.ref.path.reduce<unknown>((current, segment) =>
+          current !== null && typeof current === 'object' && !Array.isArray(current)
+            ? (current as Readonly<Record<string, unknown>>)[segment]
+            : undefined, root);
+        return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+          ? value
+          : expr.ref.onMissing !== 'unavailable'
+            ? expr.ref.onMissing.value
+            : undefined;
       }
       return undefined;
     case 'param':

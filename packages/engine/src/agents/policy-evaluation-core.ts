@@ -240,6 +240,7 @@ export interface CreatePolicyEvaluationContextInput {
     readonly optionValue: MoveParamValue;
     readonly optionIndex?: number;
   };
+  readonly selectorItemKey?: string;
   readonly selectorMicroturnOptions?: readonly SelectorEvalMicroturnOption[];
   readonly previewOption?: {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
@@ -440,6 +441,7 @@ export class PolicyEvaluationContext {
   private activeState: GameState;
   private currentSeatContext: string | undefined;
   private currentSeatMatrixContext: { readonly seatId: string } | undefined;
+  private currentSelectorItemKey: string | undefined;
   private candidateParamUnavailableDuringValue = false;
   private previewUnavailableEventCount = 0;
   private scheduleUnavailableDuringValue = false;
@@ -1846,6 +1848,8 @@ export class PolicyEvaluationContext {
       }
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
+      case 'selectorItemIntrinsic':
+        return this.currentSelectorItemKey ?? this.input.selectorItemKey;
       case 'candidateParam':
         return this.resolveCandidateParamRef(ref, candidate);
       case 'microturnIntrinsic':
@@ -1997,10 +2001,11 @@ export class PolicyEvaluationContext {
       ...(this.input.catalog.compiled.selectors === undefined ? {} : { selectors: this.input.catalog.compiled.selectors }),
       observerPlayerId: this.input.playerId,
       ...this.resolveSelectorObserverProfile(),
-      evaluateExpr: (expr, itemCandidate, microturnOption) => this.evaluateSelectorItemExpr(
+      evaluateExpr: (expr, itemCandidate, microturnOption, selectorItemKey) => this.evaluateSelectorItemExpr(
         expr,
         itemCandidate as PolicyEvaluationCandidate | undefined,
         microturnOption,
+        selectorItemKey,
       ),
       onPreviewFallback: (fallback) => this.recordPreviewFallbackFired(candidate, {
         termId: `selector.${fallback.selectorId}.${fallback.componentId}`,
@@ -2020,13 +2025,20 @@ export class PolicyEvaluationContext {
     expr: CompiledPolicyExpr,
     candidate: PolicyEvaluationCandidate | undefined,
     microturnOption: SelectorEvalMicroturnOption | undefined,
+    selectorItemKey: string | undefined,
   ): PolicyValue {
     if (
       microturnOption === undefined
       || this.input.completion === undefined
       || microturnOption.key === this.currentMicroturnOptionKey()
     ) {
-      return this.evaluateCompiledExpr(expr, candidate);
+      const previousSelectorItemKey = this.currentSelectorItemKey;
+      this.currentSelectorItemKey = selectorItemKey;
+      try {
+        return this.evaluateCompiledExpr(expr, candidate);
+      } finally {
+        this.currentSelectorItemKey = previousSelectorItemKey;
+      }
     }
 
     const context = new PolicyEvaluationContext({
@@ -2043,12 +2055,17 @@ export class PolicyEvaluationContext {
       ...(this.input.encodedStateLayout === undefined ? {} : { encodedStateLayout: this.input.encodedStateLayout }),
       ...(this.input.encodedState === undefined ? {} : { encodedState: this.input.encodedState }),
       ...(this.input.traceLevel === undefined ? {} : { traceLevel: this.input.traceLevel }),
-      completion: {
-        request: this.input.completion.request,
-        optionValue: microturnOption.value,
-        optionIndex: microturnOption.index,
-      },
+      ...(this.input.completion === undefined || microturnOption === undefined
+        ? {}
+        : {
+            completion: {
+              request: this.input.completion.request,
+              optionValue: microturnOption.value,
+              optionIndex: microturnOption.index,
+            },
+          }),
       ...(this.input.selectorMicroturnOptions === undefined ? {} : { selectorMicroturnOptions: this.input.selectorMicroturnOptions }),
+      ...(selectorItemKey === undefined ? {} : { selectorItemKey }),
     }, this.currentCandidates);
     try {
       return context.evaluateCompiledExpr(expr, candidate);

@@ -59,13 +59,17 @@ export function createGuardrail(overrides: Partial<GuardrailDef> = {}): Guardrai
   };
 }
 
-export function createGuardrailConformanceDef(guardrail: GuardrailDef): GameDef {
+export function createGuardrailConformanceDef(
+  guardrail: GuardrailDef,
+  options: { readonly includeConstantConsideration?: boolean } = {},
+): GameDef {
+  const considerationIds = options.includeConstantConsideration === true ? ['constantZero'] : [];
   const profile: CompiledAgentProfile = {
     fingerprint: 'guardrail-conformance-profile',
     params: {},
     use: {
       guardrails: [String(guardrail.id)],
-      considerations: [],
+      considerations: considerationIds,
       tieBreakers: [],
     },
     plan: {
@@ -73,7 +77,7 @@ export function createGuardrailConformanceDef(guardrail: GuardrailDef): GameDef 
       candidateFeatures: [],
       candidateAggregates: [],
       guardrails: [String(guardrail.id)],
-      considerations: [],
+      considerations: considerationIds,
     },
     preview: { mode: 'disabled' },
     selection: { mode: 'argmax' },
@@ -113,7 +117,15 @@ export function createGuardrailConformanceDef(guardrail: GuardrailDef): GameDef 
           ...(guardrail.onAllPruned === undefined ? {} : { onAllPruned: guardrail.onAllPruned }),
         },
       },
-      considerations: {},
+      considerations: options.includeConstantConsideration === true ? {
+        constantZero: {
+          scopes: ['move'],
+          costClass: 'candidate',
+          weight: literal(1),
+          value: literal(0),
+          dependencies: emptyDependencies,
+        },
+      } : {},
       tieBreakers: {},
       strategicConditions: {},
     },

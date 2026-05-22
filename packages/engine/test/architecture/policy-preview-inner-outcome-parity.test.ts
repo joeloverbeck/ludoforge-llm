@@ -31,6 +31,9 @@ interface OutcomeParityDecision {
 const WITNESS_SEEDS = [1005, 1011, 1008, 1013, 1009] as const;
 const PLAYER_COUNT = 4;
 const PROFILE_ID = 'arvn-evolved';
+const WITNESS_MAX_TURNS = 1;
+const { compiled: PRODUCTION_COMPILE_RESULT } = compileProductionSpec();
+const PRODUCTION_GAME_DEF = assertValidatedGameDef(PRODUCTION_COMPILE_RESULT.gameDef);
 
 const resolveRepoRoot = (): string => {
   let cursor = process.cwd();
@@ -52,6 +55,12 @@ const readFixture = (seed: number): OutcomeParityFixture =>
 const profileForSeat = (seatId: string): string =>
   seatId.toLowerCase() === 'arvn' ? PROFILE_ID : `${seatId.toLowerCase()}-baseline`;
 
+const createPolicyAgents = (): readonly PolicyAgent[] =>
+  (PRODUCTION_GAME_DEF.seats ?? []).map((seat) => new PolicyAgent({
+    profileId: profileForSeat(String(seat.id)),
+    traceLevel: 'verbose',
+  }));
+
 const selectedValueFor = (decision: GameTrace['decisions'][number]['decision']): unknown =>
   'value' in decision ? decision.value : null;
 
@@ -72,14 +81,17 @@ const normalize = <T>(value: T): T =>
   JSON.parse(`${JSON.stringify(value, (_key, nested) => (typeof nested === 'bigint' ? nested.toString() : nested), 2)}\n`) as T;
 
 const captureOutcomeParity = (seed: number, maxTurns: number): OutcomeParityFixture => {
-  const { compiled } = compileProductionSpec();
-  const def = assertValidatedGameDef(compiled.gameDef);
-  const runtime = createGameDefRuntime(def);
-  const agents = (def.seats ?? []).map((seat) => new PolicyAgent({
-    profileId: profileForSeat(String(seat.id)),
-    traceLevel: 'verbose',
-  }));
-  const trace = runGame(def, seed, agents, maxTurns, PLAYER_COUNT, { skipDeltas: true }, runtime);
+  assert.equal(maxTurns, WITNESS_MAX_TURNS, 'outcome parity fixtures intentionally pin the first-turn witness window');
+  const runtime = createGameDefRuntime(PRODUCTION_GAME_DEF);
+  const trace = runGame(
+    PRODUCTION_GAME_DEF,
+    seed,
+    createPolicyAgents(),
+    maxTurns,
+    PLAYER_COUNT,
+    { skipDeltas: true },
+    runtime,
+  );
   const decisions: readonly OutcomeParityDecision[] = trace.decisions
     .filter((entry) => entry.decisionContextKind === 'chooseOne')
     .filter((entry) => entry.agentDecision?.resolvedProfileId === PROFILE_ID)

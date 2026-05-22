@@ -855,8 +855,12 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
               } : undefined,
             )
           ), 0);
-          candidate.score -= guardrailDispatch.penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
-          candidate.score -= turnShapePenaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
+        }
+      }
+      for (const candidate of activeCandidates) {
+        candidate.score -= guardrailDispatch.penaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
+        candidate.score -= turnShapePenaltiesByStableMoveKey.get(candidate.stableMoveKey) ?? 0;
+        if (!scoredWithWasm) {
           evaluation.finalizePreviewOutcome(candidate);
         }
       }

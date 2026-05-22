@@ -19,6 +19,7 @@ export type AgentPolicyLibraryBucket = typeof AGENT_POLICY_LIBRARY_BUCKETS[numbe
 export const AGENT_POLICY_PROFILE_USE_BUCKETS = [
   'guardrails',
   'strategyModules',
+  'planTemplates',
   'turnShapeEvaluators',
   'considerations',
   'tieBreakers',
@@ -29,6 +30,7 @@ export type AgentPolicyProfileUseBucket = typeof AGENT_POLICY_PROFILE_USE_BUCKET
 export const AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET = {
   guardrails: 'guardrails',
   strategyModules: 'strategyModules',
+  planTemplates: 'planTemplates',
   turnShapeEvaluators: 'turnShapeEvaluators',
   considerations: 'considerations',
   tieBreakers: 'tieBreakers',

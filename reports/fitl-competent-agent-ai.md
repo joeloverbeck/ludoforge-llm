@@ -1,17 +1,19 @@
-# Fire in the Lake AI Policy Requirements: Competent Faction Personalities
+# Fire in the Lake Base-Game Faction Competence Requirements
+
+> **Status note.** This document defines *what competent AI faction behavior must understand and prioritize* for the base game of Fire in the Lake as implemented in this repository. It is **not** implementation architecture: it does not prescribe a scoring formula, policy DSL, target selector, plan-template schema, fixed weight set, search algorithm, or bot flowchart. Any implementation implication derived from this document is recorded separately and is non-normative. The earlier revision of this report mixed competence requirements with implementation sketches (candidate-turn objects, scoring pseudo-formulas, a "DSL must" capability list); those have been removed. The actual implementation of an agent that satisfies these requirements lives in `archive/specs/186-advisory-turn-plan-architecture-core.md`, `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md`, and the design exploration `reports/ai-agent-policy-overhaul-first-iteration.md`.
 
 ## Scope
 
-This report describes competent, general-purpose policy personalities for the four base-game factions in Fire in the Lake:
+This document describes what competent, general-purpose play must understand and prioritize for the four base-game factions in Fire in the Lake:
 
 - US
 - ARVN
 - NVA
 - VC
 
-The goal is not to reproduce the printed non-player bots. The goal is to describe what a competent human-like policy should *generally* try to do, so that an AI-agent DSL can be evaluated against these requirements.
+The goal is not to reproduce the printed non-player bots. The goal is to describe what a competent human-like agent should *generally* try to do under the actual implemented rules. It covers only the base game; it does not define requirements for expansions, Trưng bots, solitaire bot reproduction, or optional tournament variants, except to exclude them.
 
-The policy should not simply map each faction to a preferred operation. Fire in the Lake is too positional and too temporal for that. A good policy must evaluate:
+A competent agent does not simply map each faction to a preferred operation. Fire in the Lake is too positional and too temporal for that. Competent play must weigh:
 
 - current victory margins;
 - upcoming Coup/Monsoon timing;
@@ -22,19 +24,20 @@ The policy should not simply map each faction to a preferred operation. Fire in 
 - whether an apparent ally is becoming a rival;
 - whether a move improves the faction’s own margin or only helps a nominal partner.
 
+## Source-of-truth hierarchy
+
+Requirements in this document are valid only if they align with, in order:
+
+1. `docs/FOUNDATIONS.md` — non-negotiable architectural constraints (engine agnosticism, one rules protocol, bounded computation, rule-valid legality, observer discipline, determinism, preview integrity);
+2. the active repository rules under `rules/fire-in-the-lake/` — for legality, phases, effects, and base-game fidelity;
+3. base-game Fire in the Lake strategy evidence and play experience — for how competent players reason;
+4. repository reports and prior drafts — only as lower-trust prior art.
+
+If a strategic claim conflicts with the active repository rules, the repository rules win. If a strategic claim implies an implementation capability, that implication is non-normative and belongs with the implementation artifacts named in the status note above — not in this document.
+
 ## Core shared model
 
-Every faction should evaluate a candidate turn as a composed object:
-
-    candidate_turn =
-      operation
-      + optional_special_activity
-      + timing_order_of_special_activity
-      + selected_spaces
-      + selected_pieces
-      + expected_posture_after_coup
-
-The policy should not score an Operation and Special Activity independently. Many strong turns are strong only because of sequencing:
+Competent play evaluates a *whole composed turn* — an operation together with any special activity, the order in which they resolve, the selected spaces and pieces, and the expected board posture after the next Coup — rather than scoring an operation and special activity independently. Many strong turns are strong only because of sequencing:
 
 - Sweep then removal.
 - March then Ambush.
@@ -43,6 +46,8 @@ The policy should not score an Operation and Special Activity independently. Man
 - Assault, then mobility special, then continued Assault.
 - Tax during a Terror turn.
 - Air Lift before Training to make a Pacification target legal.
+
+*This document does not prescribe how an agent represents, enumerates, or scores composed turns; it requires only that competent behavior account for sequencing rather than treating operation and special activity as separable.*
 
 ### Universal priority stack
 
@@ -80,39 +85,19 @@ All factions should use a decision stack roughly like this:
    - Avoid exposing underground guerrillas unless the exposure is worth it.
    - Avoid moving pieces out of origin spaces if doing so loses important Control or exposes a Base.
 
-### Universal candidate-turn scoring sketch
+### What competent turn evaluation must weigh
 
-A useful generic scoring model:
+Competent turn evaluation must account for all of the following considerations (this document does not prescribe how they are combined, weighted, or computed):
 
-    score(candidate_turn) =
-        own_victory_margin_delta
-      + enemy_victory_margin_reduction
-      + coup_readiness_delta
-      + resource_and_logistics_delta
-      + future_action_legality_delta
-      + piece_efficiency_delta
-      + board_safety_delta
-      - ally_rival_risk
-      - opportunity_cost
-      - exposure_or_redeploy_risk
-
-Where:
-
-- `own_victory_margin_delta` is faction-specific.
-- `enemy_victory_margin_reduction` should be heavily weighted if the enemy is close to winning.
-- `ally_rival_risk` is crucial: US/ARVN and NVA/VC are friendly by rules, but not by victory condition.
-- `future_action_legality_delta` captures things like:
-  - placing Police and Troops for Pacification;
-  - creating non-Support spaces for Rally;
-  - preserving Underground guerrillas for Terror/Tax/Subvert;
-  - creating NVA numerical superiority for Infiltrate;
-  - creating COIN Control for Govern/Pacification.
-- `exposure_or_redeploy_risk` captures:
-  - active guerrillas becoming Assault/Air Strike targets;
-  - ARVN Troops being forced to redeploy from Provinces without COIN Bases;
-  - US Troops left in Laos/Cambodia;
-  - large COIN stacks becoming Bombard targets;
-  - bases being left without sufficient protection.
+- **Own victory-margin change** — faction-specific; the dominant term when a win is reachable.
+- **Enemy victory-margin reduction** — heavily decisive when an enemy is close to winning; denial can matter more than own gain.
+- **Coup readiness** — the board that will matter at the next Victory/Resource/Support/Redeploy/Commitment phase, not just the current board.
+- **Resource and logistics maintenance** — Aid/Econ/LoCs for COIN, Trail/Laos-Cambodia for NVA, Resources/Bases for VC.
+- **Future action legality** — placing Police and Troops for Pacification; creating non-Support spaces for Rally; preserving Underground guerrillas for Terror/Tax/Subvert; creating NVA numerical superiority for Infiltrate; creating COIN Control for Govern/Pacification.
+- **Piece efficiency and board safety** — prefer moves that change Control, Support/Opposition, Bases, Resources, or future legality over low-yield removals.
+- **Ally-rival risk** — US/ARVN and NVA/VC are friendly by rules but not by victory condition (see §5).
+- **Opportunity cost** of committing pieces or becoming ineligible.
+- **Exposure and Redeploy risk** — active guerrillas becoming Assault/Air Strike targets; ARVN Troops forced to redeploy from Provinces without COIN Bases; US Troops left in Laos/Cambodia; large COIN stacks becoming Bombard targets; bases left without sufficient protection.
 
 ### Monsoon awareness
 
@@ -156,6 +141,13 @@ After a Coup:
 - US Commitment can move Troops/Bases between Available and map.
 
 A policy that ignores Coup timing will look tactically plausible but strategically stupid.
+
+### Rule caveats competent play must respect
+
+Two rule interactions are easy to get wrong and are stated explicitly here:
+
+- **Pacification is not one mechanism.** US Train Pacification requires only a US piece and COIN Control (no Police); ARVN Train Pacification requires ARVN Troops and Police; Coup Support-Phase Pacification requires COIN Control, Police, and the pacifying faction's Troops. Competent play must select pieces and spaces for the *specific* Pacification it intends, not a generic one.
+- **Events can override normal rules.** Event text supersedes ordinary Operation/Special-Activity rules where stated. Competent play must sometimes choose the Event over Ops/Specials when the Event has direct victory, tempo, eligibility, resource, or denial value — Event handling is a first-class decision, not a fallback.
 
 ---
 
@@ -309,7 +301,7 @@ If US Troops begin in a space with removable enemies, the US can:
 2. Air Lift those Troops to another space.
 3. Continue Assault resolution in the second space.
 
-This should be encoded if the engine supports interrupting an Operation with a Special Activity.
+This pattern is available only where the rules and the implemented action construction allow a Special Activity to interrupt an Operation; competent play must verify its legality in the concrete state rather than assume it.
 
 Use when:
 
@@ -327,47 +319,15 @@ Use when:
 - Pacification there is urgent;
 - moving one US piece unlocks a large Support swing.
 
-## US target scoring features
+## US target-value requirements
 
-Suggested features:
+The US must judge target spaces by these strategic considerations (not by any fixed formula):
 
-    us_pacify_value =
-        population * support_levels_gained
-      + terror_marker_removed_value
-      + vc_opposition_denial
-      + coup_pacification_setup_bonus
-      - arvn_resource_cost
-      - risk_of_arvn_govern_followup
-
-    us_available_value =
-        available_us_pieces_after_commitment
-      - required_map_presence_to_hold_support
-      - emergency_commitment_need
-
-    us_assault_value =
-        nva_control_removed_population
-      + coin_control_added_population
-      + insurgent_base_removed_value
-      + nva_troops_removed_value
-      + vc_base_removed_value
-      + aid_gain_from_base_removal
-      - opportunity_cost_of_committed_troops
-
-    us_airstrike_value =
-        active_enemy_pieces_removed
-      + base_removed_value
-      + trail_degrade_value
-      + nva_victory_denial
-      + vc_victory_denial
-      - support_loss_penalty
-      - vc_opposition_help_penalty
-
-    us_patrol_value =
-        econ_value_protected
-      + sabotage_prevention
-      + city_control_added
-      + loc_guerrillas_activated_or_removed
-      + future_mobility_enabled
+- **Pacification** is most valuable in high-population spaces where Support can improve, where a Terror marker is removed, where VC Opposition is denied, or where it sets up Coup Support-Phase scoring — weighed against the ARVN Resource cost and the risk that ARVN later Governs the Support away.
+- **Available US count** is a victory component: every map commitment must be justified against the required map presence to hold Support and any emergency commitment need.
+- **Assault** is appropriate when it removes NVA Control, adds COIN Control, removes an insurgent Base, removes NVA Troops creating Control, or removes a VC Base — weighed against the opportunity cost of the committed Troops. It is poor play purely for body count.
+- **Air Strike** is powerful but politically costly: appropriate when active-piece removal, base removal, Trail degradation, or near-win denial outweighs the mandatory political shift in selected populated spaces. It is poor play when it damages Support without decisive payoff, and it cannot remove Underground guerrillas or Tunneled Bases.
+- **Patrol** is judged by Econ protected, Sabotage prevented, City Control added, LoC guerrillas activated or removed, and future mobility enabled.
 
 ## US errors to avoid
 
@@ -561,9 +521,7 @@ Target logic:
 
 ### Assault + Transport + Assault
 
-Advanced ARVN strike pattern.
-
-If the implementation supports interrupting an Operation with a Special Activity:
+Advanced ARVN strike pattern, available only where the rules and the implemented action construction allow a Special Activity to interrupt an Operation (verify legality in the concrete state):
 
 1. Assault in one space.
 2. Transport the same Troops/Rangers.
@@ -571,55 +529,16 @@ If the implementation supports interrupting an Operation with a Special Activity
 
 Use only if both Assaults create meaningful value.
 
-## ARVN target scoring features
+## ARVN target-value requirements
 
-Suggested features:
+ARVN must judge target spaces by these strategic considerations (not by any fixed formula):
 
-    arvn_govern_patronage_value =
-        population
-      + active_support_to_passive_support_bonus
-      + arvn_over_us_cube_bonus
-      + arvn_near_victory_bonus
-      - passive_support_to_neutral_rally_risk
-      - us_ally_score_help_penalty_if_us_close
-
-    arvn_govern_aid_value =
-        3 * population
-      + aid_low_bonus
-      + next_coup_bonus
-      + arvn_resource_starvation_bonus
-
-    arvn_control_value =
-        coin_control_added_population
-      + nva_control_removed_population
-      + city_bonus
-      + high_pop_province_bonus
-      + coup_redeploy_stability_bonus_if_base_or_police_present
-
-    arvn_train_value =
-        control_created
-      + troop_police_pair_created
-      + pacification_enabled
-      + rangers_added
-      + province_base_created
-      - resource_cost
-      - overstack_or_bombard_risk
-
-    arvn_assault_value =
-        base_removed_or_tunnel_roll
-      + nva_troops_removed
-      + nva_control_removed
-      + coin_control_added
-      + high_pop_space_cleared
-      - low_yield_highland_penalty
-
-    arvn_transport_value =
-        destination_control_gain
-      + threatened_space_reinforced
-      + assault_or_sweep_enabled
-      + ranger_underground_reset
-      - origin_control_loss
-      - path_blocked_by_enemy
+- **Govern for Patronage** is a primary scoring engine. ARVN must distinguish Active Support targets from Passive Support targets, because Governing Active Support leaves the space Supported while Governing Passive Support to Neutral opens Rally space and hurts the US. Higher population, ARVN cubes exceeding US cubes (for Patronage mode), and ARVN proximity to victory raise its value; the Rally risk and helping a near-win US lower it.
+- **Govern for Aid** scales with population and is most valuable when Aid is low, a Coup approaches, or ARVN Resources are starved.
+- **Control** value rises with COIN Control added, NVA Control removed, City and high-pop Province targets, and the post-Coup stability a Base or Police presence provides against Redeploy.
+- **Train** is valuable when it creates Control, completes a Troop/Police pair, enables Pacification, adds Rangers, or creates a Province Base — weighed against Resource cost and overstack/Bombard risk. Training that changes none of these is wasted.
+- **Assault** is appropriate when it removes a Base (subject to the Tunnel roll), removes NVA Troops or NVA Control, adds COIN Control, or clears a high-pop space; ARVN Assault is weaker than US Assault, especially in Highlands, so low-yield Highland Assaults are poor play.
+- **Transport** is judged by destination Control gained, threatened spaces reinforced, Assault/Sweep enabled, and Ranger Underground reset — against the cost of losing origin Control or a path blocked by enemy pieces.
 
 ## ARVN errors to avoid
 
@@ -807,54 +726,16 @@ Use when:
 - LoC Ambush adjacency threatens Cities/Provinces;
 - COIN Patrol would be forced into low-efficiency response.
 
-## NVA target scoring features
+## NVA target-value requirements
 
-Suggested features:
+NVA must judge target spaces by these strategic considerations (not by any fixed formula):
 
-    nva_control_value =
-        population_if_nva_control_added
-      + population_if_coin_control_removed
-      + city_or_saigon_bonus
-      + high_pop_province_bonus
-      - pieces_needed_to_hold
-      - us_airlift_assault_risk
-
-    nva_base_value =
-        1_victory_point
-      + rally_node_value
-      + infiltrate_node_value
-      + resource_value_if_laos_cambodia
-      + terrain_defense_bonus
-      - vulnerability_to_assault_or_airstrike
-
-    nva_trail_value =
-        rally_multiplier_gain
-      + march_discount_gain
-      + infiltrate_troop_gain
-      + resource_gain_at_coup
-      - expected_us_airstrike_or_laos_cambodia_degrade_risk
-
-    nva_infiltrate_vc_value =
-        nva_base_or_piece_gain
-      + vc_base_or_piece_denial
-      + vc_score_reduction
-      + nva_control_enabled
-      - useful_vc_pressure_lost
-
-    nva_bombard_value =
-        us_troop_removed_value
-      + arvn_troop_removed_value
-      + assault_threat_reduction
-      + casualty_or_aid_damage
-      + control_swing_if_any
-      - opportunity_cost
-
-    nva_terror_value =
-        support_denial
-      + rally_space_opened
-      + pacification_hindered
-      + loc_sabotage_value
-      - no_direct_nva_score_gain
+- **Control** value rises with NVA Control added in population, COIN Control removed, City/Saigon and high-pop Province targets — weighed against the pieces needed to hold and the risk of US Air Lift + Assault punishment.
+- **Bases** are victory points, Rally nodes, Infiltrate nodes, and (in Laos/Cambodia) Resource engines; terrain defense raises their value, vulnerability to Assault/Air Strike lowers it.
+- **Trail** improves Rally, March, Infiltrate, and Coup Earnings; its value is set against the expected US Air Strike or Laos/Cambodia COIN-degrade risk.
+- **Infiltrate** is both a Troop-building tool and an ally-rival tool: converting VC infrastructure is correct when it improves NVA score/Control or blocks a leading VC, but harmful when VC pressure is still needed to contain COIN. It can reduce Opposition — good against a leading VC, bad if VC pressure is needed against the US.
+- **Bombard** removes Troops only (not Police, Bases, or Special Forces). It is valuable when it causes meaningful US casualties (which can later reduce Aid), reduces an Assault threat, or swings Control; removing ARVN Troops is not Aid damage by itself, and Bombard is overvalued when Control does not change.
+- **Terror** is denial and preparation, not scoring: NVA Terror does not create Opposition. Its value is in Support denial, Rally space opened, Pacification hindered, and LoC Sabotage.
 
 ## NVA errors to avoid
 
@@ -1052,57 +933,16 @@ Use when:
 
 This is a defensive reset and future-threat creation move.
 
-## VC target scoring features
+## VC target-value requirements
 
-Suggested features:
+VC must judge target spaces by these strategic considerations (not by any fixed formula):
 
-    vc_terror_value =
-        population * opposition_levels_gained
-      + support_removed_value
-      + terror_marker_pacification_delay
-      + coup_agitation_setup
-      + us_score_denial
-      - guerrilla_activation_risk
-      - coin_reaction_risk
-
-    vc_base_value =
-        1_victory_point
-      + resource_income
-      + rally_capacity
-      + tunnel_or_terrain_defense_bonus
-      + political_network_anchor_value
-      - nva_infiltration_risk
-      - coin_assault_or_raid_risk
-
-    vc_rally_value =
-        new_guerrilla_future_action_value
-      + base_created_value
-      + underground_reset_value
-      + high_pop_target_preparation
-      - support_legality_block
-
-    vc_tax_value =
-        resources_gained
-      + future_agitation_enabled
-      - support_shift_penalty_if_population_space
-      - activated_guerrilla_exposure
-      + loc_tax_bonus
-
-    vc_subvert_value =
-        arvn_cubes_removed_or_replaced
-      + patronage_reduction
-      + coin_control_removed_population
-      + pacification_pair_broken
-      + govern_target_disrupted
-      + replacement_guerrilla_value
-
-    vc_ambush_value =
-        key_piece_removed
-      + control_swing
-      + pacification_denial
-      + us_casualty_or_aid_damage
-      + special_force_threat_removed
-      - exposure_cost
+- **Terror** is the primary political scoring Operation: its value rises with population and Opposition levels gained, Support removed, the Pacification delay a Terror marker imposes, Coup Agitation setup, and US-score denial — against guerrilla activation and COIN reaction risk. It requires Underground guerrillas, and repeated Terror in an already-marked space does not keep adding shifts.
+- **Bases** are victory points, income, and Rally capacity; tunnels/terrain raise their defensive value and political-anchor value, while NVA Infiltrate risk and COIN Assault/Raid risk lower it.
+- **Rally** value comes from new-guerrilla future-action potential, Bases created, Underground reset, and high-pop target preparation — blocked when the space is Supported.
+- **Tax** is competent when resources are strategically necessary, especially on LoCs where no Support shift occurs. Tax in populated spaces is dangerous: it shifts toward Support and activates a guerrilla, so it is competent only when the resource gain and a follow-on political plan justify the cost.
+- **Subvert** removes or replaces ARVN cubes: valuable when it breaks COIN Control, reduces Patronage, breaks a Pacification pair, disrupts a Govern target, and leaves a replacement guerrilla. It requires Underground VC and ARVN cubes, and does not remove US pieces.
+- **Ambush** is surgical guaranteed removal: valuable when one removed piece swings Control, denies Pacification, causes a US casualty (and later Aid damage), or removes a Special Forces threat — against the exposure cost. Bases are removed last.
 
 ## VC errors to avoid
 
@@ -1157,17 +997,7 @@ Therefore:
 - ARVN may want US help but not a US Support win.
 - US may convert Patronage to ARVN Resources in Saigon when ARVN Patronage is too high or Resources are needed.
 
-Suggested ally weighting:
-
-    if ARVN near victory:
-        US treats ARVN Patronage gain as enemy gain
-    else:
-        US treats ARVN control/resource gain as useful but secondary
-
-    if US near victory:
-        ARVN treats US Support gain as rival gain
-    else:
-        ARVN treats US military support as useful but secondary
+Ally-rival requirement: the relationship is conditional, not a fixed positive utility. While ARVN is not close to winning, the US treats ARVN Control/Resource gains as useful but secondary; once ARVN is near victory, the US must treat further ARVN Patronage gain as a rival gain to be denied. Symmetrically, ARVN treats US military support as useful but secondary until the US is near a Support win, at which point further US Support gain is a rival gain.
 
 ## NVA vs VC
 
@@ -1190,17 +1020,7 @@ Therefore:
 - VC wants NVA pressure against COIN but not NVA dominance in VC Base spaces.
 - NVA wants VC to distract COIN but not win.
 
-Suggested ally weighting:
-
-    if VC near victory:
-        NVA prioritizes Infiltrate against VC Bases/Opposition
-    else:
-        NVA tolerates VC pressure where it damages COIN
-
-    if NVA near victory:
-        VC may remove/block NVA Control or avoid strengthening NVA routes
-    else:
-        VC tolerates NVA pressure where it distracts COIN
+Ally-rival requirement: while VC is not near winning (and not blocking NVA Control), the NVA tolerates VC pressure where it damages COIN; once VC is near victory or blocks NVA Control, the NVA must actively harm VC score, prioritizing Infiltrate against VC Bases/Opposition. Symmetrically, the VC tolerates NVA pressure where it distracts COIN until the NVA can win or threatens to steal VC Bases, at which point the VC must remove/block NVA Control or avoid strengthening NVA routes.
 
 ## Primary conflict pairs
 
@@ -1290,166 +1110,32 @@ VC should:
 
 ---
 
-# 6. DSL expressivity requirements implied by these personalities
+# 6. The reasoning surface competent play requires
 
-A policy DSL that can express competent Fire in the Lake play needs more than simple if/then action triggers.
+Competent faction behavior requires reasoning over legal action consequences, timing, visible future-card information, phase effects, resources, Control, Support/Opposition, Bases, hidden/active status, ally-rival incentives, and near-win denial. Concretely, competent play must be able to account for:
 
-It needs the following expressive capabilities.
+- **Composed turns** — operation + special-activity type, timing (before/during/after), target spaces and pieces, movement origins, legality constraints, and expected resulting board state — including interrupt/sequencing patterns (Assault → Air Lift → Assault; March → Infiltrate; Air Lift → Train; etc.) where the rules permit them.
+- **Marginal victory scoring** for each faction (US: Support + Available US; ARVN: COIN-Controlled Population + Patronage; NVA: NVA-Controlled Population + NVA Bases; VC: Opposition + VC Bases), and the symmetric *denial* of an enemy's margin, with near-win denial overriding normal faction habits.
+- **Space features** — population, Support/Opposition, COIN/NVA Control, Bases and Tunnel markers, LoC Econ, terrain, space type, Laos/Cambodia/North-Vietnam status, Troop/Police pairs, Underground vs Active status, Special Forces presence, origin-Control loss, Redeploy/Bombard vulnerability, and per-operation legality.
+- **Temporal structure** — Coup imminence, Monsoon restrictions, post-Coup Redeploy, Support-Phase Pacification/Agitation windows, Resource-Phase income/Sabotage, Trail reset/degrade, US Commitment, one-card-ahead planning, and eligibility/pass tradeoffs.
+- **Conditional ally-rival incentives** — friendly factions are never a fixed positive utility; the relationship flips when the ally nears its own win or blocks the faction's scoring path (see §5).
+- **Risk and exposure** — exposing Underground guerrillas, undefended Bases, Bombard-threatened stacks, politically costly Air Strikes, Control-losing moves, pre-Coup Redeploy traps, and ceding LoCs or Laos/Cambodia before Coup.
 
-## 6.1 Candidate turn generation
+**This document does not prescribe how an agent represents or computes that reasoning** — no DSL capability list, no candidate-turn data structure, no utility equation, no fixed personality defaults. How an agent enumerates, scores, sequences, previews, or executes turns is an implementation concern. The implementation that satisfies these requirements in this repository is defined by `archive/specs/186-advisory-turn-plan-architecture-core.md`, `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md`, and the design exploration `reports/ai-agent-policy-overhaul-first-iteration.md`.
 
-The DSL must generate candidate turns that include:
+# Explicit non-requirements
 
-- operation type;
-- special activity type;
-- whether the special occurs before, during, or after the operation;
-- target spaces;
-- target pieces;
-- origin spaces for movement;
-- legality constraints;
-- expected resulting board state.
+This document does not require:
 
-It must support action interruption/sequencing, such as:
+- reproducing the printed non-player bots;
+- using any particular policy DSL;
+- using target-scoring formulas or fixed weights;
+- using plan templates or whole-turn advisory objects;
+- using Monte Carlo search, minimax, behavior trees, HTN planning, or utility AI;
+- preserving any earlier report claim merely because it was already written;
+- importing expansions, Trưng, optional tournament variants, or non-base-game material.
 
-- Assault + Air Lift + Assault;
-- Assault + Transport + Assault;
-- Rally, pause to Tax, then continue Rally;
-- Air Lift before Training;
-- March then Infiltrate;
-- March then Ambush.
-
-## 6.2 Marginal victory scoring
-
-The DSL must evaluate marginal changes to each faction’s victory score:
-
-- US: Support + Available US.
-- ARVN: COIN-Controlled Population + Patronage.
-- NVA: NVA-Controlled Population + NVA Bases.
-- VC: Opposition + VC Bases.
-
-It must also evaluate denial:
-
-- reducing an enemy score can be as important as increasing own score;
-- blocking a near-win should override normal faction habits.
-
-## 6.3 Space-feature scoring
-
-The DSL must score spaces using features such as:
-
-- population;
-- current Support/Opposition;
-- COIN Control;
-- NVA Control;
-- Bases and Tunnel markers;
-- LoC Econ value;
-- terrain type;
-- city/province/LoC;
-- Laos/Cambodia/North Vietnam status;
-- presence of Troop/Police pairs;
-- presence of Underground vs Active guerrillas;
-- presence of Special Forces;
-- whether movement out of origin loses Control;
-- whether pieces are vulnerable to Redeploy or Bombard;
-- whether the space is legal for Rally/Govern/Pacification/Tax/Subvert/etc.
-
-## 6.4 Temporal awareness
-
-The DSL must represent:
-
-- Coup imminent;
-- Monsoon restrictions;
-- post-Coup Redeploy effects;
-- Support Phase Pacification/Agitation opportunities;
-- Resource Phase income/sabotage;
-- Trail reset/degrade;
-- US Commitment;
-- one-card-ahead planning;
-- eligibility/pass tradeoffs.
-
-Without temporal awareness, the agent will fail at:
-
-- preparing Coup scoring;
-- avoiding Monsoon dead plans;
-- protecting Agitation/Pacification spaces;
-- preserving ARVN Troops in Provinces;
-- protecting Trail before Resources;
-- deciding when to pass for future eligibility.
-
-## 6.5 Rival-allied utility
-
-The DSL must not hardcode friendly factions as positive utility.
-
-It should support conditional ally weights:
-
-    utility =
-      own_gain
-      + ally_gain * ally_weight
-      - enemy_gain
-      - rival_ally_gain_if_ally_near_win
-
-Where ally weight changes by context.
-
-Examples:
-
-- US likes ARVN Control until ARVN is close to winning.
-- ARVN likes US Support until US is close to winning.
-- NVA likes VC disruption until VC is close to winning or blocks NVA Control.
-- VC likes NVA pressure until NVA can win or steal VC Bases.
-
-## 6.6 Risk modeling
-
-The DSL must express risk penalties:
-
-- exposing Underground guerrillas;
-- leaving Bases undefended;
-- overconcentrating COIN Troops near Bombard threats;
-- Air Striking populated spaces;
-- moving pieces out of Control-critical origins;
-- placing ARVN Troops in Provinces without COIN Bases before Coup;
-- letting NVA/VC occupy LoCs before Coup;
-- letting COIN Control Laos/Cambodia before Coup;
-- letting NVA outnumber VC in VC Base spaces;
-- letting US/ARVN Special Forces threaten Bases.
-
-## 6.7 Operation-specific legality and value
-
-The DSL must be able to express action-specific target priorities.
-
-Examples:
-
-- Govern requires Supported COIN-Controlled spaces, not Saigon, not Train-selected, and Patronage mode requires more ARVN cubes than US cubes.
-- Rally requires non-Support spaces.
-- Tax requires Underground VC and no COIN Control, with LoCs being especially attractive.
-- Subvert requires Underground VC and ARVN cubes.
-- Sweep cannot happen in Monsoon.
-- March cannot happen in Monsoon.
-- Assault cannot remove Underground guerrillas.
-- Bases are removed last.
-- Tunneled Bases require special handling.
-- Air Strike cannot remove Underground guerrillas or Tunneled Bases and causes political damage in populated spaces.
-- Infiltrate can convert VC pieces/Bases if NVA outnumbers VC.
-
-## 6.8 Personality-level policy defaults
-
-A good DSL should allow each faction to have weighted defaults that are overridden by victory/block emergencies.
-
-Suggested default personalities:
-
-    US:
-      prioritize Support, Pacification, Aid, Irregulars, controlled withdrawal,
-      and surgical force. Penalize overcommitment and Air Strike political damage.
-
-    ARVN:
-      prioritize COIN Control, Patronage, Govern, Aid/Econ, cities,
-      Transport/Raid flexibility, and self-interest over US goals.
-
-    NVA:
-      prioritize Trail, Bases, NVA Control, Laos/Cambodia logistics,
-      Troop mass, Infiltrate, and high-pop military pressure.
-
-    VC:
-      prioritize Opposition, Bases, Underground status, Terror, Agitation setup,
-      Subvert, Tax on LoCs, and making COIN waste actions.
+A later implementation may choose any architecture that satisfies these competence requirements while obeying `docs/FOUNDATIONS.md` and the active FITL rules. The "preferred combinations" listed per faction are **tactical patterns a competent agent must recognize**, not mandatory plan-template structures.
 
 ---
 

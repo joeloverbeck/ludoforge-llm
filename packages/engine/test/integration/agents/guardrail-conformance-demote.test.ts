@@ -3,6 +3,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
+import { __internal_for_tests as policyWasmRuntimeInternals } from '../../../src/agents/policy-wasm-runtime.js';
+import { initializePolicyWasmRuntimeSync } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import {
   alphaPlayerId,
   conformanceMoves,
@@ -42,5 +44,36 @@ describe('guardrail conformance: demote severity', () => {
       penalty: 20,
       status: 'ready',
     }]);
+  });
+
+  it('subtracts the declared penalty when consideration scores use the WASM route', () => {
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(initializePolicyWasmRuntimeSync());
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    try {
+      const def = createGuardrailConformanceDef(createGuardrail({
+        severity: 'demote',
+        penalty: literal(20),
+      }), { includeConstantConsideration: true });
+      const state = createConformanceState(def);
+
+      const result = evaluatePolicyMoveCore({
+        def,
+        state,
+        playerId: alphaPlayerId,
+        legalMoves: conformanceMoves.tagged,
+        trustedMoveIndex: new Map(),
+        rng: { state: state.rng },
+        diagnosticsMode: 'enabled',
+        traceLevel: 'summary',
+      });
+
+      assert.equal(result.kind, 'success');
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowRouteCount(), 1);
+      assert.equal(result.metadata.candidates.find((candidate) => candidate.actionId === 'badMove')?.score, -20);
+      assert.equal(result.metadata.candidates.find((candidate) => candidate.actionId === 'goodMove')?.score, 0);
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+      policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    }
   });
 });

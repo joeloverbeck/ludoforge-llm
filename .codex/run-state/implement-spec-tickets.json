@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md",
-  "archived_spec": "archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md",
-  "last_ticket": "archive/tickets/187WHOTURPOS-005.md",
-  "last_result": "completed_archived_final_spec_archived",
-  "last_work_commit": "688028aaf37fb7c4f8062305c8aad2d2f60b4738",
+  "originating_spec": "archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
+  "archived_spec": "archive/specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
+  "last_ticket": "archive/tickets/188FITLFOUFAC-010.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "76e445e789d55b33fe9d0853998255873a289f75",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 187 family completed and archived; post-state-commit worktree expected clean.",
+  "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-21"
+  "updated_at": "2026-05-22"
 }

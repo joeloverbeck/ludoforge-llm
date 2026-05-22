@@ -1,6 +1,6 @@
 ---
 name: implement-spec-tickets
-description: "Run the Ludoforge spec-ticket implementation loop for a spec: select active same-family tickets, invoke implement-ticket with the originating spec as authority, review/archive completed tickets with post-ticket-review, apply evidence-backed skill-audit hardening when child workflows expose it, persist resume state, archive the originating spec when all owned tickets are done, and optionally create/push a final branch."
+description: "Run the Ludoforge spec-ticket implementation loop for a spec: select active same-family tickets, invoke implement-ticket with the originating spec as authority, review/archive completed tickets with post-ticket-review, surface evidence-backed skill-audit hardening proposals when child workflows expose them, persist resume state, archive the originating spec when all owned tickets are done, and optionally create/push a final branch."
 ---
 
 # Implement Spec Tickets
@@ -8,6 +8,8 @@ description: "Run the Ludoforge spec-ticket implementation loop for a spec: sele
 Use this skill when the user wants the full Ludoforge spec-family loop handled across multiple tickets without repeatedly invoking child skills by hand.
 
 This is an orchestration skill. Do not reimplement `.codex/skills/implement-ticket`, `.codex/skills/post-ticket-review`, or `.codex/skills/skill-audit`; load and obey those skills at each phase, and let their narrower guardrails control their owned work.
+
+In Codex, "invoke" a child skill by loading the live child `SKILL.md`, executing its required reads and workflow checklist in the current session, and emitting this harness's required marker/block. There is no separate slash-command subprocess; do not claim the child workflow ran unless its live checklist was actually used.
 
 The default unit of execution is one ticket iteration: implement, review/archive when complete, commit, persist state, and hand off the next target. The full loop is resumable across invocations. Continue into another ticket in the same invocation only when the next target is an immediate follow-up or explicit direct dependent, the continuation is still the same seam, context remains small enough to preserve proof accuracy, and the worktree/state file are clean enough to avoid ambiguity.
 
@@ -17,9 +19,9 @@ Prefer a fresh context boundary between unrelated ticket iterations. After each 
 
 This harness intentionally narrows `skill-audit` output when auditing child workflow skills during an implementation loop. Use the live `skill-audit` criteria to identify evidence-backed issues, improvements, and features, but emit the compact child-audit block required below instead of the full report template.
 
-This harness also grants explicit authorization to patch child skills when a child-audit suggestion is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. That authorization applies only inside this orchestrated loop; a standalone `$skill-audit` request remains report-only unless the user separately asks to implement suggestions.
+This harness does not grant implicit authorization to patch child skills. When a child-audit suggestion is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow, propose the skill update in the compact child-audit block and wait for explicit user confirmation before editing any skill or rules file. A standalone `$skill-audit` request remains report-only unless the user separately asks to implement suggestions.
 
-For any nonzero child-audit finding count, include enough evidence in the compact block to justify each apply, reject, or defer decision. Do not collapse nonzero findings into unexplained counts.
+For any nonzero child-audit finding count, include enough evidence in the compact block to justify each proposed, rejected, or deferred decision. Do not collapse nonzero findings into unexplained counts.
 
 For a zero-finding child audit, the `Evidence basis` line must still name at least two concrete exercised surfaces that were checked, such as boundary reset handling, archival/reference repair, proof invalidation, ticket graph updates, state persistence, or terminal-status gating. Do not emit a bare "no findings" audit without saying which parts of the child workflow were actually exercised.
 
@@ -71,8 +73,18 @@ Keep the file small and machine-readable. Update it after intake, after every it
 
 - `"clean"` only when `git status --short` has no entries.
 - `"unrelated_untracked: reports/example.md"` when only unrelated untracked paths remain and they are intentionally left untouched.
+- `"unrelated_dirty: <paths>"` when unrelated tracked modifications, unrelated untracked paths, or both remain and they are intentionally left untouched.
 - `"owned_dirty: <paths>"` when owned paths remain dirty for a no-commit or blocked handoff.
 - `"mixed_dirty: owned=<paths>; unrelated=<paths>"` when both owned and unrelated paths remain.
+
+Use stable `last_result` values where possible so later resumes can distinguish implementation, retarget, and state-only handoffs. Current vocabulary:
+
+- `"completed_archived"` or `"implemented_archived"` when the ticket reached terminal status and was archived.
+- `"implemented_not_archived"` when implementation completed but review/archive did not run.
+- `"retargeted_to_prerequisite"` when the iteration only inserted or selected a prerequisite before returning to the original target.
+- `"blocked"` when no next owner exists or the current target remains blocked by an unresolved owner.
+- `"state_only"` when only the state file was refreshed and no work commit represents a new ticket/spec decision.
+- `"final_spec_archived"` when the originating spec was archived.
 
 On resume, read this file first, then verify it against live repo state before invoking a child skill:
 
@@ -89,6 +101,25 @@ If state conflicts with the live repo, trust the live repo and refresh the state
 If an in-flight proof command or terminal session may still be running after interruption or compaction, poll or classify it before rerunning proof, editing closeout, committing, or finalizing. If the old session is unobservable, mark it unverified and rerun the lane before citing it.
 
 If resuming after compaction, interruption, or a long handoff near proof, closeout, commit, or final response time, reread `### 5. Commit The Iteration` before committing or finalizing. Emit the required visible blocks or an explicit `late harness recovery checkpoint` before any commit/final response: child audit blocks, `Acceptance-to-command map`, `Post-ticket review` block, generated-artifact provenance when triggered, state-file validation when changed, `Required-visible-block checkpoint`, and full `Harness handoff` readiness. A recovered checkpoint can repair conversation visibility, but it is not a substitute for an unrun or unobservable child workflow.
+
+Compact required-block ledger for recovered or late-stage iterations. Copy this order into the visible conversation as each surface becomes applicable; do not wait until after archive or commit to reconstruct it:
+
+1. `Child skill audit:` for `.codex/skills/implement-ticket`, or `not_applicable` with the allowed retarget-only reason.
+2. `Acceptance-to-command map:` before invoking review/archive for a terminal ticket.
+3. `post-ticket-review child workflow:` before archive eligibility is trusted.
+4. `Pre-archive gate:` immediately before any archive move.
+5. `Post-ticket review:` after review/archive or manual late recovery.
+6. `post-ticket-review` audit classification: compact child audit block when triggered, or `not_applicable: routine archive/reference repair`.
+7. Generated-artifact provenance when triggered, otherwise a reasoned `not_applicable`.
+8. Source-size ledger when triggered by `implement-ticket`, otherwise a reasoned `not_applicable`.
+9. Abandoned-probe cleanup proof when a retarget restores exploratory source/test/schema edits, otherwise a reasoned `not_applicable`.
+10. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
+11. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
+12. `Harness handoff:` before final response.
+
+Retarget-only visibility profile: when an iteration only inserts/selects a prerequisite and does not reach terminal ticket status, do not force terminal-ticket review blocks into misleading prose. Emit `Acceptance-to-command map: not_applicable: retarget-only prerequisite insertion`, `Post-ticket review: not_applicable: retarget-only prerequisite insertion`, and `post-ticket-review audit classification: not_applicable: no review/archive surface exercised`. Preserve the state/proof/handoff requirements, and when an exploratory probe was restored include an explicit `Abandoned-probe cleanup proof:` block naming the abandoned probe, restored/removed paths, and cleanup proof.
+
+The helper `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` prints the checkpoint/handoff scaffold and performs lightweight state/path checks. It is only a prompt and sanity check; it does not replace the child workflows or the required visible blocks.
 
 ## Intake
 
@@ -130,6 +161,8 @@ If a user-approved `1-3-1` resolves only a process gate, such as a source-size d
 
 If a red proof lane or repo invariant exposes a contradiction between the active ticket/spec wording and `docs/FOUNDATIONS.md`, `AGENTS.md`, or a current repo policy test, stop before proposing implementation choices as neutral alternatives. Present the problem with three options already ranked by Foundations/repo-rule alignment, explicitly reject or demote any option that would weaken the rule, recommend the compliant option, and wait for user confirmation before patching the boundary or resuming implementation. After confirmation, record the approved option in the affected active ticket/spec/sibling artifacts and rerun the affected proof lanes before terminal status or archival.
 
+If a broad proof lane is still alive but produces no output long enough that the result may be unobservable, treat it as hang triage instead of waiting indefinitely. Poll and record the command/session, owning process when visible, last emitted test/file/output, elapsed runtime, and no-output interval. If there is no prior approval to interrupt the lane, stop for `1-3-1` before killing or replacing it. If interruption was approved or preauthorized, stop the lane, rerun the suspected next file or smallest owned proof surface with an explicit timeout, and classify the outcome as active-ticket-owned failure, prerequisite/follow-up, stale lane, or unrelated/preexisting. Record the timeout command, exit status, and decisive output in the active ticket, prerequisite, or handoff, even when the decisive output is only a TAP header or timeout status.
+
 If implementation blocks:
 
 - if a concrete follow-up or prerequisite ticket is created or named as next owner, put it at the front of the queue
@@ -144,6 +177,34 @@ When an approved `1-3-1` or Foundations reassessment turns the current implement
 4. Create or update the prerequisite ticket with a narrow problem statement, dependency edge, out-of-scope note that leaves the blocked ticket's remaining cleanup with the blocked ticket, and proof lane that reproduces or isolates the red gate.
 5. Rerun the smallest proof that proves the restored safe path plus the ticket graph/integrity lanes, emit `post-ticket-review: not_applicable` in the required checkpoint, and commit the retarget as a blocked handoff rather than as implementation completion.
 6. Persist state with the new prerequisite at the front of the queue and the blocked ticket immediately after it.
+
+Use the blocked handoff classification when implementation edits remain landed, a partial behavioral slice is retained, terminal status is blocked by unresolved ownership, or no concrete next owner exists. If source/test/schema edits were only exploratory, are fully restored before commit, and the durable diff is limited to ticket/spec/state or other workflow artifacts, use the clean prerequisite insertion path below with `last_result: "retargeted_to_prerequisite"` instead of `blocked`. In that case, still record the abandoned probe and cleanup proof in the visible checkpoint.
+
+For exploratory-probe cleanup before a clean prerequisite insertion, use this order:
+
+1. Run `git diff --name-status` and `git status --short`, then classify tracked and untracked probe paths.
+2. Restore only owned tracked source, test, schema, generated, or artifact diffs from the abandoned probe. Do not touch user, concurrent, or unrelated paths.
+3. Delete only owned untracked probe files after confirming they are not user or concurrent work.
+4. Rerun `git status --short` and a literal residue sweep for abandoned probe ids, paths, template ids, fixture names, and command labels across edited source, test, schema, generated, ticket, spec, and state areas.
+5. Run the ticket graph or dependency-integrity lanes that prove the durable ticket/spec/state rewrite.
+
+Record restored/removed paths and residue-sweep proof in `Abandoned-probe cleanup proof:`.
+
+When the same approved reassessment happens before any source/test/schema implementation has landed, and the truthful result is a clean prerequisite insertion rather than a blocked landed slice:
+
+1. Keep the original ticket nonterminal unless its own durable outcome needs to record a landed partial.
+2. Create or update the prerequisite ticket with the narrow YAML/code/proof owner, dependencies, out-of-scope boundary, and proof lanes required before returning to the original ticket.
+3. Patch the original ticket, originating spec, and directly affected siblings so dependency lists, phase order, ticket-list prose, and proof expectations point at the prerequisite.
+4. Emit a dependent classification ledger for active same-family tickets that were inspected for retarget impact:
+
+   ```text
+   Dependent classification:
+   - <path>: <relation to original/prerequisite>; <edit | no edit>; <rationale>
+   ```
+
+   Use `no edit` when a sibling correctly continues to depend on the original ticket rather than the new prerequisite, and cite that rationale instead of silently leaving it out.
+5. Run the ticket graph/integrity lanes and focused hygiene for the artifact rewrite. The default proof set for a clean prerequisite insertion is `pnpm run check:ticket-deps`, `git diff --check` over edited tracked files, a no-index or equivalent whitespace check for any new untracked ticket/spec file, and an old/new id/path sweep covering the original ticket, prerequisite ticket, originating spec, and directly affected siblings.
+6. Commit the retarget as a prerequisite handoff, not as `blocked` completion. Use `last_result: "retargeted_to_prerequisite"` and place the prerequisite immediately before the original target in the queue.
 
 If the blocker is resolved by a user-approved 1-3-1 option or other explicit boundary reset, do this before resuming implementation:
 
@@ -161,22 +222,26 @@ After each implementation phase, run:
 $skill-audit .codex/skills/implement-ticket
 ```
 
-Apply every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. This skill is explicit authorization to apply those suggestions; do not wait for a separate "Implement suggestions" prompt.
+If the iteration stopped in a pre-implementation prerequisite insertion or pure retarget before `implement-ticket` exercised source/test edits, terminal status, proof closeout, or archival handoff behavior, the audit may be marked `not_applicable: retarget-only boundary reset`. The visible checkpoint must still name the exercised child surfaces, such as reassessment, 1-3-1 ranking, ticket graph updates, and state persistence. If source/test/schema edits were made only as an exploratory probe, then fully restored before the retarget commit, this exception may still apply, but the checkpoint must name the abandoned probe, classify it as fully removed, and cite the cleanup proof that no source/test/schema diff remains. Do not use this exception when implementation edits landed, proof ran for a completed slice, terminal status changed, retained source/test/schema edits remain, or any child workflow behavior was worked around.
+
+For retarget-only iterations, prefer the visibility profile above over terminal-ticket review wording. The child-audit exception is valid only when the final durable work is a prerequisite/queue/state rewrite, not when `implement-ticket` behavior was materially exercised and then manually reconstructed by the harness.
+
+Propose every audit suggestion that is specific, evidence-backed, and compatible with `AGENTS.md`, `docs/FOUNDATIONS.md`, and Ludoforge's local ticket workflow. Do not apply child-skill edits during the implementation loop unless the user explicitly confirms the proposed skill/rules-file update.
 
 Reject or defer suggestions that are speculative, duplicate existing guidance, weaken proof/closeout guardrails, or import assumptions from another repository.
 
-Before applying or rejecting suggestions, print:
+Before proposing, applying, or rejecting suggestions, print:
 
 ```text
 Child skill audit:
 - Target skill: .codex/skills/implement-ticket
 - Findings: <N issues, N improvements, N features>
 - Evidence basis: <one-line session evidence checked>
-- Apply: <specific suggestions to patch, or "none">
+- Apply: <specific user-confirmed suggestions to patch, or "none">
 - Reject/defer: <specific suggestions and reason, or "none">
 ```
 
-If no skill files change, record `Apply: none`. If skill files change, run focused hygiene such as `git diff --check -- .codex/skills/implement-ticket`.
+If no skill files change, record `Apply: none`. If the user explicitly confirms a child-skill edit and skill files change, run focused hygiene such as `git diff --check -- .codex/skills/implement-ticket`.
 
 ### 3. Review Completed Tickets
 
@@ -197,7 +262,23 @@ Acceptance-to-command map:
 
 Use this map to catch semantic gates that are not named as exact commands, such as budget harnesses, policy-profile-quality lanes, generated-artifact checks, or repo integrity scripts. If any entry is `not exercised/blocking`, do not archive yet.
 
+For prerequisite tickets, map the prerequisite ticket's own commands and invariants. If a dependent ticket names a broader or different proof command, classify that dependent command as next-owner proof unless the prerequisite explicitly adopted it; do not overclaim the dependent ticket's acceptance lane as current-ticket proof.
+
 Use the live `post-ticket-review` skill exactly. It owns closeout truthing, archival, dependency/path repairs, and warranted follow-up creation.
+
+Before the archive move or any finalization that depends on review, emit a compact child-review invocation marker so the harness can distinguish a real child workflow from manual reconstruction:
+
+```text
+post-ticket-review child workflow:
+- skill loaded: <yes | blocked: reason>
+- child workflow checklist executed: <yes | manual late recovery: reason | blocked: reason>
+- ticket reread: <Acceptance Criteria/Test Plan/Commands/Outcome current | blocked: reason>
+- current code/docs checked: <yes | blocked: reason>
+- reference sweep: <complete | blocked: reason>
+- action decision: <archive | keep active | follow-up | blocked>
+```
+
+This marker does not replace the `Post-ticket review:` block below. For the normal archive path, `child workflow checklist executed` must be `yes`, meaning the live `post-ticket-review` required reads and Phase 1/2/3 checklist were used as the active workflow for this review slice. If the child workflow was not actually observable, use the `manual late recovery` path and say why normal invocation is no longer truthful.
 
 After review, print:
 
@@ -234,25 +315,37 @@ Manual late recovery is exceptional, not a normal substitute for the child workf
 
 If any manual-recovery checklist item is unverified, stop before archival and either invoke `post-ticket-review` or leave the ticket active with a handoff naming the missing item.
 
-Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text:
+Normal archive path hard rule: before any ticket archive move, if the ticket is not already archived and no visible `post-ticket-review child workflow:` invocation marker exists for the current review slice, run `$post-ticket-review <completed-ticket>` now. Do not use manual late recovery simply because manual review checks have already been performed; reserve it for already-crossed states where a normal child invocation would be misleading, duplicative, or impossible to observe cleanly.
 
+Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
+
+```text
+Pre-archive gate:
+- post-ticket-review: <invoked | manual late recovery: reason | not_applicable: reason>
+- Post-ticket review block: <emitted | pending: review in progress | late recovery pending>
+- archive eligibility: <terminal and outcome-current | blocked: reason>
+```
+
+The rows mean:
 - `post-ticket-review`: `invoked`, `manual late recovery: <reason>`, or `not_applicable: <reason>`
-- `Post-ticket review block`: `emitted` or `late recovery pending`
+- `Post-ticket review block`: `emitted`, `pending: review in progress`, or `late recovery pending`; use `pending: review in progress` for the normal pre-archive moment when review has been invoked but the final review block naturally cannot be emitted until after review/archive, and reserve `late recovery pending` for an actual missed-block recovery.
 - `archive eligibility`: `terminal and outcome-current` or `blocked`
 
 If the review was not invoked and there is no valid `manual late recovery` or `not_applicable` classification, stop before archival and run the child workflow.
 
+Immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move for the ticket, re-check that this pre-archive gate has already appeared in visible text. If it has not, emit it before the archive command rather than recovering it later.
+
 ### 4. Audit Post-Ticket Review When It Changes Handoff Surfaces
 
-If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, or same-family archive reference, run:
+If `post-ticket-review` creates or materially updates a follow-up ticket, active spec, active ticket dependency, current contract doc, active sibling proof command, active sibling verification lane, or same-family archive reference, run:
 
 ```text
 $skill-audit .codex/skills/post-ticket-review
 ```
 
-Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
+Routine archive fallout is not a material update by itself. When review only moves a terminal ticket, rewrites active paths to `archive/tickets/...`, updates the originating spec's ticket list/status line, changes only `Deps` from `tickets/<id>.md` to `archive/tickets/<id>.md`, or recomputes dependency order without changing ownership semantics, creating a follow-up, reopening a ticket, changing future verification behavior, or exposing a concrete review workflow defect, classify the audit as `not_applicable: routine archive/reference repair` in the required visible blocks. For this routine path, do not emit a child skill audit block; emit only the `not_applicable` classification. Run the audit when the reference repair changes handoff ownership, creates or edits a follow-up, changes a current contract doc, corrects stale proof commands or verification lanes in active sibling tickets, rewrites same-family archive meaning beyond path correction, or otherwise shows evidence that `post-ticket-review` guidance failed.
 
-Apply sound, evidence-backed suggestions under the same rules as the implement-ticket audit. Emit the same compact child-audit block and run focused hygiene over changed skill files.
+Handle sound, evidence-backed suggestions under the same confirmation rules as the implement-ticket audit. Emit the same compact child-audit block. If the user explicitly confirms a child-skill edit and skill files change, run focused hygiene over changed skill files.
 
 Put any review-created follow-up ticket at the front of the queue. If review only truthed dependencies, specs, or archive references and created no follow-up, recompute dependency order but keep the existing queue where still valid.
 
@@ -262,6 +355,7 @@ Compact pre-commit visibility gate. This is a quick index for the longer rules b
 
 - child `implement-ticket` audit block
 - `Acceptance-to-command map`
+- pre-archive gate emitted before any ticket archive command, when archival is triggered
 - `Post-ticket review` block, or `not_applicable` classification
 - `post-ticket-review` audit block when triggered, or `not_applicable` classification
 - generated-artifact provenance when triggered
@@ -273,7 +367,7 @@ Compact pre-commit visibility gate. This is a quick index for the longer rules b
 Before committing:
 
 1. Refresh `git status --short`.
-2. Inspect `git diff --cached --name-status` before staging. Pre-existing unrelated staged entries must not enter a harness commit.
+2. Inspect `git diff --cached --name-status` before staging only to detect pre-existing staged entries. Pre-existing unrelated staged entries must not enter a harness commit.
 3. Verify every dirty path is owned by the iteration, explicitly approved, or intentionally left unstaged.
    - Unrelated untracked files, reports, generated artifacts, and proof byproducts must remain untouched and unstaged unless the user explicitly approves deletion or inclusion. Do not remove them merely to make `git status --short` clean; instead, record them in `dirty_state` and the handoff as unrelated retained paths.
 4. Run whitespace/hygiene over owned files. For newly untracked files, use `git diff --no-index --check /dev/null <path>` or an equivalent trailing-whitespace check.
@@ -284,17 +378,32 @@ Before committing:
      - `canonical inputs`
      - `why checked in instead of generated on demand`
      - `hygiene proof`
-     If the generator was ad hoc and is not retained, record the exact command or script body in the ticket outcome, a report, or the final handoff; otherwise stop for `1-3-1` before committing a large opaque artifact.
-   - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner.
-   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
+     The ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc and is not retained, record the exact command and script body in a durable repo artifact or the visible final handoff; a temporary path such as `/tmp/example.mjs` alone is not reproducible evidence. Otherwise stop for `1-3-1` before committing a large opaque artifact.
+     For inline shell generators such as `node -e`, avoid raw JavaScript template literals or markdown backticks inside shell-quoted command strings because the shell can treat backticks as command substitution before Node runs. Prefer a retained script, a temporary script whose exact body is copied into the durable outcome before staging, or shell-safe string concatenation.
+   - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner. The source-size ledger normally applies to implementation source and other repo-owned files governed by local size caps; for authored data or markdown/YAML GameSpecDoc support files, either emit the ledger when the child workflow triggered it or mark `not_applicable` with the reason, such as `authored data doc below cap` or `data-only growth, no source-size trigger`.
+   - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, hash-only generated fixture output, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
      - `artifact path`
      - `generation command or retained script`
      - `canonical inputs`
      - `why the refresh is expected`
-     Record this in the ticket outcome, a report, or the final handoff before staging. If the generator was ad hoc, preserve the exact command text in that durable location.
-5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification.
+     Record this in the ticket outcome, a report, or the final handoff before staging. The lightweight ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc, preserve the exact command and script body in that durable location; a temporary path alone is not enough.
+     Use this compact ledger when several small generated fixtures moved together:
+
+     ```text
+     Generated artifact provenance:
+     - artifact path(s): <paths or glob plus exact files>
+     - generation command: <command or retained script path>
+     - canonical inputs: <spec/scenario/seed/profile/hash inputs>
+     - expected refresh reason: <intentional trajectory/schema/witness shift>
+     - generator durability: <retained generator: repo path | ad hoc generator body recorded in: ticket/report/handoff section>
+     - hygiene proof: <git diff --check/schema check/focused consumer proof>
+     ```
+     Before staging any generated artifact with `generator durability: ad hoc generator body recorded in: ...`, re-open the named durable ticket, report, or handoff section and verify it preserves the exact script body plus command needed to rerun the generator. A prose summary of copied logic is not enough. If the exact body is absent and no retained repo script exists, stop before commit and either record the exact body durably or run `1-3-1` for how to handle the opaque refresh.
+     When the durable command is an inline shell generator, re-check that the recorded command is shell-safe. In particular, do not preserve a command that relies on unescaped JS template-literal backticks inside a double-quoted shell string; record the working shell-safe command or use a retained script instead.
+   - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. Before launching a `tee` or log-wrapper command, verify that the destination is shell-writable in the current sandbox. Do not assume `.codex/run-state/` is a suitable shell log directory merely because the state file can be patched. Prefer `/tmp/<ticket>-<lane>.log` for transient logs unless the log is an intentionally committed report artifact. If `tee` or log setup fails after the lane starts, stop or interrupt the lane only with existing user approval or after `1-3-1`, then rerun with working capture. Do not cite the failed log path as durable evidence. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
+5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first. For a state-file-only follow-up commit where the only live dirty path is `.codex/run-state/implement-spec-tickets.json`, validate both views deliberately: the retained validator may reject a staged state that truthfully says post-commit `dirty_state: "clean"` because the state file is still dirty pre-commit; in that case, validate the staged state file's paths, queue, SHA reachability, and vocabulary manually, record the retained-validator transient-state limitation in the checkpoint, then revalidate live `git status --short` and the committed state after the state commit.
 6. Stage only owned and approved paths.
-7. Re-run `git diff --cached --name-status` and confirm the staged set is scoped to the iteration.
+7. Re-run `git diff --cached --name-status` after staging and immediately before commit; confirm the staged set is scoped to the iteration.
 8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
 9. Emit the checkpoint below.
 10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
@@ -306,16 +415,21 @@ Required checkpoint. This is a hard stop: do not commit until every row below ha
 ```text
 Required-visible-block checkpoint:
 - implement-ticket audit block: <emitted | not_applicable: reason>
+- Acceptance-to-command map: <emitted | not_applicable: reason | blocked: reason>
+- pre-archive gate: <emitted before archive command | not_applicable: no ticket archive in this iteration | late_recovered: reason>
 - post-ticket-review block: <emitted | not_applicable: reason>
 - post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>
 - state-file validity: <valid | not_changed | blocked: reason>
 - generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
+- generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>
 - source-size ledger: <emitted | not_applicable: reason | blocked: reason>
+- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>
+- dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
-Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, abandoned-probe cleanup proof when triggered, dependent classification when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
 
 If a required child skill audit block is missing and there is no visible evidence that the audit actually ran in the current observable context, run the child audit before committing or finalizing. Do not treat a late checkpoint as a substitute for an unrun or unobservable `$skill-audit`. After running it, emit the compact child-audit block and apply, reject, or defer evidence-backed suggestions under the normal child-audit rules.
 
@@ -357,9 +471,25 @@ No-commit finalization is still a terminal handoff state. Before any final respo
 4. Emit the full `Harness handoff` block below with `Work commit: none` and `State commit: none` unless a state-only commit was actually created.
 5. Do not send a final response until the no-commit handoff states what remains dirty and which invocation should resume or commit the work.
 
-If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` should normally describe the final clean state after the state-only commit. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
+If the state file must record the finalized work commit SHA and changes after the work commit, prefer committing it separately as a state-file-only commit with `last_state_commit: "self"`. Prepare that state file for the expected post-state-commit repo state, not the transient pre-commit state: for example, if the only remaining dirty path is the state file itself and it is about to be committed, `dirty_state` must be `"clean"` for the final post-commit state. Do not amend solely to embed the finalized work commit SHA, because amending changes that SHA again.
 
 State-only clean-state example: after a work commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`, when the only remaining dirty path is `.codex/run-state/implement-spec-tickets.json` and you are about to commit that state file, write `last_work_commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`, `last_state_commit: "self"`, `dirty_state: "clean"`, and an `owned_dirty_summary` that describes the post-state-commit repo as clean. Do not write `dirty_state: "state_file_only"` for that state commit; that describes the transient pre-commit moment and will be stale immediately after the commit.
+
+Before a state-file-only commit, emit this lightweight checkpoint in visible text:
+
+```text
+State-only commit checkpoint:
+- staged state file: <yes | blocked: reason>
+- recorded work commit: <full sha | none>
+- recorded state commit: <self | full sha | none>
+- transient validator limitation: <not_applicable | classified: reason>
+- post-commit dirty-state expectation: <clean | unrelated_dirty/untracked paths | blocked: reason>
+- planned revalidation: <retained validator + git status | manual state checks + git status>
+```
+
+This checkpoint does not replace the final `Harness handoff`; it records why the state-only commit is scoped to harness state and how the post-commit validation will be proven.
+
+If unrelated dirty paths appear or change after a state-only commit but before final response, refresh the state file once when the committed state would make the handoff false. Use `unrelated_dirty: <paths>` for unrelated tracked modifications, unrelated untracked files, or both. If unrelated paths keep changing after that refresh, stop chasing state-only commits; report the latest live `git status --short`, identify the state file as stale because of concurrent unrelated work, and do not commit unrelated paths. Continue only after the user confirms how to handle the volatile unrelated worktree.
 
 If the state file is amended into the work commit for a reason other than recording that commit's finalized SHA, `last_state_commit` may be the same as `last_work_commit` or `"self"` when that is the truthful non-self-referential state. Do not create a chain of state-only commits to embed the state commit's own SHA.
 
@@ -382,8 +512,17 @@ Use this compact state-file validation recipe whenever `.codex/run-state/impleme
 - verify `last_state_commit` is a full reachable commit SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`
 - verify active paths exist, archived paths exist, queued paths exist, and final queues are empty when `phase: "completed"`
 - verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
-- if unrelated untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
-- if no retained script performs this validation, do the checks manually and record the result in the Required-visible-block checkpoint
+- if unrelated tracked or untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
+- prefer the retained validator at `.codex/skills/implement-spec-tickets/scripts/validate-state.mjs`; if it is unavailable, do the checks manually and record the result in the Required-visible-block checkpoint
+- for a state-file-only follow-up commit, if the retained validator rejects only because the staged state file says post-commit `dirty_state: "clean"` while the live pre-commit worktree still shows the state file dirty, treat that as a transient validator limitation rather than a state failure; manually validate the staged state, commit it, then re-run the live status/state checks after the commit
+
+When a retained validator is not available, this shell-safe validation shape is acceptable to run from the repo root and cite in the checkpoint:
+
+```bash
+node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.codex/run-state/implement-spec-tickets.json','utf8')); if(s.last_work_commit==='self') throw new Error('last_work_commit cannot be self'); for (const key of ['originating_spec','last_ticket','next_target']) { const value=s[key]; if (typeof value==='string' && !['blocked','final_spec_archive'].includes(value) && !fs.existsSync(value)) throw new Error(key+' missing: '+value); } for (const value of s.queue || []) if (!fs.existsSync(value)) throw new Error('queue missing: '+value); if (!['clean'].includes(s.dirty_state) && !/^unrelated_untracked: |^unrelated_dirty: |^owned_dirty: |^mixed_dirty: /.test(s.dirty_state || '')) throw new Error('dirty_state vocabulary: '+s.dirty_state); console.log('state validation ok')"
+```
+
+Also verify any non-`"none"` `last_work_commit` is reachable with `git cat-file -e <sha>^{commit}` or an equivalent non-mutating git command.
 
 Print:
 

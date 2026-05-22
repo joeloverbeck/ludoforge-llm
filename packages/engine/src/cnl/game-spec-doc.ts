@@ -916,6 +916,7 @@ export interface GameSpecAgentProfileUse {
   readonly considerations?: readonly string[];
   readonly guardrails?: readonly string[];
   readonly strategyModules?: readonly string[];
+  readonly planTemplates?: readonly string[];
   readonly turnShapeEvaluators?: readonly string[];
   readonly tieBreakers?: readonly string[];
 }

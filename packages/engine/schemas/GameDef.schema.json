@@ -2686,7 +2686,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
@@ -2716,7 +2716,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
@@ -2749,12 +2749,12 @@
                     "$ref": "#/definitions/anon_4682db72"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
@@ -2799,7 +2799,7 @@
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
@@ -2815,7 +2815,7 @@
                               "$ref": "#/definitions/anon_4682db72"
                             },
                             "value": {
-                              "$ref": "#/definitions/anon_e8ece5ea"
+                              "$ref": "#/definitions/anon_56b57eae"
                             },
                             "weight": {
                               "$ref": "#/definitions/anon_e7c99bd4"
@@ -2853,7 +2853,7 @@
                   "minImpact": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
@@ -2893,7 +2893,7 @@
                     "$ref": "#/definitions/anon_4682db72"
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "applies": {
                     "$ref": "#/definitions/anon_8743dba2"
@@ -2909,7 +2909,7 @@
                       "value": {
                         "allOf": [
                           {
-                            "$ref": "#/definitions/anon_e8ece5ea"
+                            "$ref": "#/definitions/anon_56b57eae"
                           }
                         ]
                       }
@@ -2946,7 +2946,7 @@
                                 ]
                               },
                               "value": {
-                                "$ref": "#/definitions/anon_e8ece5ea"
+                                "$ref": "#/definitions/anon_56b57eae"
                               },
                               "weight": {
                                 "$ref": "#/definitions/anon_e7c99bd4"
@@ -3030,7 +3030,7 @@
                     }
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "severity": {
                     "$ref": "#/definitions/anon_1c93aa90"
@@ -3038,7 +3038,7 @@
                   "penalty": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
@@ -3099,7 +3099,7 @@
                           "$ref": "#/definitions/anon_4682db72"
                         },
                         "condition": {
-                          "$ref": "#/definitions/anon_e8ece5ea"
+                          "$ref": "#/definitions/anon_56b57eae"
                         },
                         "onViolation": {
                           "type": "string",
@@ -3111,7 +3111,7 @@
                         "demotePenalty": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/anon_e8ece5ea"
+                              "$ref": "#/definitions/anon_56b57eae"
                             }
                           ]
                         }
@@ -3135,21 +3135,21 @@
                         "when": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/anon_e8ece5ea"
+                              "$ref": "#/definitions/anon_56b57eae"
                             }
                           ]
                         },
                         "value": {
-                          "$ref": "#/definitions/anon_e8ece5ea"
+                          "$ref": "#/definitions/anon_56b57eae"
                         },
                         "weight": {
-                          "$ref": "#/definitions/anon_e8ece5ea"
+                          "$ref": "#/definitions/anon_56b57eae"
                         },
                         "fallback": {
                           "type": "object",
                           "properties": {
                             "contribution": {
-                              "$ref": "#/definitions/anon_e8ece5ea"
+                              "$ref": "#/definitions/anon_56b57eae"
                             }
                           },
                           "required": [
@@ -3234,7 +3234,7 @@
                   "gainValue": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   }
@@ -3267,15 +3267,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "hasPreviewRef": {
                     "$ref": "#/definitions/anon_def33f2f"
@@ -3377,7 +3377,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       }
                     ]
                   },
@@ -3408,13 +3408,13 @@
                 "type": "object",
                 "properties": {
                   "target": {
-                    "$ref": "#/definitions/anon_e8ece5ea"
+                    "$ref": "#/definitions/anon_56b57eae"
                   },
                   "proximity": {
                     "type": "object",
                     "properties": {
                       "current": {
-                        "$ref": "#/definitions/anon_e8ece5ea"
+                        "$ref": "#/definitions/anon_56b57eae"
                       },
                       "threshold": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
@@ -7415,6 +7415,1407 @@
         {
           "type": "string",
           "const": "auditOnly"
+        }
+      ]
+    },
+    "anon_56b57eae": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/anon_c0e4ebfe"
+                },
+                {
+                  "$ref": "#/definitions/anon_def33f2f"
+                },
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/anon_4682db72"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "param"
+            },
+            "id": {
+              "$ref": "#/definitions/anon_4682db72"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "ref"
+            },
+            "ref": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "library"
+                    },
+                    "refKind": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "stateFeature"
+                        },
+                        {
+                          "type": "string",
+                          "const": "candidateFeature"
+                        },
+                        {
+                          "type": "string",
+                          "const": "aggregate"
+                        },
+                        {
+                          "type": "string",
+                          "const": "previewStateFeature"
+                        }
+                      ]
+                    },
+                    "id": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "refKind",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "currentSurface"
+                    },
+                    "family": {
+                      "$ref": "#/definitions/anon_bf7328ad"
+                    },
+                    "id": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "selector": {
+                      "$ref": "#/definitions/anon_8049209f"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "family",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "previewSurface"
+                    },
+                    "family": {
+                      "$ref": "#/definitions/anon_bf7328ad"
+                    },
+                    "id": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "selector": {
+                      "$ref": "#/definitions/anon_8049209f"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "family",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateIntrinsic"
+                    },
+                    "intrinsic": {
+                      "type": "string",
+                      "enum": [
+                        "actionId",
+                        "stableMoveKey",
+                        "paramCount"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "selectorItemIntrinsic"
+                    },
+                    "intrinsic": {
+                      "type": "string",
+                      "const": "key"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "selector"
+                    },
+                    "selectorId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "field": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "selected.matches"
+                        },
+                        {
+                          "type": "string",
+                          "const": "selected.key"
+                        },
+                        {
+                          "type": "string",
+                          "const": "selected.quality"
+                        },
+                        {
+                          "type": "string",
+                          "const": "selected.rank"
+                        },
+                        {
+                          "type": "string",
+                          "const": "current.matches"
+                        },
+                        {
+                          "type": "string",
+                          "const": "current.quality"
+                        },
+                        {
+                          "type": "string",
+                          "const": "current.rank"
+                        },
+                        {
+                          "type": "string",
+                          "const": "impactSatisfied"
+                        },
+                        {
+                          "type": "string",
+                          "const": "size"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "selected.component"
+                            },
+                            "componentId": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "componentId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "current.component"
+                            },
+                            "componentId": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "componentId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "candidate.quality"
+                            },
+                            "key": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "key"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "selectorId",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "strategyModule"
+                    },
+                    "moduleId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "field": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "active"
+                        },
+                        {
+                          "type": "string",
+                          "const": "priority.value"
+                        },
+                        {
+                          "type": "string",
+                          "const": "contribution"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "scoreGroup.value"
+                            },
+                            "scoreGroupId": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "scoreGroupId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "selector.id"
+                            },
+                            "role": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "role"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "moduleId",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "guardrail"
+                    },
+                    "guardrailId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "field": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "fired"
+                        },
+                        {
+                          "type": "string",
+                          "const": "severity"
+                        },
+                        {
+                          "type": "string",
+                          "const": "status"
+                        },
+                        {
+                          "type": "string",
+                          "const": "penalty"
+                        },
+                        {
+                          "type": "string",
+                          "const": "onUnavailable"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "guardrailId",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateParam"
+                    },
+                    "id": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "onMissing": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "unavailable"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "constant"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/anon_e7c99bd4"
+                                },
+                                {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                {
+                                  "$ref": "#/definitions/anon_def33f2f"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "appliesToActions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "onMissing"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "microturnIntrinsic"
+                    },
+                    "intrinsic": {
+                      "type": "string",
+                      "enum": [
+                        "kind",
+                        "decisionKey",
+                        "actorSeat",
+                        "remainingRequiredCount",
+                        "remainingMaxCount"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "microturnOptionIntrinsic"
+                    },
+                    "intrinsic": {
+                      "type": "string",
+                      "enum": [
+                        "value",
+                        "index",
+                        "stableKey",
+                        "tags",
+                        "targetKind"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "previewOptionRef"
+                    },
+                    "refKind": {
+                      "type": "string",
+                      "enum": [
+                        "victoryCurrentMarginSelf",
+                        "victoryCurrentRankSelf",
+                        "deltaVictoryCurrentMarginSelf",
+                        "globalVar",
+                        "perPlayerVarSelf",
+                        "derivedMetric",
+                        "outcome",
+                        "driveDepth"
+                      ]
+                    },
+                    "id": {
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_4682db72"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "refKind"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "previewPlanRef"
+                    },
+                    "refKind": {
+                      "type": "string",
+                      "enum": [
+                        "deltaVictoryCurrentMarginSelf"
+                      ]
+                    },
+                    "id": {
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_4682db72"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "refKind"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "lookup"
+                    },
+                    "surface": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "policyState"
+                        },
+                        {
+                          "type": "string",
+                          "const": "previewOptionState"
+                        }
+                      ]
+                    },
+                    "collection": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "zones"
+                        },
+                        {
+                          "type": "string",
+                          "const": "tokens"
+                        },
+                        {
+                          "type": "string",
+                          "const": "players"
+                        },
+                        {
+                          "type": "string",
+                          "const": "globals"
+                        }
+                      ]
+                    },
+                    "keyType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "ZoneId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "TokenId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "PlayerId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "string"
+                        }
+                      ]
+                    },
+                    "key": {
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_56b57eae"
+                        }
+                      ]
+                    },
+                    "path": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    },
+                    "onMissing": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "unavailable"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "constant"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/anon_e7c99bd4"
+                                },
+                                {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                {
+                                  "$ref": "#/definitions/anon_def33f2f"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "onHidden": {
+                      "type": "string",
+                      "const": "unavailable"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "surface",
+                    "collection",
+                    "keyType",
+                    "key",
+                    "path",
+                    "onMissing",
+                    "onHidden"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "seatIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "self"
+                        },
+                        {
+                          "type": "string",
+                          "const": "active"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "turnIntrinsic"
+                    },
+                    "intrinsic": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "phaseId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "stepId"
+                        },
+                        {
+                          "type": "string",
+                          "const": "round"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "intrinsic"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "phaseIntrinsic"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "current.id"
+                        },
+                        {
+                          "type": "string",
+                          "const": "next.id"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "scheduleDistance"
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "nextBoundary"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "boundary"
+                            },
+                            "boundaryId": {
+                              "$ref": "#/definitions/anon_4682db72"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "boundaryId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "unit": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "cards"
+                        },
+                        {
+                          "type": "string",
+                          "const": "microturns"
+                        },
+                        {
+                          "type": "string",
+                          "const": "actions"
+                        },
+                        {
+                          "type": "string",
+                          "const": "turns"
+                        },
+                        {
+                          "type": "string",
+                          "const": "rounds"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "target"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "strategicCondition"
+                    },
+                    "conditionId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "field": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "satisfied"
+                        },
+                        {
+                          "type": "string",
+                          "const": "proximity"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "conditionId",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "relationship"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "nominalAlly",
+                        "sharedEnemy",
+                        "rivalAlly",
+                        "leader",
+                        "nearWin",
+                        "kingmakerRisk",
+                        "cooperativeUntilThreshold"
+                      ]
+                    },
+                    "field": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "seat"
+                        },
+                        {
+                          "type": "string",
+                          "const": "gainValue"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "role",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateTag"
+                    },
+                    "tagName": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "tagName"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "candidateTags"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "contextKind"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "op"
+            },
+            "op": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "abs"
+                },
+                {
+                  "type": "string",
+                  "const": "add"
+                },
+                {
+                  "type": "string",
+                  "const": "and"
+                },
+                {
+                  "type": "string",
+                  "const": "boolToNumber"
+                },
+                {
+                  "type": "string",
+                  "const": "clamp"
+                },
+                {
+                  "type": "string",
+                  "const": "coalesce"
+                },
+                {
+                  "type": "string",
+                  "const": "div"
+                },
+                {
+                  "type": "string",
+                  "const": "eq"
+                },
+                {
+                  "type": "string",
+                  "const": "gt"
+                },
+                {
+                  "type": "string",
+                  "const": "gte"
+                },
+                {
+                  "type": "string",
+                  "const": "if"
+                },
+                {
+                  "type": "string",
+                  "const": "in"
+                },
+                {
+                  "type": "string",
+                  "const": "lt"
+                },
+                {
+                  "type": "string",
+                  "const": "lte"
+                },
+                {
+                  "type": "string",
+                  "const": "max"
+                },
+                {
+                  "type": "string",
+                  "const": "min"
+                },
+                {
+                  "type": "string",
+                  "const": "mul"
+                },
+                {
+                  "type": "string",
+                  "const": "ne"
+                },
+                {
+                  "type": "string",
+                  "const": "neg"
+                },
+                {
+                  "type": "string",
+                  "const": "not"
+                },
+                {
+                  "type": "string",
+                  "const": "or"
+                },
+                {
+                  "type": "string",
+                  "const": "sub"
+                }
+              ]
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/anon_56b57eae"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "op",
+            "args"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "zoneTokenAgg"
+            },
+            "zone": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                },
+                {
+                  "$ref": "#/definitions/anon_56b57eae"
+                }
+              ]
+            },
+            "owner": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "self",
+                    "active",
+                    "none"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              ]
+            },
+            "prop": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "aggOp": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "count",
+                "min",
+                "max"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "zone",
+            "owner",
+            "prop",
+            "aggOp"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "globalTokenAgg"
+            },
+            "tokenFilter": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_d06881e5"
+                }
+              ]
+            },
+            "aggOp": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "count",
+                "min",
+                "max"
+              ]
+            },
+            "prop": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                }
+              ]
+            },
+            "zoneFilter": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_6844ab0e"
+                }
+              ]
+            },
+            "zoneScope": {
+              "type": "string",
+              "enum": [
+                "board",
+                "aux",
+                "all"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "aggOp",
+            "zoneScope"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "globalZoneAgg"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "variable",
+                "attribute"
+              ]
+            },
+            "field": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "aggOp": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "count",
+                "min",
+                "max"
+              ]
+            },
+            "zoneFilter": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_6844ab0e"
+                }
+              ]
+            },
+            "zoneScope": {
+              "type": "string",
+              "enum": [
+                "board",
+                "aux",
+                "all"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "source",
+            "field",
+            "aggOp",
+            "zoneScope"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "adjacentTokenAgg"
+            },
+            "anchorZone": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                },
+                {
+                  "$ref": "#/definitions/anon_56b57eae"
+                }
+              ]
+            },
+            "tokenFilter": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_d06881e5"
+                }
+              ]
+            },
+            "aggOp": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "count",
+                "min",
+                "max"
+              ]
+            },
+            "prop": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                }
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "anchorZone",
+            "aggOp"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "seatAgg"
+            },
+            "over": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "opponents"
+                },
+                {
+                  "type": "string",
+                  "const": "all"
+                },
+                {
+                  "readOnly": true,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/anon_4682db72"
+                  }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "currentLeader",
+                        "nearestThreat",
+                        "closestAhead",
+                        "closestBehind"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "expr": {
+              "$ref": "#/definitions/anon_56b57eae"
+            },
+            "aggOp": {
+              "type": "string",
+              "enum": [
+                "sum",
+                "count",
+                "min",
+                "max"
+              ]
+            },
+            "availability": {
+              "type": "string",
+              "enum": [
+                "requireAllReady",
+                "requireAnyReady",
+                "selfAndTargetReady",
+                "skipUnavailable"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "over",
+            "expr",
+            "aggOp"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "zoneProp"
+            },
+            "zone": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                },
+                {
+                  "$ref": "#/definitions/anon_56b57eae"
+                }
+              ]
+            },
+            "prop": {
+              "$ref": "#/definitions/anon_4682db72"
+            }
+          },
+          "required": [
+            "kind",
+            "zone",
+            "prop"
+          ],
+          "additionalProperties": false
         }
       ]
     },
@@ -12447,1389 +13848,6 @@
       "type": "integer",
       "minimum": -9007199254740991,
       "maximum": 9007199254740991
-    },
-    "anon_e8ece5ea": {
-      "anyOf": [
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "literal"
-            },
-            "value": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/anon_c0e4ebfe"
-                },
-                {
-                  "$ref": "#/definitions/anon_def33f2f"
-                },
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                },
-                {
-                  "type": "null"
-                },
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/anon_4682db72"
-                  }
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "param"
-            },
-            "id": {
-              "$ref": "#/definitions/anon_4682db72"
-            }
-          },
-          "required": [
-            "kind",
-            "id"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "ref"
-            },
-            "ref": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "library"
-                    },
-                    "refKind": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "stateFeature"
-                        },
-                        {
-                          "type": "string",
-                          "const": "candidateFeature"
-                        },
-                        {
-                          "type": "string",
-                          "const": "aggregate"
-                        },
-                        {
-                          "type": "string",
-                          "const": "previewStateFeature"
-                        }
-                      ]
-                    },
-                    "id": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "refKind",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "currentSurface"
-                    },
-                    "family": {
-                      "$ref": "#/definitions/anon_bf7328ad"
-                    },
-                    "id": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "selector": {
-                      "$ref": "#/definitions/anon_8049209f"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "family",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "previewSurface"
-                    },
-                    "family": {
-                      "$ref": "#/definitions/anon_bf7328ad"
-                    },
-                    "id": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "selector": {
-                      "$ref": "#/definitions/anon_8049209f"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "family",
-                    "id"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateIntrinsic"
-                    },
-                    "intrinsic": {
-                      "type": "string",
-                      "enum": [
-                        "actionId",
-                        "stableMoveKey",
-                        "paramCount"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "selector"
-                    },
-                    "selectorId": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "field": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "selected.matches"
-                        },
-                        {
-                          "type": "string",
-                          "const": "selected.key"
-                        },
-                        {
-                          "type": "string",
-                          "const": "selected.quality"
-                        },
-                        {
-                          "type": "string",
-                          "const": "selected.rank"
-                        },
-                        {
-                          "type": "string",
-                          "const": "current.matches"
-                        },
-                        {
-                          "type": "string",
-                          "const": "current.quality"
-                        },
-                        {
-                          "type": "string",
-                          "const": "current.rank"
-                        },
-                        {
-                          "type": "string",
-                          "const": "impactSatisfied"
-                        },
-                        {
-                          "type": "string",
-                          "const": "size"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "selected.component"
-                            },
-                            "componentId": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "componentId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "current.component"
-                            },
-                            "componentId": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "componentId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "candidate.quality"
-                            },
-                            "key": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "key"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "selectorId",
-                    "field"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "strategyModule"
-                    },
-                    "moduleId": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "field": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "active"
-                        },
-                        {
-                          "type": "string",
-                          "const": "priority.value"
-                        },
-                        {
-                          "type": "string",
-                          "const": "contribution"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "scoreGroup.value"
-                            },
-                            "scoreGroupId": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "scoreGroupId"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "selector.id"
-                            },
-                            "role": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "role"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "moduleId",
-                    "field"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "guardrail"
-                    },
-                    "guardrailId": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "field": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "fired"
-                        },
-                        {
-                          "type": "string",
-                          "const": "severity"
-                        },
-                        {
-                          "type": "string",
-                          "const": "status"
-                        },
-                        {
-                          "type": "string",
-                          "const": "penalty"
-                        },
-                        {
-                          "type": "string",
-                          "const": "onUnavailable"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "guardrailId",
-                    "field"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateParam"
-                    },
-                    "id": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "onMissing": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "unavailable"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "constant"
-                            },
-                            "value": {
-                              "anyOf": [
-                                {
-                                  "$ref": "#/definitions/anon_e7c99bd4"
-                                },
-                                {
-                                  "$ref": "#/definitions/anon_4682db72"
-                                },
-                                {
-                                  "$ref": "#/definitions/anon_def33f2f"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "value"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "appliesToActions": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/anon_4682db72"
-                      }
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "id",
-                    "onMissing"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "microturnIntrinsic"
-                    },
-                    "intrinsic": {
-                      "type": "string",
-                      "enum": [
-                        "kind",
-                        "decisionKey",
-                        "actorSeat",
-                        "remainingRequiredCount",
-                        "remainingMaxCount"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "microturnOptionIntrinsic"
-                    },
-                    "intrinsic": {
-                      "type": "string",
-                      "enum": [
-                        "value",
-                        "index",
-                        "stableKey",
-                        "tags",
-                        "targetKind"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "previewOptionRef"
-                    },
-                    "refKind": {
-                      "type": "string",
-                      "enum": [
-                        "victoryCurrentMarginSelf",
-                        "victoryCurrentRankSelf",
-                        "deltaVictoryCurrentMarginSelf",
-                        "globalVar",
-                        "perPlayerVarSelf",
-                        "derivedMetric",
-                        "outcome",
-                        "driveDepth"
-                      ]
-                    },
-                    "id": {
-                      "allOf": [
-                        {
-                          "$ref": "#/definitions/anon_4682db72"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "refKind"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "previewPlanRef"
-                    },
-                    "refKind": {
-                      "type": "string",
-                      "enum": [
-                        "deltaVictoryCurrentMarginSelf"
-                      ]
-                    },
-                    "id": {
-                      "allOf": [
-                        {
-                          "$ref": "#/definitions/anon_4682db72"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "refKind"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "lookup"
-                    },
-                    "surface": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "policyState"
-                        },
-                        {
-                          "type": "string",
-                          "const": "previewOptionState"
-                        }
-                      ]
-                    },
-                    "collection": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "zones"
-                        },
-                        {
-                          "type": "string",
-                          "const": "tokens"
-                        },
-                        {
-                          "type": "string",
-                          "const": "players"
-                        },
-                        {
-                          "type": "string",
-                          "const": "globals"
-                        }
-                      ]
-                    },
-                    "keyType": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "ZoneId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "TokenId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "PlayerId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "string"
-                        }
-                      ]
-                    },
-                    "key": {
-                      "allOf": [
-                        {
-                          "$ref": "#/definitions/anon_e8ece5ea"
-                        }
-                      ]
-                    },
-                    "path": {
-                      "minItems": 1,
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/definitions/anon_4682db72"
-                      }
-                    },
-                    "onMissing": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "unavailable"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "constant"
-                            },
-                            "value": {
-                              "anyOf": [
-                                {
-                                  "$ref": "#/definitions/anon_e7c99bd4"
-                                },
-                                {
-                                  "$ref": "#/definitions/anon_4682db72"
-                                },
-                                {
-                                  "$ref": "#/definitions/anon_def33f2f"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "value"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "onHidden": {
-                      "type": "string",
-                      "const": "unavailable"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "surface",
-                    "collection",
-                    "keyType",
-                    "key",
-                    "path",
-                    "onMissing",
-                    "onHidden"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "seatIntrinsic"
-                    },
-                    "intrinsic": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "self"
-                        },
-                        {
-                          "type": "string",
-                          "const": "active"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "turnIntrinsic"
-                    },
-                    "intrinsic": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "phaseId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "stepId"
-                        },
-                        {
-                          "type": "string",
-                          "const": "round"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "intrinsic"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "phaseIntrinsic"
-                    },
-                    "name": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "current.id"
-                        },
-                        {
-                          "type": "string",
-                          "const": "next.id"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "name"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "scheduleDistance"
-                    },
-                    "target": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "nextBoundary"
-                            }
-                          },
-                          "required": [
-                            "kind"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "boundary"
-                            },
-                            "boundaryId": {
-                              "$ref": "#/definitions/anon_4682db72"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "boundaryId"
-                          ],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "unit": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "cards"
-                        },
-                        {
-                          "type": "string",
-                          "const": "microturns"
-                        },
-                        {
-                          "type": "string",
-                          "const": "actions"
-                        },
-                        {
-                          "type": "string",
-                          "const": "turns"
-                        },
-                        {
-                          "type": "string",
-                          "const": "rounds"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "target"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "strategicCondition"
-                    },
-                    "conditionId": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    },
-                    "field": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "satisfied"
-                        },
-                        {
-                          "type": "string",
-                          "const": "proximity"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "conditionId",
-                    "field"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "relationship"
-                    },
-                    "role": {
-                      "type": "string",
-                      "enum": [
-                        "nominalAlly",
-                        "sharedEnemy",
-                        "rivalAlly",
-                        "leader",
-                        "nearWin",
-                        "kingmakerRisk",
-                        "cooperativeUntilThreshold"
-                      ]
-                    },
-                    "field": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "const": "seat"
-                        },
-                        {
-                          "type": "string",
-                          "const": "gainValue"
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "role",
-                    "field"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateTag"
-                    },
-                    "tagName": {
-                      "$ref": "#/definitions/anon_4682db72"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "tagName"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "candidateTags"
-                    }
-                  },
-                  "required": [
-                    "kind"
-                  ],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "kind": {
-                      "type": "string",
-                      "const": "contextKind"
-                    }
-                  },
-                  "required": [
-                    "kind"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "ref"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "op"
-            },
-            "op": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "abs"
-                },
-                {
-                  "type": "string",
-                  "const": "add"
-                },
-                {
-                  "type": "string",
-                  "const": "and"
-                },
-                {
-                  "type": "string",
-                  "const": "boolToNumber"
-                },
-                {
-                  "type": "string",
-                  "const": "clamp"
-                },
-                {
-                  "type": "string",
-                  "const": "coalesce"
-                },
-                {
-                  "type": "string",
-                  "const": "div"
-                },
-                {
-                  "type": "string",
-                  "const": "eq"
-                },
-                {
-                  "type": "string",
-                  "const": "gt"
-                },
-                {
-                  "type": "string",
-                  "const": "gte"
-                },
-                {
-                  "type": "string",
-                  "const": "if"
-                },
-                {
-                  "type": "string",
-                  "const": "in"
-                },
-                {
-                  "type": "string",
-                  "const": "lt"
-                },
-                {
-                  "type": "string",
-                  "const": "lte"
-                },
-                {
-                  "type": "string",
-                  "const": "max"
-                },
-                {
-                  "type": "string",
-                  "const": "min"
-                },
-                {
-                  "type": "string",
-                  "const": "mul"
-                },
-                {
-                  "type": "string",
-                  "const": "ne"
-                },
-                {
-                  "type": "string",
-                  "const": "neg"
-                },
-                {
-                  "type": "string",
-                  "const": "not"
-                },
-                {
-                  "type": "string",
-                  "const": "or"
-                },
-                {
-                  "type": "string",
-                  "const": "sub"
-                }
-              ]
-            },
-            "args": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/anon_e8ece5ea"
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "op",
-            "args"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "zoneTokenAgg"
-            },
-            "zone": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                },
-                {
-                  "$ref": "#/definitions/anon_e8ece5ea"
-                }
-              ]
-            },
-            "owner": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "self",
-                    "active",
-                    "none"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "pattern": "^[0-9]+$"
-                }
-              ]
-            },
-            "prop": {
-              "$ref": "#/definitions/anon_4682db72"
-            },
-            "aggOp": {
-              "type": "string",
-              "enum": [
-                "sum",
-                "count",
-                "min",
-                "max"
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "zone",
-            "owner",
-            "prop",
-            "aggOp"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "globalTokenAgg"
-            },
-            "tokenFilter": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_d06881e5"
-                }
-              ]
-            },
-            "aggOp": {
-              "type": "string",
-              "enum": [
-                "sum",
-                "count",
-                "min",
-                "max"
-              ]
-            },
-            "prop": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                }
-              ]
-            },
-            "zoneFilter": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_6844ab0e"
-                }
-              ]
-            },
-            "zoneScope": {
-              "type": "string",
-              "enum": [
-                "board",
-                "aux",
-                "all"
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "aggOp",
-            "zoneScope"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "globalZoneAgg"
-            },
-            "source": {
-              "type": "string",
-              "enum": [
-                "variable",
-                "attribute"
-              ]
-            },
-            "field": {
-              "$ref": "#/definitions/anon_4682db72"
-            },
-            "aggOp": {
-              "type": "string",
-              "enum": [
-                "sum",
-                "count",
-                "min",
-                "max"
-              ]
-            },
-            "zoneFilter": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_6844ab0e"
-                }
-              ]
-            },
-            "zoneScope": {
-              "type": "string",
-              "enum": [
-                "board",
-                "aux",
-                "all"
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "source",
-            "field",
-            "aggOp",
-            "zoneScope"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "adjacentTokenAgg"
-            },
-            "anchorZone": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                },
-                {
-                  "$ref": "#/definitions/anon_e8ece5ea"
-                }
-              ]
-            },
-            "tokenFilter": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_d06881e5"
-                }
-              ]
-            },
-            "aggOp": {
-              "type": "string",
-              "enum": [
-                "sum",
-                "count",
-                "min",
-                "max"
-              ]
-            },
-            "prop": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                }
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "anchorZone",
-            "aggOp"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "seatAgg"
-            },
-            "over": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "const": "opponents"
-                },
-                {
-                  "type": "string",
-                  "const": "all"
-                },
-                {
-                  "readOnly": true,
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/anon_4682db72"
-                  }
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "role": {
-                      "type": "string",
-                      "enum": [
-                        "currentLeader",
-                        "nearestThreat",
-                        "closestAhead",
-                        "closestBehind"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "role"
-                  ],
-                  "additionalProperties": false
-                }
-              ]
-            },
-            "expr": {
-              "$ref": "#/definitions/anon_e8ece5ea"
-            },
-            "aggOp": {
-              "type": "string",
-              "enum": [
-                "sum",
-                "count",
-                "min",
-                "max"
-              ]
-            },
-            "availability": {
-              "type": "string",
-              "enum": [
-                "requireAllReady",
-                "requireAnyReady",
-                "selfAndTargetReady",
-                "skipUnavailable"
-              ]
-            }
-          },
-          "required": [
-            "kind",
-            "over",
-            "expr",
-            "aggOp"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "type": "string",
-              "const": "zoneProp"
-            },
-            "zone": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                },
-                {
-                  "$ref": "#/definitions/anon_e8ece5ea"
-                }
-              ]
-            },
-            "prop": {
-              "$ref": "#/definitions/anon_4682db72"
-            }
-          },
-          "required": [
-            "kind",
-            "zone",
-            "prop"
-          ],
-          "additionalProperties": false
-        }
-      ]
     },
     "anon_ea10cad6": {
       "type": "array",

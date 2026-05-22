@@ -15,6 +15,7 @@ import {
   asPlayerId,
   asSeatId,
   asTurnId,
+  asZoneId,
   createRng,
   initialState,
   type AgentMicroturnDecisionInput,
@@ -369,6 +370,60 @@ describe('plan proposal', () => {
     assert.equal(result.status, 'selected');
     assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, '1');
     assert.equal(result.selected?.roleBindings.governSpace?.selectedId, '2');
+  });
+
+  it('scores plan role selector items with the current selector item key', () => {
+    const selectorItemKey = {
+      kind: 'ref' as const,
+      ref: { kind: 'selectorItemIntrinsic' as const, intrinsic: 'key' as const },
+    };
+    const selector: CompiledPolicySelector = {
+      ...roleSelector(1),
+      source: { kind: 'collection', collection: { kind: 'zones' } },
+      quality: {
+        components: [{
+          id: 'population' as never,
+          value: { kind: 'zoneProp', zone: selectorItemKey, prop: 'population' },
+          weight: 1,
+        }],
+        order: 'qualityDesc',
+      },
+    };
+    const template = planTemplate({
+      roles: {
+        trainSpace: {
+          ...planTemplate().roles.trainSpace!,
+          selector: {
+            ...planTemplate().roles.trainSpace!.selector,
+            ...selector,
+          },
+        },
+      },
+    });
+    const def: GameDef = {
+      ...createDef(),
+      zones: [
+        { id: asZoneId('low:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1 } },
+        { id: asZoneId('high:none'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 4 } },
+      ],
+      agents: createCatalog({ template, selector }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    const result = proposeAdvisoryTurnPlan({
+      def,
+      state,
+      seatId: 'alpha',
+      playerId: asPlayerId(0),
+      profile,
+      catalog: def.agents!,
+      actionDecisions: [actionDecision('branch')],
+    });
+
+    assert.equal(result.status, 'selected');
+    assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, 'high:none');
+    assert.equal(result.selected?.roleBindings.trainSpace?.components.population, 4);
   });
 
   it('truncates alternatives deterministically by named cap class', () => {

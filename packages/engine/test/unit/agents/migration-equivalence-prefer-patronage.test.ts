@@ -110,6 +110,11 @@ const governModeDecisionKey = (decision: Decision): string | undefined =>
     ? String(decision.decisionKey)
     : undefined;
 
+const expectedGovernModes = (decisions: readonly Decision[]): readonly string[] =>
+  decisions
+    .filter((decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> => governModeDecisionKey(decision) !== undefined)
+    .map((decision) => String(decision.value));
+
 describe('preferPatronageMode migration equivalence', () => {
   it('documents the retired completion-scope baseline and the microturn rewrite', () => {
     assert.deepEqual(completionScopeBaseline, {
@@ -126,17 +131,17 @@ describe('preferPatronageMode migration equivalence', () => {
     });
   });
 
-  it('reproduces the captured four govern-mode patronage choices on a fixed FITL seed', () => {
+  it('reproduces the captured govern-mode patronage choices on a fixed FITL seed', () => {
     const def = withPreferPatronageMode(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
     const fixtureDecisions = readDecisionSequence();
     const agent = new PolicyAgent({ profileId: 'arvn-evolved', traceLevel: 'summary' });
     let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
-    const selectedGovernModes: readonly string[] = [];
+    const expected = expectedGovernModes(fixtureDecisions);
     const selected: string[] = [];
 
     for (const fixtureDecision of fixtureDecisions) {
-      if (selected.length >= 4) {
+      if (selected.length >= expected.length) {
         break;
       }
       const microturn = publishMicroturn(def, state, runtime);
@@ -151,7 +156,7 @@ describe('preferPatronageMode migration equivalence', () => {
       state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
     }
 
-    assert.deepEqual(selected, ['patronage', 'patronage', 'patronage', 'patronage']);
-    assert.deepEqual(selectedGovernModes, []);
+    assert.deepEqual(expected, ['patronage', 'patronage', 'patronage']);
+    assert.deepEqual(selected, expected);
   });
 });

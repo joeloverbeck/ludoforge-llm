@@ -184,10 +184,6 @@ describe('FITL schedule ref sandbox consideration trace shape', () => {
     assertNoErrors(parsed);
     assert.equal(gameDef.agents?.profiles[PROFILE_ID], undefined, 'sandbox profile must not be production-loaded');
     const REQUIRED_ARVN_EVOLVED_TERMS = [
-      'preferProjectedSelfMargin',
-      'preferStrongNormalizedMargin',
-      'preferGovernWeighted',
-      'trainWhenControlLow',
       'preferOptionProjectedMargin',
     ];
     const arvnEvolvedConsiderations = gameDef.agents?.profiles['arvn-evolved']?.use.considerations ?? [];

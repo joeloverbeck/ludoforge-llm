@@ -1,15 +1,13 @@
 {
-  "originating_spec": "specs/189-policy-eval-context-cache-eligibility.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/189POLEVALCACHE-001.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "bcef2e0b61037d4e6ab3fff4f89f40c419bbcd2c",
+  "originating_spec": "archive/specs/189-policy-eval-context-cache-eligibility.md",
+  "archived_spec": "archive/specs/189-policy-eval-context-cache-eligibility.md",
+  "last_ticket": "archive/tickets/189POLEVALCACHE-002.md",
+  "last_result": "final_spec_archived",
+  "last_work_commit": "c2b2473a48dea1f3fe010bf196f3bf59cc763b45",
   "last_state_commit": "self",
-  "next_target": "tickets/189POLEVALCACHE-002.md",
-  "queue": [
-    "tickets/189POLEVALCACHE-002.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
   "owned_dirty_summary": null,
   "blocked": false,

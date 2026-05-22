@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @profile-variant: arvn-evolved
+// @profile-variant: arvn-baseline
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -37,12 +37,12 @@ describe('Spec 186 ARVN Train+Govern plan separation', () => {
 
     const def = assertValidatedGameDef(first.compiled.gameDef);
     const state = initialState(def, 186007, FITL_PLAYER_COUNT).state;
-    const profile = def.agents?.profiles['arvn-evolved'];
+    const profile = def.agents?.profiles['arvn-baseline'];
     assert.ok(def.agents?.library.planTemplates?.['arvn.trainGovern'], 'expected arvn.trainGovern template');
-    assert.ok(profile?.plan.planTemplates?.includes('arvn.trainGovern'), 'expected arvn-evolved to carry the plan template');
+    assert.ok(profile?.plan.planTemplates?.includes('arvn.trainGovern'), 'expected arvn-baseline to carry the plan template');
     assert.equal(JSON.stringify(first.compiled.gameDef), JSON.stringify(second.compiled.gameDef));
     if (profile === undefined) {
-      throw new Error('Expected arvn-evolved profile');
+      throw new Error('Expected arvn-baseline profile');
     }
 
     const result = proposeAdvisoryTurnPlan({
@@ -64,7 +64,7 @@ describe('Spec 186 ARVN Train+Govern plan separation', () => {
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
-      variantId: 'arvn-evolved',
+      variantId: 'arvn-baseline',
       seed: 186007,
       passed,
       stopReason: result.status,

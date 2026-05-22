@@ -12,7 +12,7 @@ import {
 import { runGame } from '../../src/sim/index.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
-const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const FITL_TURNSHAPE_DETERMINISM_SEED = 1005;
 const FITL_TURNSHAPE_DETERMINISM_MAX_TURNS = 80;
 const FITL_PLAYER_COUNT = 4;

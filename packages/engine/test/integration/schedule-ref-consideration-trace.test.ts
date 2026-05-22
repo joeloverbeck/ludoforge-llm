@@ -113,7 +113,7 @@ function withSandboxProfile(def: GameDef): GameDef {
     onUnavailable: 'noContribution',
     onPartial: { visiblePrefixExhausted: 'useLowerBound' },
   });
-  assert.equal(profileArtifact.extends, 'arvn-evolved');
+  assert.equal(profileArtifact.extends, 'arvn-baseline');
   assert.deepEqual(profileArtifact.use?.considerations, [CONSIDERATION_ID]);
 
   const baseProfile = agents.profiles[profileArtifact.extends];
@@ -186,11 +186,11 @@ describe('FITL schedule ref sandbox consideration trace shape', () => {
     const REQUIRED_ARVN_EVOLVED_TERMS = [
       'preferOptionProjectedMargin',
     ];
-    const arvnEvolvedConsiderations = gameDef.agents?.profiles['arvn-evolved']?.use.considerations ?? [];
+    const arvnEvolvedConsiderations = gameDef.agents?.profiles['arvn-baseline']?.use.considerations ?? [];
     for (const term of REQUIRED_ARVN_EVOLVED_TERMS) {
       assert.ok(
         arvnEvolvedConsiderations.includes(term),
-        `arvn-evolved must contain required baseline consideration ${term} (current: [${arvnEvolvedConsiderations.join(', ')}])`,
+        `arvn-baseline must contain required baseline consideration ${term} (current: [${arvnEvolvedConsiderations.join(', ')}])`,
       );
     }
 

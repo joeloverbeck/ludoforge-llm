@@ -12,7 +12,7 @@ import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/pr
 
 const FITL_BUDGET = {
   // Recorded from the current deterministic FITL witness corpus after Spec 161
-  // enabled `arvn-evolved.preview.inner.chooseNStep: true`, which retargets
+  // enabled `arvn-baseline.preview.inner.chooseNStep: true`, which retargets
   // chooseNStep tie-breaking via per-option projected-margin scoring and
   // shifts seed-1005/1010 trajectories. Keep modest slack so the witness
   // still catches real frontier inflation without pinning to exact totals.
@@ -44,7 +44,7 @@ describe('Spec 140 compound-turn overhead', () => {
       runGame(
         def,
         1005,
-        ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'].map(
+        ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'].map(
           (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
         ),
         200,
@@ -55,7 +55,7 @@ describe('Spec 140 compound-turn overhead', () => {
       runGame(
         def,
         1010,
-        ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'].map(
+        ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'].map(
           (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
         ),
         200,

@@ -125,7 +125,7 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
   assert.deepEqual(consideration.scopes, ['microturn']);
   assert.equal(consideration.costClass, 'preview');
   assert.equal(consideration.value?.ref, PREVIEW_REF_ID);
-  assert.equal(profileArtifact.extends, 'arvn-evolved');
+  assert.equal(profileArtifact.extends, 'arvn-baseline');
   assert.equal(profileArtifact.preview?.inner?.chooseOne, true);
   assert.deepEqual(profileArtifact.use?.considerations, [CONSIDERATION_ID]);
 

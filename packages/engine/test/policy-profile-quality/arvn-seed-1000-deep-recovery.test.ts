@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @profile-variant: arvn-evolved
+// @profile-variant: arvn-baseline
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -19,7 +19,7 @@ const TEST_FILE = fileURLToPath(import.meta.url);
 const MAX_TURNS = 600;
 const PLAYER_COUNT = 4;
 const SEED = 1000;
-const PROFILE_ID = 'arvn-evolved';
+const PROFILE_ID = 'arvn-baseline';
 const WITNESS_ID = 'spec-164-arvn-seed-1000-deep';
 const REQUESTED_REF = 'preview.option.delta.victory.currentMargin.self';
 const EXPECTED_DEEP_READY_COUNT = 4;

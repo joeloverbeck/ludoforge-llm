@@ -33,7 +33,7 @@ const WORKLOAD = {
   seed: 1013,
   maxTurns: 1,
   playerCount: 4,
-  profiles: ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  profiles: ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 } as const;
 
 const FIRST_TOUCH_ONLY_STATIC_REBUILD_THRESHOLD = 8;

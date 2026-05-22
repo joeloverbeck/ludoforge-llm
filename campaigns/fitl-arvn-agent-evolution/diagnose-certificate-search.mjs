@@ -21,7 +21,7 @@ const getArg = (name, fallback) => {
 };
 
 const SEED = Number(getArg('seed', '1002'));
-const PROFILE = getArg('profile', SEED === 123 ? 'random' : 'arvn-evolved');
+const PROFILE = getArg('profile', SEED === 123 ? 'random' : 'arvn-baseline');
 const MAX_TURNS = Number(getArg('max-turns', '200'));
 const PLAYER_COUNT = 4;
 

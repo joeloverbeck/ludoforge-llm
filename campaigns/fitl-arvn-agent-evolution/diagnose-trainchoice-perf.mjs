@@ -56,7 +56,7 @@ const runtime = createGameDefRuntime(def);
 const seats = def.seats ?? [];
 const seatProfiles = seats.map((s) => {
   const id = s.id.toLowerCase();
-  return id === 'arvn' ? 'arvn-evolved' : `${id}-baseline`;
+  return id === 'arvn' ? 'arvn-baseline' : `${id}-baseline`;
 });
 
 for (const seed of SEEDS) {

@@ -3964,54 +3964,6 @@
     "arvn-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "projectedMarginWeight": 800,
-        "governWeight": 500
-      },
-      "use": {
-        "guardrails": [
-          "dropPassWhenOtherMovesExist"
-        ],
-        "considerations": [
-          "preferProjectedSelfMargin",
-          "preferGovernWeighted"
-        ],
-        "tieBreakers": [
-          "stableMoveKey"
-        ]
-      },
-      "preview": {
-        "mode": "exactWorld",
-        "budget": {
-          "strategy": "balancedCoverage",
-          "fullCandidateCap": 4,
-          "minPerGroup": 1
-        },
-        "phase1": false,
-        "phase1CompletionsPerAction": 1
-      },
-      "selection": {
-        "mode": "argmax"
-      },
-      "plan": {
-        "stateFeatures": [
-          "selfMargin"
-        ],
-        "candidateFeatures": [
-          "projectedSelfMargin"
-        ],
-        "candidateAggregates": [
-          "hasNonPassAlternative"
-        ],
-        "considerations": [
-          "preferProjectedSelfMargin",
-          "preferGovernWeighted"
-        ]
-      },
-      "fingerprint": "f37904dda758698b30d0fdff9b10365af3187b7d9375a4673770d5be875d5c98"
-    },
-    "arvn-evolved": {
-      "observerName": "currentPlayer",
-      "params": {
         "projectedMarginWeight": 300,
         "governWeight": 1000,
         "trainWeight": 300
@@ -4207,7 +4159,7 @@
   },
   "bindingsBySeat": {
     "us": "us-baseline",
-    "arvn": "arvn-evolved",
+    "arvn": "arvn-baseline",
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },

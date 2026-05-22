@@ -182,14 +182,14 @@ describe('test class reporter', () => {
   it('emits policy-profile-quality variant groupings when that lane is active', async () => {
     const { createTestClassReporter, extractProfileVariantMarker } = await loadReporterModule();
     assert.equal(
-      extractProfileVariantMarker('// @test-class: convergence-witness\n// @profile-variant: arvn-evolved\n'),
-      'arvn-evolved',
+      extractProfileVariantMarker('// @test-class: convergence-witness\n// @profile-variant: arvn-baseline\n'),
+      'arvn-baseline',
     );
 
     const fileContents = new Map([
       [
         '/tmp/arvn-quality.test.js',
-        '// @test-class: convergence-witness\n// @profile-variant: arvn-evolved\n',
+        '// @test-class: convergence-witness\n// @profile-variant: arvn-baseline\n',
       ],
       [
         '/tmp/baseline-quality.test.js',
@@ -214,6 +214,6 @@ describe('test class reporter', () => {
     assert.match(output, /=== Policy Profile Variant Summary ===/u);
     assert.match(output, /non-blocking - profile-level quality witness/u);
     assert.match(output, /all-baselines:\s+1 pass, 0 fail/u);
-    assert.match(output, /arvn-evolved:\s+1 pass, 1 fail/u);
+    assert.match(output, /arvn-baseline:\s+1 pass, 1 fail/u);
   });
 });

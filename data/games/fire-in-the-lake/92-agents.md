@@ -2302,26 +2302,6 @@ agents:
         mode: exactWorld
         budget:
           strategy: balancedCoverage
-          fullCandidateCap: 4
-          minPerGroup: 1
-      params:
-        projectedMarginWeight: 800
-        governWeight: 500
-      use:
-        guardrails:
-          - dropPassWhenOtherMovesExist
-        considerations:
-          - preferProjectedSelfMargin
-          - preferGovernWeighted
-        tieBreakers:
-          - stableMoveKey
-
-    arvn-evolved:
-      observer: currentPlayer
-      preview:
-        mode: exactWorld
-        budget:
-          strategy: balancedCoverage
           fullCandidateCap: 10
           minPerGroup: 1
         inner:
@@ -2460,7 +2440,7 @@ agents:
 
   bindings:
     us: us-baseline
-    arvn: arvn-evolved
+    arvn: arvn-baseline
     nva: nva-baseline
     vc: vc-baseline
 ```

@@ -54,7 +54,7 @@ describe('ARVN tournament worker-pool determinism', () => {
     const seedModule = await import(pathToFileURL(seedModulePath).href) as TournamentSeedModule;
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
-    const seatProfiles = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'];
+    const seatProfiles = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
     const seedOptions = {
       def,
       runtime,

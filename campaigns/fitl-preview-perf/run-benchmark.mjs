@@ -7,17 +7,17 @@
  * diagnostics for the harness aggregator.
  *
  * Modes:
- *   --mode on   — primary metric path: arvn-evolved with mode=exactWorld,
+ *   --mode on   — primary metric path: arvn-baseline with mode=exactWorld,
  *                 completion=agentGuided, completionDepthCap=8, topK=4
  *                 (the production target the campaign is optimizing for).
- *   --mode off  — Goodhart watchdog: arvn-evolved with mode=disabled. Should
+ *   --mode off  — Goodhart watchdog: arvn-baseline with mode=disabled. Should
  *                 stay near the static baseline (~12s) regardless of changes
  *                 to the preview pipeline.
  *
- * The arvn-evolved YAML is immutable per campaign rules. Override is applied
+ * The arvn-baseline YAML is immutable per campaign rules. Override is applied
  * in-memory by spread-cloning def.agents.profiles and re-binding the arvn
- * seat to a synthetic profile entry (`arvn-evolved-bench-on` /
- * `arvn-evolved-bench-off`).
+ * seat to a synthetic profile entry (`arvn-baseline-bench-on` /
+ * `arvn-baseline-bench-off`).
  *
  * Output: a single JSON line on stdout (last line) consumed by harness.sh.
  */
@@ -133,7 +133,7 @@ const CORPUS = {
   playerCount: 4,
   evolvedSeat: 'arvn',
   sampleSize: 50,
-  seatProfiles: ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  seatProfiles: ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 };
 
 // --- Step 1: Compile FITL spec ---
@@ -182,11 +182,11 @@ const compilation_ms = performance.now() - compileStart;
 // Same-mode-on-every-seat is the only configuration that decouples the
 // preview-cost measurement from cross-seat profile heterogeneity, and it
 // matches the spec-145 perf-test corpus binding (seatProfiles us-baseline
-// arvn-evolved nva-baseline vc-baseline).
+// arvn-baseline nva-baseline vc-baseline).
 
 const SEAT_PROFILE_BINDINGS = [
   { seatId: 'us', sourceProfileId: 'us-baseline' },
-  { seatId: 'arvn', sourceProfileId: 'arvn-evolved' },
+  { seatId: 'arvn', sourceProfileId: 'arvn-baseline' },
   { seatId: 'nva', sourceProfileId: 'nva-baseline' },
   { seatId: 'vc', sourceProfileId: 'vc-baseline' },
 ];

@@ -9,7 +9,7 @@ const arvnReplayWindows = readFixtureJson<readonly ProbeStateSample[]>(
 export const arvnModuleActivation = defineProbe({
   id: 'arvn-module-activation',
   game: 'fire-in-the-lake',
-  profile: 'arvn-evolved',
+  profile: 'arvn-baseline',
   seat: 'ARVN',
   stateBinding: {
     scenario: 'fitl-default',
@@ -32,7 +32,7 @@ export const arvnModuleActivation = defineProbe({
     },
   ],
   severity: 'profileQuality',
-  tags: ['arvn-evolved', 'strategy-modules', 'spec-182-phase-2'],
+  tags: ['arvn-baseline', 'strategy-modules', 'spec-182-phase-2'],
 });
 
 // Calibration source:

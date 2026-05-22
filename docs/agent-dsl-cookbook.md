@@ -929,7 +929,7 @@ agents:
 
   profiles:
     arvn-inner-preview:
-      extends: arvn-evolved
+      extends: arvn-baseline
       observer: currentPlayer
       preview:
         mode: exactWorld
@@ -967,7 +967,7 @@ agents:
 
   profiles:
     arvn-inner-preview:
-      extends: arvn-evolved
+      extends: arvn-baseline
       observer: currentPlayer
       preview:
         mode: exactWorld

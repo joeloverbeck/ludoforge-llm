@@ -17,7 +17,7 @@ const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const SEED = 1001;
 const PLAYER_COUNT = 4;
 const MAX_TURNS = 500;
-const VARIANT_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'];
+const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const writeJson = (name, value) => {
   writeFileSync(join(OUT_DIR, name), `${JSON.stringify(value, null, 2)}\n`);

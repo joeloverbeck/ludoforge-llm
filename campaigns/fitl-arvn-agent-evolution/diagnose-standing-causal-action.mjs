@@ -25,7 +25,7 @@ const EPSILON = 1e-9;
 const MAX_TURNS = 500;
 const PLAYER_COUNT = 4;
 const EVOLVED_SEAT = 'arvn';
-const EVOLVED_PROFILE = 'arvn-evolved';
+const EVOLVED_PROFILE = 'arvn-baseline';
 
 function resolveRepoRoot() {
   let cursor = HERE;

@@ -20,7 +20,7 @@ import { runGame } from '../../src/sim/index.js';
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-const VARIANT_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const SEED = 1001;
 const MAX_TURNS = 500;
 const PLAYER_COUNT = 4;

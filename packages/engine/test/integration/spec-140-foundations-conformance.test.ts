@@ -17,7 +17,7 @@ import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/pr
 const FITL_CANARY_SEEDS = [1002, 1005, 1010, 1013] as const;
 const FITL_PROFILE_VARIANTS = [
   ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
-  ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 ] as const;
 const TEXAS_SEEDS = process.env.RUN_SLOW_E2E === '1'
   ? Array.from({ length: 20 }, (_unused, index) => 2000 + index)

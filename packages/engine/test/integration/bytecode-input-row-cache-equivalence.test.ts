@@ -22,9 +22,9 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 const SEED = 42;
 
 const selectCanaryExpr = (def: GameDef): CompiledPolicyExpr => {
-  const profile = def.agents?.profiles['arvn-evolved'];
+  const profile = def.agents?.profiles['arvn-baseline'];
   const compiled = def.agents?.compiled;
-  assert.ok(profile, 'expected arvn-evolved profile');
+  assert.ok(profile, 'expected arvn-baseline profile');
   assert.ok(compiled, 'expected compiled policy catalog');
 
   const stateFeatureId = profile.plan.stateFeatures[0];

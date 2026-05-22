@@ -1288,7 +1288,7 @@ Start with ARVN because the campaign is already focused there.
 
 Migration sequence:
 
-1. Convert `arvn-evolved` into doctrine modules:  
+1. Convert `arvn-baseline` into doctrine modules:  
    * `arvn.blockImmediateWin`  
    * `arvn.buildPoliticalEngine`  
    * `arvn.holdHighPopControl`  

@@ -19,7 +19,7 @@ diagnosticAgents:
 
   profiles:
     policy-preview-inner-fitl-canary:
-      extends: arvn-evolved
+      extends: arvn-baseline
       observer: currentPlayer
       preview:
         mode: exactWorld

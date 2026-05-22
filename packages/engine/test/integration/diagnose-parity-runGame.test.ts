@@ -11,7 +11,7 @@ import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/i
 import { runGame } from '../../src/sim/index.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-const VARIANT_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const SEEDS = [1001, 1020, 1049, 1054] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;

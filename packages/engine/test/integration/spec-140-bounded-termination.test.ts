@@ -26,7 +26,7 @@ import { compileProductionSpec, deriveFitlPopulationZeroSpaces } from '../helper
 const FITL_POLICY_CANARY_SEEDS = [1002, 1005, 1010, 1013] as const;
 const POLICY_PROFILE_VARIANTS = [
   ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
-  ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 ] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;

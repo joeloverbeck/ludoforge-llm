@@ -1,17 +1,11 @@
 # Campaign: fitl-arvn-agent-evolution
 
-## Bootstrap (run before starting the improvement loop)
+## Bootstrap (run before starting a new improvement loop)
 
-If `92-agents.md` does not already contain an `arvn-evolved` profile, create one by
-cloning the current `arvn-baseline` profile:
-
-1. Copy the `arvn-baseline` profile definition verbatim as a new `arvn-evolved`
-   profile in the `profiles:` section of `92-agents.md`.
-2. Update the `bindings:` section: change `arvn: arvn-baseline` to `arvn: arvn-evolved`.
-3. The `arvn-evolved` profile is the mutable target — the improvement loop modifies
-   only this profile and its supporting library items.
-4. The `arvn-baseline` profile and all other faction profiles remain unchanged as
-   controls.
+`arvn-baseline` is now the promoted ARVN production profile. A new evolution
+campaign should either mutate `arvn-baseline` in a dedicated worktree or create a
+temporary candidate profile from it and pass that profile via `--evolved-profile`.
+Do not reintroduce a second shipped ARVN profile as a production control.
 
 ## Objective
 
@@ -34,10 +28,10 @@ a compositeScore near 0 (margin near threshold distance, ~0% win rate).
 
 ## Campaign Completion
 
-When the campaign ends, the evolved profile's strategy should be promoted to
-baseline: update the `arvn-baseline` profile to use the evolved strategy, then
-remove the `arvn-evolved` profile. This makes the winning strategy the new
-standard for future campaigns and the browser-based game runner.
+When the campaign ends, promote the winning ARVN strategy into `arvn-baseline`
+and remove any temporary candidate profile. This keeps the winning strategy as
+the single production ARVN baseline for future campaigns and the browser-based
+game runner.
 
 ## Primary Metric
 
@@ -59,8 +53,8 @@ simplification = good.
 
 - `data/games/fire-in-the-lake/92-agents.md` — agent library (features, pruning
   rules, score terms, aggregates, profiles, parameters, bindings)
-  - Mutable: `arvn-evolved` profile and its supporting library items
-  - Immutable within this file: `arvn-baseline` profile, `us-baseline`,
+  - Mutable: `arvn-baseline` profile and its supporting library items
+  - Immutable within this file: `us-baseline`,
     `vc-baseline`, `nva-baseline` profiles, bindings for non-ARVN seats
 
 ### Tier 2: DSL Extension (when YAML expressiveness is the bottleneck)

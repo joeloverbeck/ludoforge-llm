@@ -16,7 +16,7 @@
     "baselinePreviewMode": "disabled",
     "seatProfiles": [
       "us-baseline",
-      "arvn-evolved",
+      "arvn-baseline",
       "nva-baseline",
       "vc-baseline"
     ]

@@ -1,6 +1,6 @@
 # 191PLAROLSEM-002: Step-match field validation + use (`decisionPath`/`targetKind`/`stageIndex`) + FITL profile corrections
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents` (plan-controller step matching), `cnl` (plan-template validator); `data/games/fire-in-the-lake` (corrective profile fixes)
@@ -77,3 +77,35 @@ Run the new validation against `data/games/fire-in-the-lake/92-agents.md`; fix a
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/agent-plan-template-validate.test.js dist/test/architecture/plan-controller-legality-frontier.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-23.
+
+What changed:
+- Added compile-time step-match validation in `packages/engine/src/cnl/validate-agent-plan-templates.ts` for selector-compatible `targetKind` and declared decision surfaces keyed by `decisionKind`, `decisionPath`, `targetKind`, optional `actionTag`, and optional `stageIndex`.
+- Threaded decision-surface metadata through runtime choice contexts: choose-one/choose-N contexts now publish `targetKinds`, and pipeline choices publish their originating `stageIndex`.
+- Updated `packages/engine/src/agents/plan-controller.ts` so exact and reselected plan steps require the current decision context to match `decisionPath`, `targetKind`, and optional `stageIndex` before selecting a role value.
+- Corrected FITL plan-template metadata in `data/games/fire-in-the-lake/92-agents.md` where validation exposed stale or impossible authored matches (`air-lift`, `air-strike`, and removed unreachable second-assault steps).
+- Refreshed schema artifacts and FITL preview golden fixtures whose trajectory changed because plan metadata is now active during policy-guided preview completion.
+
+Deviations:
+- `decisionPath` was validated and consumed as the microturn decision key / bind name, not as the kernel `CompoundDecisionPath` placement field. That is the live contract used by existing authored plan-template matches.
+- `stageIndex` validation is implemented by matching declared decision surfaces rather than separately computing a template-local stage range. This catches out-of-range authored stages because no declared choice surface exists at that stage.
+- Full root `pnpm turbo build/test/lint/typecheck` was not rerun; the package-local engine build and full engine `test:all` lane were run instead, which is the directly affected proof surface for this ticket.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js dist/test/architecture/plan-controller-legality-frontier.test.js dist/test/integration/parse-validate-full-spec.test.js dist/test/unit/cnl/agent-plan-template-compile.test.js dist/test/unit/cnl/agent-posture-evaluator-compile.test.js dist/test/unit/schema-artifacts-sync.test.js` — passed (24 tests, 0 failures).
+- `node --test dist/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.js` — passed after updating the canary decision index from 315 to 314 for the new trajectory.
+- `node --test dist/test/architecture/policy-preview-inner-outcome-parity.test.js` — passed after reblessing the Spec 178 parity fixtures for newly plan-guided preview completions.
+- `pnpm -F @ludoforge/engine test:all` — passed (959 tests, 0 failures).
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `git diff --check` — passed.
+- `pnpm run check:ticket-deps` — passed.
+
+Source-size ledger:
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts`: 520 lines after; remains under 800.
+- `packages/engine/src/agents/plan-controller.ts`: 222 lines after; remains under 800.
+- `packages/engine/src/kernel/microturn/types.ts`: 405 lines after; remains under 800.
+- `packages/engine/src/kernel/microturn/publish.ts`, `packages/engine/src/kernel/legal-choices.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/src/agents/policy-agent.ts` were already large shared files; this change added only narrow metadata threading at existing seams.

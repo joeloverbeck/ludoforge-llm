@@ -1966,6 +1966,8 @@ interface ChoicePendingRequestBase {
   readonly reason?: ChoiceIllegalReason;
   /** Where the decision value should be placed in the move structure. Absent or `'main'` → `move.params[decisionKey]`. */
   readonly decisionPath?: CompoundDecisionPath;
+  /** Absolute action-pipeline stage index that produced this pending decision, when applicable. */
+  readonly stageIndex?: number;
   /** Internal suspension payload used by the microturn kernel to resume execution after the decision resolves. */
   readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }

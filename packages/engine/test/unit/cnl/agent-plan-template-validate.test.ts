@@ -22,10 +22,19 @@ function createDoc(planTemplates: Record<string, unknown>, selectors: Record<str
       actor: 'active',
       executor: 'actor',
       phase: ['main'],
-      params: [],
+      params: [
+        { name: 'operationTarget', domain: { query: 'mapSpaces' } },
+      ],
       pre: null,
       cost: [],
-      effects: [],
+      effects: [
+        {
+          chooseOne: {
+            bind: '$specialTarget',
+            options: { query: 'mapSpaces' },
+          },
+        },
+      ],
       limits: [],
       tags: ['pass'],
     }],
@@ -90,12 +99,12 @@ function validTemplate(overrides: Record<string, unknown> = {}): any {
       {
         label: 'select-train-space',
         role: 'trainSpace',
-        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'operation.target' },
+        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'operationTarget', actionTag: 'pass' },
       },
       {
         label: 'select-govern-space',
         role: 'governSpace',
-        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'special.target' },
+        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'specialTarget', actionTag: 'pass' },
       },
     ],
     caps: { capClass: 'standard256', maxSteps: 2 },
@@ -169,6 +178,48 @@ describe('agent plan-template validation diagnostics', () => {
       }),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED,
       /trainGovern.*governSpace.*locatedIn.*no runtime implementation/u,
+    );
+  });
+
+  it('rejects step matches whose decision path, target kind, or stage index has no declared surface', () => {
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          steps: [{
+            label: 'bad-path',
+            role: 'trainSpace',
+            match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'missingTarget', actionTag: 'pass' },
+          }],
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
+      /trainGovern.*trainSpace.*declared decision surface/u,
+    );
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          steps: [{
+            label: 'bad-kind',
+            role: 'trainSpace',
+            match: { decisionKind: 'chooseOne', targetKind: 'token', decisionPath: 'operationTarget', actionTag: 'pass' },
+          }],
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
+      /targetKind "token".*selector target kind "zone"/u,
+    );
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          steps: [{
+            label: 'bad-stage',
+            role: 'trainSpace',
+            match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'operationTarget', actionTag: 'pass', stageIndex: 4 },
+          }],
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
+      /declared decision surface/u,
     );
   });
 

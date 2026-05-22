@@ -682,6 +682,7 @@ export class PolicyAgent implements Agent {
         turnId: input.microturn.turnId,
         seatId: String(input.microturn.seatId),
         legalActions: input.microturn.legalActions,
+        decisionContext: input.microturn.decisionContext,
         ...(primitiveDecision === undefined ? {} : { primitiveDecision }),
       });
       if (controlled !== undefined) {

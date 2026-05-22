@@ -70,9 +70,20 @@
           "selectionReason": "gated",
           "previewOutcome": "ready",
           "previewDrive": {
-            "depth": 1,
+            "depth": 2,
             "completionPolicy": "policyGuided",
-            "syntheticDecisions": []
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]:\"aid\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
           }
         },
         {
@@ -82,6 +93,110 @@
             {
               "termId": "preferOptionProjectedMargin",
               "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "scored",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]:\"aid\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 5,
+      "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]",
+      "selectedValue": "patronage",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]:\"patronage\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 0,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 2,
+            "distinctValueCount": 2,
+            "min": 1,
+            "max": 2,
+            "range": 1,
+            "allReadyValuesEqual": false
+          }
+        },
+        "utility": "differentiating",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 2,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": false,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]:\"aid\"",
+          "score": 300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[1]:\"patronage\"",
+          "score": 600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 600
             }
           ],
           "unknownPreviewRefs": [],
@@ -113,14 +228,14 @@
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 9,
-            "distinctValueCount": 2,
-            "min": -1,
+            "distinctValueCount": 1,
+            "min": 0,
             "max": 0,
-            "range": 1,
-            "allReadyValuesEqual": false
+            "range": 0,
+            "allReadyValuesEqual": true
           }
         },
-        "utility": "differentiating",
+        "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
           "ready": 9,
@@ -142,7 +257,7 @@
           "readyRootOptionCount": 9,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
           "strategy": "continuedDeepening",
           "capClass": "deep1024"
         }
@@ -160,7 +275,7 @@
           ],
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
-          "selectionReason": "tiebreak",
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 2,
@@ -181,11 +296,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"cam-ranh:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -211,11 +326,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"can-tho:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -241,11 +356,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"da-nang:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -271,11 +386,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"hue:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -301,11 +416,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"kontum:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -331,11 +446,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"pleiku-darlac:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -361,11 +476,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"qui-nhon:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -391,11 +506,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"saigon:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -438,14 +553,14 @@
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
             "readyCount": 9,
-            "distinctValueCount": 2,
-            "min": -1,
+            "distinctValueCount": 1,
+            "min": 0,
             "max": 0,
-            "range": 1,
-            "allReadyValuesEqual": false
+            "range": 0,
+            "allReadyValuesEqual": true
           }
         },
-        "utility": "differentiating",
+        "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
           "ready": 9,
@@ -467,7 +582,7 @@
           "readyRootOptionCount": 9,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
-          "selectedByTieBreakerBecausePreviewUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
           "strategy": "continuedDeepening",
           "capClass": "deep1024"
         }
@@ -485,7 +600,7 @@
           ],
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
-          "selectionReason": "tiebreak",
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 1,
@@ -495,11 +610,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"cam-ranh:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -514,11 +629,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"can-tho:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -533,11 +648,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"da-nang:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -552,11 +667,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"hue:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -571,11 +686,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"kontum:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -590,11 +705,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"pleiku-darlac:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -609,11 +724,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"qui-nhon:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],
@@ -628,11 +743,11 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"saigon:none\"",
-          "score": -300,
+          "score": 0,
           "scoreContributions": [
             {
               "termId": "preferOptionProjectedMargin",
-              "contribution": -300
+              "contribution": 0
             }
           ],
           "unknownPreviewRefs": [],

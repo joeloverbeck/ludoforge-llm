@@ -1035,12 +1035,10 @@ agents:
         roles:
           firstAssaultSpace: { selector: arvn.assaultTargetSpace, required: true }
           transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
-          secondAssaultSpace: { selector: arvn.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
         steps:
           - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
           - { label: transport-route, role: transportRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
-          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
-        caps: { capClass: standard256, maxSteps: 3 }
+        caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
       us.trainAdvise:
         traceLabel: "US Train then Advise"
@@ -1075,7 +1073,7 @@ agents:
           airStrikeSpace: { selector: us.airStrikeTarget, required: true }
         steps:
           - { label: sweep-expose-space, role: sweepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: sweep } }
-          - { label: air-strike-space, role: airStrikeSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: air-strike } }
+          - { label: air-strike-space, role: airStrikeSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-strike } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       us.assaultAirLiftAssault:
@@ -1085,12 +1083,10 @@ agents:
         roles:
           firstAssaultSpace: { selector: us.assaultTargetSpace, required: true }
           airLiftRoute: { selector: us.airLiftDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
-          secondAssaultSpace: { selector: us.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
         steps:
           - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
-          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
-          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
-        caps: { capClass: standard256, maxSteps: 3 }
+          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
+        caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
       us.airLiftTrain:
         traceLabel: "US Air Lift then Train"
@@ -1100,7 +1096,7 @@ agents:
           airLiftRoute: { selector: us.airLiftDestination, required: true }
           trainSpace: { selector: us.trainSupportSpace, required: true }
         steps:
-          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
+          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
           - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }

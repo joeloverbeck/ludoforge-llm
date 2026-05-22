@@ -40,7 +40,7 @@ const planTemplate = (): CompiledPlanTemplate => ({
   steps: [{
     label: 'choose-space',
     role: 'space',
-    match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'value' },
+    match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: '$space', stageIndex: 1 },
   }],
   caps: { capClass: 'standard256', maxSteps: 1 },
   fallback: {},
@@ -139,6 +139,8 @@ const inputFor = (agent: PolicyAgent, selectedId: string): AgentMicroturnDecisio
       kind: 'chooseOne',
       seatId: asSeatId('alpha'),
       decisionKey: '$space' as DecisionKey,
+      targetKinds: ['zone'],
+      stageIndex: 1,
       options: [
         { value: 'left', legality: 'legal', illegalReason: null },
         { value: 'right', legality: 'legal', illegalReason: null },
@@ -182,5 +184,31 @@ describe('plan execution controller frontier legality', () => {
     assert.ok(input.microturn.legalActions.some((decision) => JSON.stringify(decision) === JSON.stringify(result.decision)));
     assert.equal(result.agentDecision?.plan?.microturns?.[0]?.match, 'fallback');
     assert.equal(result.agentDecision?.plan?.microturns?.[0]?.fallbackReason, 'stableFrontierTieBreak');
+  });
+
+  it('does not exact-match a planned value from the wrong decision path, target kind, or stage', () => {
+    const mismatches = [
+      { decisionKey: '$otherSpace' as DecisionKey },
+      { targetKinds: ['token'] as const },
+      { stageIndex: 2 },
+    ];
+    for (const mismatch of mismatches) {
+      const agent = new PolicyAgent({ traceLevel: 'summary' });
+      const input = inputFor(agent, 'right');
+      const result = agent.chooseDecision({
+        ...input,
+        microturn: {
+          ...input.microturn,
+          decisionContext: {
+            ...input.microturn.decisionContext,
+            ...mismatch,
+          },
+        },
+      });
+
+      assert.equal(result.decision.kind, 'chooseOne');
+      assert.equal(result.agentDecision?.plan?.microturns?.[0]?.match, 'fallback');
+      assert.notEqual(result.agentDecision?.plan?.microturns?.[0]?.match, 'exact');
+    }
   });
 });

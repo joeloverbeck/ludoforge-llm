@@ -226,6 +226,7 @@ const appendPipelineContinuationFrame = (
   request: ChoiceRequest,
   action: ActionDef,
   pipeline: { readonly id: string; readonly atomicity: 'atomic' | 'partial' },
+  stageIndex: number,
   remainingStages: readonly import('./types-operations.js').ActionResolutionStageDef[],
   eventEffects: readonly EffectAST[],
 ): ChoiceRequest => {
@@ -238,6 +239,7 @@ const appendPipelineContinuationFrame = (
   }
   return {
     ...request,
+    stageIndex,
     suspendedFrame: {
       ...request.suspendedFrame,
       resumeStack: [
@@ -1037,6 +1039,7 @@ const legalChoicesWithPreparedContextInternal = (
             resolvedStageResult.request,
             action,
             pipeline,
+            stageIndex,
             pipeline.stages.slice(stageIndex + 1),
             eventEffects,
           ));
@@ -1046,6 +1049,7 @@ const legalChoicesWithPreparedContextInternal = (
           resolvedStageResult.request,
           action,
           pipeline,
+          stageIndex,
           pipeline.stages.slice(stageIndex + 1),
           eventEffects,
         );

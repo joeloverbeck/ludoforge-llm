@@ -78,6 +78,16 @@ describe('Spec 186 ARVN Train+Govern fallback', () => {
       turnId: '186008',
       seatId: 'arvn',
       legalActions: [legalDecision],
+      decisionContext: {
+        kind: 'chooseNStep',
+        seatId: 'arvn' as never,
+        decisionKey: 'targetSpaces' as never,
+        options: [{ value: legalZone!, legality: 'legal', illegalReason: null }],
+        targetKinds: ['zone'],
+        selectedSoFar: [],
+        cardinality: { min: 1, max: 1 },
+        stepCommands: ['add'],
+      },
       primitiveDecision: legalDecision,
     });
     const microturnTrace = controlled?.planTrace.microturns?.[0];

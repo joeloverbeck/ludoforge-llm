@@ -380,6 +380,8 @@ const toChooseNStepContext = (
   seatId,
   decisionKey: request.decisionKey,
   options: request.options,
+  targetKinds: request.targetKinds,
+  ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
   selectedSoFar: request.selected,
   cardinality: {
     min: request.min ?? 0,
@@ -615,6 +617,8 @@ const toChooseOneContext = (
   seatId,
   decisionKey: request.decisionKey,
   options: request.options,
+  targetKinds: request.targetKinds,
+  ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
 });
 
 const findRootFrame = (state: GameState, top: DecisionStackFrame): DecisionStackFrame => {

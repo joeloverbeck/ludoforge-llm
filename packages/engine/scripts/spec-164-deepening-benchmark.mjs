@@ -25,7 +25,7 @@ const dateStamp = dateArgIndex >= 0 && process.argv[dateArgIndex + 1] !== undefi
   : new Date().toISOString().slice(0, 10).replaceAll('-', '');
 const outputPath = join(repoRoot, 'reports', `spec-164-deepening-benchmarks-${dateStamp}.md`);
 
-const fitlProfiles = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'];
+const fitlProfiles = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const deep1024 = {
   strategy: 'continuedDeepening',
@@ -69,9 +69,9 @@ function cloneDef(def) {
 
 function withFitlDeepening(def) {
   const next = cloneDef(def);
-  const profile = next.agents?.profiles?.['arvn-evolved'];
+  const profile = next.agents?.profiles?.['arvn-baseline'];
   if (profile?.preview?.inner === undefined) {
-    throw new Error('Expected FITL arvn-evolved preview.inner');
+    throw new Error('Expected FITL arvn-baseline preview.inner');
   }
   profile.preview.inner = {
     ...profile.preview.inner,
@@ -209,7 +209,7 @@ const fitlBaseDef = assertValidatedGameDef(productionHelpers.getFitlProductionFi
 const texasBaseDef = assertValidatedGameDef(productionHelpers.getTexasProductionFixture().gameDef);
 
 const fitlBaseline = runMeasured({
-  label: 'FITL arvn-evolved singlePass standard256',
+  label: 'FITL arvn-baseline singlePass standard256',
   def: fitlBaseDef,
   seed: 1000,
   maxTurns: 600,
@@ -217,7 +217,7 @@ const fitlBaseline = runMeasured({
   profileIds: fitlProfiles,
 });
 const fitlTreatment = runMeasured({
-  label: 'FITL arvn-evolved continuedDeepening deep1024 Db=4 Dd=16',
+  label: 'FITL arvn-baseline continuedDeepening deep1024 Db=4 Dd=16',
   def: withFitlDeepening(fitlBaseDef),
   seed: 1000,
   maxTurns: 600,
@@ -253,7 +253,7 @@ node packages/engine/scripts/spec-164-deepening-benchmark.mjs --date ${dateStamp
 This report is empirical evidence for future default-change work. It is not a
 green/red acceptance gate for production profile migration.
 
-## FITL arvn-evolved
+## FITL arvn-baseline
 
 Baseline:
 

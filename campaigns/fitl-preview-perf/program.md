@@ -17,20 +17,20 @@ preview-disabled path measurably unchanged (Goodhart guard).
 The preview-enabled path is the production path that the engine must run on
 every action-selection microturn for any FITL profile that lists
 `preferProjectedSelfMargin` in its considerations (us-baseline, arvn-baseline,
-arvn-evolved, nva-baseline) — so the cost reduction directly enables faction
+arvn-baseline, nva-baseline) — so the cost reduction directly enables faction
 agent evolution and tractable simulator runs going forward.
 
 ## Primary Metric
 
 `previewOn_totalMs_ms` — wall time to drive `runGame` until 50 ARVN
-action-selection microturns have been sampled, with `arvn-evolved`'s preview
+action-selection microturns have been sampled, with `arvn-baseline`'s preview
 configured for the production target (`mode: exactWorld`, `completion:
 agentGuided`, `topK=4`, `completionDepthCap=8`). Lower is better.
 Measurements within `NOISE_TOLERANCE` (1%) are equal.
 
 The corpus is the spec-145 perf harness corpus (seed=1000, maxTurns=200,
 playerCount=4, evolvedSeat=arvn, sampleSize=50; seatProfiles us-baseline /
-arvn-evolved / nva-baseline / vc-baseline). Same fixture as
+arvn-baseline / nva-baseline / vc-baseline). Same fixture as
 `packages/engine/test/perf/agents/preview-pipeline.perf.test.ts`.
 
 ### Targets
@@ -47,7 +47,7 @@ arvn-evolved / nva-baseline / vc-baseline). Same fixture as
 
 ## Goodhart Guard (Watchdog)
 
-`previewOff_totalMs_ms` — wall time over the same corpus with `arvn-evolved`'s
+`previewOff_totalMs_ms` — wall time over the same corpus with `arvn-baseline`'s
 preview reconfigured to `mode: disabled` in-memory by the benchmark runner.
 The static disabled baseline `BASELINE_OFF_MS = 12060` is sourced from
 `packages/engine/test/perf/agents/preview-pipeline.baseline.json` (`totalMs`
@@ -174,7 +174,7 @@ replacement, or skipped.
 ## Immutable System
 
 - **All `data/games/**` files** including `data/games/fire-in-the-lake/92-agents.md`
-  (the `arvn-evolved` profile and its `preview` block). The `agentGuided`
+  (the `arvn-baseline` profile and its `preview` block). The `agentGuided`
   completion target is enforced by the campaign benchmark via an in-memory
   override constructed at agent instantiation; the YAML stays untouched.
 - **`packages/engine/test/perf/agents/preview-pipeline.baseline.json`** — the

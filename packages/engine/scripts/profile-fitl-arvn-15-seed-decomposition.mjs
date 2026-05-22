@@ -331,7 +331,7 @@ async function runSeedInProcess(seed, maxTurns) {
 function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPathProfiler) {
   const seatProfiles = (def.seats ?? []).map((seat) => {
     const id = String(seat.id).toLowerCase();
-    return id === 'arvn' ? 'arvn-evolved' : `${id}-baseline`;
+    return id === 'arvn' ? 'arvn-baseline' : `${id}-baseline`;
   });
   return seatProfiles.map((profileId, playerIndex) => {
     const inner = new PolicyAgent({ profileId, traceLevel: 'summary' });

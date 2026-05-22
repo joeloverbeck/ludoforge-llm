@@ -24,9 +24,12 @@ import { compileProductionSpec, deriveFitlPopulationZeroSpaces } from '../helper
  */
 
 const FITL_POLICY_CANARY_SEEDS = [1002, 1005, 1010, 1013] as const;
+// One variant: the production all-baseline binding. The prior second variant
+// pinned the now-promoted `arvn-evolved`, which is identical to `arvn-baseline`
+// post-promotion; keeping both ran the heavy arvn profile twice for no added
+// coverage and pushed the file past its per-file timeout budget.
 const POLICY_PROFILE_VARIANTS = [
   ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
-  ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
 ] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;

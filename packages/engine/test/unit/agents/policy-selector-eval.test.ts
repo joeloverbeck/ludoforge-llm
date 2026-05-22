@@ -346,6 +346,7 @@ describe('policy selector evaluator', () => {
       catalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     }, []);
     try {
       assert.equal(context.getEvaluatedSelectorCacheSize(), 0);
@@ -384,6 +385,7 @@ describe('policy selector evaluator', () => {
       catalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
+      cacheBinding: { kind: 'isolated' },
     }, []);
     try {
       assert.equal(

@@ -23,7 +23,7 @@ sandboxAgents:
 
   profiles:
     spec-169-schedule-demo:
-      extends: arvn-evolved
+      extends: arvn-baseline
       observer: currentPlayer
       use:
         considerations:

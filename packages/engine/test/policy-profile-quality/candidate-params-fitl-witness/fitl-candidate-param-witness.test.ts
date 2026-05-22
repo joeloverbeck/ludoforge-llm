@@ -30,7 +30,7 @@ import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const WITNESS_PROFILE_ID = 'spec-166-candidate-params-fitl-witness';
-const BASELINE_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const SEED_1000_REPLAY_LIMIT = 80;
 const PLAYER_COUNT = 4;
 
@@ -61,8 +61,8 @@ function eventCandidateSide(candidate: TraceCandidate): 'shaded' | 'unshaded' | 
 function withAvoidShadedEventProfile(def: GameDef): ValidatedGameDef {
   const agents = def.agents;
   assert.ok(agents, 'expected FITL production agents');
-  const arvn = agents.profiles['arvn-evolved'];
-  assert.ok(arvn, 'expected arvn-evolved profile');
+  const arvn = agents.profiles['arvn-baseline'];
+  assert.ok(arvn, 'expected arvn-baseline profile');
 
   const updatedAgents: AgentPolicyCatalog = {
     ...agents,
@@ -140,7 +140,7 @@ function withAvoidShadedEventProfile(def: GameDef): ValidatedGameDef {
 
 function findFirstArvnEventDecision(trace: GameTrace): number {
   const index = trace.decisions.findIndex((decision) =>
-    decision.agentDecision?.resolvedProfileId === 'arvn-evolved'
+    decision.agentDecision?.resolvedProfileId === 'arvn-baseline'
     && (decision.agentDecision.candidates ?? []).some((candidate) => candidate.actionId === 'event'));
   assert.notEqual(index, -1, 'expected seed 1000 baseline to reach an ARVN event frontier');
   return index;

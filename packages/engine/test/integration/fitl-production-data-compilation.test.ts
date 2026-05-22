@@ -90,7 +90,7 @@ describe('FITL production data integration compilation', () => {
         id: 'auto:victory:controlledPopulation:coin',
       },
     });
-    const evolvedConsiderations = catalog.profiles['arvn-evolved']?.use.considerations;
+    const evolvedConsiderations = catalog.profiles['arvn-baseline']?.use.considerations;
     assert.ok(
       Array.isArray(evolvedConsiderations) && evolvedConsiderations.length > 0,
       'Expected ARVN evolved profile to have at least one consideration',
@@ -99,7 +99,7 @@ describe('FITL production data integration compilation', () => {
     for (const cId of evolvedConsiderations) {
       assert.ok(
         catalog.library.considerations[cId],
-        `Consideration '${cId}' referenced by arvn-evolved not found in library`,
+        `Consideration '${cId}' referenced by arvn-baseline not found in library`,
       );
     }
   });

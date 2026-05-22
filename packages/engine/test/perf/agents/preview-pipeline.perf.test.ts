@@ -25,7 +25,7 @@ const CORPUS = {
   playerCount: 4,
   evolvedSeat: 'arvn',
   sampleSize: 50,
-  seatProfiles: ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  seatProfiles: ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 } as const;
 
 interface BaselineFixture {
@@ -105,7 +105,7 @@ describe('Spec 145 preview pipeline performance', () => {
 
 function measurePreviewPipeline(def: ValidatedGameDef): Measurement {
   const runtime = createGameDefRuntime(def);
-  const arvnAgent = new SamplingPolicyAgent('arvn-evolved');
+  const arvnAgent = new SamplingPolicyAgent('arvn-baseline');
   const agents: Agent[] = [
     new PolicyAgent({ profileId: 'us-baseline', traceLevel: 'summary' }),
     arvnAgent,

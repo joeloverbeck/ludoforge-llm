@@ -15,7 +15,7 @@ describe('preview grantFlowContinuation production profile migration', () => {
 
       for (const [profileId, profile] of Object.entries(compiled.gameDef.agents?.profiles ?? {})) {
         const continuation = profile.preview.grantFlowContinuation;
-        if (family === 'fitl' && profileId === 'arvn-evolved') {
+        if (family === 'fitl' && profileId === 'arvn-baseline') {
           assert.deepEqual(
             continuation,
             {
@@ -25,7 +25,7 @@ describe('preview grantFlowContinuation production profile migration', () => {
               freeOperationDepthCap: 16,
               freeOperationCapClass: 'grantFlow16',
             },
-            'arvn-evolved intentionally retains the Spec 179 red-witness opt-in substrate',
+            'arvn-baseline intentionally retains the Spec 179 red-witness opt-in substrate',
           );
           continue;
         }

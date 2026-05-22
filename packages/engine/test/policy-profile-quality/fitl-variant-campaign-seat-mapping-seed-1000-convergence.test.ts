@@ -16,7 +16,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-const POLICY_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;
 const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);

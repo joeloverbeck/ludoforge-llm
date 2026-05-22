@@ -53,6 +53,7 @@ function createEvaluation(def: GameDef, candidates: readonly PolicyEvaluationCan
     catalog: def.agents!,
     parameterValues: {},
     trustedMoveIndex: new Map(),
+    cacheBinding: { kind: 'isolated' },
   }, [...candidates]);
 }
 

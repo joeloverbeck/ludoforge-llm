@@ -17,23 +17,38 @@
 //
 // Calibration
 // -----------
-// Calibration commit:    eed7384d (post-POLPREVDRIVE-005)
-// Calibration date:      2026-04-28
+// Calibration commit:    promoted-arvn-evolved (arvn-baseline now preview-only)
+// Calibration date:      2026-05-22
 // Calibration command:   node packages/engine/scripts/profile-fitl-preview-drive.mjs \
 //                          --seed 42 --maxTurns 10 --profilesAll
-// Calibration runs (ms): 36895, 37556, 36981 (median ~37000)
-// Warmup run (ms):       34831
-// Wall-clock ceiling:    75000 ms (~2× post-POLPREVDRIVE-005 median)
+// Calibration runs (ms): 55410, 60732, 56234 (local median ~56000)
+// CI observation (ms):   120113 (run 26267333916; CI hardware ~2.14× local)
+// Wall-clock ceiling:    240000 ms (~2× the CI-observed wall-clock)
+//
+// Why anchored to CI, not local: the promoted arvn-baseline is preview-only
+// (its sole move consideration `preferOptionProjectedMargin` is costClass:
+// preview), so every arvn decision drives the bounded preview pipeline. That
+// widened the CI/local ratio to ~2.14×, so ~2× the LOCAL median (~112000) no
+// longer clears the CI wall-clock. The ceiling is set to ~2× the CI-observed
+// time, preserving the same ">=2x regression" sensitivity the prior
+// 75000/37000 calibration had relative to its own environment.
+//
+// Prior calibration (pre-promotion, light arvn-baseline):
+//   commit eed7384d (post-POLPREVDRIVE-005), 2026-04-28
+//   local runs 36895/37556/36981 (median ~37000), ceiling 75000 (~2× median)
 //
 // Recalibration policy
 // --------------------
 // Raise the ceiling ONLY when a legitimate workload growth (added profile,
 // deeper drive, expanded effects) explains the new floor. Do not raise it to
 // silence a regression — investigate first using the harness above. To
-// recalibrate after a legitimate growth, re-run the harness three times,
-// take the median, set `WALL_CLOCK_CEILING_MS` to ~2× the new median, and
-// update the calibration block above with the new commit SHA, date, and
-// raw measurements in the same commit.
+// recalibrate after a legitimate growth, re-run the harness three times and
+// take the local median. Set `WALL_CLOCK_CEILING_MS` to ~2× the local median
+// when CI tracks local closely; when the CI/local ratio is materially above
+// 2× (as it is for preview-heavy profiles), anchor to ~2× the CI-observed
+// wall-clock instead so the gate does not false-positive in CI. Update the
+// calibration block above with the new commit, date, raw measurements, and
+// the CI observation in the same commit.
 //
 // Note on historical regression detection
 // ---------------------------------------
@@ -74,7 +89,7 @@ const WORKLOAD = {
   playerCount: 4,
 } as const;
 
-const WALL_CLOCK_CEILING_MS = 75_000;
+const WALL_CLOCK_CEILING_MS = 240_000;
 
 describe('POLPREVDRIVE-006 FITL parity drive perf gate', () => {
   it(`runs 4 baseline profiles under verifyIncrementalHash within ${WALL_CLOCK_CEILING_MS} ms`, () => {

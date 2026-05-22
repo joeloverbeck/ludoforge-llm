@@ -13,7 +13,7 @@ const SEED = 1000;
 const PLAYER_COUNT = 4;
 const MAX_TURNS = 20;
 const TARGET_PLAYER_DECISIONS = 80;
-const SEAT_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
+const SEAT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 
 interface NormalizedDecision {
   readonly decision: Decision | undefined;

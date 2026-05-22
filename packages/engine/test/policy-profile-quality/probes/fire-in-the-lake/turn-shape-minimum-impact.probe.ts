@@ -9,7 +9,7 @@ const arvnReplayWindows = readFixtureJson<readonly ProbeStateSample[]>(
 export const turnShapeMinimumImpactObserved = defineProbe({
   id: 'turn-shape-minimum-impact-observed',
   game: 'fire-in-the-lake',
-  profile: 'arvn-evolved',
+  profile: 'arvn-baseline',
   seat: 'ARVN',
   stateBinding: {
     scenario: 'fitl-default',
@@ -29,7 +29,7 @@ export const turnShapeMinimumImpactObserved = defineProbe({
     },
   ],
   severity: 'profileQuality',
-  tags: ['arvn-evolved', 'turn-shape', 'spec-182-phase-4'],
+  tags: ['arvn-baseline', 'turn-shape', 'spec-182-phase-4'],
 });
 
 // Calibration source:

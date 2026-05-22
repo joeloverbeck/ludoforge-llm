@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @profile-variant: arvn-evolved
+// @profile-variant: arvn-baseline
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -88,7 +88,7 @@ describe('Spec 186 ARVN Train+Govern fallback', () => {
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
-      variantId: 'arvn-evolved',
+      variantId: 'arvn-baseline',
       seed: 186008,
       passed,
       stopReason: microturnTrace?.match ?? 'no-plan-decision',

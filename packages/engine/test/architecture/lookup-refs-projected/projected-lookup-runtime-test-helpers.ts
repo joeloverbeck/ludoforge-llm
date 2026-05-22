@@ -240,6 +240,7 @@ export function evaluateActionSelectionProjectedLookup() {
     catalog: createProjectedCatalog(considerations),
     parameterValues: {},
     trustedMoveIndex: new Map(),
+    cacheBinding: { kind: 'isolated' },
   }, [candidate]);
   try {
     const score = evaluation.evaluateConsideration(considerations, 'projected0', candidate);

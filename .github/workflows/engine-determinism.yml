@@ -102,7 +102,7 @@ jobs:
             shard_label: baseline variants
             test_paths: |
               dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js
-              dist/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.js
+              dist/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.js
           - shard_id: campaign-seat-mapping
             shard_label: campaign seat mapping
             test_paths: |
@@ -112,10 +112,10 @@ jobs:
             test_paths: |
               dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js
               dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js
-          - shard_id: arvn-evolved-seed-1000
-            shard_label: arvn evolved seed 1000
+          - shard_id: arvn-baseline-seed-1000
+            shard_label: arvn baseline seed 1000
             test_paths: |
-              dist/test/policy-profile-quality/fitl-variant-arvn-evolved-seed-1000-draw-space-convergence.test.js
+              dist/test/policy-profile-quality/fitl-variant-arvn-baseline-seed-1000-draw-space-convergence.test.js
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6

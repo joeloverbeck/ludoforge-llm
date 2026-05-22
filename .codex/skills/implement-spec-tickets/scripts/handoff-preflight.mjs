@@ -87,8 +87,10 @@ function printScaffold(state, status) {
   console.log('- post-ticket-review audit block: <emitted | not_applicable: reason | blocked: reason>');
   console.log('- state-file validity: <valid | not_changed | blocked: reason>');
   console.log('- generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>');
+  console.log('- generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>');
   console.log('- source-size ledger: <emitted | not_applicable: reason | blocked: reason>');
   console.log('- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>');
+  console.log('- baseline worktree lifecycle: <emitted | not_applicable: no temporary baseline worktree | blocked: reason>');
   console.log('- dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>');
   console.log('- approved extra paths: <none | paths + approval source + commit-message/handoff treatment>');
   console.log('- Harness handoff: <ready_to_emit | not_applicable: reason>');

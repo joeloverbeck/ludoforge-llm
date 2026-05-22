@@ -14,7 +14,7 @@ The tuned limit is evidence-backed: the observed peak cache size was 2,467 entri
 
 Seeds: `1000..1014`, `1020`, `1049`, `1054`
 
-Profile mapping: `us-baseline`, `arvn-evolved`, `nva-baseline`, `vc-baseline`
+Profile mapping: `us-baseline`, `arvn-baseline`, `nva-baseline`, `vc-baseline`
 
 Command used:
 

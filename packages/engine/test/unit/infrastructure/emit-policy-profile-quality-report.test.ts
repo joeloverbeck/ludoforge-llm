@@ -64,16 +64,16 @@ const SAMPLE_REPORT = [
     decisions: 291,
   },
   {
-    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
-    variantId: 'arvn-evolved',
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.ts',
+    variantId: 'arvn-baseline',
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
     decisions: 289,
   },
   {
-    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
-    variantId: 'arvn-evolved',
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.ts',
+    variantId: 'arvn-baseline',
     seed: 1049,
     passed: false,
     stopReason: 'maxTurns',
@@ -99,16 +99,16 @@ const BASELINE_REPORT = [
     decisions: 290,
   },
   {
-    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
-    variantId: 'arvn-evolved',
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.ts',
+    variantId: 'arvn-baseline',
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
     decisions: 285,
   },
   {
-    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
-    variantId: 'arvn-evolved',
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.ts',
+    variantId: 'arvn-baseline',
     seed: 1049,
     passed: true,
     stopReason: 'terminal',
@@ -131,7 +131,7 @@ describe('emit-policy-profile-quality-report script', () => {
     const annotations = buildPolicyProfileQualityAnnotations(SAMPLE_REPORT);
 
     assert.deepEqual(annotations, [
-      '::warning file=/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts::POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-evolved seed=1049 stopReason=maxTurns decisions=300',
+      '::warning file=/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.ts::POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-baseline seed=1049 stopReason=maxTurns decisions=300',
     ]);
   });
 
@@ -144,7 +144,7 @@ describe('emit-policy-profile-quality-report script', () => {
     assert.match(comment, /\| all-baselines \| 2\/2 -> 2\/2 \| {2}\|/u);
     assert.match(
       comment,
-      /\| arvn-evolved \| 2\/2 -> 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, decisions=300\) \|/u,
+      /\| arvn-baseline \| 2\/2 -> 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, decisions=300\) \|/u,
     );
     assert.match(comment, /Determinism corpus is the blocking gate\./u);
   });
@@ -216,7 +216,7 @@ describe('emit-policy-profile-quality-report script', () => {
     );
 
     assert.equal(exitCode, 0);
-    assert.match(stdout, /POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-evolved seed=1049/u);
+    assert.match(stdout, /POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-baseline seed=1049/u);
     assert.match(stdout, /2\/2 -> 1\/2/u);
     assert.match(stdout, /## Policy-Profile Quality Report/u);
     assert.equal(postedComment.includes('<!-- policy-profile-quality-report -->'), true);

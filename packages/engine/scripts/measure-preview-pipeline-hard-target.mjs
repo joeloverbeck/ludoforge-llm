@@ -14,7 +14,7 @@ const CORPUS = {
   playerCount: 4,
   evolvedSeat: 'arvn',
   sampleSize: 50,
-  seatProfiles: ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
+  seatProfiles: ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 };
 
 const [
@@ -50,7 +50,7 @@ const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
 
 function measurePreviewPipeline(validatedDef) {
   const runtime = createGameDefRuntime(validatedDef);
-  const arvnAgent = new SamplingPolicyAgent('arvn-evolved');
+  const arvnAgent = new SamplingPolicyAgent('arvn-baseline');
   const agents = [
     new PolicyAgent({ profileId: 'us-baseline', traceLevel: 'summary' }),
     arvnAgent,

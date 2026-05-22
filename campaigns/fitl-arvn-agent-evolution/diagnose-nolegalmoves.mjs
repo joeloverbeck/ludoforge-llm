@@ -4,7 +4,11 @@
  * microturn simulator contract and dumping the pre-terminal state plus the
  * final player decision that led into the failure.
  *
- * Usage: node diagnose-nolegalmoves.mjs --seed 1000 [--max-turns 200] [--evolved-seat arvn]
+ * Usage: node diagnose-nolegalmoves.mjs --seed 1000 [--max-turns 200]
+ *
+ * Seat profiles are resolved from the game def's authoritative agent
+ * bindings, so the diagnostic always reproduces the production binding and
+ * cannot drift from it (e.g. when an evolved profile is promoted).
  */
 
 import { existsSync } from 'node:fs';
@@ -28,7 +32,6 @@ const getArg = (n, d) => {
 };
 const SEED = Number(getArg('seed', '1000'));
 const MAX_TURNS = Number(getArg('max-turns', '200'));
-const EVOLVED_SEAT = getArg('evolved-seat', 'arvn');
 const PLAYER_COUNT = 4;
 
 const { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } =
@@ -53,9 +56,14 @@ const def = assertValidatedGameDef(staged.compilation.result.gameDef);
 const runtime = createGameDefRuntime(def);
 
 const seats = def.seats ?? [];
+const bindingsBySeat = def.agents?.bindingsBySeat ?? {};
 const seatProfiles = seats.map((s) => {
-  const sid = s.id.toLowerCase();
-  return sid === EVOLVED_SEAT.toLowerCase() ? `${sid}-evolved` : `${sid}-baseline`;
+  const profileId = bindingsBySeat[s.id];
+  if (profileId === undefined) {
+    console.error(`No agent binding for seat ${s.id}`);
+    process.exit(1);
+  }
+  return profileId;
 });
 const seatNames = seats.map((s) => s.id.toLowerCase());
 const agents = seatProfiles.map((pid) => new PolicyAgent({ profileId: pid, traceLevel: 'summary' }));

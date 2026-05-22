@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @profile-variant: arvn-evolved
+// @profile-variant: arvn-baseline
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +33,7 @@ describe('Spec 188 ARVN US rival-risk flip witness', () => {
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
-      variantId: 'arvn-evolved',
+      variantId: 'arvn-baseline',
       seed: SEED,
       passed,
       stopReason: selected.posture.status,

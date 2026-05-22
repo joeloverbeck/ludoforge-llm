@@ -43,7 +43,7 @@ describe('test class marker profile-variant helpers', () => {
   it('rejects a policy-profile-quality convergence witness that declares both @witness and @profile-variant', () => {
     const source = [
       '// @test-class: convergence-witness',
-      '// @profile-variant: arvn-evolved',
+      '// @profile-variant: arvn-baseline',
       '// @witness: fitl-canary',
       'export {};',
       '',
@@ -59,7 +59,7 @@ describe('test class marker profile-variant helpers', () => {
   it('rejects an integration convergence witness that declares @profile-variant instead of @witness', () => {
     const source = [
       '// @test-class: convergence-witness',
-      '// @profile-variant: arvn-evolved',
+      '// @profile-variant: arvn-baseline',
       'export {};',
       '',
     ].join('\n');

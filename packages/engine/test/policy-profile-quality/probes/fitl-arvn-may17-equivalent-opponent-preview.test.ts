@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @profile-variant: arvn-evolved
+// @profile-variant: arvn-baseline
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -25,7 +25,7 @@ const arvnReplayWindows = readFixtureJson<readonly ProbeStateSample[]>(
 const arvnOpponentPreviewProbe = defineProbe({
   id: 'fitl-arvn-may17-equivalent-opponent-preview',
   game: 'fire-in-the-lake',
-  profile: 'arvn-evolved',
+  profile: 'arvn-baseline',
   seat: 'ARVN',
   stateBinding: {
     scenario: FITL_SCENARIO,
@@ -39,7 +39,7 @@ const arvnOpponentPreviewProbe = defineProbe({
   },
   assertions: [],
   severity: 'profileQuality',
-  tags: ['arvn-evolved', 'grant-flow', 'spec-185'],
+  tags: ['arvn-baseline', 'grant-flow', 'spec-185'],
 });
 
 const loadFitlGame = (): ProbeLoadedGame => {

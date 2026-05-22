@@ -8,8 +8,8 @@ import type { PolicyEvaluationMetadata } from '../../../src/agents/policy-eval.j
 function createPreviewMetadata(): PolicyEvaluationMetadata {
   return {
     seatId: 'arvn',
-    requestedProfileId: 'arvn-evolved',
-    profileId: 'arvn-evolved',
+    requestedProfileId: 'arvn-baseline',
+    profileId: 'arvn-baseline',
     profileFingerprint: 'preview-diagnostics',
     canonicalOrder: ['govern', 'march', 'train'],
     candidates: [

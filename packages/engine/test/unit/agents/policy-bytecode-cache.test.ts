@@ -12,6 +12,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  buildEncodedState,
   buildEncodedStateLayout,
   createGameDefRuntime,
   forkGameDefRuntimeForRun,
@@ -118,8 +119,9 @@ function createContext(
       catalog: def.agents as AgentPolicyCatalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime,
-      ...(input.encodedStateLayout === undefined ? {} : { encodedStateLayout: input.encodedStateLayout }),
+      cacheBinding: input.encodedStateLayout === undefined
+        ? { kind: 'runtime', runtime }
+        : { kind: 'runtime', runtime, preEncoded: { layout: input.encodedStateLayout, encoded: buildEncodedState(state, input.encodedStateLayout) } },
     },
     [],
   );

@@ -80,7 +80,7 @@ function hasFlag(name) {
 const SEED_COUNT = Number(getArg('seeds', '3'));
 const PLAYER_COUNT = Number(getArg('players', '4'));
 const EVOLVED_SEAT = getArg('evolved-seat', 'arvn');
-const EVOLVED_PROFILE = getArg('evolved-profile', `${EVOLVED_SEAT.toLowerCase()}-evolved`);
+const EVOLVED_PROFILE = getArg('evolved-profile', `${EVOLVED_SEAT.toLowerCase()}-baseline`);
 const MAX_TURNS = Number(getArg('max-turns', '500'));
 const CONCURRENCY = Number(getArg('concurrency', '1'));
 const TRACE_DEFAULT_ARG = getArg('trace-default', null);
@@ -261,7 +261,7 @@ if (evolvedPlayerIndex < 0) {
 
 process.stderr.write(`Evolved seat: ${EVOLVED_SEAT} (player index ${evolvedPlayerIndex})\n`);
 
-// Build seat-to-profile mapping: evolved seat uses arvn-evolved, others use their baselines
+// Build seat-to-profile mapping: target seat uses the selected profile, others use their baselines.
 const seatProfiles = (def.seats ?? []).map((seat) => {
   if (seat.id.toLowerCase() === EVOLVED_SEAT.toLowerCase()) {
     return EVOLVED_PROFILE;

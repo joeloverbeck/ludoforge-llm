@@ -9,7 +9,7 @@ const arvnReplayWindows = readFixtureJson<readonly ProbeStateSample[]>(
 export const arvnActionDistributionNotDominated = defineProbe({
   id: 'arvn-action-distribution-not-dominated',
   game: 'fire-in-the-lake',
-  profile: 'arvn-evolved',
+  profile: 'arvn-baseline',
   seat: 'ARVN',
   stateBinding: {
     scenario: 'fitl-default',
@@ -35,7 +35,7 @@ export const arvnActionDistributionNotDominated = defineProbe({
     },
   ],
   severity: 'profileQuality',
-  tags: ['arvn-evolved', 'action-distribution', 'spec-181-phase-0'],
+  tags: ['arvn-baseline', 'action-distribution', 'spec-181-phase-0'],
 });
 
 // Calibration sources:

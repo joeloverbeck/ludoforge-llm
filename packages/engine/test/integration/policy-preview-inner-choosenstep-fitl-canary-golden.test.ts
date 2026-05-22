@@ -35,7 +35,7 @@ interface ChooseNStepFitlCanaryFixture {
 }
 
 const PROFILE_ID = 'policy-preview-inner-choosenstep-fitl-canary';
-const BASE_PROFILE_ID = 'arvn-evolved';
+const BASE_PROFILE_ID = 'arvn-baseline';
 const CONSIDERATION_ID = 'preferOptionProjectedMargin';
 const PREVIEW_REF_ID = 'preview.option.delta.victory.currentMargin.self';
 const PROJECTED_MARGIN_WEIGHT = 300;

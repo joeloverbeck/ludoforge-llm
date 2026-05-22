@@ -56,33 +56,33 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 | arvn-baseline | `considerations.preferProjectedSelfMargin.weight` | A | Tunable scalar weight survives unchanged. |
 | arvn-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
 | arvn-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
-| arvn-evolved | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
-| arvn-evolved | `candidateAggregates.maxMarginScore.of` | C | Depends on preview-derived projected margin candidates; no 1:1 microturn equivalent once candidate-set phase preview retires. |
-| arvn-evolved | `candidateAggregates.minMarginScore.of` | C | Depends on preview-derived projected margin candidates; no 1:1 microturn equivalent once candidate-set phase preview retires. |
-| arvn-evolved | `candidateFeatures.projectedSelfMargin.expr` | C | Depends on `preview.victory.currentMargin.self` from the retiring exact-world/two-phase preview surface. Replace by re-evolved microturn scoring rather than a literal port. |
-| arvn-evolved | `considerations.governWhenPatronageLow.value` | A | `candidate.tag.govern` remains direct action-selection metadata. |
-| arvn-evolved | `considerations.governWhenPatronageLow.when` | A | Reads current patronage only; no rewrite needed. |
-| arvn-evolved | `considerations.preferGovernWeighted.value` | A | `candidate.tag.govern` remains direct action-selection metadata. |
-| arvn-evolved | `considerations.preferGovernWeighted.weight` | A | Tunable scalar weight survives unchanged. |
-| arvn-evolved | `considerations.preferPacifyPopulousZones.value` | B | `candidate.param.targetSpace` rewrites to the bound target-space value in `microturnContext.accumulatedBindings` or current-option metadata. |
-| arvn-evolved | `considerations.preferPacifyPopulousZones.when` | A | `candidate.actionId` remains direct action-selection metadata. |
-| arvn-evolved | `considerations.preferPopulousTargets.value` | B | `option.value` maps to the currently published microturn option value/metadata. |
-| arvn-evolved | `considerations.preferPopulousTargets.when` | B | `decision.type` and `decision.name` rewrite to `microturnContext.decisionKind` and `microturnContext.decisionKey`; target kind comes from current option metadata. |
-| arvn-evolved | `considerations.preferProjectedSelfMargin.value` | C | Inherits the retired preview-based margin signal from `feature.projectedSelfMargin`; treat as a re-evolution input. |
-| arvn-evolved | `considerations.preferProjectedSelfMargin.weight` | A | Tunable scalar weight survives unchanged. |
-| arvn-evolved | `considerations.preferRedeployNearEnemies.value` | B | `option.value` rewrites to current-option metadata for the live `chooseOne/chooseNStep` microturn. |
-| arvn-evolved | `considerations.preferRedeployNearEnemies.when` | B | `decision.name` rewrites to `microturnContext.decisionKey`. |
-| arvn-evolved | `considerations.preferRedeployToPopulousZones.value` | B | `option.value` rewrites to current-option metadata for the live `chooseOne/chooseNStep` microturn. |
-| arvn-evolved | `considerations.preferRedeployToPopulousZones.when` | B | `decision.name` rewrites to `microturnContext.decisionKey`. |
-| arvn-evolved | `considerations.preferStrongNormalizedMargin.value` | C | Normalizes preview-derived projected margins across the candidate set; this is the clearest two-phase-only scoring pattern in the live repo. |
-| arvn-evolved | `considerations.preferTrainWeighted.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
-| arvn-evolved | `considerations.preferTrainWeighted.weight` | A | Tunable scalar weight survives unchanged. |
-| arvn-evolved | `considerations.trainWhenControlLow.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
-| arvn-evolved | `considerations.trainWhenControlLow.when` | A | Reads current controlled-population metric only; no rewrite needed. |
-| arvn-evolved | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
-| arvn-evolved | `stateFeatures.coinControlPop.expr` | A | Reads current metric only; no rewrite needed. |
-| arvn-evolved | `stateFeatures.patronage.expr` | A | Reads current patronage only; no rewrite needed. |
-| arvn-evolved | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
+| arvn-baseline | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
+| arvn-baseline | `candidateAggregates.maxMarginScore.of` | C | Depends on preview-derived projected margin candidates; no 1:1 microturn equivalent once candidate-set phase preview retires. |
+| arvn-baseline | `candidateAggregates.minMarginScore.of` | C | Depends on preview-derived projected margin candidates; no 1:1 microturn equivalent once candidate-set phase preview retires. |
+| arvn-baseline | `candidateFeatures.projectedSelfMargin.expr` | C | Depends on `preview.victory.currentMargin.self` from the retiring exact-world/two-phase preview surface. Replace by re-evolved microturn scoring rather than a literal port. |
+| arvn-baseline | `considerations.governWhenPatronageLow.value` | A | `candidate.tag.govern` remains direct action-selection metadata. |
+| arvn-baseline | `considerations.governWhenPatronageLow.when` | A | Reads current patronage only; no rewrite needed. |
+| arvn-baseline | `considerations.preferGovernWeighted.value` | A | `candidate.tag.govern` remains direct action-selection metadata. |
+| arvn-baseline | `considerations.preferGovernWeighted.weight` | A | Tunable scalar weight survives unchanged. |
+| arvn-baseline | `considerations.preferPacifyPopulousZones.value` | B | `candidate.param.targetSpace` rewrites to the bound target-space value in `microturnContext.accumulatedBindings` or current-option metadata. |
+| arvn-baseline | `considerations.preferPacifyPopulousZones.when` | A | `candidate.actionId` remains direct action-selection metadata. |
+| arvn-baseline | `considerations.preferPopulousTargets.value` | B | `option.value` maps to the currently published microturn option value/metadata. |
+| arvn-baseline | `considerations.preferPopulousTargets.when` | B | `decision.type` and `decision.name` rewrite to `microturnContext.decisionKind` and `microturnContext.decisionKey`; target kind comes from current option metadata. |
+| arvn-baseline | `considerations.preferProjectedSelfMargin.value` | C | Inherits the retired preview-based margin signal from `feature.projectedSelfMargin`; treat as a re-evolution input. |
+| arvn-baseline | `considerations.preferProjectedSelfMargin.weight` | A | Tunable scalar weight survives unchanged. |
+| arvn-baseline | `considerations.preferRedeployNearEnemies.value` | B | `option.value` rewrites to current-option metadata for the live `chooseOne/chooseNStep` microturn. |
+| arvn-baseline | `considerations.preferRedeployNearEnemies.when` | B | `decision.name` rewrites to `microturnContext.decisionKey`. |
+| arvn-baseline | `considerations.preferRedeployToPopulousZones.value` | B | `option.value` rewrites to current-option metadata for the live `chooseOne/chooseNStep` microturn. |
+| arvn-baseline | `considerations.preferRedeployToPopulousZones.when` | B | `decision.name` rewrites to `microturnContext.decisionKey`. |
+| arvn-baseline | `considerations.preferStrongNormalizedMargin.value` | C | Normalizes preview-derived projected margins across the candidate set; this is the clearest two-phase-only scoring pattern in the live repo. |
+| arvn-baseline | `considerations.preferTrainWeighted.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
+| arvn-baseline | `considerations.preferTrainWeighted.weight` | A | Tunable scalar weight survives unchanged. |
+| arvn-baseline | `considerations.trainWhenControlLow.value` | A | `candidate.tag.train` remains direct action-selection metadata. |
+| arvn-baseline | `considerations.trainWhenControlLow.when` | A | Reads current controlled-population metric only; no rewrite needed. |
+| arvn-baseline | `guardrails.dropPassWhenOtherMovesExist.when` | A | Current-frontier pruning remains valid once the frontier is `microturn.legalActions`. |
+| arvn-baseline | `stateFeatures.coinControlPop.expr` | A | Reads current metric only; no rewrite needed. |
+| arvn-baseline | `stateFeatures.patronage.expr` | A | Reads current patronage only; no rewrite needed. |
+| arvn-baseline | `stateFeatures.selfMargin.expr` | A | Reads current victory margin only; no rewrite needed. |
 | nva-baseline | `candidateAggregates.hasNonPassAlternative.of` | A | Aggregate stays on the current published action frontier; no semantic rewrite needed. |
 | nva-baseline | `candidateFeatures.projectedSelfMargin.expr` | C | Depends on `preview.victory.currentMargin.self` from the retiring exact-world/two-phase preview surface. Replace by re-evolved microturn scoring rather than a literal port. |
 | nva-baseline | `considerations.preferAttackAction.value` | A | `candidate.tag.attack` remains direct action-selection metadata. |
@@ -128,6 +128,6 @@ Ticket `140MICRODECPRO-009` remains in scope. Category `C` is non-zero in the li
 ## Migration Readout
 
 - FITL `us-baseline` and `nva-baseline` are mostly stable action-selection profiles, but both rely on the preview-based `projectedSelfMargin` feature and therefore still carry Category `C` rows.
-- FITL `arvn-evolved` is the widest migration surface. Its redeploy and target-space rules convert mechanically, but its normalized preview margin logic remains Category `C`.
+- FITL `arvn-baseline` is the widest migration surface. Its redeploy and target-space rules convert mechanically, but its normalized preview margin logic remains Category `C`.
 - FITL `vc-baseline` has the heaviest Category `C` concentration because it combines preview-derived margin normalization with preview-derived capability deltas.
 - Texas Hold'em is the expected easy case from the spec. Its only Category `B` surface is raise-size binding (`candidate.param.raiseAmount`), and it has zero Category `C` rows.

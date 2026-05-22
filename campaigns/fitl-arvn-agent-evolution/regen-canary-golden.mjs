@@ -3,11 +3,11 @@
  * Regenerate the `policy-preview-inner-fitl-canary` golden trace fixture.
  *
  * The `policy-preview-inner-fitl-canary` diagnostic profile (`94-diagnostic-agents.md`)
- * declares `extends: arvn-evolved`, so it inherits every consideration the
- * `fitl-arvn-agent-evolution` campaign adds to `arvn-evolved`. Move-scope
+ * declares `extends: arvn-baseline`, so it inherits every consideration the
+ * `fitl-arvn-agent-evolution` campaign adds to `arvn-baseline`. Move-scope
  * additions don't touch its microturn golden trace, but microturn-scope
  * additions do — making the golden a profile-coupled, derived artifact of the
- * (legitimately evolving) `arvn-evolved` profile.
+ * (legitimately evolving) `arvn-baseline` profile.
  *
  * This script mirrors `capturePolicyPreviewInnerFitlCanary` /
  * `withDiagnosticInnerPreviewProfile` from

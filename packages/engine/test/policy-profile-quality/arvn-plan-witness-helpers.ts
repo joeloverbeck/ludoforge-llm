@@ -15,7 +15,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_PLAYER_COUNT = 4;
-const ARVN_PROFILE_ID = 'arvn-evolved';
+const ARVN_PROFILE_ID = 'arvn-baseline';
 
 export interface ArvnPlanFixture {
   readonly def: GameDef;
@@ -31,7 +31,7 @@ export const loadArvnPlanFixture = (seed: number): ArvnPlanFixture => {
   const def = assertValidatedGameDef(compiled.gameDef);
   const profile = def.agents?.profiles[ARVN_PROFILE_ID];
   assert.ok(def.agents, 'expected FITL production agents');
-  assert.ok(profile, 'expected arvn-evolved profile');
+  assert.ok(profile, 'expected arvn-baseline profile');
 
   return {
     def,

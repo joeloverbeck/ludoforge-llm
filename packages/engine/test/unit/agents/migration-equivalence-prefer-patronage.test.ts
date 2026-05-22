@@ -51,8 +51,8 @@ const microturnScopeRewrite = {
 function withPreferPatronageMode(def: GameDef): GameDef {
   const agents = def.agents;
   assert.ok(agents?.compiled, 'expected FITL production agents');
-  const profile = agents.profiles['arvn-evolved'];
-  assert.ok(profile, 'expected arvn-evolved profile');
+  const profile = agents.profiles['arvn-baseline'];
+  assert.ok(profile, 'expected arvn-baseline profile');
 
   const updatedAgents: AgentPolicyCatalog = {
     ...agents,
@@ -83,7 +83,7 @@ function withPreferPatronageMode(def: GameDef): GameDef {
     },
     profiles: {
       ...agents.profiles,
-      'arvn-evolved': {
+      'arvn-baseline': {
         ...profile,
         use: {
           ...profile.use,
@@ -135,7 +135,7 @@ describe('preferPatronageMode migration equivalence', () => {
     const def = withPreferPatronageMode(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
     const fixtureDecisions = readDecisionSequence();
-    const agent = new PolicyAgent({ profileId: 'arvn-evolved', traceLevel: 'summary' });
+    const agent = new PolicyAgent({ profileId: 'arvn-baseline', traceLevel: 'summary' });
     let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
     const expected = expectedGovernModes(fixtureDecisions);
     const selected: string[] = [];

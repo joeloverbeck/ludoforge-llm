@@ -35,10 +35,10 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 // Frozen consideration set for this canary test.
 //
 // Earlier revisions of this test spread `profile.use.considerations` and
-// `profile.plan.considerations` from the production `arvn-evolved` profile and
+// `profile.plan.considerations` from the production `arvn-baseline` profile and
 // appended `preferPatronageMode`. That coupled the test's pass/fail to the
 // evolving production consideration list — any improve-loop campaign that
-// added or removed a consideration on `arvn-evolved` shifted the agent's
+// added or removed a consideration on `arvn-baseline` shifted the agent's
 // trajectory on this fixed FITL seed and broke the canary without indicating
 // a real regression. The invariant under test is "policy-guided completion
 // produces a differentiating preview decision when `preferPatronageMode` is
@@ -52,8 +52,8 @@ const POLICY_GUIDED_CANARY_CONSIDERATIONS: readonly string[] = [
 function withPolicyGuidedPreferPatronageMode(def: GameDef): GameDef {
   const agents = def.agents;
   assert.ok(agents?.compiled, 'expected FITL production agents');
-  const profile = agents.profiles['arvn-evolved'];
-  assert.ok(profile, 'expected arvn-evolved profile');
+  const profile = agents.profiles['arvn-baseline'];
+  assert.ok(profile, 'expected arvn-baseline profile');
 
   const updatedAgents: AgentPolicyCatalog = {
     ...agents,
@@ -84,7 +84,7 @@ function withPolicyGuidedPreferPatronageMode(def: GameDef): GameDef {
     },
     profiles: {
       ...agents.profiles,
-      'arvn-evolved': {
+      'arvn-baseline': {
         ...profile,
         preview: {
           ...profile.preview,
@@ -114,7 +114,7 @@ describe('policy-guided FITL canary golden', () => {
     const def = withPolicyGuidedPreferPatronageMode(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
     const fixtureDecisions = readDecisionSequence();
-    const agent = new PolicyAgent({ profileId: 'arvn-evolved', traceLevel: 'verbose' });
+    const agent = new PolicyAgent({ profileId: 'arvn-baseline', traceLevel: 'verbose' });
     let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
 
     for (const fixtureDecision of fixtureDecisions.slice(0, 6)) {

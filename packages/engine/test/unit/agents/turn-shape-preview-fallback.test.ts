@@ -35,6 +35,7 @@ function contextFor(turnShape: TurnShapeEvaluatorDef): PolicyEvaluationContext {
     catalog: agents,
     parameterValues: {},
     trustedMoveIndex: new Map(),
+    cacheBinding: { kind: 'isolated' },
     previewOption: {
       resolvedRefs: new Map(),
       projectedState: {

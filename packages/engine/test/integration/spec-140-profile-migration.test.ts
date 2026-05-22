@@ -44,7 +44,7 @@ describe('Spec 140 profile migration correctness', () => {
     }
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
-    const agents = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'].map(
+    const agents = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'].map(
       (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
     );
 

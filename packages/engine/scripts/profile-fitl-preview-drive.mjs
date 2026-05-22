@@ -77,7 +77,7 @@ const config = {
 if (config.caseName === 'arvn-cubes-deep') {
   config.seed = flagPositiveInt('seed', 1013);
   config.maxTurns = flagPositiveInt('maxTurns', 200);
-  config.profileId = flagValue('profileId', 'arvn-evolved');
+  config.profileId = flagValue('profileId', 'arvn-baseline');
 } else if (config.caseName !== 'default') {
   process.stderr.write(`ERROR: unknown --case "${config.caseName}".\n`);
   process.exit(1);

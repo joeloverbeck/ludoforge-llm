@@ -8,6 +8,7 @@ import {
   resolvePolicyEncodedState,
 } from '../../../src/agents/policy-encoded-state-cache.js';
 import { PolicyEvaluationContext } from '../../../src/agents/policy-evaluation-core.js';
+import { getPolicyEncodedStateLayout } from '../../../src/agents/policy-eval.js';
 import {
   asActionId,
   asPhaseId,
@@ -119,8 +120,9 @@ function createContext(
       catalog: def.agents as AgentPolicyCatalog,
       parameterValues: {},
       trustedMoveIndex: new Map(),
-      runtime,
-      ...(input.encodedState === undefined ? {} : { encodedState: input.encodedState }),
+      cacheBinding: input.encodedState === undefined
+        ? { kind: 'runtime', runtime }
+        : { kind: 'runtime', runtime, preEncoded: { layout: getPolicyEncodedStateLayout(def), encoded: input.encodedState } },
     },
     [],
   );

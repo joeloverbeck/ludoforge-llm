@@ -13,7 +13,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 interface OutcomeParityFixture {
   readonly seed: number;
   readonly maxTurns: number;
-  readonly profileId: 'arvn-evolved';
+  readonly profileId: 'arvn-baseline';
   readonly decisions: readonly OutcomeParityDecision[];
 }
 
@@ -30,7 +30,7 @@ interface OutcomeParityDecision {
 
 const WITNESS_SEEDS = [1005, 1011, 1008, 1013, 1009] as const;
 const PLAYER_COUNT = 4;
-const PROFILE_ID = 'arvn-evolved';
+const PROFILE_ID = 'arvn-baseline';
 const WITNESS_MAX_TURNS = 1;
 const { compiled: PRODUCTION_COMPILE_RESULT } = compileProductionSpec();
 const PRODUCTION_GAME_DEF = assertValidatedGameDef(PRODUCTION_COMPILE_RESULT.gameDef);
@@ -110,7 +110,7 @@ const captureOutcomeParity = (seed: number, maxTurns: number): OutcomeParityFixt
         scoreContributionsByOption: collectCandidates(agentDecision),
       };
     });
-  assert.ok(decisions.length > 0, `seed ${seed} must exercise arvn-evolved continuedDeepening chooseOne decisions`);
+  assert.ok(decisions.length > 0, `seed ${seed} must exercise arvn-baseline continuedDeepening chooseOne decisions`);
   return normalize({ seed, maxTurns, profileId: PROFILE_ID, decisions });
 };
 

@@ -1,17 +1,18 @@
 {
   "originating_spec": "specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/188FITLFOUFAC-009.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "69226ec463c1902c2231078e9e86b40a2a95db39",
+  "last_ticket": "tickets/188FITLFOUFAC-010.md",
+  "last_result": "retargeted_to_prerequisite",
+  "last_work_commit": "e53266691e3f1d79b393ee02ce51ebf5e4b93b76",
   "last_state_commit": "self",
-  "next_target": "tickets/188FITLFOUFAC-010.md",
+  "next_target": "tickets/188FITLFOUFAC-010A.md",
   "queue": [
+    "tickets/188FITLFOUFAC-010A.md",
     "tickets/188FITLFOUFAC-010.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "post-state-commit repo clean; 009 archived and 010 is next",
+  "owned_dirty_summary": "retargeted 010 to generic prerequisite 010A after removing exploratory VC implementation diff",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

@@ -276,36 +276,6 @@ const evaluationCandidates = (def: GameDef, legalMoves: readonly Move[]): Policy
   unknownCandidateParamRefs: new Map(),
 }));
 
-const isWasmScoreExprSupported = (expr: CompiledPolicyExpr | undefined): boolean => {
-  if (expr === undefined) return true;
-  switch (expr.kind) {
-    case 'literal':
-    case 'param':
-    case 'globalTokenAgg':
-    case 'globalZoneAgg':
-    case 'zoneTokenAgg':
-    case 'zoneProp':
-      return true;
-    case 'op':
-      return expr.args.every(isWasmScoreExprSupported);
-    case 'ref':
-      return expr.ref.kind === 'currentSurface'
-        || expr.ref.kind === 'candidateIntrinsic'
-        || expr.ref.kind === 'candidateParam'
-        || expr.ref.kind === 'candidateTag'
-        || expr.ref.kind === 'phaseIntrinsic'
-        || expr.ref.kind === 'scheduleDistance'
-        || (expr.ref.kind === 'library' && (
-          expr.ref.refKind === 'stateFeature'
-          || expr.ref.refKind === 'candidateFeature'
-          || expr.ref.refKind === 'aggregate'
-        ));
-    case 'adjacentTokenAgg':
-    case 'seatAgg':
-      return false;
-  }
-};
-
 const encodeWasmPrecomputedPolicyValue = (value: unknown): number | boolean | undefined => {
   if (value === undefined || typeof value === 'boolean') return value;
   if (typeof value === 'number' && Number.isSafeInteger(value)) return value;
@@ -325,12 +295,6 @@ const encodeWasmPreviewOutcome = (
       return 'unresolved';
   }
 };
-
-const isWasmScoreConsiderationSupported = (consideration: CompiledPolicyConsideration): boolean =>
-  consideration.costClass !== 'preview'
-    && isWasmScoreExprSupported(consideration.when)
-    && isWasmScoreExprSupported(consideration.weight)
-    && isWasmScoreExprSupported(consideration.value);
 
 const compiledConsiderationEntries = (
   def: GameDef,
@@ -613,7 +577,7 @@ describe('policy bytecode equivalence harness', () => {
     assert.ok(unsupportedRows > 0, 'corpus should still include unsupported batch rows for fail-closed handoff coverage.');
   });
 
-  it('compares candidate-dependent WASM score rows against the TypeScript reference for supported move considerations', { timeout: 120_000 }, async () => {
+  it('routes every baseline profile full consideration set through WASM score rows with integer coverage', { timeout: 120_000 }, async () => {
     const wasm = await loadPolicyWasmRuntime();
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(wasm);
     let supportedProfiles = 0;
@@ -649,34 +613,14 @@ describe('policy bytecode equivalence harness', () => {
             throw new Error(`full-profile WASM score rows unexpectedly failed closed: ${allRows.reason}`);
           }
           assert.equal(allRows.rows.length, candidates.length, `seed ${seed} profile ${profileId} full-profile WASM rows should cover every candidate`);
-          const considerations = compiledConsiderationEntries(def, profile.use.considerations)
-            .filter((entry) => entry.consideration.costClass !== 'preview')
-            .filter((entry) => isWasmScoreConsiderationSupported(entry.consideration));
-          assert.ok(considerations.length > 0, `profile ${profileId} should have supported move considerations`);
-          const wasmRows = evaluateWasmMoveConsiderationScoreRows(wasm, {
-            def,
-            encoded,
-            context: {
-              def,
-              layout,
-              state: corpusState.state,
-              playerId: Number(corpusState.state.activePlayer),
-            },
-            parameterValues: profile.params,
-            considerations,
-            candidates,
-            precomputedStateFeatures: precomputed.stateFeatures,
-            precomputedCandidateFeatures: precomputed.candidateFeatures,
-            precomputedPreviewCandidateFeatures: precomputed.previewCandidateFeatures,
-            precomputedAggregates: precomputed.aggregates,
-          });
-          if (wasmRows.kind !== 'supported') {
-            throw new Error(`supported consideration subset unexpectedly failed closed: ${wasmRows.reason}`);
-          }
-          assert.equal(wasmRows.rows.length, candidates.length, `seed ${seed} profile ${profileId} supported WASM rows should cover every candidate`);
+          // The full consideration set — including preview-class considerations
+          // backed by precomputed preview-candidate features — must be WASM
+          // scoreable with integer scores. A profile may legitimately be
+          // preview-only (no non-preview consideration), so the invariant is
+          // full-set scoreability, not the existence of a non-preview subset.
           assert.ok(
-            wasmRows.rows.every((row) => Number.isInteger(row.score)),
-            `seed ${seed} profile ${profileId} supported WASM rows should produce integer scores`,
+            allRows.rows.every((row) => Number.isInteger(row.score)),
+            `seed ${seed} profile ${profileId} full-profile WASM rows should produce integer scores`,
           );
           supportedProfiles += 1;
         }

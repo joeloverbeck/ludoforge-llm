@@ -2,10 +2,14 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
-const STATE_PATH = '.codex/run-state/implement-spec-tickets.json';
+const DEFAULT_STATE_PATH = '.codex/run-state/implement-spec-tickets.json';
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const VALID_DIRTY_STATE =
   /^(clean|unrelated_untracked: .+|unrelated_dirty: .+|owned_dirty: .+|mixed_dirty: owned=.+; unrelated=.+)$/;
+
+const args = process.argv.slice(2);
+const allowOnlyStateFileDirty = args.includes('--allow-only-state-file-dirty');
+const statePath = args.find((arg) => !arg.startsWith('--')) ?? DEFAULT_STATE_PATH;
 
 function fail(message) {
   console.error(`state validation failed: ${message}`);
@@ -49,7 +53,7 @@ function verifyCommit(value, field) {
   }
 }
 
-const state = readJson(STATE_PATH);
+const state = readJson(statePath);
 
 if (state.last_work_commit === 'self') {
   fail('last_work_commit cannot be self');
@@ -92,10 +96,13 @@ if (typeof state.dirty_state !== 'string' || !VALID_DIRTY_STATE.test(state.dirty
 }
 
 const status = git(['status', '--short']);
+const statusLines = status === '' ? [] : status.split('\n');
+const onlyStateFileDirty = statusLines.length > 0 && statusLines.every((line) => line.slice(3) === statePath);
+
 if (status === '' && state.dirty_state !== 'clean') {
   fail(`dirty_state should be clean when git status is clean: ${state.dirty_state}`);
 }
-if (status !== '' && state.dirty_state === 'clean') {
+if (status !== '' && state.dirty_state === 'clean' && !(allowOnlyStateFileDirty && onlyStateFileDirty)) {
   fail('dirty_state cannot be clean when git status has entries');
 }
 

@@ -113,13 +113,14 @@ Compact required-block ledger for recovered or late-stage iterations. Copy this 
 7. Generated-artifact provenance when triggered, otherwise a reasoned `not_applicable`.
 8. Source-size ledger when triggered by `implement-ticket`, otherwise a reasoned `not_applicable`.
 9. Abandoned-probe cleanup proof when a retarget restores exploratory source/test/schema edits, otherwise a reasoned `not_applicable`.
-10. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
-11. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
-12. `Harness handoff:` before final response.
+10. Baseline worktree lifecycle when temporary worktrees or alternate checkouts were used for proof classification, otherwise a reasoned `not_applicable`.
+11. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
+12. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
+13. `Harness handoff:` before final response.
 
 Retarget-only visibility profile: when an iteration only inserts/selects a prerequisite and does not reach terminal ticket status, do not force terminal-ticket review blocks into misleading prose. Emit `Acceptance-to-command map: not_applicable: retarget-only prerequisite insertion`, `Post-ticket review: not_applicable: retarget-only prerequisite insertion`, and `post-ticket-review audit classification: not_applicable: no review/archive surface exercised`. Preserve the state/proof/handoff requirements, and when an exploratory probe was restored include an explicit `Abandoned-probe cleanup proof:` block naming the abandoned probe, restored/removed paths, and cleanup proof.
 
-The helper `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` prints the checkpoint/handoff scaffold and performs lightweight state/path checks. It is only a prompt and sanity check; it does not replace the child workflows or the required visible blocks.
+The helper `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` prints the checkpoint/handoff scaffold and performs lightweight state/path checks. Run it before every archive move, iteration commit, state-only commit, no-commit finalization, and final response after a context transition. It is a mandatory preflight for visibility and state/path sanity, but it does not replace child workflows, proof lanes, or the required visible blocks; fill in or emit the scaffold rows truthfully before taking the gated action.
 
 ## Intake
 
@@ -317,7 +318,7 @@ If any manual-recovery checklist item is unverified, stop before archival and ei
 
 Normal archive path hard rule: before any ticket archive move, if the ticket is not already archived and no visible `post-ticket-review child workflow:` invocation marker exists for the current review slice, run `$post-ticket-review <completed-ticket>` now. Do not use manual late recovery simply because manual review checks have already been performed; reserve it for already-crossed states where a normal child invocation would be misleading, duplicative, or impossible to observe cleanly.
 
-Before moving any ticket into `archive/tickets/`, perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
+Before moving any ticket into `archive/tickets/`, run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs`, then perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
 
 ```text
 Pre-archive gate:
@@ -401,14 +402,22 @@ Before committing:
      Before staging any generated artifact with `generator durability: ad hoc generator body recorded in: ...`, re-open the named durable ticket, report, or handoff section and verify it preserves the exact script body plus command needed to rerun the generator. A prose summary of copied logic is not enough. If the exact body is absent and no retained repo script exists, stop before commit and either record the exact body durably or run `1-3-1` for how to handle the opaque refresh.
      When the durable command is an inline shell generator, re-check that the recorded command is shell-safe. In particular, do not preserve a command that relies on unescaped JS template-literal backticks inside a double-quoted shell string; record the working shell-safe command or use a retained script instead.
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. Before launching a `tee` or log-wrapper command, verify that the destination is shell-writable in the current sandbox. Do not assume `.codex/run-state/` is a suitable shell log directory merely because the state file can be patched. Prefer `/tmp/<ticket>-<lane>.log` for transient logs unless the log is an intentionally committed report artifact. If `tee` or log setup fails after the lane starts, stop or interrupt the lane only with existing user approval or after `1-3-1`, then rerun with working capture. Do not cite the failed log path as durable evidence. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
-5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first. For a state-file-only follow-up commit where the only live dirty path is `.codex/run-state/implement-spec-tickets.json`, validate both views deliberately: the retained validator may reject a staged state that truthfully says post-commit `dirty_state: "clean"` because the state file is still dirty pre-commit; in that case, validate the staged state file's paths, queue, SHA reachability, and vocabulary manually, record the retained-validator transient-state limitation in the checkpoint, then revalidate live `git status --short` and the committed state after the state commit.
+   - When a clean-HEAD baseline, A/B comparison, or broad-lane causality check uses a temporary git worktree or alternate checkout, record a baseline worktree lifecycle ledger before staging:
+     - `path`
+     - `purpose`
+     - `created from`
+     - `commands/results used as evidence`
+     - `retention decision: retained for inspection | removed`
+     - `cleanup/status proof: git worktree list classification`
+     Do not silently leave registered temporary worktrees behind; either remove them when no longer needed or name why they are retained in the handoff.
+5. Validate `.codex/run-state/implement-spec-tickets.json` if it changed: live paths exist or are intentionally archived/final, queued paths exist, `last_work_commit` is a full reachable SHA or `"none"`, `last_state_commit` is a reachable SHA, the same SHA as `last_work_commit`, `"self"`, or `"none"`, and `dirty_state` matches the worktree classification. Prefer `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs` when available. `dirty_state` must use one of the documented forms (`"clean"`, `unrelated_untracked: ...`, `unrelated_dirty: ...`, `owned_dirty: ...`, or `mixed_dirty: ...`), unless this skill has been updated to document a new form first. For a state-file-only follow-up commit where the only live dirty path is `.codex/run-state/implement-spec-tickets.json` and the staged/final state truthfully says post-commit `dirty_state: "clean"`, validate with `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs --allow-only-state-file-dirty .codex/run-state/implement-spec-tickets.json`, then revalidate without that flag after the state commit.
 6. Stage only owned and approved paths.
 7. Re-run `git diff --cached --name-status` after staging and immediately before commit; confirm the staged set is scoped to the iteration.
 8. If `.codex/run-state/implement-spec-tickets.json` is staged, re-read the staged state before committing. It must describe the post-review terminal or blocked state represented by the commit being made, not stale intake or in-progress state for the ticket that just completed. If the state file still needs the finalized work commit SHA or otherwise describes a later handoff phase, unstage it and use the state-file-only follow-up commit pattern in `Persist State And Prepare Reset`.
 9. Emit the checkpoint below.
 10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
-Commit lock recipe: immediately before running `git commit`, print the required checkpoint below, then run `git diff --cached --name-status`, then run the commit. Treat this order as the normal path. The late-recovery rules are only for accidental misses discovered after the fact; if late recovery was needed, name that process miss in the final handoff or state-only handoff instead of implying the checkpoint was timely.
+Commit lock recipe: immediately before running `git commit`, run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs`, print the required checkpoint below, then run `git diff --cached --name-status`, then run the commit. Treat this order as the normal path. The late-recovery rules are only for accidental misses discovered after the fact; if late recovery was needed, name that process miss in the final handoff or state-only handoff instead of implying the checkpoint was timely.
 
 Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 
@@ -424,12 +433,13 @@ Required-visible-block checkpoint:
 - generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>
 - source-size ledger: <emitted | not_applicable: reason | blocked: reason>
 - abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>
+- baseline worktree lifecycle: <emitted | not_applicable: no temporary baseline worktree | blocked: reason>
 - dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
 - Harness handoff: <ready_to_emit | not_applicable: reason>
 ```
 
-Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, abandoned-probe cleanup proof when triggered, dependent classification when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
+Finalizer micro-checklist: immediately before any iteration commit, no-commit final response, or final response after a state-only commit, run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs` and verify these visible artifacts are present or explicitly recovered late: child `implement-ticket` audit block, `Acceptance-to-command map`, `Post-ticket review` block, `post-ticket-review` audit block when triggered, the `Required-visible-block checkpoint`, generated-artifact provenance when triggered, source-size ledger when triggered, abandoned-probe cleanup proof when triggered, baseline worktree lifecycle when triggered, dependent classification when triggered, final state-file validation, and the full `Harness handoff`. For any generated report staged or left as a durable proof artifact, the generated-artifact provenance must name `path`, `generation command`, `canonical inputs`, and the ticket/report/handoff location where that provenance is recorded. If any item is missing, emit the matching `late harness recovery checkpoint` before committing or finalizing.
 
 If a required child skill audit block is missing and there is no visible evidence that the audit actually ran in the current observable context, run the child audit before committing or finalizing. Do not treat a late checkpoint as a substitute for an unrun or unobservable `$skill-audit`. After running it, emit the compact child-audit block and apply, reject, or defer evidence-backed suggestions under the normal child-audit rules.
 
@@ -482,7 +492,7 @@ State-only commit checkpoint:
 - staged state file: <yes | blocked: reason>
 - recorded work commit: <full sha | none>
 - recorded state commit: <self | full sha | none>
-- transient validator limitation: <not_applicable | classified: reason>
+- state-only validator mode: <not_applicable | --allow-only-state-file-dirty used because only state file is dirty>
 - post-commit dirty-state expectation: <clean | unrelated_dirty/untracked paths | blocked: reason>
 - planned revalidation: <retained validator + git status | manual state checks + git status>
 ```
@@ -514,7 +524,7 @@ Use this compact state-file validation recipe whenever `.codex/run-state/impleme
 - verify `next_target`, `phase`, `in_progress_ticket`, `blocked`, and `dirty_state` match `git status --short`
 - if unrelated tracked or untracked paths remain intentionally unstaged, verify `dirty_state` and the handoff name them explicitly instead of claiming `clean`
 - prefer the retained validator at `.codex/skills/implement-spec-tickets/scripts/validate-state.mjs`; if it is unavailable, do the checks manually and record the result in the Required-visible-block checkpoint
-- for a state-file-only follow-up commit, if the retained validator rejects only because the staged state file says post-commit `dirty_state: "clean"` while the live pre-commit worktree still shows the state file dirty, treat that as a transient validator limitation rather than a state failure; manually validate the staged state, commit it, then re-run the live status/state checks after the commit
+- for a state-file-only follow-up commit, use `node .codex/skills/implement-spec-tickets/scripts/validate-state.mjs --allow-only-state-file-dirty .codex/run-state/implement-spec-tickets.json` when the only live dirty path is the state file and the file truthfully records the expected post-commit state as `dirty_state: "clean"`; after the state commit, rerun the validator without the flag plus `git status --short`
 
 When a retained validator is not available, this shell-safe validation shape is acceptable to run from the repo root and cite in the checkpoint:
 

@@ -95,6 +95,8 @@ Live 008 reassessment on 2026-05-21 identified that adding US plan templates as 
 
 Live 008 follow-up reassessment on 2026-05-21 identified a second generic planner/profile isolation gap for `strategyModules`: US doctrine carriers could perturb an ARVN golden canary, while an attempted `seat.self` authoring gate did not activate correctly for US plan proposal. The approved Foundations-aligned reset inserted 008B as the generic strategy-module profile/seat isolation prerequisite before US/NVA/VC skeleton authoring continues.
 
+Live 010 reassessment on 2026-05-22 identified that the VC skeleton could be authored with focused witnesses green, but the required broad engine lane stalled in the generic Spec 178 `policy-preview-inner-outcome-parity` architecture witness. The approved Foundations-aligned reset removed the exploratory VC implementation diff and inserted 010A as the generic parity/performance prerequisite before VC skeleton authoring resumes.
+
 - [`archive/tickets/188FITLFOUFAC-001.md`](../archive/tickets/188FITLFOUFAC-001.md) — Agent-DSL cookbook: document planTemplates/postureEvaluators/relationships authoring (covers §6 Docs) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-002.md`](../archive/tickets/188FITLFOUFAC-002.md) — Engine-agnosticism guard test — no faction/action IDs in engine/src (covers §6 Engine-agnosticism guard) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-003.md`](../archive/tickets/188FITLFOUFAC-003.md) — ARVN plan structure — doctrines + plan templates + role selectors (covers §4.1) — completed 2026-05-21
@@ -108,6 +110,7 @@ Live 008 follow-up reassessment on 2026-05-21 identified a second generic planne
 - [`archive/tickets/188FITLFOUFAC-008B.md`](../archive/tickets/188FITLFOUFAC-008B.md) — Generic strategy-module profile/seat isolation prerequisite exposed by US skeleton authoring (keeps Phase 2 doctrine carriers YAML-only and engine-agnostic) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-008.md`](../archive/tickets/188FITLFOUFAC-008.md) — US skeleton + headline witnesses (pattern-setting) (covers §4.2, §5 Phase 2) — completed 2026-05-21
 - [`archive/tickets/188FITLFOUFAC-009.md`](../archive/tickets/188FITLFOUFAC-009.md) — NVA skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2) — completed 2026-05-22
+- [`tickets/188FITLFOUFAC-010A.md`](../tickets/188FITLFOUFAC-010A.md) — Generic parity-witness performance prerequisite exposed by VC skeleton authoring (keeps 010 YAML-only and broad-lane provable)
 - [`tickets/188FITLFOUFAC-010.md`](../tickets/188FITLFOUFAC-010.md) — VC skeleton + headline witnesses (port of 008) (covers §4.2, §5 Phase 2)
 
 ## Outcome

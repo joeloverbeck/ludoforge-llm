@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — Tier-1 YAML authoring only
-**Deps**: `archive/tickets/188FITLFOUFAC-008.md`, `archive/tickets/188FITLFOUFAC-009.md`
+**Deps**: `archive/tickets/188FITLFOUFAC-008.md`, `archive/tickets/188FITLFOUFAC-009.md`, `tickets/188FITLFOUFAC-010A.md`
 
 ## Problem
 
@@ -15,6 +15,13 @@ Spec 188 §4.2 / Phase 2 authors the VC faction personality as a correct skeleto
 1. `vc-baseline` is the current VC profile binding (`92-agents.md` ~line 778); this ticket authors the VC skeleton and rebinds the VC seat.
 2. The skeleton-authoring structure is established by ticket 008 — follow it verbatim, substituting VC content.
 3. The NVA/VC relationship (report §5.2) is the counterpart of NVA's wiring completed in `archive/tickets/188FITLFOUFAC-009.md` — keep the two sides consistent.
+
+## Live Reassessment (2026-05-22)
+
+1. A live `010` implementation probe authored the VC YAML skeleton and the two ticket-named warning-class witnesses. `pnpm -F @ludoforge/engine build` and the focused compiled VC witnesses passed.
+2. The broad acceptance lane then exposed a generic architecture blocker: `pnpm -F @ludoforge/engine test:all` stalled after `dist/test/architecture/policy-evaluation-context-constructor-invariant.test.js`; isolated `node --test packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js` timed out after 120 seconds with only `TAP version 13`.
+3. Per `docs/FOUNDATIONS.md`, this ticket cannot close by weakening its broad-suite proof, under-authoring the VC signature skeleton, or adding FITL-specific runtime code. The approved reset inserted `tickets/188FITLFOUFAC-010A.md` as a generic prerequisite before VC skeleton authoring resumes.
+4. The abandoned VC YAML/test probe was removed before the retarget handoff; this ticket remains `PENDING` and owns no landed partial implementation yet.
 
 ## Architecture Check
 
@@ -44,6 +51,7 @@ Add Phase-2 VC headline witnesses: VC avoids conventional Attack unless Ambush p
 
 - ARVN (003–007), US (008), NVA (009).
 - Full VC fidelity beyond the skeleton.
+- Generic parity-witness performance or boundedness work exposed by the live VC skeleton probe; that is owned by `tickets/188FITLFOUFAC-010A.md`.
 
 ## Acceptance Criteria
 

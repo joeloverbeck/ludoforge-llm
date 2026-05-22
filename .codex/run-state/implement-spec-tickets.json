@@ -1,18 +1,17 @@
 {
   "originating_spec": "specs/188-fitl-four-faction-plan-migration-and-sequencing.md",
   "archived_spec": null,
-  "last_ticket": "tickets/188FITLFOUFAC-010.md",
-  "last_result": "retargeted_to_prerequisite",
-  "last_work_commit": "e53266691e3f1d79b393ee02ce51ebf5e4b93b76",
+  "last_ticket": "archive/tickets/188FITLFOUFAC-010A.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "f7b45e0985a80c1d0a86d58fc53782aa5c546977",
   "last_state_commit": "self",
-  "next_target": "tickets/188FITLFOUFAC-010A.md",
+  "next_target": "tickets/188FITLFOUFAC-010.md",
   "queue": [
-    "tickets/188FITLFOUFAC-010A.md",
     "tickets/188FITLFOUFAC-010.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "retargeted 010 to generic prerequisite 010A after removing exploratory VC implementation diff",
+  "owned_dirty_summary": "implemented and archived 010A generic parity witness prerequisite; 010 remains next",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

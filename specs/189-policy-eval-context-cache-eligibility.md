@@ -2,7 +2,7 @@
 
 **Status**: 📋 PROPOSED
 **Priority**: Medium — closes a silent-degradation class that already cost one CI regression (PR #275 / Spec 188). Not user-facing; bounded engine refactor.
-**Complexity**: S–M — one constructor contract change plus migration of 4 known construction sites and a guard test. No DSL, schema, or data changes.
+**Complexity**: Option-dependent — Option C is S (lint/grep guard only, no migration). Options A/B change the `PolicyEvaluationContext` constructor input contract and therefore ripple to **all 4 src construction sites + 26 test construction sites** (several routed through shared test helpers), plus a guard test; Option A is M–L. No DSL, schema, or data changes.
 **Date**: 2026-05-22
 **Dependencies**:
 - `archive/specs/172-*` (the preview-drive static/encoded-state rebuild dedup guarantee this protects — witness `172POLEVASTA-001`)
@@ -71,7 +71,7 @@ Both cache decisions hinge on the same predicate: `runtime !== undefined && uses
 | `policy-eval.ts:~691` (main per-microturn eval) | yes (+ `encodedView.layout`/`encoded`) | correct |
 | `microturn-option-eval.ts:~121` (option projection) | yes | correct |
 | `policy-evaluation-core.ts:~2044` (spawned selector-item context) | yes (+ `encodedState`) | correct |
-| `plan-proposal.ts:~506` (`evaluatePlanPosture`) | **no** (until `ded6d281f`) | was the outlier |
+| `plan-proposal.ts:~508` (`evaluatePlanPosture`) | **no** (until `ded6d281f`) | was the outlier |
 
 Three of four sites threaded `runtime`; the fourth did not, and nothing flagged it. The site pre-dated Spec 188 but was dormant — `evaluatePlanPosture` returns early when `template.postureHook === undefined`, and no profile carried a posture hook until Spec 188 added them to all four FITL profiles.
 
@@ -89,12 +89,15 @@ Replace the three independent optional fields with a single discriminated input 
 
 ```ts
 type PolicyEvalCacheBinding =
-  | { readonly kind: 'runtime'; readonly runtime: GameDefRuntime }      // canonical layout, shared caches
+  // canonical layout, shared caches; optionally carries a precomputed encoded state
+  | { readonly kind: 'runtime'; readonly runtime: GameDefRuntime; readonly preEncoded?: { readonly layout: EncodedStateLayout; readonly encoded: EncodedState } }
   | { readonly kind: 'isolated' }                                       // explicit uncached (tests/ad-hoc)
   | { readonly kind: 'preEncoded'; readonly layout: EncodedStateLayout; readonly encoded: EncodedState };
 ```
 
 A caller that has a runtime passes `{ kind: 'runtime', runtime }`; a caller that genuinely has none must write `{ kind: 'isolated' }` — explicit, greppable, and reviewable. Omission becomes a type error. Internal layout/encodedState fields are derived from the binding, not threaded separately.
+
+**Orthogonality constraint (verified)**: the three current fields gate *independently*, not exclusively. Two of the four src sites (`policy-eval.ts:~691` main eval, `policy-evaluation-core.ts:~2044` selector-item) pass `runtime` **and** a precomputed `encodedState`+`encodedStateLayout` simultaneously: the explicit `encodedState` short-circuits encoded-state resolution (constructor line ~459), while `runtime` still selects the shared `policyBytecodeCache`. A naive 3-way *mutually exclusive* union cannot express this combination, so the `runtime` variant must optionally carry the precomputed `{ layout, encoded }` (as shown above) rather than forcing a choice between `runtime` and `preEncoded`.
 
 ### 4.2 Option B — Helper factory that derives caches from `state`
 
@@ -104,7 +107,7 @@ Provide `createPolicyEvaluationContextForRuntime(runtime, { def, state, ... })` 
 
 Keep the optional fields but add a test (or ESLint rule) asserting every `new PolicyEvaluationContext({...})` in `src/agents/` either passes `runtime` or carries an explicit `// eslint-disable`/comment marker justifying the uncached path. Cheapest, but preserves the silent-omission failure mode — only adds a tripwire.
 
-**1-3-1 recommendation**: **Option A**. It eliminates the failure mode at the type level (Foundation #15, Architectural Completeness) rather than guarding against it after the fact. Option B is a good intermediate if A's discriminated-union churn across call sites is judged too large. Option C does not close the gap; reserve it only as a stopgap.
+**1-3-1 recommendation**: **Option A**. It eliminates the failure mode at the type level (Foundation #15, Architectural Completeness) rather than guarding against it after the fact. Note that Option A must accommodate the orthogonal precomputed-encoded-state field (see §4.1 orthogonality constraint), which adds modeling surface and migration churn across the 4 src + 26 test construction sites. Option B is a good intermediate if A's discriminated-union churn is judged too large — and it naturally preserves the orthogonal fields (the helper threads `runtime` while leaving precomputed `encodedState` as an ordinary input), avoiding the union-shape complexity entirely. Option C does not close the gap; reserve it only as a stopgap.
 
 ## 5. Determinism and replay (Foundations #8, #16)
 
@@ -113,7 +116,8 @@ No replay or hash impact. Encoded state from the cache is byte-identical to the 
 ## 6. Test plan
 
 - **Architectural-invariant test** (new): assert that constructing a `PolicyEvaluationContext` with a runtime binding and the same `state` twice produces exactly one `buildEncodedState` and one bytecode compile per unique expr (distill the duplicate-rebuild half of `172POLEVASTA-001` into a small, fast unit test that does not need the full 4-profile perf workload).
-- **Migration**: all four construction sites compile against the new contract; the `plan-proposal.ts` posture site is covered by the existing `172POLEVASTA-001` witness, which must still pass at `duplicateEncodedStateRebuilds === 0`.
+- **Migration**: all four src construction sites compile against the new contract; the `plan-proposal.ts` posture site is covered by the existing `172POLEVASTA-001` witness, which must still pass at `duplicateEncodedStateRebuilds === 0`.
+- **Migration scope (test sites)**: under a constructor-contract change (Options A/B), all **26 test construction sites** of `new PolicyEvaluationContext` migrate to the new binding, several through shared helpers (`test/helpers/compiled-policy-production-helpers.ts`, `test/architecture/lookup-refs-projected/projected-lookup-runtime-test-helpers.ts`, `test/unit/agents/strategy-module-test-fixtures.ts`). Under Option C, no test migration is required. This migration is part of the same change (Foundation #14 — no compatibility shims).
 - **Negative**: an explicit `isolated` binding still evaluates correctly (uncached) — guards that the uncached path remains reachable.
 
 ## 7. Foundation alignment
@@ -129,7 +133,10 @@ No replay or hash impact. Encoded state from the cache is byte-identical to the 
 
 ## Tickets
 
-_To be decomposed. Candidate namespace `POLEVALCACHE`._
+Decomposed via `/spec-to-tickets` on 2026-05-22:
+
+- [`tickets/189POLEVALCACHE-001.md`](../tickets/189POLEVALCACHE-001.md) — Make cache-eligibility structural via required `PolicyEvalCacheBinding` (atomic cut: union + constructor contract + all 4 src + 26 test construction sites) (covers §4 Option A, §6 migration)
+- [`tickets/189POLEVALCACHE-002.md`](../tickets/189POLEVALCACHE-002.md) — Distilled cache-dedup architectural-invariant test + isolated-binding negative test (covers §6 test plan)
 
 ## Outcome
 

@@ -34,11 +34,12 @@ function createDoc(): GameSpecDoc {
       cost: [],
       effects: [],
       limits: [],
-      tags: ['pass', 'operation', 'rival-operation', 'special-activity'],
+      tags: ['pass', 'operation', 'rival-operation', 'special-activity', 'rival-special'],
     }],
     actionPipelines: [{
       id: 'pass-profile',
       actionId: 'pass',
+      accompanyingOps: ['pass'],
       legality: null,
       costValidation: null,
       costEffects: [],
@@ -96,7 +97,7 @@ function compilePlanDoc() {
             traceLabel: 'train-govern',
             root: {
               actionTags: ['operation'],
-              compound: { specialTags: ['specialActivity'], timing: 'after' },
+              compound: { specialTags: ['special-activity'], timing: 'after' },
             },
             roles: {
               trainSpace: { selector: 'trainSpace', required: true },
@@ -194,7 +195,7 @@ describe('agent plan-template IR compilation', () => {
     const template = first.gameDef?.agents?.library.planTemplates?.trainGovern;
     assert.equal(template?.traceLabel, 'train-govern');
     assert.deepEqual(template?.root.actionTags, ['operation']);
-    assert.deepEqual(template?.root.compound?.specialTags, ['specialActivity']);
+    assert.deepEqual(template?.root.compound?.specialTags, ['special-activity']);
     assert.equal(template?.roles.trainSpace?.selectorId, 'trainSpace');
     assert.equal(template?.roles.trainSpace?.selector.role, 'trainSpace');
     assert.equal(template?.roles.trainSpace?.selector.refs.quality, 'role.trainSpace.quality');

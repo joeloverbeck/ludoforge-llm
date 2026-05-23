@@ -3,114 +3,30 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from '../../../src/cnl/compiler-diagnostic-codes.js';
-import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '../../../src/cnl/index.js';
+import { compileGameSpecToGameDef } from '../../../src/cnl/index.js';
+import {
+  compoundWitnessZoneSelector,
+  createAgentPlanCompoundWitnessDoc,
+  defaultCompoundWitnessSelectors,
+  validCompoundPlanTemplate,
+} from '../../architecture/fixtures/agent-plan-compound-witness-fixture.js';
 import type { CnlCompilerDiagnosticCode } from '../../../src/cnl/compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from '../../../src/cnl/game-spec-doc.js';
 
 function createDoc(planTemplates: Record<string, unknown>, selectors: Record<string, unknown> = defaultSelectors()): GameSpecDoc {
-  return {
-    ...createEmptyGameSpecDoc(),
-    metadata: { id: 'agent-plan-template-validate-test', players: { min: 2, max: 2 } },
-    observability: { observers: { testObserver: { surfaces: { victory: { currentMargin: 'public' } } } } },
-    zones: [
-      { id: 'zone-a', owner: 'none', visibility: 'public', ordering: 'set' },
-      { id: 'zone-b', owner: 'none', visibility: 'public', ordering: 'set' },
-    ],
-    turnStructure: { phases: [{ id: 'main' }] },
-    actions: [{
-      id: 'pass',
-      actor: 'active',
-      executor: 'actor',
-      phase: ['main'],
-      params: [
-        { name: 'operationTarget', domain: { query: 'mapSpaces' } },
-      ],
-      pre: null,
-      cost: [],
-      effects: [
-        {
-          chooseOne: {
-            bind: '$specialTarget',
-            options: { query: 'mapSpaces' },
-          },
-        },
-      ],
-      limits: [],
-      tags: ['pass'],
-    }],
-    terminal: {
-      conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
-      margins: [{ seat: 'p1', value: 0 }, { seat: 'p2', value: 0 }],
-      ranking: { order: 'desc' },
-    },
-    dataAssets: [{ id: 'seats', kind: 'seatCatalog', payload: { seats: [{ id: 'p1' }, { id: 'p2' }] } }],
-    agents: {
-      library: {
-        selectors: selectors as any,
-        planTemplates: planTemplates as any,
-        considerations: { neutral: { scopes: ['move'], weight: 1, value: 0 } },
-        tieBreakers: { stableMoveKey: { kind: 'stableMoveKey' } },
-      },
-      profiles: {
-        baseline: {
-          observer: 'testObserver',
-          params: {},
-          use: { considerations: ['neutral'], guardrails: [], tieBreakers: ['stableMoveKey'] },
-        },
-      },
-      bindings: { p1: 'baseline' },
-    },
-  };
+  return createAgentPlanCompoundWitnessDoc(planTemplates, selectors);
 }
 
 function defaultSelectors(): Record<string, unknown> {
-  return {
-    trainSpace: zoneSelector(),
-    governSpace: zoneSelector(),
-  };
+  return defaultCompoundWitnessSelectors();
 }
 
 function zoneSelector(overrides: Record<string, unknown> = {}): any {
-  return {
-    scopes: ['move'],
-    source: { collection: { kind: 'zones' } },
-    quality: { components: [{ id: 'constant', value: 1, weight: 1 }], order: 'qualityDesc' },
-    result: { maxItems: 4, order: ['qualityDesc', 'stableKeyAsc'], onEmpty: 'noContribution' },
-    ...overrides,
-  };
+  return compoundWitnessZoneSelector(overrides);
 }
 
 function validTemplate(overrides: Record<string, unknown> = {}): any {
-  return {
-    traceLabel: 'train-govern',
-    root: {
-      actionTags: ['operation'],
-      compound: { specialTags: ['specialActivity'], timing: 'after' },
-    },
-    roles: {
-      trainSpace: { selector: 'trainSpace', required: true },
-      governSpace: {
-        selector: 'governSpace',
-        required: true,
-        constraints: [{ notEqual: 'role.trainSpace' }],
-      },
-    },
-    steps: [
-      {
-        label: 'select-train-space',
-        role: 'trainSpace',
-        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'operationTarget', actionTag: 'pass' },
-      },
-      {
-        label: 'select-govern-space',
-        role: 'governSpace',
-        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: 'specialTarget', actionTag: 'pass' },
-      },
-    ],
-    caps: { capClass: 'standard256', maxSteps: 2 },
-    fallback: { ifRoleTargetUnavailable: 'primitivePolicy', ifPreviewUnavailable: 'traceOnly' },
-    ...overrides,
-  };
+  return validCompoundPlanTemplate(overrides);
 }
 
 function assertCode(doc: GameSpecDoc, code: CnlCompilerDiagnosticCode, messageMatch?: RegExp): void {
@@ -220,6 +136,36 @@ describe('agent plan-template validation diagnostics', () => {
       }),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
       /declared decision surface/u,
+    );
+  });
+
+  it('rejects compound metadata with no grantable special-activity continuation witness', () => {
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          root: {
+            actionTags: ['operation'],
+            compound: { specialTags: ['missingSpecial'], timing: 'after' },
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+      /trainGovern.*root\.compound.*no authored operation\/special-activity continuation witness/u,
+    );
+  });
+
+  it('rejects compound interrupt metadata that cannot map to an operation stage', () => {
+    assertCode(
+      createDoc({
+        trainGovern: validTemplate({
+          root: {
+            actionTags: ['operation'],
+            compound: { specialTags: ['special-activity'], timing: 'during', interruptAfterStage: 4 },
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+      /trainGovern.*root\.compound.*no authored operation\/special-activity continuation witness/u,
     );
   });
 

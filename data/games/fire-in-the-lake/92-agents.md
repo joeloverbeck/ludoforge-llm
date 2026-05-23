@@ -1088,18 +1088,6 @@ agents:
           - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
-      us.airLiftTrain:
-        traceLabel: "US Air Lift then Train"
-        root: { actionTags: [air-lift], compound: { specialTags: [train], timing: after } }
-        postureHook: us.preserveSupportAndAvailability
-        roles:
-          airLiftRoute: { selector: us.airLiftDestination, required: true }
-          trainSpace: { selector: us.trainSupportSpace, required: true }
-        steps:
-          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
-          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
-        caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.rallyInfiltrate:
         traceLabel: "NVA Rally then Infiltrate"
         root: { actionTags: [rally], compound: { specialTags: [infiltrate], timing: after } }
@@ -1146,18 +1134,6 @@ agents:
         steps:
           - { label: attack-control-space, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: attack } }
           - { label: ambush-high-leverage-piece, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-nva } }
-        caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
-      nva.terrorFutureRally:
-        traceLabel: "NVA Terror prepares future Rally"
-        root: { actionTags: [terror], compound: { specialTags: [rally], timing: after } }
-        postureHook: nva.protectLogisticsAndBases
-        roles:
-          terrorSpace: { selector: nva.terrorSupportDenialSpace, required: true }
-          rallySpace: { selector: nva.rallyBaseOrTrailSpace, required: true }
-        steps:
-          - { label: terror-support-denial-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
-          - { label: future-rally-space, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.locOccupationBeforeCoup:
@@ -1232,19 +1208,6 @@ agents:
           - { label: surgical-ambush, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-vc } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
-      vc.rallyResetTerror:
-        traceLabel: "VC Rally reset then Terror"
-        root: { actionTags: [rally], compound: { specialTags: [terror], timing: after } }
-        postureHook: vc.protectOppositionAndBases
-        roles:
-          rallySpace: { selector: vc.rallyBaseOrUndergroundSpace, required: true }
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-        steps:
-          - { label: rally-underground-reset, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
-          - { label: future-terror-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
-        caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
-
     postureEvaluators:
       arvn.preserveAidAndMargin:
         traceLabel: "ARVN preserve Aid/resources and projected margin"
@@ -2280,7 +2243,6 @@ agents:
           - us.patrolAdvise
           - us.sweepAirStrike
           - us.assaultAirLiftAssault
-          - us.airLiftTrain
         considerations:
           - preferProjectedSelfMargin
           - preserveResources
@@ -2381,7 +2343,6 @@ agents:
           - nva.marchInfiltrate
           - nva.marchAmbush
           - nva.attackAmbush
-          - nva.terrorFutureRally
           - nva.locOccupationBeforeCoup
         considerations:
           - preferProjectedSelfMargin
@@ -2421,7 +2382,6 @@ agents:
           - vc.terrorSubvert
           - vc.terrorTax
           - vc.marchAmbushFromLoc
-          - vc.rallyResetTerror
         considerations:
           - preferNormalizedMargin
           - preferRallyWeighted

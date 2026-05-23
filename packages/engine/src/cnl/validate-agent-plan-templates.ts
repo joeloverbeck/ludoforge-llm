@@ -24,6 +24,7 @@ export function validatePlanTemplates(
   const templateIds = new Set(Object.keys(planTemplates));
   const fallbackEdges = new Map<string, readonly string[]>();
   const decisionSurfaces = doc === undefined ? [] : collectDecisionSurfaces(doc);
+  const compoundWitnesses = doc === undefined ? [] : collectCompoundWitnesses(doc);
 
   for (const [templateId, templateDef] of Object.entries(planTemplates)) {
     if (!isRecord(templateDef)) {
@@ -32,6 +33,7 @@ export function validatePlanTemplates(
     const templatePath = `doc.agents.library.planTemplates.${templateId}`;
     validatePlanTemplateRoles(templateId, templateDef, templatePath, selectors, diagnostics);
     validatePlanTemplateSteps(templateId, templateDef, templatePath, selectors, decisionSurfaces, diagnostics);
+    validatePlanTemplateCompound(templateId, templateDef, templatePath, compoundWitnesses, diagnostics);
     validatePlanTemplateCaps(templateId, templateDef.caps, `${templatePath}.caps`, diagnostics);
     fallbackEdges.set(
       templateId,
@@ -192,6 +194,104 @@ interface PlanDecisionSurface {
   readonly stageIndex?: number;
 }
 
+interface PlanCompoundWitness {
+  readonly operationActionId: string;
+  readonly operationTags: readonly string[];
+  readonly specialActionId: string;
+  readonly specialTags: readonly string[];
+  readonly operationStageCount: number;
+}
+
+function validatePlanTemplateCompound(
+  templateId: string,
+  templateDef: Record<string, unknown>,
+  templatePath: string,
+  witnesses: readonly PlanCompoundWitness[],
+  diagnostics: Diagnostic[],
+): void {
+  const root = isRecord(templateDef.root) ? templateDef.root : undefined;
+  const compound = isRecord(root?.compound) ? root.compound : undefined;
+  if (root === undefined || compound === undefined) {
+    return;
+  }
+
+  const actionIds = stringArray(root.actionIds);
+  const actionTags = stringArray(root.actionTags);
+  const specialTags = stringArray(compound.specialTags);
+  if (specialTags.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+      path: `${templatePath}.root.compound.specialTags`,
+      severity: 'error',
+      message: `Plan template "${templateId}" root.compound must name at least one special activity tag.`,
+      suggestion: 'Add specialTags that identify an authored special-activity action, or remove root.compound.',
+    });
+    return;
+  }
+
+  const timing = compound.timing === undefined ? 'during' : compound.timing;
+  if (timing !== 'before' && timing !== 'during' && timing !== 'after') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+      path: `${templatePath}.root.compound.timing`,
+      severity: 'error',
+      message: `Plan template "${templateId}" root.compound timing must be before, during, or after.`,
+      suggestion: 'Use before, during, or after.',
+    });
+    return;
+  }
+
+  const interruptAfterStage = compound.interruptAfterStage;
+  if (interruptAfterStage !== undefined) {
+    if (timing !== 'during') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.interruptAfterStage`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound interruptAfterStage requires timing "during".`,
+        suggestion: 'Set timing: during or remove interruptAfterStage.',
+      });
+      return;
+    }
+    if (typeof interruptAfterStage !== 'number' || !Number.isSafeInteger(interruptAfterStage) || interruptAfterStage < 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.interruptAfterStage`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound interruptAfterStage must be a non-negative safe integer.`,
+        suggestion: 'Use a stage index from the matching operation pipeline.',
+      });
+      return;
+    }
+  }
+
+  const hasWitness = witnesses.some((witness) =>
+    matchesRootAction(witness, actionIds, actionTags)
+    && specialTags.every((tag) => witness.specialTags.includes(tag))
+    && (interruptAfterStage === undefined || interruptAfterStage < witness.operationStageCount),
+  );
+
+  if (!hasWitness) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+      path: `${templatePath}.root.compound`,
+      severity: 'error',
+      message: `Plan template "${templateId}" root.compound has no authored operation/special-activity continuation witness for the requested tags and timing.`,
+      suggestion: 'Align root.actionTags/actionIds and compound.specialTags with an action pipeline whose special activity accompanyingOps can accompany the operation, or remove ungrantable compound metadata.',
+    });
+  }
+}
+
+function matchesRootAction(
+  witness: PlanCompoundWitness,
+  actionIds: readonly string[],
+  actionTags: readonly string[],
+): boolean {
+  const idMatches = actionIds.length === 0 || actionIds.includes(witness.operationActionId);
+  const tagsMatch = actionTags.length === 0 || actionTags.every((tag) => witness.operationTags.includes(tag));
+  return idMatches && tagsMatch;
+}
+
 function validatePlanStepMatch(
   templateId: string,
   roleName: string,
@@ -243,6 +343,54 @@ function validatePlanStepMatch(
       suggestion: 'Check decisionKind, decisionPath, targetKind, actionTag, and stageIndex against authored action and pipeline choices.',
     });
   }
+}
+
+function collectCompoundWitnesses(doc: GameSpecDoc): readonly PlanCompoundWitness[] {
+  const actions = Array.isArray(doc.actions) ? doc.actions : [];
+  const actionTagsById = new Map<string, readonly string[]>();
+  for (const action of actions) {
+    if (!isRecord(action) || typeof action.id !== 'string') {
+      continue;
+    }
+    actionTagsById.set(action.id, stringArray(action.tags));
+  }
+
+  const pipelines = Array.isArray(doc.actionPipelines) ? doc.actionPipelines : [];
+  const operationPipelines = pipelines.filter((pipeline) => isRecord(pipeline) && typeof pipeline.actionId === 'string');
+  const specialPipelines = operationPipelines.filter((pipeline) =>
+    pipeline.accompanyingOps === 'any' || Array.isArray(pipeline.accompanyingOps));
+
+  const witnesses: PlanCompoundWitness[] = [];
+  for (const operationPipeline of operationPipelines) {
+    const operationActionId = String(operationPipeline.actionId);
+    const operationTags = actionTagsById.get(operationActionId) ?? [];
+    const operationStageCount = Array.isArray(operationPipeline.stages) ? operationPipeline.stages.length : 0;
+    for (const specialPipeline of specialPipelines) {
+      const specialActionId = String(specialPipeline.actionId);
+      if (!canSpecialAccompanyOperation(specialPipeline.accompanyingOps, operationActionId)) {
+        continue;
+      }
+      witnesses.push({
+        operationActionId,
+        operationTags,
+        specialActionId,
+        specialTags: actionTagsById.get(specialActionId) ?? [],
+        operationStageCount,
+      });
+    }
+  }
+  return witnesses;
+}
+
+function canSpecialAccompanyOperation(accompanyingOps: unknown, operationActionId: string): boolean {
+  return accompanyingOps === 'any'
+    || (Array.isArray(accompanyingOps) && accompanyingOps.includes(operationActionId));
+}
+
+function stringArray(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
 }
 
 function collectDecisionSurfaces(doc: GameSpecDoc): readonly PlanDecisionSurface[] {

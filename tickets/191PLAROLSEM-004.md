@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only (golden-trace fixtures + assertions)
-**Deps**: `archive/tickets/191PLAROLSEM-002.md`, `tickets/191PLAROLSEM-003.md`
+**Deps**: `archive/tickets/191PLAROLSEM-002.md`, `archive/tickets/191PLAROLSEM-003.md`
 
 ## Problem
 

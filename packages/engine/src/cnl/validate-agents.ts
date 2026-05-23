@@ -59,12 +59,12 @@ export function validateAgents(doc: GameSpecDoc, diagnostics: Diagnostic[]): voi
   validateUnknownKeys(doc.agents, AGENTS_SECTION_KEYS, 'doc.agents', diagnostics, 'agents');
   const authoredLibrary = isRecord(doc.agents.library) ? doc.agents.library : undefined;
   validateNamedDefinitionMap(doc.agents.parameters, 'doc.agents.parameters', diagnostics, 'agents parameter map');
-  validateLibrary(doc.agents.library, diagnostics);
+  validateLibrary(doc, doc.agents.library, diagnostics);
   validateProfiles(doc.agents.profiles, authoredLibrary, doc.observability, diagnostics);
   validateBindings(doc.agents.bindings, diagnostics);
 }
 
-function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
+function validateLibrary(doc: GameSpecDoc, library: unknown, diagnostics: Diagnostic[]): void {
   if (!validateRecordMap(library, 'doc.agents.library', diagnostics, 'agents library')) {
     return;
   }
@@ -76,7 +76,7 @@ function validateLibrary(library: unknown, diagnostics: Diagnostic[]): void {
     validateNamedDefinitionMap(library[key], `doc.agents.library.${key}`, diagnostics, `agents library ${key}`);
   }
 
-  validatePlanTemplates(library, diagnostics);
+  validatePlanTemplates(library, diagnostics, doc);
 
   const considerations = library.considerations;
   if (!isRecord(considerations)) {

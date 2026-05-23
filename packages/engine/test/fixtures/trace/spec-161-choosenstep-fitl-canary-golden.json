@@ -2,7 +2,7 @@
   "seed": 2,
   "maxTurns": 80,
   "playerCount": 4,
-  "decisionIndex": 315,
+  "decisionIndex": 314,
   "profileId": "policy-preview-inner-choosenstep-fitl-canary",
   "decision": {
     "kind": "chooseNStep",

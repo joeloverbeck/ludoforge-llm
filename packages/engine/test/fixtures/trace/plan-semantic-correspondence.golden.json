@@ -1,0 +1,215 @@
+{
+  "seed": 191004,
+  "profile": "FITL production agent catalog",
+  "cases": [
+    {
+      "templateId": "arvn.trainGovern",
+      "traceLabel": "ARVN Train then Govern",
+      "root": {
+        "actionTags": [
+          "train"
+        ],
+        "actionIds": [],
+        "compound": {
+          "specialTags": [
+            "govern"
+          ],
+          "timing": "after"
+        }
+      },
+      "stepIndex": 0,
+      "stepLabel": "train-space",
+      "role": "trainSpace",
+      "authoredMatch": {
+        "decisionKind": "chooseNStep",
+        "targetKind": "zone",
+        "decisionPath": "targetSpaces",
+        "actionTag": "train"
+      },
+      "frontierContext": {
+        "kind": "chooseNStep",
+        "decisionPath": "targetSpaces",
+        "targetKinds": [
+          "zone"
+        ]
+      },
+      "selectedLegalOption": "chooseNStep:targetSpaces:add:\"an-loc:none\"",
+      "resultDecision": {
+        "kind": "chooseNStep",
+        "decisionKey": "targetSpaces",
+        "command": "add",
+        "value": "an-loc:none"
+      },
+      "planMicroturn": {
+        "expectedStep": "train-space",
+        "matchedRole": "trainSpace",
+        "selectedLegalOption": "chooseNStep:targetSpaces:add:\"an-loc:none\"",
+        "match": "exact"
+      }
+    },
+    {
+      "templateId": "arvn.trainGovern",
+      "traceLabel": "ARVN Train then Govern",
+      "root": {
+        "actionTags": [
+          "train"
+        ],
+        "actionIds": [],
+        "compound": {
+          "specialTags": [
+            "govern"
+          ],
+          "timing": "after"
+        }
+      },
+      "stepIndex": 1,
+      "stepLabel": "govern-space",
+      "role": "governSpace",
+      "authoredMatch": {
+        "decisionKind": "chooseNStep",
+        "targetKind": "zone",
+        "decisionPath": "targetSpaces",
+        "actionTag": "govern"
+      },
+      "frontierContext": {
+        "kind": "chooseNStep",
+        "decisionPath": "targetSpaces",
+        "targetKinds": [
+          "zone"
+        ]
+      },
+      "selectedLegalOption": "chooseNStep:targetSpaces:add:\"ba-xuyen:none\"",
+      "resultDecision": {
+        "kind": "chooseNStep",
+        "decisionKey": "targetSpaces",
+        "command": "add",
+        "value": "ba-xuyen:none"
+      },
+      "planMicroturn": {
+        "expectedStep": "govern-space",
+        "matchedRole": "governSpace",
+        "selectedLegalOption": "chooseNStep:targetSpaces:add:\"ba-xuyen:none\"",
+        "match": "exact"
+      }
+    },
+    {
+      "templateId": "arvn.assaultTransportAssault",
+      "traceLabel": "ARVN Assault, Transport, Assault",
+      "root": {
+        "actionTags": [
+          "assault"
+        ],
+        "actionIds": [],
+        "compound": {
+          "specialTags": [
+            "transport"
+          ],
+          "timing": "during",
+          "interruptAfterStage": 1
+        }
+      },
+      "stepIndex": 0,
+      "stepLabel": "first-assault-space",
+      "role": "firstAssaultSpace",
+      "authoredMatch": {
+        "decisionKind": "chooseNStep",
+        "targetKind": "zone",
+        "decisionPath": "targetSpaces",
+        "actionTag": "assault",
+        "stageIndex": 0
+      },
+      "frontierContext": {
+        "kind": "chooseNStep",
+        "decisionPath": "targetSpaces",
+        "targetKinds": [
+          "zone"
+        ],
+        "stageIndex": 0
+      },
+      "selectedLegalOption": "chooseNStep:targetSpaces:add:\"binh-dinh:none\"",
+      "resultDecision": {
+        "kind": "chooseNStep",
+        "decisionKey": "targetSpaces",
+        "command": "add",
+        "value": "binh-dinh:none"
+      },
+      "planMicroturn": {
+        "expectedStep": "first-assault-space",
+        "matchedRole": "firstAssaultSpace",
+        "selectedLegalOption": "chooseNStep:targetSpaces:add:\"binh-dinh:none\"",
+        "match": "exact"
+      }
+    },
+    {
+      "templateId": "us.assaultAirLiftAssault",
+      "traceLabel": "US Assault, Air Lift, Assault",
+      "root": {
+        "actionTags": [
+          "assault"
+        ],
+        "actionIds": [],
+        "compound": {
+          "specialTags": [
+            "air-lift"
+          ],
+          "timing": "during",
+          "interruptAfterStage": 1
+        }
+      },
+      "stepIndex": 0,
+      "stepLabel": "first-assault-space",
+      "role": "firstAssaultSpace",
+      "authoredMatch": {
+        "decisionKind": "chooseNStep",
+        "targetKind": "zone",
+        "decisionPath": "targetSpaces",
+        "actionTag": "assault",
+        "stageIndex": 0
+      },
+      "frontierContext": {
+        "kind": "chooseNStep",
+        "decisionPath": "targetSpaces",
+        "targetKinds": [
+          "zone"
+        ],
+        "stageIndex": 0
+      },
+      "selectedLegalOption": "chooseNStep:targetSpaces:add:\"binh-tuy-binh-thuan:none\"",
+      "resultDecision": {
+        "kind": "chooseNStep",
+        "decisionKey": "targetSpaces",
+        "command": "add",
+        "value": "binh-tuy-binh-thuan:none"
+      },
+      "planMicroturn": {
+        "expectedStep": "first-assault-space",
+        "matchedRole": "firstAssaultSpace",
+        "selectedLegalOption": "chooseNStep:targetSpaces:add:\"binh-tuy-binh-thuan:none\"",
+        "match": "exact"
+      }
+    }
+  ],
+  "mismatchProbes": [
+    {
+      "templateId": "arvn.trainGovern",
+      "stepLabel": "train-space",
+      "mismatch": "decisionPath",
+      "observedMatch": "fallback",
+      "fallbackReason": "stableFrontierTieBreak"
+    },
+    {
+      "templateId": "arvn.trainGovern",
+      "stepLabel": "govern-space",
+      "mismatch": "targetKind",
+      "observedMatch": "fallback",
+      "fallbackReason": "stableFrontierTieBreak"
+    },
+    {
+      "templateId": "arvn.assaultTransportAssault",
+      "stepLabel": "first-assault-space",
+      "mismatch": "stageIndex",
+      "observedMatch": "fallback",
+      "fallbackReason": "stableFrontierTieBreak"
+    }
+  ]
+}

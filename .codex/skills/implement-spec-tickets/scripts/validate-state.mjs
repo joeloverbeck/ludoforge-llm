@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 
 const DEFAULT_STATE_PATH = '.codex/run-state/implement-spec-tickets.json';
 const FULL_SHA = /^[0-9a-f]{40}$/;
@@ -33,6 +34,24 @@ function git(args) {
     fail(`git ${args.join(' ')} failed: ${result.stderr || result.error?.message || 'unknown error'}`);
   }
   return (result.stdout || '').trim();
+}
+
+function normalizeRepoPath(path) {
+  return path.replaceAll('\\', '/').replace(/^\.\//, '');
+}
+
+function statePathForGitStatus(path) {
+  const normalizedPath = normalizeRepoPath(path);
+  if (!path.startsWith('/')) return normalizedPath;
+
+  const repoRoot = git(['rev-parse', '--show-toplevel']);
+  return normalizeRepoPath(relative(repoRoot, path));
+}
+
+function statusPath(line) {
+  if (line[2] === ' ') return normalizeRepoPath(line.slice(3));
+  if (line[1] === ' ') return normalizeRepoPath(line.slice(2));
+  return normalizeRepoPath(line.slice(3));
 }
 
 function pathExistsForState(value) {
@@ -97,7 +116,9 @@ if (typeof state.dirty_state !== 'string' || !VALID_DIRTY_STATE.test(state.dirty
 
 const status = git(['status', '--short']);
 const statusLines = status === '' ? [] : status.split('\n');
-const onlyStateFileDirty = statusLines.length > 0 && statusLines.every((line) => line.slice(3) === statePath);
+const gitStatusStatePath = statePathForGitStatus(statePath);
+const onlyStateFileDirty =
+  statusLines.length > 0 && statusLines.every((line) => statusPath(line) === gitStatusStatePath);
 
 if (status === '' && state.dirty_state !== 'clean') {
   fail(`dirty_state should be clean when git status is clean: ${state.dirty_state}`);

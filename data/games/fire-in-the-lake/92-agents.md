@@ -1035,12 +1035,10 @@ agents:
         roles:
           firstAssaultSpace: { selector: arvn.assaultTargetSpace, required: true }
           transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
-          secondAssaultSpace: { selector: arvn.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
         steps:
           - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
           - { label: transport-route, role: transportRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
-          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
-        caps: { capClass: standard256, maxSteps: 3 }
+        caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
       us.trainAdvise:
         traceLabel: "US Train then Advise"
@@ -1075,7 +1073,7 @@ agents:
           airStrikeSpace: { selector: us.airStrikeTarget, required: true }
         steps:
           - { label: sweep-expose-space, role: sweepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: sweep } }
-          - { label: air-strike-space, role: airStrikeSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: air-strike } }
+          - { label: air-strike-space, role: airStrikeSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-strike } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       us.assaultAirLiftAssault:
@@ -1085,25 +1083,11 @@ agents:
         roles:
           firstAssaultSpace: { selector: us.assaultTargetSpace, required: true }
           airLiftRoute: { selector: us.airLiftDestination, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
-          secondAssaultSpace: { selector: us.assaultTargetSpace, required: true, constraints: [{ notEqual: role.firstAssaultSpace }] }
         steps:
           - { label: first-assault-space, role: firstAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
-          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
-          - { label: second-assault-space, role: secondAssaultSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 2 } }
-        caps: { capClass: standard256, maxSteps: 3 }
-        fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
-      us.airLiftTrain:
-        traceLabel: "US Air Lift then Train"
-        root: { actionTags: [air-lift], compound: { specialTags: [train], timing: after } }
-        postureHook: us.preserveSupportAndAvailability
-        roles:
-          airLiftRoute: { selector: us.airLiftDestination, required: true }
-          trainSpace: { selector: us.trainSupportSpace, required: true }
-        steps:
-          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: airLiftDestination, actionTag: air-lift } }
-          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
         caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+        fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
       nva.rallyInfiltrate:
         traceLabel: "NVA Rally then Infiltrate"
         root: { actionTags: [rally], compound: { specialTags: [infiltrate], timing: after } }
@@ -1150,18 +1134,6 @@ agents:
         steps:
           - { label: attack-control-space, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: attack } }
           - { label: ambush-high-leverage-piece, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-nva } }
-        caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
-      nva.terrorFutureRally:
-        traceLabel: "NVA Terror prepares future Rally"
-        root: { actionTags: [terror], compound: { specialTags: [rally], timing: after } }
-        postureHook: nva.protectLogisticsAndBases
-        roles:
-          terrorSpace: { selector: nva.terrorSupportDenialSpace, required: true }
-          rallySpace: { selector: nva.rallyBaseOrTrailSpace, required: true }
-        steps:
-          - { label: terror-support-denial-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
-          - { label: future-rally-space, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.locOccupationBeforeCoup:
@@ -1236,19 +1208,6 @@ agents:
           - { label: surgical-ambush, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-vc } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
-      vc.rallyResetTerror:
-        traceLabel: "VC Rally reset then Terror"
-        root: { actionTags: [rally], compound: { specialTags: [terror], timing: after } }
-        postureHook: vc.protectOppositionAndBases
-        roles:
-          rallySpace: { selector: vc.rallyBaseOrUndergroundSpace, required: true }
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-        steps:
-          - { label: rally-underground-reset, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
-          - { label: future-terror-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
-        caps: { capClass: standard256, maxSteps: 2 }
-        fallback: { ifRoleTargetUnavailable: primitivePolicy }
-
     postureEvaluators:
       arvn.preserveAidAndMargin:
         traceLabel: "ARVN preserve Aid/resources and projected margin"
@@ -2284,7 +2243,6 @@ agents:
           - us.patrolAdvise
           - us.sweepAirStrike
           - us.assaultAirLiftAssault
-          - us.airLiftTrain
         considerations:
           - preferProjectedSelfMargin
           - preserveResources
@@ -2385,7 +2343,6 @@ agents:
           - nva.marchInfiltrate
           - nva.marchAmbush
           - nva.attackAmbush
-          - nva.terrorFutureRally
           - nva.locOccupationBeforeCoup
         considerations:
           - preferProjectedSelfMargin
@@ -2425,7 +2382,6 @@ agents:
           - vc.terrorSubvert
           - vc.terrorTax
           - vc.marchAmbushFromLoc
-          - vc.rallyResetTerror
         considerations:
           - preferNormalizedMargin
           - preferRallyWeighted

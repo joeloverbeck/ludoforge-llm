@@ -1,9 +1,9 @@
 {
-  "originating_spec": "archive/specs/189-policy-eval-context-cache-eligibility.md",
-  "archived_spec": "archive/specs/189-policy-eval-context-cache-eligibility.md",
-  "last_ticket": "archive/tickets/189POLEVALCACHE-002.md",
+  "originating_spec": "archive/specs/191-plan-role-semantic-integrity.md",
+  "archived_spec": "archive/specs/191-plan-role-semantic-integrity.md",
+  "last_ticket": "archive/tickets/191PLAROLSEM-004.md",
   "last_result": "final_spec_archived",
-  "last_work_commit": "c2b2473a48dea1f3fe010bf196f3bf59cc763b45",
+  "last_work_commit": "1f66c49f99b69f88120e19180a34a1d16af98c2a",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
@@ -13,5 +13,5 @@
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-22"
+  "updated_at": "2026-05-23"
 }

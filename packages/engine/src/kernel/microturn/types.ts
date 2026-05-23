@@ -11,6 +11,7 @@ import type { TurnFlowPendingFreeOperationGrant } from '../types-turn-flow.js';
 import type {
   AgentDecisionTrace,
   ConditionTraceEntry,
+  ChoiceTargetKind,
   DecisionTraceEntry,
   EffectTraceEntry,
   ExecutionOptions,
@@ -179,6 +180,8 @@ export interface ChooseOneContext {
   readonly seatId: SeatId;
   readonly decisionKey: DecisionKey;
   readonly options: readonly ChooseOption[];
+  readonly targetKinds?: readonly ChoiceTargetKind[];
+  readonly stageIndex?: number;
 }
 
 export interface ChooseNStepContext {
@@ -186,6 +189,8 @@ export interface ChooseNStepContext {
   readonly seatId: SeatId;
   readonly decisionKey: DecisionKey;
   readonly options: readonly ChooseOption[];
+  readonly targetKinds?: readonly ChoiceTargetKind[];
+  readonly stageIndex?: number;
   readonly selectedSoFar: readonly MoveParamScalar[];
   readonly cardinality: { readonly min: number; readonly max: number };
   readonly stepCommands: readonly ChooseNStepCommand[];

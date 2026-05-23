@@ -318,6 +318,13 @@ If any manual-recovery checklist item is unverified, stop before archival and ei
 
 Normal archive path hard rule: before any ticket archive move, if the ticket is not already archived and no visible `post-ticket-review child workflow:` invocation marker exists for the current review slice, run `$post-ticket-review <completed-ticket>` now. Do not use manual late recovery simply because manual review checks have already been performed; reserve it for already-crossed states where a normal child invocation would be misleading, duplicative, or impossible to observe cleanly.
 
+Archive move recipe. Use this exact order for every ticket archive move:
+
+1. Run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs`.
+2. Emit the `Pre-archive gate:` block below with truthful values.
+3. Re-check that the visible conversation already contains that block for this archive move.
+4. Run `node scripts/archive-ticket.mjs <ticket> archive/tickets`, `git mv`, or the chosen archive command.
+
 Before moving any ticket into `archive/tickets/`, run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs`, then perform this archive gate in visible text. Emit this exact block immediately before running `node scripts/archive-ticket.mjs`, `git mv`, or any other archive move:
 
 ```text
@@ -379,7 +386,7 @@ Before committing:
      - `canonical inputs`
      - `why checked in instead of generated on demand`
      - `hygiene proof`
-     The ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc and is not retained, record the exact command and script body in a durable repo artifact or the visible final handoff; a temporary path such as `/tmp/example.mjs` alone is not reproducible evidence. Otherwise stop for `1-3-1` before committing a large opaque artifact.
+     The ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/committed provenance note>`. If the generator was ad hoc and is not retained, record the exact command and script body in a durable repo artifact before staging; a temporary path such as `/tmp/example.mjs` and a conversational handoff alone are not reproducible evidence for committed generated artifacts. Otherwise stop for `1-3-1` before committing a large opaque artifact.
      For inline shell generators such as `node -e`, avoid raw JavaScript template literals or markdown backticks inside shell-quoted command strings because the shell can treat backticks as command substitution before Node runs. Prefer a retained script, a temporary script whose exact body is copied into the durable outcome before staging, or shell-safe string concatenation.
    - If `implement-ticket` triggered a source-size ledger, preserve that ledger through final visibility before staging. The ledger must name every triggered path and the child workflow's resolution, such as extraction done, user-approved deferral, verified no edit, preexisting oversize with no active growth, or successor owner. The source-size ledger normally applies to implementation source and other repo-owned files governed by local size caps; for authored data or markdown/YAML GameSpecDoc support files, either emit the ledger when the child workflow triggered it or mark `not_applicable` with the reason, such as `authored data doc below cap` or `data-only growth, no source-size trigger`.
    - For any refreshed generated golden, profile-quality witness, deterministic decision sequence, trace, report, hash-only generated fixture output, or serialized-state artifact caused by an intentional trajectory or fixture shift, record lightweight provenance even when the file is below the large-artifact threshold:
@@ -387,7 +394,7 @@ Before committing:
      - `generation command or retained script`
      - `canonical inputs`
      - `why the refresh is expected`
-     Record this in the ticket outcome, a report, or the final handoff before staging. The lightweight ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/handoff section>`. If the generator was ad hoc, preserve the exact command and script body in that durable location; a temporary path alone is not enough.
+     Record this in the ticket outcome, a report, or another committed provenance note before staging. The lightweight ledger must classify generator durability as either `retained generator: <repo path>` or `ad hoc generator body recorded in: <ticket/report/committed provenance note>`. If the generator was ad hoc, preserve the exact command and script body in that durable repository location; a temporary path or conversational handoff alone is not enough for committed generated artifacts.
      Use this compact ledger when several small generated fixtures moved together:
 
      ```text
@@ -396,10 +403,10 @@ Before committing:
      - generation command: <command or retained script path>
      - canonical inputs: <spec/scenario/seed/profile/hash inputs>
      - expected refresh reason: <intentional trajectory/schema/witness shift>
-     - generator durability: <retained generator: repo path | ad hoc generator body recorded in: ticket/report/handoff section>
+     - generator durability: <retained generator: repo path | ad hoc generator body recorded in: ticket/report/committed provenance note>
      - hygiene proof: <git diff --check/schema check/focused consumer proof>
      ```
-     Before staging any generated artifact with `generator durability: ad hoc generator body recorded in: ...`, re-open the named durable ticket, report, or handoff section and verify it preserves the exact script body plus command needed to rerun the generator. A prose summary of copied logic is not enough. If the exact body is absent and no retained repo script exists, stop before commit and either record the exact body durably or run `1-3-1` for how to handle the opaque refresh.
+     Before staging any generated artifact with `generator durability: ad hoc generator body recorded in: ...`, re-open the named durable ticket, report, or committed provenance note and verify it preserves the exact script body plus command needed to rerun the generator. A prose summary of copied logic is not enough. If the exact body is absent and no retained repo script exists, stop before commit and either record the exact body durably or run `1-3-1` for how to handle the opaque refresh.
      When the durable command is an inline shell generator, re-check that the recorded command is shell-safe. In particular, do not preserve a command that relies on unescaped JS template-literal backticks inside a double-quoted shell string; record the working shell-safe command or use a retained script instead.
    - For very verbose broad proof lanes such as root `pnpm turbo test`, prefer capturing the output to a local log or other concise durable witness when it will be cited as final proof. Before launching a `tee` or log-wrapper command, verify that the destination is shell-writable in the current sandbox. Do not assume `.codex/run-state/` is a suitable shell log directory merely because the state file can be patched. Prefer `/tmp/<ticket>-<lane>.log` for transient logs unless the log is an intentionally committed report artifact. If `tee` or log setup fails after the lane starts, stop or interrupt the lane only with existing user approval or after `1-3-1`, then rerun with working capture. Do not cite the failed log path as durable evidence. At minimum, record the exact command, exit status, and enough summary output in the ticket outcome or handoff to make the proof auditable if the terminal output is truncated.
    - When a clean-HEAD baseline, A/B comparison, or broad-lane causality check uses a temporary git worktree or alternate checkout, record a baseline worktree lifecycle ledger before staging:
@@ -418,6 +425,14 @@ Before committing:
 10. Commit with a message naming the ticket id and truthful contents, such as `181STRSTRPOL-001 implement and archive selector probe fix`. Mention follow-ups or skill hardening only when they actually changed.
 
 Commit lock recipe: immediately before running `git commit`, run `node .codex/skills/implement-spec-tickets/scripts/handoff-preflight.mjs`, print the required checkpoint below, then run `git diff --cached --name-status`, then run the commit. Treat this order as the normal path. The late-recovery rules are only for accidental misses discovered after the fact; if late recovery was needed, name that process miss in the final handoff or state-only handoff instead of implying the checkpoint was timely.
+
+Late-recovery classification. Before using any late recovery, classify the miss and take only the allowed action:
+
+| Miss type | Allowed recovery |
+|---|---|
+| missed visibility only | Emit a `late harness recovery checkpoint` with the current truthful contents; name the miss in the final handoff or state-only handoff. |
+| missed proof | Run or rerun the missing proof, or leave the ticket active with a handoff naming the unverified lane. A visibility checkpoint cannot make unrun proof valid. |
+| missed child workflow | Run or rerun the child workflow unless the live state already crossed a point where normal invocation would be misleading, duplicative, or impossible to observe cleanly; in that exceptional case, use the manual late recovery checklist and say why. |
 
 Required checkpoint. This is a hard stop: do not commit until every row below has been emitted or explicitly marked `not_applicable` with a reason. If any row was missed earlier, emit this as a `late harness recovery checkpoint` and say it is late.
 

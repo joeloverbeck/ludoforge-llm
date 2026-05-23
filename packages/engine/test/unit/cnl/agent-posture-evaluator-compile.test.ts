@@ -27,7 +27,10 @@ function createDoc(postureEvaluator: Record<string, unknown>, postureHook = 'sus
       actor: 'active',
       executor: 'actor',
       phase: ['main'],
-      params: [],
+      params: [{
+        name: 'pass.target',
+        domain: { query: 'mapSpaces' },
+      }],
       pre: null,
       cost: [],
       effects: [],

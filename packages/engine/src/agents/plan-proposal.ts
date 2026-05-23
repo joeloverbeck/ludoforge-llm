@@ -15,6 +15,7 @@ import type {
 } from '../kernel/types.js';
 import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { isSupportedPlanRoleConstraintKind } from '../kernel/plan-role-constraints.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import {
   commitPlanExecutionState,
@@ -435,7 +436,11 @@ function constraintsSatisfied(
     if (constraint.kind === 'notEqual') {
       return binding.selectedId !== other.selectedId;
     }
-    return true;
+    if (!isSupportedPlanRoleConstraintKind(constraint.kind)) {
+      throw new Error(`Unsupported plan role constraint kind "${constraint.kind}" reached runtime evaluation.`);
+    }
+    const _exhaustive: never = constraint.kind;
+    return _exhaustive;
   });
 }
 

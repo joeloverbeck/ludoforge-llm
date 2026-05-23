@@ -1,4 +1,4 @@
-import type { Decision } from '../kernel/microturn/types.js';
+import type { Decision, DecisionContext } from '../kernel/microturn/types.js';
 import type { AgentPolicyCatalog, CompiledPlanTemplate, GameDef } from '../kernel/types.js';
 import type { PolicyPlanMicroturnTrace, PolicyPlanTrace } from '../kernel/types-plan-trace.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
@@ -21,6 +21,7 @@ export interface SelectPlanControlledDecisionInput {
   readonly turnId: string | number;
   readonly seatId: string;
   readonly legalActions: readonly Decision[];
+  readonly decisionContext: DecisionContext;
   readonly primitiveDecision?: Decision;
 }
 
@@ -40,7 +41,9 @@ export const selectPlanControlledDecision = (
     return undefined;
   }
 
-  const exact = input.legalActions.find((decision) => decisionMatchesStep(input.def, decision, template, step, state, false));
+  const exact = input.legalActions.find((decision) =>
+    decisionMatchesStep(input.def, input.decisionContext, decision, template, step, state, false),
+  );
   if (exact !== undefined) {
     const trace = microturnTraceFor(input.def, exact, step.label, step.role, 'exact');
     commitPlanExecutionState(input.store, advanceState(state));
@@ -48,7 +51,7 @@ export const selectPlanControlledDecision = (
   }
 
   const reselected = input.legalActions.find((decision) =>
-    decisionMatchesStep(input.def, decision, template, step, state, true),
+    decisionMatchesStep(input.def, input.decisionContext, decision, template, step, state, true),
   );
   if (reselected !== undefined) {
     const deviation = `${step.role}.reselected`;
@@ -74,6 +77,7 @@ export const selectPlanControlledDecision = (
 
 const decisionMatchesStep = (
   def: GameDef,
+  decisionContext: DecisionContext,
   decision: Decision,
   template: CompiledPlanTemplate,
   step: CompiledPlanTemplate['steps'][number],
@@ -81,6 +85,9 @@ const decisionMatchesStep = (
   allowAnySelectedRoleValue: boolean,
 ): boolean => {
   if (decision.kind !== step.match.decisionKind) {
+    return false;
+  }
+  if (!decisionContextMatchesStep(decisionContext, step.match)) {
     return false;
   }
   if (decision.kind === 'actionSelection') {
@@ -104,6 +111,31 @@ const decisionMatchesStep = (
     default:
       return allowAnySelectedRoleValue;
   }
+};
+
+const decisionContextMatchesStep = (
+  context: DecisionContext,
+  match: CompiledPlanTemplate['steps'][number]['match'],
+): boolean => {
+  if (context.kind !== match.decisionKind) {
+    return false;
+  }
+  if (context.kind === 'actionSelection') {
+    return match.targetKind === 'action' && match.decisionPath === 'actionId';
+  }
+  if (context.kind === 'chooseOne' || context.kind === 'chooseNStep') {
+    if (String(context.decisionKey) !== match.decisionPath) {
+      return false;
+    }
+    if (!(context.targetKinds ?? []).includes(match.targetKind as never)) {
+      return false;
+    }
+    if (match.stageIndex !== undefined && context.stageIndex !== match.stageIndex) {
+      return false;
+    }
+    return true;
+  }
+  return match.stageIndex === undefined;
 };
 
 const traceForState = (

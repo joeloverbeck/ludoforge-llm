@@ -26,12 +26,37 @@ function createDoc(): GameSpecDoc {
       actor: 'active',
       executor: 'actor',
       phase: ['main'],
-      params: [],
+      params: [{
+        name: 'operation.target',
+        domain: { query: 'mapSpaces' },
+      }],
       pre: null,
       cost: [],
       effects: [],
       limits: [],
-      tags: ['pass'],
+      tags: ['pass', 'operation', 'rival-operation', 'special-activity', 'rival-special'],
+    }],
+    actionPipelines: [{
+      id: 'pass-profile',
+      actionId: 'pass',
+      accompanyingOps: ['pass'],
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        { effects: [] },
+        {
+          effects: [{
+            chooseOne: {
+              bind: '$special.target',
+              options: { query: 'mapSpaces' },
+              apply: [],
+            },
+          }],
+        },
+      ],
+      atomicity: 'partial',
     }],
     terminal: {
       conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
@@ -72,7 +97,7 @@ function compilePlanDoc() {
             traceLabel: 'train-govern',
             root: {
               actionTags: ['operation'],
-              compound: { specialTags: ['specialActivity'], timing: 'after' },
+              compound: { specialTags: ['special-activity'], timing: 'after' },
             },
             roles: {
               trainSpace: { selector: 'trainSpace', required: true },
@@ -95,7 +120,7 @@ function compilePlanDoc() {
                   decisionKind: 'chooseOne',
                   targetKind: 'zone',
                   decisionPath: 'special.target',
-                  actionTag: 'specialActivity',
+                  actionTag: 'special-activity',
                   stageIndex: 1,
                 },
               },
@@ -170,12 +195,12 @@ describe('agent plan-template IR compilation', () => {
     const template = first.gameDef?.agents?.library.planTemplates?.trainGovern;
     assert.equal(template?.traceLabel, 'train-govern');
     assert.deepEqual(template?.root.actionTags, ['operation']);
-    assert.deepEqual(template?.root.compound?.specialTags, ['specialActivity']);
+    assert.deepEqual(template?.root.compound?.specialTags, ['special-activity']);
     assert.equal(template?.roles.trainSpace?.selectorId, 'trainSpace');
     assert.equal(template?.roles.trainSpace?.selector.role, 'trainSpace');
     assert.equal(template?.roles.trainSpace?.selector.refs.quality, 'role.trainSpace.quality');
     assert.deepEqual(template?.roles.governSpace?.constraints, [{ kind: 'notEqual', role: 'trainSpace' }]);
-    assert.equal(template?.steps[1]?.match.actionTag, 'specialActivity');
+    assert.equal(template?.steps[1]?.match.actionTag, 'special-activity');
     assert.deepEqual(template?.caps, { capClass: 'standard256', maxSteps: 2 });
     assert.deepEqual(first.gameDef?.agents?.profiles.baseline?.plan.planTemplates, ['trainGovern']);
     assert.deepEqual(first.gameDef?.agents?.profiles.rival?.plan.planTemplates, ['rivalTrainAdvise']);

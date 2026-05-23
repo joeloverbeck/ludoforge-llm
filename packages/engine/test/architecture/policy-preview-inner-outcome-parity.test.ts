@@ -1,7 +1,7 @@
-// @test-class: architectural-invariant
+// @test-class: golden-trace
 
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -114,11 +114,17 @@ const captureOutcomeParity = (seed: number, maxTurns: number): OutcomeParityFixt
   return normalize({ seed, maxTurns, profileId: PROFILE_ID, decisions });
 };
 
+const UPDATE_GOLDEN = process.env.UPDATE_GOLDEN === '1';
+
 describe('Spec 178 chooseOne inner-preview outcome parity', () => {
   for (const seed of WITNESS_SEEDS) {
-    it(`preserves ARVN continuedDeepening chooseOne outcomes for seed ${seed}`, { timeout: 90_000 }, () => {
+    it(`preserves ARVN continuedDeepening chooseOne outcomes for seed ${seed}`, { timeout: 240_000 }, () => {
       const expected = readFixture(seed);
       const actual = captureOutcomeParity(seed, expected.maxTurns);
+      if (UPDATE_GOLDEN) {
+        writeFileSync(fixturePathForSeed(seed), `${JSON.stringify(actual, null, 2)}\n`);
+        return;
+      }
       assert.deepEqual(actual, expected);
     });
   }

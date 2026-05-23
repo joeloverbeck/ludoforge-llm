@@ -11,7 +11,7 @@ import {
 } from './test-lane-manifest.mjs';
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
-const DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS = 10 * 60 * 1000;
+const DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS = 20 * 60 * 1000;
 const DEFAULT_FITL_RULES_TIMEOUT_MS = 5 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
 const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];

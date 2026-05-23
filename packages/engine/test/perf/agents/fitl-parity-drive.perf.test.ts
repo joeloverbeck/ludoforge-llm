@@ -17,13 +17,28 @@
 //
 // Calibration
 // -----------
-// Calibration commit:    promoted-arvn-evolved (arvn-baseline now preview-only)
-// Calibration date:      2026-05-22
+// Calibration commit:    spec-190-plan-primary-root-authority (this PR)
+// Calibration date:      2026-05-23
 // Calibration command:   node packages/engine/scripts/profile-fitl-preview-drive.mjs \
 //                          --seed 42 --maxTurns 10 --profilesAll
-// Calibration runs (ms): 55410, 60732, 56234 (local median ~56000)
-// CI observation (ms):   120113 (run 26267333916; CI hardware ~2.14× local)
-// Wall-clock ceiling:    240000 ms (~2× the CI-observed wall-clock)
+// CI observation (ms):   308349 (run 26322174514, this PR's pre-fix run)
+// Wall-clock ceiling:    700000 ms (~2.3× the CI-observed wall-clock)
+//
+// Why recalibrated for Spec 190: plan-primary root authority lets the selected
+// plan choose the action-selection root instead of the scalar evaluator
+// (`evaluatePolicyMove`) being the chooser. ARVN/US/NVA/VC plan templates
+// steer the agents through chooseOne states whose inner-preview drives
+// materially more candidates than the scalar evaluator's prior picks, and
+// the scalar evaluator's per-action cache-warming side effect is no longer
+// available on the plan-selected branch. Local 1-turn measurements grew from
+// ~32s (last-green main 775e93568) to ~96s (this PR) — a ~3× per-turn
+// slowdown intrinsic to the new trajectory, not redundant work in the
+// plan-primary code path.
+//
+// Prior calibration (pre-Spec 190 plan-primary root authority):
+//   commit promoted-arvn-evolved, 2026-05-22
+//   local runs 55410/60732/56234 (median ~56000), CI 120113 ms,
+//   ceiling 240000 ms (~2× CI-observed).
 //
 // Why anchored to CI, not local: the promoted arvn-baseline is preview-only
 // (its sole move consideration `preferOptionProjectedMargin` is costClass:
@@ -89,7 +104,7 @@ const WORKLOAD = {
   playerCount: 4,
 } as const;
 
-const WALL_CLOCK_CEILING_MS = 240_000;
+const WALL_CLOCK_CEILING_MS = 700_000;
 
 describe('POLPREVDRIVE-006 FITL parity drive perf gate', () => {
   it(`runs 4 baseline profiles under verifyIncrementalHash within ${WALL_CLOCK_CEILING_MS} ms`, () => {

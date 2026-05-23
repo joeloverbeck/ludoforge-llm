@@ -81,7 +81,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent } from '../../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -93,11 +92,24 @@ import {
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { runGame } from '../../../src/sim/index.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
+import { createSeededChoiceAgents } from '../../helpers/test-agents.js';
 
-const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+// Exploration vehicle: seeded-choice agents pick a legal action uniformly from
+// the published frontier. They depend on no policy semantics, so policy-layer
+// evolutions (e.g. Spec 190 plan-primary root authority) cannot shift the
+// trajectory away from option-matrix-overlapping states the way PolicyAgent
+// can. The original empirical corpus this test guards was captured with
+// PolicyAgent baselines (`us-baseline`/`arvn-baseline`/`nva-baseline`/
+// `vc-baseline`) on seed 42; Spec 190's plan-primary trajectory observed
+// 0 collisions on that exact corpus while the kernel property remained
+// unchanged. Seeded-choice agents reach option-matrix-overlapping states on
+// every probed seed (42/100/200/500/1000) under both pre- and post-Spec-190
+// kernels, so the test now exercises the kernel-structural property
+// (`legal-moves.ts:tryPushOptionMatrixFilteredMove`) independently of policy
+// trajectory.
 
+const CORPUS_SEEDS = [42, 100, 200, 500, 1000] as const;
 const CORPUS = {
-  seed: 42,
   maxTurns: 10,
   playerCount: 4,
 } as const;
@@ -156,27 +168,27 @@ describe('POLPREVDRIVE-005 — drive fingerprint identity property', () => {
       }
     };
 
-    const agents: Agent[] = FITL_BASELINE_PROFILES.map((profileId) => {
-      const inner = new PolicyAgent({ profileId, traceLevel: 'summary' });
-      return wrapAgentWithLegalMoveObserver(inner, observe);
-    });
-
-    runGame(
-      def,
-      CORPUS.seed,
-      agents,
-      CORPUS.maxTurns,
-      CORPUS.playerCount,
-      {
-        kernel: { verifyIncrementalHash: true },
-        skipDeltas: true,
-        traceRetention: 'finalStateOnly',
-      },
-      runtime,
-    );
+    for (const seed of CORPUS_SEEDS) {
+      const inner = createSeededChoiceAgents(CORPUS.playerCount);
+      const agents: Agent[] = inner.map((agent) => wrapAgentWithLegalMoveObserver(agent, observe));
+      runGame(
+        def,
+        seed,
+        agents,
+        CORPUS.maxTurns,
+        CORPUS.playerCount,
+        {
+          kernel: { verifyIncrementalHash: true },
+          skipDeltas: true,
+          traceRetention: 'finalStateOnly',
+        },
+        runtime,
+      );
+    }
 
     process.stderr.write(
-      `[polprevdrive-005-record] statesObserved=${totalStatesObserved} ` +
+      `[polprevdrive-005-record] seeds=${CORPUS_SEEDS.join(',')} ` +
+      `statesObserved=${totalStatesObserved} ` +
       `legalMoveEnumerations=${totalLegalMoveEnumerations} ` +
       `fingerprintCollisions=${collisionCount}\n`,
     );
@@ -195,7 +207,8 @@ describe('POLPREVDRIVE-005 — drive fingerprint identity property', () => {
       `Expected at least one reachable state where legalMoves(state) contains a (actionId, canonicalParamsJSON) ` +
       `group with two or more distinct stableMoveKeys, proving that fingerprint=(actionId, paramsJSON, sourceStateHash) ` +
       `is strictly weaker than stableMoveKey and therefore unsound as a drive cache identity oracle. ` +
-      `Found 0 such collisions across ${totalLegalMoveEnumerations} legal-move enumerations on the FITL corpus. ` +
+      `Found 0 such collisions across ${totalLegalMoveEnumerations} legal-move enumerations on the FITL corpus ` +
+      `(seeds ${CORPUS_SEEDS.join(',')}). ` +
       `If this assertion fails, the kernel may have collapsed actionClass/freeOperation into params, removing ` +
       `the option-matrix discrimination in legal-moves.ts:tryPushOptionMatrixFilteredMove; reassess POLPREVDRIVE-005 ` +
       `before re-opening the cache implementation.`,

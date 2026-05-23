@@ -1,6 +1,6 @@
 # Spec 191 — Plan/Role Semantic Integrity: Enforce Compiled Plan Metadata Instead of Accepting It
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — this is the hardening substrate the plan-primary root authority (Spec 190) relies on. The compiler currently accepts plan/role metadata that the runtime silently ignores, which violates the compiler/kernel validation boundary and lets authored intent diverge from enforced behavior.
 **Complexity**: M (M–L if many authored values fail validation) — engine + compiler changes, no new DSL surface area; corrective fixes to existing authored profile values that fail the new validation are in scope (see §2).
 **Date**: 2026-05-22
@@ -139,4 +139,22 @@ Decomposed via `/spec-to-tickets` on 2026-05-22 (namespace `191PLAROLSEM`):
 
 ## Outcome
 
-TBD.
+Completed: 2026-05-23
+
+What changed:
+- P1 added a shared supported-role-constraint registry and compile-rejected unsupported `locatedIn`, closing the accepted-but-ignored role-constraint gap.
+- P2 made plan step matching consume/validate `decisionPath`, `targetKind`, and `stageIndex`, with FITL profile corrections where needed.
+- P3 added compound-sequencing witness validation and FITL profile corrections for authored `root.compound` metadata.
+- P4 added a semantic golden trace fixture and test that pins representative authored role-kind/path/stage correspondence against the plan-controller frontier, including mismatch probes for discriminating power.
+
+Deviations from original plan:
+- `locatedIn` was compile-rejected rather than implemented, matching the spec's recommended disposition because the live FITL profile authors zero `locatedIn` constraints.
+- No new profile authoring or root-selection behavior landed; Spec 190 remains the plan-primary root authority owner.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed during P4.
+- `UPDATE_GOLDEN=1 node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js` from `packages/engine` — passed and generated the P4 fixture.
+- `node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js` from `packages/engine` — passed against the checked-in fixture.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm run check:ticket-deps` — passed after archiving the final active ticket.

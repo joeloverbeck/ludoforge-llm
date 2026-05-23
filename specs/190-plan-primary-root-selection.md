@@ -7,7 +7,7 @@
 **Dependencies**:
 - `archive/specs/186-advisory-turn-plan-architecture-core.md` (COMPLETED — plan proposer/evaluator, `PlanExecutionState`, execution controller, fallback ladder, plan trace)
 - `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md` (COMPLETED — posture + relationship scoring the proposer already uses)
-- `specs/191-plan-role-semantic-integrity.md` (lands first — trustworthy step matching and enforced role constraints make the plan a safe root authority; see `specs/IMPLEMENTATION-ORDER.md`)
+- `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED — trustworthy step matching and enforced role constraints make the plan a safe root authority; see `specs/IMPLEMENTATION-ORDER.md`)
 
 **Trigger report**:
 - `reports/ludoforge-ai-overhaul-first-iteration.md` (ChatGPT-Pro audit, 2026-05-22). This spec adopts the audit's central verified finding (#1 — root selection is not plan-primary) and corrects its framing: this is the completion of Spec 186 §4.6, not a new architecture.
@@ -102,7 +102,7 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 - The audit's "the current architecture is still not the primary decision architecture … perform a second major architectural iteration" framing — corrected to: Spec 186 §4.6 *already* specified plan-primary root selection; the implementation realized plan-driven tail execution + advisory root but not root authority. This is completion of a built architecture, not a new iteration.
 - The audit's claims #2/#3 ("strategy modules are score-groups, selectors use `value:1`/`projectedSelfMargin`/`weight:0`") — these describe the demoted leaf scorers Spec 186 §11 deliberately kept. They read as "scalar soup" only because the scalar pass currently chooses the root; this spec relocates them to their intended subordinate role *without a profile rewrite*. No profile-authoring spec is warranted on this basis.
 
-**Deferred / rejected:** see `specs/191-plan-role-semantic-integrity.md` §11 (shared disposition table for the audit's remaining recommendations) and `specs/IMPLEMENTATION-ORDER.md`.
+**Deferred / rejected:** see `archive/specs/191-plan-role-semantic-integrity.md` §11 (shared disposition table for the audit's remaining recommendations) and `specs/IMPLEMENTATION-ORDER.md`.
 
 ## 12. Out of scope (named follow-on / sibling)
 

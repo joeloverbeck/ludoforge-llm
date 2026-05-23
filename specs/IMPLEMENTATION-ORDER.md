@@ -14,8 +14,8 @@ This series finishes the advisory turn-plan architecture (Specs 186–188, all C
 
 ## Order
 
-1. **Spec 191 — Plan/Role Semantic Integrity** (`specs/191-plan-role-semantic-integrity.md`).
-   Enforce or compile-reject every piece of compiled plan/role metadata: role-constraint runtime/compile parity (`locatedIn`), step-match `decisionPath`/`stageIndex`/`targetKind` validation + use, compound-sequencing witness validation, semantic golden traces. **Lands first** — it is non-behaviour-changing correctness hardening, and trustworthy step matching + enforced role constraints make the plan a safe root authority for Spec 190.
+1. **Spec 191 — Plan/Role Semantic Integrity** (`archive/specs/191-plan-role-semantic-integrity.md`) — COMPLETED 2026-05-23.
+   Enforce or compile-reject every piece of compiled plan/role metadata: role-constraint runtime/compile parity (`locatedIn`), step-match `decisionPath`/`stageIndex`/`targetKind` validation + use, compound-sequencing witness validation, semantic golden traces. Landed first as non-behaviour-changing correctness hardening; trustworthy step matching + enforced role constraints now make the plan a safe root authority for Spec 190.
 
 2. **Spec 190 — Plan-Primary Root Selection** (`specs/190-plan-primary-root-selection.md`).
    Make the selected plan/root pair authoritative at the action-selection microturn; demote the scalar `evaluatePolicyMove` path to the no-template fallback (Spec 186 §4.6). **Behaviour-changing** — requires profile-quality re-validation and a root-override witness Spec 186 lacked. Depends on Spec 191's enforced matching landing first.

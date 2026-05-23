@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents` (plan-proposal constraint evaluator), `cnl` (plan-template validator)
-**Deps**: `specs/191-plan-role-semantic-integrity.md`
+**Deps**: `archive/specs/191-plan-role-semantic-integrity.md`
 
 ## Problem
 

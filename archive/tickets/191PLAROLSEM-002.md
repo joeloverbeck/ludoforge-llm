@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents` (plan-controller step matching), `cnl` (plan-template validator); `data/games/fire-in-the-lake` (corrective profile fixes)
-**Deps**: `specs/191-plan-role-semantic-integrity.md`
+**Deps**: `archive/specs/191-plan-role-semantic-integrity.md`
 
 ## Problem
 

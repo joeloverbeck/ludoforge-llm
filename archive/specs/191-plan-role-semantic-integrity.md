@@ -125,7 +125,7 @@ All additions are pure validation and deterministic matching over already-determ
 
 ## 12. Out of scope (named follow-on / sibling)
 
-- **Spec 190** — plan-primary root selection (depends conceptually on this spec's trustworthy step matching; see `specs/IMPLEMENTATION-ORDER.md`).
+- **Spec 190** — plan-primary root selection (depends conceptually on this spec's trustworthy step matching; see `archive/specs/IMPLEMENTATION-ORDER-2026-05-23.md`).
 - Cookbook rewrite, relationship-matrix, evolution-loop revival — per §11 deferred.
 
 ## Tickets

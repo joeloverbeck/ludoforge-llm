@@ -1,6 +1,6 @@
 # Implementation Order — Plan-Primary Decision Authority + Semantic Integrity
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Date**: 2026-05-22
 
 This series finishes the advisory turn-plan architecture (Specs 186–188, all COMPLETED 2026-05-22) by closing the two gaps that the ChatGPT-Pro audit `reports/ludoforge-ai-overhaul-first-iteration.md` verified as genuinely unaddressed: (1) the selected plan does not yet choose the action-selection **root**, and (2) compiled plan/role metadata is **accepted but not enforced**. It is the reassessed, de-duplicated form of that audit — the audit's broader "second major architectural iteration" was largely already landed (186–188) or already rejected on Foundations merits (Spec 186 §11). See each spec's §11 Reassessment for per-recommendation dispositions.
@@ -39,3 +39,24 @@ This series finishes the advisory turn-plan architecture (Specs 186–188, all C
 ## Why this scope, not the audit's "replace everything"
 
 The audit re-derived the Doctrine–Plan–Role–Target shape that Specs 186–188 already landed, under new vocabulary, and re-proposed two things the completed series had already rejected on their merits (doctrine-as-new-layer, weights-abolished). Verification against current `main` showed the genuinely unaddressed residue is exactly two clusters: root authority (190) and metadata enforcement (191). Scoping to those avoids duplicating the just-completed 186–188 work and re-litigating settled decisions, while still closing the real Foundation #12/#15 gaps the audit correctly identified.
+
+## Outcome
+
+Completed on 2026-05-23.
+
+What changed:
+
+- Spec 191 landed first and was archived at `archive/specs/191-plan-role-semantic-integrity.md`, enforcing/compiling-rejecting the plan/role metadata integrity gap.
+- Spec 190 landed second and was archived at `archive/specs/190-plan-primary-root-selection.md`, making selected plans authoritative at the action-selection root and adding the ARVN behavioural root-override witness.
+- The sequencing decision `191 -> 190` was preserved through implementation and the remaining audit items are explicitly deferred or rejected above.
+
+Deviations from the plan:
+
+- None. The two-spec series completed in the intended order.
+
+Verification:
+
+- `pnpm turbo test` — passed after Spec 190 completion.
+- `pnpm turbo lint` — passed after Spec 190 completion.
+- `pnpm turbo typecheck` — passed after Spec 190 completion.
+- `pnpm run check:ticket-deps` — passed after archiving Spec 190 and its tickets.

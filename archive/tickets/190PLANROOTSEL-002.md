@@ -1,6 +1,6 @@
 # 190PLANROOTSEL-002: ARVN root-override witness + profile-quality re-validation sweep
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — warning-class profile-quality test additions and witness re-runs only
@@ -106,3 +106,37 @@ If any witness is re-blessed or distilled in §2 above, record the rationale in 
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/`
 3. `pnpm turbo test`
 4. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-23.
+
+What changed:
+
+- Added `packages/engine/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.ts`, a production FITL ARVN witness where `arvn.trainGovern` selects the `train` root while scalar `evaluatePolicyMove` would choose `govern`; `PolicyAgent.chooseDecision` returns the plan root and a plan-less ARVN control returns the scalar root.
+- Used the user-approved marker correction: the drafted `// @witness: spec-190-arvn-root-override` header is represented as `// @profile-variant: spec-190-arvn-root-override`, because `policy-profile-quality/` convergence witnesses reject `@witness` markers and require `@profile-variant`.
+- Distilled the pre-existing red `packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.ts` away from a brittle seed-1000 full-game trajectory. The witness now constructs a deterministic ARVN event frontier with shaded and unshaded event candidates and still proves `candidate.params.side` contributes `-800` for shaded candidates, `0` for unshaded candidates, and no `unknownCandidateParamRefs` are emitted.
+
+Deviations and classifications:
+
+- The literal command `node --test packages/engine/dist/test/policy-profile-quality/` is invalid in this checkout; Node treats the directory as a module and fails with `MODULE_NOT_FOUND`. The repo-valid substitute is `pnpm -F @ludoforge/engine run test:policy-profile-quality`.
+- `pnpm -F @ludoforge/engine run test:policy-profile-quality` now passes through the new Spec 190 witness's relevant ARVN/candidate-param coverage but still stops later on the known `fitl-march-dead-end-recovery.test.js` GameDef-hash fixture drift. That witness is profile-quality fixture drift outside this ticket's root-authority scope; the same class of failure was previously handled in `archive/tickets/145PREVCOMP-007.md`, but the current red is not a 190 deliverable and is not classified as an active 190 blocker.
+- The abandoned broad seed scan for the candidate-param witness produced `seed=1000`, `1001`, and `1002` as no ARVN event frontier before it was stopped under the approved hang-triage replacement path. No source or fixture changes came from that probe.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed, 1 test.
+- `node --test packages/engine/dist/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` — passed, 2 tests.
+- `pnpm -F @ludoforge/engine run test:policy-profile-quality` — partial red after the owned repairs: ARVN witnesses through `arvn-us-rival-risk-flip` passed, the repaired candidate-param witness passed, then the runner stopped on the known unrelated `fitl-march-dead-end-recovery.test.js` fixture hash drift.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-*.test.js packages/engine/dist/test/policy-profile-quality/nva-*.test.js packages/engine/dist/test/policy-profile-quality/us-*.test.js packages/engine/dist/test/policy-profile-quality/vc-*.test.js packages/engine/dist/test/policy-profile-quality/fitl-variant-*.test.js packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed, 22 suites / 29 tests.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2496 archived tickets.
+- `git diff --check -- packages/engine/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.ts packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.ts tickets/190PLANROOTSEL-002.md` — passed.
+- `pnpm turbo test` — passed, 5/5 tasks.
+- `pnpm turbo lint` — passed, 2/2 tasks.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+
+Source-size ledger:
+
+- `packages/engine/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.ts`: new 146-line test, under guidance.
+- `packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.ts`: 227 lines after distillation, under guidance.

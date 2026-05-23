@@ -1,6 +1,6 @@
 # Spec 190 — Plan-Primary Root Selection: Let the Selected Plan Choose the Action-Selection Root
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — this is the one genuine architectural gap the completed 186–188 series left open. Spec 186 §4.6 specified that the composed plan becomes the primary selector of the action-selection microturn and that flat considerations are retired as the *primary* selector; the implementation commits the plan to state and drives the *tail* microturns, but the *root* is still chosen by the scalar evaluator. Until this lands, the architecture behaves like the old utility-AI with an advisory plan stapled on.
 **Complexity**: M — engine change at the root-selection seam; behaviour-changing (profile-quality re-validation required); no compiler/kernel changes.
 **Date**: 2026-05-22
@@ -114,8 +114,31 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 Decomposed via `/spec-to-tickets` on 2026-05-23:
 
 - [`archive/tickets/190PLANROOTSEL-001.md`](../archive/tickets/190PLANROOTSEL-001.md) — Plan-primary root authority at action-selection seam + invariants (COMPLETED 2026-05-23; covers §8 P1: §4.1 wiring, §4.2 invariant, §9 architectural-invariant + determinism + v2-equivalence-preserved)
-- [`tickets/190PLANROOTSEL-002.md`](../tickets/190PLANROOTSEL-002.md) — ARVN root-override witness + profile-quality re-validation sweep (covers §8 P2: §9 root-override witness + profile-quality re-validation)
+- [`archive/tickets/190PLANROOTSEL-002.md`](../archive/tickets/190PLANROOTSEL-002.md) — ARVN root-override witness + profile-quality re-validation sweep (COMPLETED 2026-05-23; covers §8 P2: §9 root-override witness + profile-quality re-validation)
 
 ## Outcome
 
-TBD.
+Completed on 2026-05-23.
+
+What changed:
+
+- `archive/tickets/190PLANROOTSEL-001.md` made selected advisory plans authoritative at the action-selection root, demoting scalar `evaluatePolicyMove` root choice to the no-template/no-match fallback and preserving plan-less v2 equivalence.
+- `archive/tickets/190PLANROOTSEL-002.md` added the production FITL ARVN behavioural root-override witness. The witness proves an ARVN plan-selected `train` root wins over the divergent scalar `govern` root, and a plan-less control returns the scalar root.
+- The profile-quality revalidation repaired the pre-existing candidate-param witness by distilling it to a deterministic ARVN event frontier; the plan-having ARVN/NVA/US/VC/FITL variant witness families pass under the current root-authority seam.
+
+Deviations:
+
+- The Spec 190 P2 witness uses the repo-valid `// @profile-variant: spec-190-arvn-root-override` marker instead of the draft `// @witness:` marker because `policy-profile-quality/` convergence witnesses require `@profile-variant`.
+- The literal directory command `node --test packages/engine/dist/test/policy-profile-quality/` is invalid in this checkout; the retained package runner is `pnpm -F @ludoforge/engine run test:policy-profile-quality`.
+- The full policy-profile-quality runner still stops later on known `fitl-march-dead-end-recovery.test.js` GameDef-hash fixture drift outside Spec 190's root-authority scope. The targeted plan-having witness set required by this spec passes.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-*.test.js packages/engine/dist/test/policy-profile-quality/nva-*.test.js packages/engine/dist/test/policy-profile-quality/us-*.test.js packages/engine/dist/test/policy-profile-quality/vc-*.test.js packages/engine/dist/test/policy-profile-quality/fitl-variant-*.test.js packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed, 22 suites / 29 tests.
+- `pnpm turbo test` — passed, 5/5 tasks.
+- `pnpm turbo lint` — passed, 2/2 tasks.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+- `pnpm run check:ticket-deps` — passed after ticket archival.

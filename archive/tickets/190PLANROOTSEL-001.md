@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-agent.ts`; new architectural-invariant and determinism tests
-**Deps**: `specs/190-plan-primary-root-selection.md`
+**Deps**: `archive/specs/190-plan-primary-root-selection.md`
 
 ## Problem
 
@@ -71,8 +71,8 @@ The existing `packages/engine/test/determinism/plan-v2-equivalence.test.ts` (Spe
 
 ## Out of Scope
 
-- **ARVN root-override behavioural witness** — owned by `tickets/190PLANROOTSEL-002.md` (Spec 190 §8 P2). This ticket lands the seam and the *property* assertions; the behavioural witness that proves the plan's root wins over a divergent scalar pick lands separately.
-- **Profile-quality witness re-validation sweep** (ARVN Train+Govern + FITL four-faction) — owned by `tickets/190PLANROOTSEL-002.md`.
+- **ARVN root-override behavioural witness** — owned by `archive/tickets/190PLANROOTSEL-002.md` (Spec 190 §8 P2). This ticket lands the seam and the *property* assertions; the behavioural witness that proves the plan's root wins over a divergent scalar pick lands separately.
+- **Profile-quality witness re-validation sweep** (ARVN Train+Govern + FITL four-faction) — owned by `archive/tickets/190PLANROOTSEL-002.md`.
 - **Profile rewrites** — Spec 190 Non-Goal #1 ("No profile rewrite"). The four-faction authoring (Spec 188) and demoted leaf scorers stay as authored.
 - **Cookbook rewrite** — deferred per Spec 190 §12; run `reassess-agent-dsl-cookbook` after this and 002 land.
 - **Posture / relationship scoring changes** — Spec 190 Non-Goal #2 (Specs 186/187 own those).
@@ -127,8 +127,8 @@ Implementation notes:
 Scope deviations:
 
 - Added `packages/engine/src/agents/policy-agent-plan-root.ts` and `packages/engine/test/helpers/spec-190-plan-root-fixture.ts`; neither was named in the original "Files to Touch", but both are local support files for the requested seam and kept the oversized agent file at no net line growth.
-- The replay-identity proof uses a synthetic bounded trajectory that exercises the same plan-selected microturn contract. The production ARVN root-override behavioural witness remains owned by `tickets/190PLANROOTSEL-002.md`.
-- A full `test:policy-profile-quality` run reached all visible `arvn-*` witnesses green, then failed in the non-001 `candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` seed-1000 frontier assertion. That red is recorded on `tickets/190PLANROOTSEL-002.md`, which owns the profile-quality sweep/revalidation decisions.
+- The replay-identity proof uses a synthetic bounded trajectory that exercises the same plan-selected microturn contract. The production ARVN root-override behavioural witness remains owned by `archive/tickets/190PLANROOTSEL-002.md`.
+- A full `test:policy-profile-quality` run reached all visible `arvn-*` witnesses green, then failed in the non-001 `candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` seed-1000 frontier assertion. That red is recorded on `archive/tickets/190PLANROOTSEL-002.md`, which owns the profile-quality sweep/revalidation decisions.
 
 Verification:
 

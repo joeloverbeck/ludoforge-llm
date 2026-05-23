@@ -1,13 +1,15 @@
 {
-  "originating_spec": "archive/specs/191-plan-role-semantic-integrity.md",
-  "archived_spec": "archive/specs/191-plan-role-semantic-integrity.md",
-  "last_ticket": "archive/tickets/191PLAROLSEM-004.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "1f66c49f99b69f88120e19180a34a1d16af98c2a",
+  "originating_spec": "specs/190-plan-primary-root-selection.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/190PLANROOTSEL-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "143fe74c83ad790bdf4b088f8677644e22962933",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/190PLANROOTSEL-002.md",
+  "queue": [
+    "tickets/190PLANROOTSEL-002.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
   "owned_dirty_summary": null,
   "blocked": false,

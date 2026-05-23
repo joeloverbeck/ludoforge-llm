@@ -295,7 +295,7 @@ describe('engine test lane taxonomy policy', () => {
       'node scripts/run-tests.mjs --lane architecture:policy-preview-parity',
     );
     assert.equal(
-      engineTestsWorkflow.includes("id: policy-preview-parity, script: 'test:architecture:policy-preview-parity', timeout: 15"),
+      engineTestsWorkflow.includes("id: policy-preview-parity, script: 'test:architecture:policy-preview-parity', timeout: 30"),
       true,
       'engine-tests.yml must run the policy-preview parity architecture shard',
     );

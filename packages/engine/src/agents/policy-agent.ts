@@ -20,7 +20,6 @@ import { pickRandom } from './agent-move-selection.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import {
   emptyPreviewUsage,
-  evaluatePolicyMove,
   type PolicyPreviewSignalUnavailableAdvisory,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
@@ -39,6 +38,7 @@ import type { PreviewWideningState } from './preview-budget-allocator.js';
 import { updatePlanExecutionLifecycle, type PlanExecutionStateStore } from './plan-execution.js';
 import { proposeAndCommitAdvisoryTurnPlan } from './plan-proposal.js';
 import { selectPlanControlledDecision } from './plan-controller.js';
+import { choosePlanSelectedRootDecision, evaluateActionSelectionFallback } from './policy-agent-plan-root.js';
 import {
   createPolicyAgentChooseNStepInnerPreview,
   createPolicyAgentChooseOneInnerPreview,
@@ -613,25 +613,25 @@ export class PolicyAgent implements Agent {
     }
     const traceHeapDelta = shouldLogPolicyOomTrace();
     const evalHeapBefore = traceHeapDelta ? heapUsedMb() : 0;
-    const evaluation = evaluatePolicyMove({
-      def: input.def,
-      state: input.state,
-      playerId: input.state.activePlayer,
-      legalMoves: actionDecisions.map((decision) => decision.move).filter((move): move is NonNullable<typeof move> => move !== undefined),
-      trustedMoveIndex: new Map(),
-      rng: input.rng,
-      ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
-      ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
-      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-      ...(this.traceLevel === 'none' ? { diagnosticsMode: 'disabled' as const } : {}),
-      traceLevel: this.traceLevel,
-      previewWideningState: this.previewWideningState,
-      previewDecisionContext: {
-        turnId: Number(input.microturn.turnId),
-        seatId: String(input.microturn.seatId),
-      },
-    });
-    const planTrace = proposeAndCommitAdvisoryTurnPlan(input, this.planExecutionState, this.profileId)?.trace;
+    const planProposal = proposeAndCommitAdvisoryTurnPlan(input, this.planExecutionState, this.profileId);
+    const planRootDecision = choosePlanSelectedRootDecision(
+      input,
+      actionDecisions,
+      this.profileId,
+      this.traceLevel,
+      planProposal,
+    );
+    if (planRootDecision !== undefined) {
+      return planRootDecision;
+    }
+    const evaluation = evaluateActionSelectionFallback(
+      input,
+      actionDecisions,
+      this.profileId,
+      this.fallbackOnError,
+      this.traceLevel,
+      this.previewWideningState,
+    );
     logPolicyOomTrace(
       'actionSelection:evaluated',
       input,
@@ -650,7 +650,7 @@ export class PolicyAgent implements Agent {
       decision: selectedDecision,
       rng: evaluation.rng,
       ...(evaluation.metadata.selectedReason === undefined ? {} : { selectedByReason: evaluation.metadata.selectedReason }),
-      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(planTrace === undefined ? evaluation.metadata : { ...evaluation.metadata, plan: planTrace }, this.traceLevel) }),
+      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(planProposal === undefined ? evaluation.metadata : { ...evaluation.metadata, plan: planProposal.trace }, this.traceLevel) }),
     };
   }
 

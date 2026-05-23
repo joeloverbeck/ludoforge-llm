@@ -1,6 +1,6 @@
 # 190PLANROOTSEL-001: Plan-primary root authority at action-selection seam + invariants
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-agent.ts`; new architectural-invariant and determinism tests
@@ -110,3 +110,40 @@ The existing `packages/engine/test/determinism/plan-v2-equivalence.test.ts` (Spe
 3. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/determinism/plan-v2-equivalence.test.js`
 4. `pnpm turbo test`
 5. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-23.
+
+The action-selection seam now proposes and commits the plan before scalar evaluation. When the proposal is `selected`, `PolicyAgent` resolves the selected plan root by stable move key against the published action frontier and returns that action with `input.rng` unchanged. The scalar `evaluatePolicyMove` path is now only the fallback for no proposal, no template, no root match, or no role binding.
+
+Implementation notes:
+
+- Extracted the plan-selected root authority branch into `packages/engine/src/agents/policy-agent-plan-root.ts` to keep `packages/engine/src/agents/policy-agent.ts` from growing.
+- Chose the synthetic metadata option for plan-selected diagnostics: the branch feeds a minimal `PolicyEvaluationMetadata` with plan provenance into the existing `buildPolicyAgentDecisionTrace` path instead of changing `policy-diagnostics.ts`.
+- Exported `getPolicyEvalCallCount()` from `packages/engine/src/agents/policy-eval.ts` so the architectural test can prove `evaluatePolicyMove` is not invoked on the selected branch.
+- Added a small synthetic plan-root fixture under `packages/engine/test/helpers/spec-190-plan-root-fixture.ts`; it terminates by score so replay tests exercise a bounded trajectory.
+
+Scope deviations:
+
+- Added `packages/engine/src/agents/policy-agent-plan-root.ts` and `packages/engine/test/helpers/spec-190-plan-root-fixture.ts`; neither was named in the original "Files to Touch", but both are local support files for the requested seam and kept the oversized agent file at no net line growth.
+- The replay-identity proof uses a synthetic bounded trajectory that exercises the same plan-selected microturn contract. The production ARVN root-override behavioural witness remains owned by `tickets/190PLANROOTSEL-002.md`.
+- A full `test:policy-profile-quality` run reached all visible `arvn-*` witnesses green, then failed in the non-001 `candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` seed-1000 frontier assertion. That red is recorded on `tickets/190PLANROOTSEL-002.md`, which owns the profile-quality sweep/revalidation decisions.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — pass.
+- `node --test packages/engine/dist/test/architecture/spec-190-plan-selected-root-authority.test.js` — pass.
+- `node --test packages/engine/dist/test/determinism/spec-190-plan-selected-replay-identity.test.js` — pass.
+- `node --test packages/engine/dist/test/determinism/plan-v2-equivalence.test.js` — pass.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-*.test.js` — pass, 9/9 files.
+- `pnpm turbo test` — pass, 5/5 tasks.
+- `pnpm turbo lint` — pass.
+- `pnpm turbo typecheck` — pass.
+- `pnpm -F @ludoforge/engine run test:policy-profile-quality` — partial/non-blocking for this ticket: all visible `arvn-*` witnesses passed, then the non-001 candidate-params witness failed as described above.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-agent.ts`: before 981 lines, after 981 lines, active growth 0; preexisting over-cap file did not grow.
+- `packages/engine/src/agents/policy-eval.ts`: before 1734 lines, after 1733 lines, active growth -1; preexisting over-cap file did not grow.
+- `packages/engine/src/agents/policy-agent-plan-root.ts`: new 89-line helper, under cap.

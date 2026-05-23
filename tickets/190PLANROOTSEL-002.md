@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — warning-class profile-quality test additions and witness re-runs only
-**Deps**: `tickets/190PLANROOTSEL-001.md`
+**Deps**: `archive/tickets/190PLANROOTSEL-001.md`
 
 ## Problem
 
-Spec 190 §8 P2 calls for the behavioural witness that Spec 186's acceptance tests omitted: a constructed scenario where the plan's chosen root differs from the scalar evaluator's pick, asserting the **plan's** root is returned (per §3 — "Spec 186's acceptance tests (Phase 2(e) v2-equivalence; Phase 3 distinct Train/Govern spaces) did not include a root-override witness, so the gap was not caught"). This ticket authors that witness for ARVN and re-validates the existing plan-having profile-quality corpus (ARVN Train+Govern separation + fallback witnesses; FITL four-faction plan-having witnesses authored by Spec 188) to confirm the new seam from `tickets/190PLANROOTSEL-001.md` does not regress committed convergence claims. Witnesses live in `packages/engine/test/policy-profile-quality/` per FOUNDATIONS Appendix — failures emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings, not blocking CI failures.
+Spec 190 §8 P2 calls for the behavioural witness that Spec 186's acceptance tests omitted: a constructed scenario where the plan's chosen root differs from the scalar evaluator's pick, asserting the **plan's** root is returned (per §3 — "Spec 186's acceptance tests (Phase 2(e) v2-equivalence; Phase 3 distinct Train/Govern spaces) did not include a root-override witness, so the gap was not caught"). This ticket authors that witness for ARVN and re-validates the existing plan-having profile-quality corpus (ARVN Train+Govern separation + fallback witnesses; FITL four-faction plan-having witnesses authored by Spec 188) to confirm the new seam from `archive/tickets/190PLANROOTSEL-001.md` does not regress committed convergence claims. Witnesses live in `packages/engine/test/policy-profile-quality/` per FOUNDATIONS Appendix — failures emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings, not blocking CI failures.
 
 ## Assumption Reassessment (2026-05-23)
 
@@ -17,6 +17,7 @@ Spec 190 §8 P2 calls for the behavioural witness that Spec 186's acceptance tes
 3. Spec 188 (FITL four-faction plan migration) is archived COMPLETED 2026-05-22; per the spec, the four competence-report personalities are authored as plan structures. Existing plan-having witnesses for ARVN / VC / NVA / US patterns live in `policy-profile-quality/` with `<faction>-*.test.ts` naming.
 4. Per FOUNDATIONS Appendix, `policy-profile-quality/` failures are warning-class (`POLICY_PROFILE_QUALITY_REGRESSION`, non-blocking summary), not determinism failures. This ticket's deliverable is consistent with that classification.
 5. The "constructed scenario" needs ARVN state where the scalar evaluator's preferred move and the plan template's bound root diverge. Two viable approaches: (a) find a real seed/turn from the existing ARVN witness corpus where this happens naturally, (b) hand-construct a minimal state where a non-default-scalar move is the plan template's chosen root. Approach (a) is preferred (uses existing fixtures); fall back to (b) if no natural divergence surfaces.
+6. During `190PLANROOTSEL-001` verification, `pnpm -F @ludoforge/engine run test:policy-profile-quality` passed every visible `arvn-*` witness, then failed in `candidate-params-fitl-witness/fitl-candidate-param-witness.test.js`, subtest `scores seed 1000 ARVN shaded event candidates through candidate.params.side`, with `expected seed 1000 baseline to reach an ARVN event frontier`. This remains in this ticket's profile-quality revalidation scope rather than blocking `001`, because this ticket already owns the full profile-quality sweep, triage, and any distillation/re-bless decisions.
 
 ## Architecture Check
 
@@ -74,7 +75,7 @@ If any witness is re-blessed or distilled in §2 above, record the rationale in 
 
 ## Out of Scope
 
-- **Seam implementation** — owned by `tickets/190PLANROOTSEL-001.md`. This ticket assumes the seam is live.
+- **Seam implementation** — owned by `archive/tickets/190PLANROOTSEL-001.md`. This ticket assumes the seam is live.
 - **Architectural-invariant property tests for the seam** — also owned by `001`. This ticket adds the *behavioural* witness, not the structural property test.
 - **Profile rewrites** — Spec 190 Non-Goal #1.
 - **Cookbook rewrite** — deferred per Spec 190 §12.

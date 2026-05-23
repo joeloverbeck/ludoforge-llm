@@ -113,7 +113,7 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 
 Decomposed via `/spec-to-tickets` on 2026-05-23:
 
-- [`tickets/190PLANROOTSEL-001.md`](../tickets/190PLANROOTSEL-001.md) — Plan-primary root authority at action-selection seam + invariants (covers §8 P1: §4.1 wiring, §4.2 invariant, §9 architectural-invariant + determinism + v2-equivalence-preserved)
+- [`archive/tickets/190PLANROOTSEL-001.md`](../archive/tickets/190PLANROOTSEL-001.md) — Plan-primary root authority at action-selection seam + invariants (COMPLETED 2026-05-23; covers §8 P1: §4.1 wiring, §4.2 invariant, §9 architectural-invariant + determinism + v2-equivalence-preserved)
 - [`tickets/190PLANROOTSEL-002.md`](../tickets/190PLANROOTSEL-002.md) — ARVN root-override witness + profile-quality re-validation sweep (covers §8 P2: §9 root-override witness + profile-quality re-validation)
 
 ## Outcome

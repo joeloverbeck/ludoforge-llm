@@ -63,7 +63,11 @@ describe('Spec 140 bounded termination', () => {
     for (const seed of FITL_POLICY_CANARY_SEEDS) {
       it(
         `profiles=${profiles.join(',')} seed=${seed}: bounded stop and population-0 neutrality`,
-        { timeout: 20_000 },
+        // Per-test budget raised from 20s to 240s after Spec 190 plan-primary
+        // root authority. Plan-primary trajectories slow per-turn by ~3× on
+        // FITL baselines because chooseOne states now expose more candidates;
+        // local seed 1002 measured at ~96s, CI multiplier ~2.14× gives ~205s.
+        { timeout: 240_000 },
         () => {
           const agents = profiles.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
           const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);

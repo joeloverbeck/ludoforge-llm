@@ -7,35 +7,33 @@ import { fileURLToPath } from 'node:url';
 
 import { PolicyAgent } from '../../../src/agents/index.js';
 import {
-  applyDecision,
+  asActionId,
+  asDecisionFrameId,
   assertValidatedGameDef,
-  createGameDefRuntime,
   createRng,
+  asSeatId,
+  asTurnId,
   initialState,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type AgentMicroturnDecisionInput,
   type CompiledAgentPolicyRef,
   type Decision,
   type GameDef,
   type GameState,
-  type GameTrace,
   type PolicyAgentDecisionTrace,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
-import { publishMicroturn } from '../../../src/kernel/microturn/publish.js';
-import { runGame } from '../../../src/sim/index.js';
 import { emitPolicyProfileQualityRecord } from '../../helpers/policy-profile-quality-report-helpers.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const WITNESS_PROFILE_ID = 'spec-166-candidate-params-fitl-witness';
-const BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-const SEED_1000_REPLAY_LIMIT = 80;
+const WITNESS_SEED = 166006;
 const PLAYER_COUNT = 4;
 
-type TraceDecision = GameTrace['decisions'][number];
-type TraceCandidate = NonNullable<NonNullable<TraceDecision['agentDecision']>['candidates']>[number];
+type TraceCandidate = NonNullable<PolicyAgentDecisionTrace['candidates']>[number];
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
@@ -138,39 +136,48 @@ function withAvoidShadedEventProfile(def: GameDef): ValidatedGameDef {
   return assertValidatedGameDef({ ...def, agents: updatedAgents });
 }
 
-function findFirstArvnEventDecision(trace: GameTrace): number {
-  const index = trace.decisions.findIndex((decision) =>
-    decision.agentDecision?.resolvedProfileId === 'arvn-baseline'
-    && (decision.agentDecision.candidates ?? []).some((candidate) => candidate.actionId === 'event'));
-  assert.notEqual(index, -1, 'expected seed 1000 baseline to reach an ARVN event frontier');
-  return index;
-}
+const eventDecision = (side: 'shaded' | 'unshaded'): Extract<Decision, { readonly kind: 'actionSelection' }> => ({
+  kind: 'actionSelection',
+  actionId: asActionId('event'),
+  move: {
+    actionId: asActionId('event'),
+    params: {
+      eventCardId: 'card-78',
+      eventDeckId: '1968',
+      side,
+    },
+  },
+});
 
-function replayPrefix(def: ValidatedGameDef, seed: number, decisions: readonly Decision[]): GameState {
-  const runtime = createGameDefRuntime(def);
-  let state = initialState(def, seed, PLAYER_COUNT, undefined, runtime).state;
-  for (const decision of decisions) {
-    state = applyDecision(def, state, decision, undefined, runtime).state;
-  }
-  return state;
-}
-
-function captureSeed1000EventFrontier(def: ValidatedGameDef): PolicyAgentDecisionTrace {
-  const baselineRuntime = createGameDefRuntime(def);
-  const baselineAgents = BASELINE_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'verbose' }));
-  const baselineTrace = runGame(def, 1000, baselineAgents, SEED_1000_REPLAY_LIMIT, PLAYER_COUNT, { skipDeltas: true }, baselineRuntime);
-  const frontierIndex = findFirstArvnEventDecision(baselineTrace);
-  const prefix = baselineTrace.decisions.slice(0, frontierIndex).map((decision) => decision.decision);
-
+function captureEventFrontier(def: ValidatedGameDef): PolicyAgentDecisionTrace {
   const witnessDef = withAvoidShadedEventProfile(def);
-  const witnessRuntime = createGameDefRuntime(witnessDef);
-  const state = replayPrefix(witnessDef, 1000, prefix);
-  const microturn = publishMicroturn(witnessDef, state, witnessRuntime);
-  assert.equal(microturn.kind, 'actionSelection');
-  assert.equal(String(microturn.seatId), 'arvn');
+  const legalActions = [eventDecision('shaded'), eventDecision('unshaded')];
+  const state: GameState = {
+    ...initialState(witnessDef, WITNESS_SEED, PLAYER_COUNT).state,
+    activePlayer: 1 as never,
+  };
+  const input: AgentMicroturnDecisionInput = {
+    def: witnessDef,
+    state,
+    rng: createRng(BigInt(WITNESS_SEED)),
+    microturn: {
+      kind: 'actionSelection',
+      seatId: asSeatId('arvn'),
+      decisionContext: {
+        kind: 'actionSelection',
+        seatId: asSeatId('arvn'),
+        eligibleActions: [asActionId('event')],
+      },
+      legalActions,
+      projectedState: { state },
+      turnId: asTurnId(WITNESS_SEED),
+      frameId: asDecisionFrameId(1),
+      compoundTurnTrace: [],
+    },
+  };
 
   const agent = new PolicyAgent({ profileId: WITNESS_PROFILE_ID, traceLevel: 'verbose' });
-  const decision = agent.chooseDecision({ def: witnessDef, state, microturn, rng: createRng(1000n), runtime: witnessRuntime });
+  const decision = agent.chooseDecision(input);
   assert.ok(decision.agentDecision, 'expected verbose policy trace');
   return decision.agentDecision;
 }
@@ -186,8 +193,8 @@ describe('Spec 166 FITL candidate-param witness', () => {
     assert.equal(witnessDef.agents?.candidateParamDefs.branch, undefined);
   });
 
-  it('scores seed 1000 ARVN shaded event candidates through candidate.params.side', { timeout: 60_000 }, () => {
-    const decision = captureSeed1000EventFrontier(baseDef);
+  it('scores an ARVN event frontier through candidate.params.side', () => {
+    const decision = captureEventFrontier(baseDef);
     const candidates = decision.candidates ?? [];
     const shaded = candidates.filter((candidate) => eventCandidateSide(candidate) === 'shaded');
     const unshaded = candidates.filter((candidate) => eventCandidateSide(candidate) === 'unshaded');
@@ -211,10 +218,10 @@ describe('Spec 166 FITL candidate-param witness', () => {
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
       variantId: WITNESS_PROFILE_ID,
-      seed: 1000,
+      seed: WITNESS_SEED,
       passed: true,
-      stopReason: 'frontier-witness',
-      decisions: SEED_1000_REPLAY_LIMIT,
+      stopReason: 'distilled-event-frontier-witness',
+      decisions: 2,
     });
   });
 });

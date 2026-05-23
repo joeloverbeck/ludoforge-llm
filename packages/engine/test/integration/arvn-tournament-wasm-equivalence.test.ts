@@ -5,7 +5,14 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/index.js';
 import { __internal_for_tests as policyWasmRuntimeInternals } from '../../src/agents/policy-wasm-runtime.js';
 import { initializePolicyWasmRuntimeSync } from '../../src/agents/policy-wasm-runtime-node-loader.js';
-import { createGameDefRuntime, type AgentDecisionTrace, type Decision } from '../../src/kernel/index.js';
+import {
+  assertValidatedGameDef,
+  createGameDefRuntime,
+  type AgentDecisionTrace,
+  type CompiledAgentProfile,
+  type Decision,
+  type ValidatedGameDef,
+} from '../../src/kernel/index.js';
 import { runGameSteps } from '../../src/sim/index.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
@@ -13,7 +20,49 @@ const SEED = 1000;
 const PLAYER_COUNT = 4;
 const MAX_TURNS = 20;
 const TARGET_PLAYER_DECISIONS = 80;
-const SEAT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+// Spec 190 plan-primary root authority short-circuits `evaluatePolicyMove` on
+// the plan-selected branch (`policy-agent.ts:617-625`). The production FITL
+// baselines (`us-baseline`/`arvn-baseline`/`nva-baseline`/`vc-baseline`) are
+// all plan-having per Spec 188, so the scalar evaluator's WASM score-row path
+// is no longer reached for production action-selections on seed 1000. To keep
+// this test exercising the WASM equivalence property it was built to guard,
+// the seat profiles are dressed as planless control variants of the same
+// baselines (`planTemplates: []`), forcing the fallback branch — where
+// `evaluatePolicyMove` and its WASM score-row path execute — to fire on every
+// action-selection. The WASM/TS equivalence property the test asserts is
+// unchanged; only the corpus that exercises it shifts.
+const PLAN_HAVING_BASELINES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+const planlessProfileIdFor = (baseId: string): string => `${baseId}:spec-190-planless-control`;
+const SEAT_PROFILES = PLAN_HAVING_BASELINES.map(planlessProfileIdFor);
+
+const buildPlanlessControlDef = (def: ValidatedGameDef): ValidatedGameDef => {
+  const baseAgents = def.agents;
+  if (baseAgents === undefined) {
+    throw new Error('Expected FITL production fixture to define agents');
+  }
+  const planlessProfiles: Record<string, CompiledAgentProfile> = {};
+  for (const baseId of PLAN_HAVING_BASELINES) {
+    const profile = baseAgents.profiles[baseId];
+    if (profile === undefined) {
+      throw new Error(`Expected FITL production fixture to define profile ${baseId}`);
+    }
+    planlessProfiles[planlessProfileIdFor(baseId)] = {
+      ...profile,
+      fingerprint: `${profile.fingerprint}:spec-190-planless-control`,
+      plan: { ...profile.plan, planTemplates: [] },
+    };
+  }
+  return assertValidatedGameDef({
+    ...def,
+    agents: {
+      ...baseAgents,
+      profiles: {
+        ...baseAgents.profiles,
+        ...planlessProfiles,
+      },
+    },
+  });
+};
 
 interface NormalizedDecision {
   readonly decision: Decision | undefined;
@@ -61,7 +110,7 @@ const captureDecisionStream = (wasmEnabled: boolean): {
   }
 
   try {
-    const def = getFitlProductionFixture().gameDef;
+    const def = buildPlanlessControlDef(getFitlProductionFixture().gameDef);
     const iterator = runGameSteps({
       def,
       seed: SEED,

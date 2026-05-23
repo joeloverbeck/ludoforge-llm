@@ -1,13 +1,13 @@
 # Spec 190 — Plan-Primary Root Selection: Let the Selected Plan Choose the Action-Selection Root
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — this is the one genuine architectural gap the completed 186–188 series left open. Spec 186 §4.6 specified that the composed plan becomes the primary selector of the action-selection microturn and that flat considerations are retired as the *primary* selector; the implementation commits the plan to state and drives the *tail* microturns, but the *root* is still chosen by the scalar evaluator. Until this lands, the architecture behaves like the old utility-AI with an advisory plan stapled on.
 **Complexity**: M — engine change at the root-selection seam; behaviour-changing (profile-quality re-validation required); no compiler/kernel changes.
 **Date**: 2026-05-22
 **Dependencies**:
 - `archive/specs/186-advisory-turn-plan-architecture-core.md` (COMPLETED — plan proposer/evaluator, `PlanExecutionState`, execution controller, fallback ladder, plan trace)
 - `archive/specs/187-whole-turn-posture-and-ally-rival-metadata.md` (COMPLETED — posture + relationship scoring the proposer already uses)
-- `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED — trustworthy step matching and enforced role constraints make the plan a safe root authority; see `specs/IMPLEMENTATION-ORDER.md`)
+- `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED — trustworthy step matching and enforced role constraints make the plan a safe root authority; see `archive/specs/IMPLEMENTATION-ORDER-2026-05-23.md`)
 
 **Trigger report**:
 - `reports/ludoforge-ai-overhaul-first-iteration.md` (ChatGPT-Pro audit, 2026-05-22). This spec adopts the audit's central verified finding (#1 — root selection is not plan-primary) and corrects its framing: this is the completion of Spec 186 §4.6, not a new architecture.
@@ -48,9 +48,9 @@ Make the selected plan/root pair authoritative at the action-selection microturn
 Rework `chooseActionSelectionDecision` so the plan proposal result is consumed for selection, not only for trace:
 
 1. Build the legal `actionSelection` decisions (unchanged, `:606–613`).
-2. Call `proposeAndCommitAdvisoryTurnPlan` and inspect its result `status` (extend the call to surface the selected root, not only `.trace`).
-3. **If `status: selected`** — resolve the plan's chosen root into the published `actionDecisions` frontier (by stable move key) and return it. The plan's root is, by construction, one of the enumerated legal roots (the proposer matches templates against published legal root actions — Spec 186 §4.4), so the resolution always finds a member; failure is an assert-impossible internal error, not a fallback path.
-4. **Otherwise** (`noTemplate`/`noRoot`/`noRole`/etc.) — fall through to the existing scalar `evaluatePolicyMove` selection (`:616`, `:640`), which becomes the no-template fallback.
+2. Call `proposeAndCommitAdvisoryTurnPlan` and consume the full return value: it already returns `{ result, trace }`, where `result.status` is the canonical `selected`/`noTemplate`/`noRootMatch`/`noRoleBinding` discriminant and `result.selected.rootStableMoveKey` is the plan's chosen root key (also mirrored on `trace.selectedRootStableMoveKey`). No signature change is required — the change is purely which fields the caller consumes.
+3. **If `status: selected`** — resolve the plan's chosen root into the published `actionDecisions` frontier (by stable move key) and return it, threading `input.rng` back unchanged (the plan proposer is deterministic and consumes no RNG, so there is no scalar-style advanced RNG to pass on). The plan's root is, by construction, one of the enumerated legal roots (the proposer matches templates against published legal root actions — Spec 186 §4.4), so the resolution always finds a member; failure is an assert-impossible internal error, not a fallback path.
+4. **Otherwise** (`noTemplate`/`noRootMatch`/`noRoleBinding`) — fall through to the existing scalar `evaluatePolicyMove` selection (`:616`, `:640`), which becomes the no-template fallback.
 5. Plan-state commit and trace attachment are preserved in both branches.
 
 The scalar evaluation is only *invoked* on the fallback branch — when a plan is selected, the scalar root-scoring pass is skipped (it no longer chooses the root). This is the literal realization of Spec 186 §4.6.
@@ -102,7 +102,7 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 - The audit's "the current architecture is still not the primary decision architecture … perform a second major architectural iteration" framing — corrected to: Spec 186 §4.6 *already* specified plan-primary root selection; the implementation realized plan-driven tail execution + advisory root but not root authority. This is completion of a built architecture, not a new iteration.
 - The audit's claims #2/#3 ("strategy modules are score-groups, selectors use `value:1`/`projectedSelfMargin`/`weight:0`") — these describe the demoted leaf scorers Spec 186 §11 deliberately kept. They read as "scalar soup" only because the scalar pass currently chooses the root; this spec relocates them to their intended subordinate role *without a profile rewrite*. No profile-authoring spec is warranted on this basis.
 
-**Deferred / rejected:** see `archive/specs/191-plan-role-semantic-integrity.md` §11 (shared disposition table for the audit's remaining recommendations) and `specs/IMPLEMENTATION-ORDER.md`.
+**Deferred / rejected:** see `archive/specs/191-plan-role-semantic-integrity.md` §11 (shared disposition table for the audit's remaining recommendations) and `archive/specs/IMPLEMENTATION-ORDER-2026-05-23.md`.
 
 ## 12. Out of scope (named follow-on / sibling)
 
@@ -111,8 +111,34 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 
 ## Tickets
 
-TBD — decompose via `/spec-to-tickets specs/190-plan-primary-root-selection.md` (namespace `190PLANROOTSEL`), after Spec 191 lands.
+Decomposed via `/spec-to-tickets` on 2026-05-23:
+
+- [`archive/tickets/190PLANROOTSEL-001.md`](../archive/tickets/190PLANROOTSEL-001.md) — Plan-primary root authority at action-selection seam + invariants (COMPLETED 2026-05-23; covers §8 P1: §4.1 wiring, §4.2 invariant, §9 architectural-invariant + determinism + v2-equivalence-preserved)
+- [`archive/tickets/190PLANROOTSEL-002.md`](../archive/tickets/190PLANROOTSEL-002.md) — ARVN root-override witness + profile-quality re-validation sweep (COMPLETED 2026-05-23; covers §8 P2: §9 root-override witness + profile-quality re-validation)
 
 ## Outcome
 
-TBD.
+Completed on 2026-05-23.
+
+What changed:
+
+- `archive/tickets/190PLANROOTSEL-001.md` made selected advisory plans authoritative at the action-selection root, demoting scalar `evaluatePolicyMove` root choice to the no-template/no-match fallback and preserving plan-less v2 equivalence.
+- `archive/tickets/190PLANROOTSEL-002.md` added the production FITL ARVN behavioural root-override witness. The witness proves an ARVN plan-selected `train` root wins over the divergent scalar `govern` root, and a plan-less control returns the scalar root.
+- The profile-quality revalidation repaired the pre-existing candidate-param witness by distilling it to a deterministic ARVN event frontier; the plan-having ARVN/NVA/US/VC/FITL variant witness families pass under the current root-authority seam.
+
+Deviations:
+
+- The Spec 190 P2 witness uses the repo-valid `// @profile-variant: spec-190-arvn-root-override` marker instead of the draft `// @witness:` marker because `policy-profile-quality/` convergence witnesses require `@profile-variant`.
+- The literal directory command `node --test packages/engine/dist/test/policy-profile-quality/` is invalid in this checkout; the retained package runner is `pnpm -F @ludoforge/engine run test:policy-profile-quality`.
+- The full policy-profile-quality runner still stops later on known `fitl-march-dead-end-recovery.test.js` GameDef-hash fixture drift outside Spec 190's root-authority scope. The targeted plan-having witness set required by this spec passes.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.js` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-*.test.js packages/engine/dist/test/policy-profile-quality/nva-*.test.js packages/engine/dist/test/policy-profile-quality/us-*.test.js packages/engine/dist/test/policy-profile-quality/vc-*.test.js packages/engine/dist/test/policy-profile-quality/fitl-variant-*.test.js packages/engine/dist/test/policy-profile-quality/spec-190-arvn-root-override-witness.test.js` — passed, 22 suites / 29 tests.
+- `pnpm turbo test` — passed, 5/5 tasks.
+- `pnpm turbo lint` — passed, 2/2 tasks.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+- `pnpm run check:ticket-deps` — passed after ticket archival.

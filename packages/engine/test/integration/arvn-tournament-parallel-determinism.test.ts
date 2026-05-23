@@ -39,7 +39,10 @@ function normalizeAggregate(aggregate: unknown): unknown {
 }
 
 describe('ARVN tournament worker-pool determinism', () => {
-  it('keeps per-seed results and aggregate metrics identical across serial and worker execution', { timeout: 180_000 }, async () => {
+  // Per-test budget raised from 180s to 600s after Spec 190 plan-primary root
+  // authority. Plan-primary trajectories steer ARVN through chooseOne states
+  // with materially more candidates, so the per-game wall-clock grew ~3×.
+  it('keeps per-seed results and aggregate metrics identical across serial and worker execution', { timeout: 600_000 }, async () => {
     const { parsed, compiled } = compileProductionSpec();
     assertNoErrors(parsed);
     assertNoErrors(compiled);

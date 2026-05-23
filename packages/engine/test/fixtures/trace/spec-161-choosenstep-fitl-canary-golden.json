@@ -2,37 +2,37 @@
   "seed": 2,
   "maxTurns": 80,
   "playerCount": 4,
-  "decisionIndex": 314,
+  "decisionIndex": 344,
   "profileId": "policy-preview-inner-choosenstep-fitl-canary",
   "decision": {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces",
+    "decisionKey": "decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece",
     "command": "add",
-    "value": "binh-dinh:none"
+    "value": "tok_vc-bases_228"
   },
-  "selectedStableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"binh-dinh:none\"",
+  "selectedStableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-bases_228\"",
   "previewUsage": {
     "mode": "exactWorld",
-    "evaluatedCandidateCount": 6,
-    "completionPolicyFallbackCount": 3,
+    "evaluatedCandidateCount": 32,
+    "completionPolicyFallbackCount": 16,
     "refIds": [
       "preview.option.delta.victory.currentMargin.self"
     ],
     "unknownRefs": [],
     "readyRefStats": {
       "preview.option.delta.victory.currentMargin.self": {
-        "readyCount": 3,
+        "readyCount": 16,
         "distinctValueCount": 2,
-        "min": 7,
-        "max": 9,
-        "range": 2,
+        "min": 6,
+        "max": 7,
+        "range": 1,
         "allReadyValuesEqual": false
       }
     },
     "utility": "differentiating",
     "widenedBecauseUniform": false,
     "outcomeBreakdown": {
-      "ready": 3,
+      "ready": 16,
       "stochastic": 0,
       "unknownRandom": 0,
       "unknownHidden": 0,
@@ -47,8 +47,8 @@
     },
     "coverage": {
       "requestedRefCount": 1,
-      "evaluatedRootOptionCount": 3,
-      "readyRootOptionCount": 3,
+      "evaluatedRootOptionCount": 16,
+      "readyRootOptionCount": 16,
       "unavailableRootOptionCount": 0,
       "allRootsUnavailable": false,
       "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -58,16 +58,68 @@
   },
   "options": [
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"binh-dinh:none\"",
-      "projectedMarginValue": 9
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_51\"",
+      "projectedMarginValue": 6
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"pleiku-darlac:none\"",
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_42\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_43\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-bases_228\"",
       "projectedMarginValue": 7
     },
     {
-      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.94.shaded.effects.0.let.in.0.chooseN::$targetProvinces:add:\"quang-nam:none\"",
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-bases_227\"",
       "projectedMarginValue": 7
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_223\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_222\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_221\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_220\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_219\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_218\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_217\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_216\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_215\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_214\"",
+      "projectedMarginValue": 6
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.88.shaded.effects.0.let.in.0.if.then.0.chooseN::$tamChauVcPiece:add:\"tok_vc-guerrillas_213\"",
+      "projectedMarginValue": 6
     }
   ]
 }

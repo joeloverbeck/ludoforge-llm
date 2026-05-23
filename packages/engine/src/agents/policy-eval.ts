@@ -80,9 +80,8 @@ const DEFAULT_PREVIEW_BUDGET: CompiledAgentPreviewBudgetConfig = {
 };
 let policyEvalCallCount = 0;
 let policyEvalDepth = 0;
-
+export const getPolicyEvalCallCount = (): number => policyEvalCallCount;
 const shouldLogPolicyEvalOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
-
 const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
 const shouldEmitPolicyEvalTrace = (

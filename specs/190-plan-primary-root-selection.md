@@ -48,9 +48,9 @@ Make the selected plan/root pair authoritative at the action-selection microturn
 Rework `chooseActionSelectionDecision` so the plan proposal result is consumed for selection, not only for trace:
 
 1. Build the legal `actionSelection` decisions (unchanged, `:606–613`).
-2. Call `proposeAndCommitAdvisoryTurnPlan` and inspect its result `status` (extend the call to surface the selected root, not only `.trace`).
-3. **If `status: selected`** — resolve the plan's chosen root into the published `actionDecisions` frontier (by stable move key) and return it. The plan's root is, by construction, one of the enumerated legal roots (the proposer matches templates against published legal root actions — Spec 186 §4.4), so the resolution always finds a member; failure is an assert-impossible internal error, not a fallback path.
-4. **Otherwise** (`noTemplate`/`noRoot`/`noRole`/etc.) — fall through to the existing scalar `evaluatePolicyMove` selection (`:616`, `:640`), which becomes the no-template fallback.
+2. Call `proposeAndCommitAdvisoryTurnPlan` and consume the full return value: it already returns `{ result, trace }`, where `result.status` is the canonical `selected`/`noTemplate`/`noRootMatch`/`noRoleBinding` discriminant and `result.selected.rootStableMoveKey` is the plan's chosen root key (also mirrored on `trace.selectedRootStableMoveKey`). No signature change is required — the change is purely which fields the caller consumes.
+3. **If `status: selected`** — resolve the plan's chosen root into the published `actionDecisions` frontier (by stable move key) and return it, threading `input.rng` back unchanged (the plan proposer is deterministic and consumes no RNG, so there is no scalar-style advanced RNG to pass on). The plan's root is, by construction, one of the enumerated legal roots (the proposer matches templates against published legal root actions — Spec 186 §4.4), so the resolution always finds a member; failure is an assert-impossible internal error, not a fallback path.
+4. **Otherwise** (`noTemplate`/`noRootMatch`/`noRoleBinding`) — fall through to the existing scalar `evaluatePolicyMove` selection (`:616`, `:640`), which becomes the no-template fallback.
 5. Plan-state commit and trace attachment are preserved in both branches.
 
 The scalar evaluation is only *invoked* on the fallback branch — when a plan is selected, the scalar root-scoring pass is skipped (it no longer chooses the root). This is the literal realization of Spec 186 §4.6.
@@ -111,7 +111,10 @@ Plan proposal/selection is already deterministic (Spec 186). Demoting the scalar
 
 ## Tickets
 
-TBD — decompose via `/spec-to-tickets specs/190-plan-primary-root-selection.md` (namespace `190PLANROOTSEL`), after Spec 191 lands.
+Decomposed via `/spec-to-tickets` on 2026-05-23:
+
+- [`tickets/190PLANROOTSEL-001.md`](../tickets/190PLANROOTSEL-001.md) — Plan-primary root authority at action-selection seam + invariants (covers §8 P1: §4.1 wiring, §4.2 invariant, §9 architectural-invariant + determinism + v2-equivalence-preserved)
+- [`tickets/190PLANROOTSEL-002.md`](../tickets/190PLANROOTSEL-002.md) — ARVN root-override witness + profile-quality re-validation sweep (covers §8 P2: §9 root-override witness + profile-quality re-validation)
 
 ## Outcome
 

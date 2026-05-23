@@ -174,7 +174,7 @@ Each hot path identified by the baseline MUST be classified into one of these re
 ### 4.5 Acceptance thresholds and stop criterion
 
 - **Per-finding floor**: a follow-up spec is named in the report ONLY if its measured contribution to total workload wall-clock exceeds **5%** (or **2s absolute** if the workload is heavy). Findings below this threshold are noted in the report's appendix but do not name follow-up specs. This prevents spec sprawl from negligible micro-optimisations.
-- **Aggregate per-workload projection**: the report SHOULD project, per workload, the expected aggregate reduction if all named follow-up specs land. The aggregate gain target is **50% reduction** (i.e., halving current wall-clock — halfway back to the pre-Spec-190 baseline). 
+- **Aggregate per-workload projection**: the report SHOULD project, per workload, the expected aggregate reduction if all named follow-up specs land. The aggregate gain target is **50% reduction** (i.e., halving current wall-clock — halfway back to the pre-Spec-190 baseline).
 - **Escalation trigger**: if the projected simple-fix aggregate gain is **< 30%**, the report MUST flag this as "insufficient simple-fix headroom; bytecode/WASM expansion required" and explicitly recommend a `Bytecode-VM expansion` or `WASM expansion` remediation spec. This encodes the user's "simpler first" mandate as a numeric threshold, not a vibe.
 - **Stop criterion**: the campaign closes when (a) cumulative remediation specs hit the aggregate target measured against PR HEAD, OR (b) two consecutive follow-up specs land with <10% individual gain (diminishing returns), whichever comes first. The next round of perf engineering then becomes a separate brainstorm with a fresh trigger.
 
@@ -266,7 +266,7 @@ The trajectory-hard-preserve constraint is concrete and enforceable: every workl
 Decomposed via `/spec-to-tickets` on 2026-05-23:
 
 - [`archive/tickets/192FITLPERFPROF-001.md`](../archive/tickets/192FITLPERFPROF-001.md) — COMPLETED 2026-05-23 — Env-gated `ENGINE_PER_DECISION_PROFILE` hook + trajectory-identity test (covers §4.2 step 4 + §6 + §9)
-- [`tickets/192FITLPERFPROF-002.md`](../tickets/192FITLPERFPROF-002.md) — Measurement harness scripts + harness-smoke test (covers §4.2 steps 1–3, 5 + §9)
+- [`archive/tickets/192FITLPERFPROF-002.md`](../archive/tickets/192FITLPERFPROF-002.md) — COMPLETED 2026-05-23 — Measurement harness scripts + harness-smoke test (covers §4.2 steps 1–3, 5 + §9)
 - [`tickets/192FITLPERFPROF-003.md`](../tickets/192FITLPERFPROF-003.md) — Baseline + delta capture across PR-HEAD and `775e93568` worktree (covers §4.3)
 - [`tickets/192FITLPERFPROF-004.md`](../tickets/192FITLPERFPROF-004.md) — Findings categorisation + follow-up spec naming → `reports/fitl-perf-baseline-<date>.md` (covers §4.4, §4.5, §5 Phase 3)
 

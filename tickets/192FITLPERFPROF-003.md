@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — measurement artifacts only (`reports/perf-baseline/`); no `packages/engine/src/` or scripts changes
-**Deps**: `tickets/192FITLPERFPROF-002.md`
+**Deps**: `archive/tickets/192FITLPERFPROF-002.md`
 
 ## Problem
 

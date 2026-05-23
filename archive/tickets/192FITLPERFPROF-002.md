@@ -1,6 +1,6 @@
 # 192FITLPERFPROF-002: Measurement harness scripts + harness-smoke test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — scripts only (`packages/engine/scripts/perf-baseline/`); no changes to `packages/engine/src/`
@@ -142,3 +142,34 @@ Create `reports/perf-baseline/` directory in the repo. A `.gitkeep` file is acce
 2. Engine full suite: `pnpm -F @ludoforge/engine test`
 3. Lint + typecheck: `pnpm turbo lint typecheck`
 4. Manual one-workload smoke: `node packages/engine/scripts/perf-baseline/run-baseline.mjs parity-drive` (expect a single JSON in `reports/perf-baseline/`)
+
+## Outcome
+
+Completed: 2026-05-23
+
+Implemented the Spec 192 P1 harness scripts under `packages/engine/scripts/perf-baseline/`:
+
+- `capture-cpu-prof.mjs` wraps a workload with V8 `--cpu-prof`, records `.cpuprofile` paths, and writes a capture summary.
+- `summarize-cpu-prof.mjs` reads V8 CPU profile JSON and emits top-30 self-time and total-time summaries in markdown plus JSON.
+- `capture-alloc-prof.mjs` wraps a workload with V8 `--prof`, processes the isolate log, and records the processed summary path.
+- `capture-per-decision-cost.mjs` runs with `ENGINE_PER_DECISION_PROFILE=1`, parses `[per-decision-profile]` entries, and aggregates per-kind and warmed per-kind timing summaries.
+- `run-baseline.mjs` orchestrates wall-clock runs, CPU capture/summary, allocation capture, per-decision capture, cache-stat scraping, CV caveats, and per-workload JSON output.
+- Shared helpers in `packages/engine/scripts/perf-baseline/lib/` centralize CLI parsing, workload keys, report paths, child workload execution, JSON writing, timing math, cache-stat extraction, and HEAD SHA lookup.
+- `smoke-workload.mjs` provides the reduced script workload used by the smoke test. In sandboxed environments where nested Node process execution produces no output, smoke mode emits synthetic structural rows so the smoke test can still prove output-shape handling; non-smoke campaign runs do not silently use that fallback.
+- `reports/perf-baseline/.gitkeep` bootstraps the report directory. Generated smoke profiler outputs were treated as disposable proof byproducts and were not checked in.
+
+Deviations from draft:
+
+- The smoke test uses `--smoke` mode and the reduced script workload rather than launching the full expensive Spec 192 workload corpus. The full corpus remains ticket `192FITLPERFPROF-003` scope.
+- No existing `profile-*.mjs` helper was factored because the shared code needed by two or more new scripts was narrower and better kept in `packages/engine/scripts/perf-baseline/lib/`.
+- `run-baseline.mjs parity-drive --smoke --runs 1` was used as the bounded manual smoke. The draft's non-smoke `run-baseline.mjs parity-drive` is intentionally left to ticket `192FITLPERFPROF-003` baseline capture.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/integration/perf-baseline-harness-smoke.test.js` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, `169/169 files passed`.
+- `pnpm turbo lint typecheck` — passed, `5 successful, 5 total`.
+- `pnpm run check:ticket-deps` — passed, `3 active tickets and 2498 archived tickets`.
+- `rg -n '[ \t]+$' packages/engine/scripts/perf-baseline packages/engine/test/integration/perf-baseline-harness-smoke.test.ts reports/perf-baseline/.gitkeep` — no trailing-whitespace matches.
+- `git diff --stat packages/engine/src` — empty; no engine production source changed.

@@ -112,7 +112,7 @@ Compact required-block ledger for recovered or late-stage iterations. Copy this 
 6. `post-ticket-review` audit classification: compact child audit block when triggered, or `not_applicable: routine archive/reference repair`.
 7. Generated-artifact provenance when triggered, otherwise a reasoned `not_applicable`.
 8. Source-size ledger when triggered by `implement-ticket`, otherwise a reasoned `not_applicable`.
-9. Abandoned-probe cleanup proof when a retarget restores exploratory source/test/schema edits, otherwise a reasoned `not_applicable`.
+9. Abandoned-probe cleanup proof when a retarget restores exploratory source/test/schema edits or when a proof/process probe is abandoned, superseded, interrupted, or replaced after hang triage. For proof/process probes, name the command or session, termination or no-lingering-process proof, replacement proof lane, and whether any files were restored or retained. Otherwise emit a reasoned `not_applicable`.
 10. Baseline worktree lifecycle when temporary worktrees or alternate checkouts were used for proof classification, otherwise a reasoned `not_applicable`.
 11. State-file validation when `.codex/run-state/implement-spec-tickets.json` changed.
 12. `Required-visible-block checkpoint:` immediately before commit or no-commit finalization.
@@ -447,7 +447,7 @@ Required-visible-block checkpoint:
 - generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>
 - generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>
 - source-size ledger: <emitted | not_applicable: reason | blocked: reason>
-- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>
+- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema/proof probe | blocked: reason>
 - baseline worktree lifecycle: <emitted | not_applicable: no temporary baseline worktree | blocked: reason>
 - dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>
 - approved extra paths: <none | paths + approval source + commit-message/handoff treatment>
@@ -556,7 +556,7 @@ Harness handoff:
 - Originating spec: <active or archived path>
 - Last ticket processed: <ticket id and result>
 - Work commit: <sha or "none">
-- State commit: <sha or "none" | same as work commit>
+- State commit: <sha or "none" | "self" | same as work commit; after a state-only commit prefer "self (<actual state commit sha>)">
 - Next target: <follow-up ticket path | next queued ticket path | final spec archive | blocked>
 - Queue: <remaining active ticket paths>
 - Dirty state: <clean | expected ignored artifacts | owned/unrelated paths still present>

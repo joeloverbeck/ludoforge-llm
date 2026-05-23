@@ -73,6 +73,24 @@ function validateStateBasics(state) {
   return problems;
 }
 
+function parseStatusEntries(status) {
+  if (status === '') return [];
+  return status.split('\n').filter(Boolean).map((line) => line.slice(3));
+}
+
+function shouldPrintStateOnlyCheckpoint(state, status) {
+  const paths = parseStatusEntries(status);
+  const onlyStateFileDirty = paths.length === 1 && paths[0] === STATE_PATH;
+  return onlyStateFileDirty || state?.last_state_commit === 'self';
+}
+
+function formatStateCommit(state, status) {
+  const value = state?.last_state_commit;
+  if (value !== 'self') return value ?? '<sha | self | none>';
+  if (status.includes(STATE_PATH)) return 'self (<actual state commit sha after commit>)';
+  return `self (${git(['rev-parse', 'HEAD'])})`;
+}
+
 function printScaffold(state, status) {
   const spec = state?.archived_spec ?? state?.originating_spec ?? '<spec>';
   const next = state?.next_target ?? '<next-target>';
@@ -89,17 +107,27 @@ function printScaffold(state, status) {
   console.log('- generated-artifact provenance: <emitted | not_applicable: reason | blocked: reason>');
   console.log('- generated-artifact generator durability: <verified exact body/retained script | not_applicable: no generated artifact | blocked: reason>');
   console.log('- source-size ledger: <emitted | not_applicable: reason | blocked: reason>');
-  console.log('- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema probe | blocked: reason>');
+  console.log('- abandoned-probe cleanup proof: <emitted | not_applicable: no abandoned exploratory source/test/schema/proof probe | blocked: reason>');
   console.log('- baseline worktree lifecycle: <emitted | not_applicable: no temporary baseline worktree | blocked: reason>');
   console.log('- dependent classification: <emitted | not_applicable: no prerequisite insertion or directly affected siblings | blocked: reason>');
   console.log('- approved extra paths: <none | paths + approval source + commit-message/handoff treatment>');
   console.log('- Harness handoff: <ready_to_emit | not_applicable: reason>');
+  if (shouldPrintStateOnlyCheckpoint(state, status)) {
+    console.log('');
+    console.log('State-only commit checkpoint:');
+    console.log(`- staged state file: ${status.includes(STATE_PATH) ? '<yes | blocked: reason>' : 'not_applicable: state file not dirty'}`);
+    console.log(`- recorded work commit: ${state?.last_work_commit ?? '<full sha | none>'}`);
+    console.log(`- recorded state commit: ${state?.last_state_commit ?? '<self | full sha | none>'}`);
+    console.log('- state-only validator mode: <not_applicable | --allow-only-state-file-dirty used because only state file is dirty>');
+    console.log(`- post-commit dirty-state expectation: ${state?.dirty_state ?? '<clean | unrelated_dirty/untracked paths | blocked: reason>'}`);
+    console.log('- planned revalidation: <retained validator + git status | manual state checks + git status>');
+  }
   console.log('');
   console.log('Harness handoff:');
   console.log(`- Originating spec: ${spec}`);
   console.log(`- Last ticket processed: ${state?.last_ticket ?? '<ticket>'} ${state?.last_result ?? '<result>'}`);
   console.log(`- Work commit: ${state?.last_work_commit ?? '<sha or none>'}`);
-  console.log(`- State commit: ${state?.last_state_commit ?? '<sha | self | none>'}`);
+  console.log(`- State commit: ${formatStateCommit(state, status)}`);
   console.log(`- Next target: ${next}`);
   console.log(`- Queue: ${queue}`);
   console.log(`- Dirty state: ${dirty}`);

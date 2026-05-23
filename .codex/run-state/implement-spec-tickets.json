@@ -1,15 +1,13 @@
 {
-  "originating_spec": "specs/190-plan-primary-root-selection.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/190PLANROOTSEL-001.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "143fe74c83ad790bdf4b088f8677644e22962933",
+  "originating_spec": "archive/specs/190-plan-primary-root-selection.md",
+  "archived_spec": "archive/specs/190-plan-primary-root-selection.md",
+  "last_ticket": "archive/tickets/190PLANROOTSEL-002.md",
+  "last_result": "final_spec_archived",
+  "last_work_commit": "48fef9edbca152f33d83d9bacc2080cb03a9ab18",
   "last_state_commit": "self",
-  "next_target": "tickets/190PLANROOTSEL-002.md",
-  "queue": [
-    "tickets/190PLANROOTSEL-002.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
   "owned_dirty_summary": null,
   "blocked": false,

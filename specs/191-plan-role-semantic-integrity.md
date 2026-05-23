@@ -135,7 +135,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-22 (namespace `191PLAROLSEM`):
 - [`archive/tickets/191PLAROLSEM-001.md`](../archive/tickets/191PLAROLSEM-001.md) — COMPLETED — Role-constraint runtime/compile parity (registry; compile-reject `locatedIn`) (covers §4.1 / P1)
 - [`archive/tickets/191PLAROLSEM-002.md`](../archive/tickets/191PLAROLSEM-002.md) — COMPLETED — Step-match field validation + use + FITL profile corrections (covers §4.2 / P2)
 - [`archive/tickets/191PLAROLSEM-003.md`](../archive/tickets/191PLAROLSEM-003.md) — COMPLETED — Compound-sequencing witness validation + FITL profile corrections (covers §4.3 / P3)
-- [`tickets/191PLAROLSEM-004.md`](../tickets/191PLAROLSEM-004.md) — Semantic golden traces (covers §4.4 / P4)
+- [`archive/tickets/191PLAROLSEM-004.md`](../archive/tickets/191PLAROLSEM-004.md) — COMPLETED — Semantic golden traces (covers §4.4 / P4)
 
 ## Outcome
 

@@ -1,6 +1,6 @@
 # 191PLAROLSEM-004: Semantic golden traces (role-kind/path/stage ↔ frontier)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only (golden-trace fixtures + assertions)
@@ -65,3 +65,32 @@ Capture the trace fixture under `packages/engine/test/fixtures/trace/`. Assert r
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-05-23
+
+What changed:
+- Added `packages/engine/test/determinism/plan-semantic-correspondence-golden.test.ts`, a `@test-class: golden-trace` test that uses the compiled FITL production agent catalog and representative authored templates:
+  - `arvn.trainGovern` step 0 and step 1 for Train/Govern path and role-kind correspondence.
+  - `arvn.assaultTransportAssault` and `us.assaultAirLiftAssault` stage-0 interrupt templates for stage-index correspondence.
+- Added `packages/engine/test/fixtures/trace/plan-semantic-correspondence.golden.json`, pinning each representative template's authored match metadata, consumed frontier context, selected legal option, result decision, and emitted plan microturn trace.
+- Added mismatch probes for `decisionPath`, `targetKind`, and `stageIndex`; each falls back instead of exact-matching, so the golden has discriminating power against regressions in the 191PLAROLSEM-002/003 enforcement path.
+
+Generated artifact provenance:
+- artifact path(s): `packages/engine/test/fixtures/trace/plan-semantic-correspondence.golden.json`
+- generation command: `UPDATE_GOLDEN=1 node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js`
+- canonical inputs: compiled FITL production GameDef/agent catalog from `data/games/fire-in-the-lake.game-spec.md`, seed `191004`, representative templates named above
+- expected refresh reason: new Spec 191 P4 semantic correspondence golden trace
+- generator durability: retained generator: `packages/engine/test/determinism/plan-semantic-correspondence-golden.test.ts`
+- hygiene proof: focused replay command below; final commit hygiene also runs `git diff --check`
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed after adding the test.
+- `UPDATE_GOLDEN=1 node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js` from `packages/engine` — passed and generated the fixture.
+- `node --test dist/test/determinism/plan-semantic-correspondence-golden.test.js` from `packages/engine` — passed against the checked-in fixture.
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed.
+
+Deviations from original plan:
+- None. The test and fixture landed at the ticket-named paths and the ticket-named focused and broad verification lanes passed.

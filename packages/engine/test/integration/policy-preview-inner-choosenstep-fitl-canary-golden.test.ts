@@ -1,6 +1,6 @@
 // @test-class: golden-trace
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/index.js';
@@ -136,6 +136,26 @@ function normalizeCanaryTrace(input: ChooseNStepFitlCanaryFixture): ChooseNStepF
   return JSON.parse(`${JSON.stringify(input, null, 2)}\n`) as ChooseNStepFitlCanaryFixture;
 }
 
+const UPDATE_GOLDEN = process.env.UPDATE_GOLDEN === '1';
+
+interface SearchableDecision {
+  readonly index: number;
+  readonly decision: Decision;
+  readonly agentDecision: NonNullable<PolicyAgentDecisionTrace>;
+}
+
+function matchesChooseNStepCanaryShape(entry: SearchableDecision): boolean {
+  if (entry.decision.kind !== 'chooseNStep') return false;
+  if (!entry.agentDecision.candidates) return false;
+  if (entry.agentDecision.previewUsage.utility !== 'differentiating') return false;
+  if (!(entry.agentDecision.previewUsage.coverage.readyRootOptionCount > 0)) return false;
+  if (entry.agentDecision.previewUsage.coverage.allRootsUnavailable) return false;
+  if (entry.agentDecision.previewUsage.outcomeBreakdown?.unknownDepthCap !== 0) return false;
+  const options = entry.agentDecision.candidates.filter((candidate) => candidate.previewRefIds.includes(PREVIEW_REF_ID));
+  if (options.length === 0) return false;
+  return options.every((option) => typeof projectedMarginValue(option) === 'number');
+}
+
 function captureChooseNStepFitlCanary(): ChooseNStepFitlCanaryFixture {
   const expected = JSON.parse(readFileSync(fixtureUrl, 'utf8')) as ChooseNStepFitlCanaryFixture;
   const def = withChooseNStepCanaryProfile(getFitlProductionFixture().gameDef);
@@ -145,8 +165,27 @@ function captureChooseNStepFitlCanary(): ChooseNStepFitlCanaryFixture {
     () => new PolicyAgent({ profileId: PROFILE_ID, traceLevel: 'verbose' }),
   );
   const trace = runGame(def, expected.seed, agents, expected.maxTurns, expected.playerCount, { skipDeltas: true }, runtime);
-  const decision = trace.decisions[expected.decisionIndex];
-  assert.ok(decision, `Expected FITL decision ${expected.decisionIndex}`);
+
+  let decisionIndex = expected.decisionIndex;
+  let decision = trace.decisions[decisionIndex];
+
+  if (UPDATE_GOLDEN) {
+    // Re-bless: scan for the first decision matching the canary shape under the
+    // current Spec 190 plan-primary trajectory. The index pinned in the fixture
+    // is a snapshot of the previous trajectory's first matching index; under
+    // policy-layer evolution it can shift, so the re-bless mode rediscovers it.
+    const found = trace.decisions
+      .map((entry, index): SearchableDecision | null =>
+        entry.agentDecision === undefined
+          ? null
+          : { index, decision: entry.decision, agentDecision: entry.agentDecision })
+      .find((entry): entry is SearchableDecision => entry !== null && matchesChooseNStepCanaryShape(entry));
+    assert.ok(found, 'Re-bless: no FITL chooseNStep canary-shape decision found in the trace; trajectory may no longer cover this scope.');
+    decisionIndex = found.index;
+    decision = trace.decisions[decisionIndex];
+  }
+
+  assert.ok(decision, `Expected FITL decision ${decisionIndex}`);
   assert.equal(decision.decision.kind, 'chooseNStep');
   const agentDecision = decision.agentDecision;
   assert.ok(agentDecision, 'Expected verbose policy trace');
@@ -168,7 +207,7 @@ function captureChooseNStepFitlCanary(): ChooseNStepFitlCanaryFixture {
     seed: expected.seed,
     maxTurns: expected.maxTurns,
     playerCount: expected.playerCount,
-    decisionIndex: expected.decisionIndex,
+    decisionIndex,
     profileId: PROFILE_ID,
     decision: decision.decision,
     selectedStableMoveKey: agentDecision.selectedStableMoveKey,
@@ -179,9 +218,15 @@ function captureChooseNStepFitlCanary(): ChooseNStepFitlCanaryFixture {
 
 describe('FITL chooseNStep inner preview policy canary golden', () => {
   it('matches the frozen per-option projected-margin fixture', () => {
-    const expectedBytes = readFileSync(fixtureUrl, 'utf8');
-    const actualBytes = `${JSON.stringify(captureChooseNStepFitlCanary(), null, 2)}\n`;
+    const actual = captureChooseNStepFitlCanary();
+    const actualBytes = `${JSON.stringify(actual, null, 2)}\n`;
 
+    if (UPDATE_GOLDEN) {
+      writeFileSync(fixtureUrl, actualBytes);
+      return;
+    }
+
+    const expectedBytes = readFileSync(fixtureUrl, 'utf8');
     assert.equal(
       actualBytes,
       expectedBytes,

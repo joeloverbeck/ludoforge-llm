@@ -1,6 +1,6 @@
 # 192FITLPERFPROF-001: Env-gated `ENGINE_PER_DECISION_PROFILE` hook + trajectory-identity test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — single env-gated diagnostic hook at agent or kernel decision boundary; one new integration test
@@ -13,7 +13,7 @@ Spec 192's measurement methodology (§4.2 step 4) requires per-microturn wall-cl
 ## Assumption Reassessment (2026-05-23)
 
 1. The `ENGINE_OOM_TRACE` precedent in `packages/engine/src/agents/policy-eval.ts` (`const shouldLogPolicyEvalOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';` plus conditional `heapUsedMb` logging) is real and provides the env-gate pattern to mirror — verified during reassessment.
-2. The spec leaves the insertion point open between agent and kernel decision boundary (§2 Non-Goals + §4.2 step 4). Three candidate sites surfaced during reassessment: `PolicyAgent.chooseActionSelectionDecision` (`packages/engine/src/agents/policy-agent.ts:603`), `evaluatePolicyMoveCore` (`packages/engine/src/agents/policy-eval.ts:606`), and `applyMove` (`packages/engine/src/kernel/apply-move.ts:1819`). The choice belongs to `/implement-ticket`'s reassessment phase — pick the seam where `(turnId, seatId, decisionKind)` is most readily available without re-derivation.
+2. The spec leaves the insertion point open between agent and kernel decision boundary (§2 Non-Goals + §4.2 step 4). Reassessment selected the simulator run boundary in `packages/engine/src/sim/run-game-steps.ts`, where existing `DecisionLog` records already cover player and auto-resolved kernel decisions and where a private per-run buffer can flush exactly once at run completion. This avoided per-agent duplication and avoided deriving partial decision context in `applyMove`.
 3. Foundation 11's scoped-internal-mutation exception governs the telemetry buffer (a private per-run array, never observable to callers, emitted via `process.stderr.write` at completion). The spec explicitly invokes this exception in §6.
 4. The trajectory-identity test name follows the convention from existing integration tests under `packages/engine/test/integration/` (verified during reassessment).
 
@@ -30,24 +30,24 @@ Spec 192's measurement methodology (§4.2 step 4) requires per-microturn wall-cl
 
 ### 1. Add env-gate predicate and per-run telemetry buffer
 
-Mirror the `ENGINE_OOM_TRACE` pattern from `policy-eval.ts`. Add to whichever module owns the chosen insertion point:
+Mirror the `ENGINE_OOM_TRACE` pattern from `policy-eval.ts`. Added to `packages/engine/src/sim/run-game-steps.ts`:
 
 ```ts
 const shouldRecordPerDecisionProfile = (): boolean =>
   process.env.ENGINE_PER_DECISION_PROFILE === '1';
 ```
 
-When active, allocate a per-run array `perDecisionProfileBuffer: PerDecisionProfileEntry[] = []`, append one entry per kernel-visible decision, and emit at run completion via `process.stderr.write(JSON.stringify({ kind: 'per-decision-profile', entries }) + '\n')`. Single flush at end avoids stderr contention.
+When active, allocate a per-run array `perDecisionProfileBuffer: PerDecisionProfileEntry[] = []`, append one entry per kernel-visible decision, and emit at run completion via `process.stderr.write('[per-decision-profile] ' + JSON.stringify({ kind: 'per-decision-profile', entries }) + '\n')`. Single flush at end avoids stderr contention.
 
 ### 2. Resolve insertion point during `/implement-ticket` reassessment
 
-Trace the three candidate sites and pick the one where the entry fields are naturally available:
+Trace the original candidate sites and pick the one where the entry fields are naturally available:
 
 - **PolicyAgent.chooseActionSelectionDecision** (and sibling methods `chooseOneOptionDecision`, `chooseNStepDecision` if present) — has `seatId`, `decisionKind`, `decisionKey`, `candidateCount` directly; needs `turnId` and `sourceStateHash` from the input state.
 - **evaluatePolicyMoveCore** (policy-eval.ts:606) — same fields, but only fires on the policy-evaluator path; misses kernel-decided microturns (outcome grants, turn retirement) unless complemented.
 - **applyMove** (apply-move.ts:1819) — sees every microturn (kernel + agent), but `decisionKind` and `candidateCount` need to be derived from the published decision before the move is applied.
 
-Choose the seam that captures ALL six workload's decision streams (per §4.1) without missing kernel-decided microturns. Document the choice in the Phase 2 reassessment so downstream tickets know which boundary to query.
+The implemented seam is `runGameSteps`, using the existing run loop's before/after state, `autoResolvedLogs`, and player `DecisionLog`. It captures all six workload streams without adding game-specific code or changing decision selection.
 
 ### 3. Define the entry shape and emit format
 
@@ -78,7 +78,7 @@ The test file must declare `// @test-class: architectural-invariant` per `.claud
 
 ## Files to Touch
 
-- `packages/engine/src/agents/policy-agent.ts` OR `packages/engine/src/agents/policy-eval.ts` OR `packages/engine/src/kernel/apply-move.ts` (modify — exact target resolved in Phase 2 reassessment)
+- `packages/engine/src/sim/run-game-steps.ts` (modified — exact target resolved in reassessment)
 - `packages/engine/test/integration/perf-baseline-trajectory-identity.test.ts` (new)
 
 ## Out of Scope
@@ -117,3 +117,21 @@ The test file must declare `// @test-class: architectural-invariant` per `.claud
 2. Engine full suite: `pnpm -F @ludoforge/engine test`
 3. Lint + typecheck: `pnpm turbo lint typecheck`
 4. Manual smoke (zero-overhead check): `pnpm -F @ludoforge/engine build && time node --test dist/test/perf/agents/fitl-parity-drive.perf.test.js` — wall-clock must match recent PR #280 baselines.
+
+## Completion Notes (2026-05-23)
+
+- Implemented the env-gated telemetry hook in `packages/engine/src/sim/run-game-steps.ts`, with no per-run buffer allocation unless `ENGINE_PER_DECISION_PROFILE === '1'`.
+- Emitted exactly one `[per-decision-profile]` JSON line per run on normal completion paths.
+- Used the browser-safe global `performance` instead of importing `node:perf_hooks`; `pnpm turbo lint typecheck` caught and prevented the Node-specific import.
+- Added `packages/engine/test/integration/perf-baseline-trajectory-identity.test.ts` with six reduced one-turn workload variants preserving the six Spec 192 workload keys. The full workload variants are too expensive for a standing architectural invariant, and the ticket explicitly allowed reduced seed/maxTurns variants when the heaviest workload cost is prohibitive.
+- Source-size ledger: `run-game-steps.ts` grew by 63 lines to 456 total lines; the new trajectory-identity test is 167 lines. Both remain below the repository file-size cap.
+- Generated/schema artifacts: none changed; `schema:artifacts:check` passed as part of the engine package test lane.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — pass.
+- `node --test dist/test/integration/perf-baseline-trajectory-identity.test.js` — pass, 6/6 workload-key subtests.
+- `pnpm -F @ludoforge/engine test` — pass, 168/168 files.
+- `pnpm -F @ludoforge/engine test:e2e` — pass, 6 tests.
+- `pnpm turbo lint typecheck` — pass.
+- `node --test dist/test/perf/agents/fitl-parity-drive.perf.test.js` — pass in 157897.561 ms, below the 700000 ms perf gate.

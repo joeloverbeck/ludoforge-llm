@@ -36,6 +36,16 @@ import { extractMicroturnSnapshot } from './snapshot.js';
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 const OOM_TRACE_INTERVAL = 25;
 
+interface PerDecisionProfileEntry {
+  readonly turnId: number;
+  readonly seatId: string;
+  readonly decisionKind: string;
+  readonly decisionKey: string;
+  readonly wallClockMs: number;
+  readonly candidateCount: number;
+  readonly sourceStateHash: string;
+}
+
 export interface RunGameInput {
   readonly def: ValidatedGameDef;
   readonly seed: number;
@@ -81,7 +91,41 @@ export type RunGameStep =
 
 const shouldLogOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
 
+const shouldRecordPerDecisionProfile = (): boolean =>
+  process.env.ENGINE_PER_DECISION_PROFILE === '1';
+
 const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+
+const stateHashToHex = (stateHash: bigint): string => `0x${stateHash.toString(16)}`;
+
+const decisionKeyToString = (decisionKey: DecisionLog['decisionKey']): string =>
+  decisionKey === null ? '' : String(decisionKey);
+
+const recordPerDecisionProfileEntry = (
+  buffer: PerDecisionProfileEntry[] | undefined,
+  decisionLog: DecisionLog,
+  wallClockMs: number,
+): void => {
+  if (buffer === undefined) {
+    return;
+  }
+  buffer.push({
+    turnId: Number(decisionLog.turnId),
+    seatId: String(decisionLog.seatId),
+    decisionKind: String(decisionLog.decisionContextKind),
+    decisionKey: decisionKeyToString(decisionLog.decisionKey),
+    wallClockMs,
+    candidateCount: decisionLog.legalActionCount,
+    sourceStateHash: stateHashToHex(decisionLog.stateHash),
+  });
+};
+
+const flushPerDecisionProfile = (buffer: PerDecisionProfileEntry[] | undefined): void => {
+  if (buffer === undefined) {
+    return;
+  }
+  process.stderr.write(`[per-decision-profile] ${JSON.stringify({ kind: 'per-decision-profile', entries: buffer })}\n`);
+};
 
 const maybeLogOomTrace = (
   label: string,
@@ -224,18 +268,27 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let currentChanceRng = chanceRng;
   let appliedDecisionCount = 0;
+  const perDecisionProfileBuffer = shouldRecordPerDecisionProfile()
+    ? []
+    : undefined;
 
   while (true) {
     maybeLogOomTrace('loop-start', state, appliedDecisionCount, resolvedRuntime);
+    const autoStartedAt = perDecisionProfileBuffer === undefined ? 0 : performance.now();
     const t0_auto = perfStart(profiler);
     const autoResult = advanceAutoresolvable(validatedDef, state, currentChanceRng, resolvedRuntime);
     perfEnd(profiler, 'simLegalMoves', t0_auto);
+    const autoElapsedMs = perDecisionProfileBuffer === undefined ? 0 : performance.now() - autoStartedAt;
     state = autoResult.state;
     currentChanceRng = autoResult.rng;
     if (shouldRetainTrace) {
       decisionLogs.push(...autoResult.autoResolvedLogs);
     }
+    const autoElapsedPerLog = autoResult.autoResolvedLogs.length === 0
+      ? 0
+      : autoElapsedMs / autoResult.autoResolvedLogs.length;
     for (const log of autoResult.autoResolvedLogs) {
+      recordPerDecisionProfileEntry(perDecisionProfileBuffer, log, autoElapsedPerLog);
       emitDecisionHook(options, log, state.turnCount);
     }
     yield { kind: 'auto', state, autoResolvedLogs: autoResult.autoResolvedLogs };
@@ -246,6 +299,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
     if (terminal !== null) {
       const stopReason: SimulationStopReason = 'terminal';
       yield { kind: 'terminal', state, result: terminal, stopReason };
+      flushPerDecisionProfile(perDecisionProfileBuffer);
       return assembleTrace(
         validatedDef,
         seed,
@@ -261,6 +315,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
     if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
       const stopReason: SimulationStopReason = 'noLegalMoves';
       yield { kind: 'noLegalMoves', state, result: null, stopReason };
+      flushPerDecisionProfile(perDecisionProfileBuffer);
       return assembleTrace(
         validatedDef,
         seed,
@@ -276,6 +331,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
     if (state.turnCount >= maxTurns) {
       const stopReason: SimulationStopReason = 'maxTurns';
       yield { kind: 'maxTurns', state, result: null, stopReason };
+      flushPerDecisionProfile(perDecisionProfileBuffer);
       return assembleTrace(
         validatedDef,
         seed,
@@ -305,6 +361,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
         if (rollback === null) {
           const stopReason: SimulationStopReason = 'noLegalMoves';
           yield { kind: 'noLegalMoves', state, result: null, stopReason };
+          flushPerDecisionProfile(perDecisionProfileBuffer);
           return assembleTrace(
             validatedDef,
             seed,
@@ -342,6 +399,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
       ? undefined
       : extractMicroturnSnapshot(validatedDef, state, microturn, resolvedRuntime, snapshotDepth);
     let selected;
+    const decisionStartedAt = perDecisionProfileBuffer === undefined ? 0 : performance.now();
     const t0_agent = perfStart(profiler);
     try {
       selected = agent.chooseDecision({
@@ -384,6 +442,11 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
       ...(snapshot === undefined ? {} : { snapshot }),
       ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
     };
+    recordPerDecisionProfileEntry(
+      perDecisionProfileBuffer,
+      decisionLog,
+      perDecisionProfileBuffer === undefined ? 0 : performance.now() - decisionStartedAt,
+    );
     if (shouldRetainTrace) {
       decisionLogs.push(decisionLog);
     }

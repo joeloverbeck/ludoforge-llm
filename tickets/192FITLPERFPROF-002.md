@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — scripts only (`packages/engine/scripts/perf-baseline/`); no changes to `packages/engine/src/`
-**Deps**: `tickets/192FITLPERFPROF-001.md`
+**Deps**: `archive/tickets/192FITLPERFPROF-001.md`
 
 ## Problem
 

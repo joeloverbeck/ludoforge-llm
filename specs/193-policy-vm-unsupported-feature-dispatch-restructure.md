@@ -212,4 +212,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-24:
 
 - [`archive/tickets/193POLVMDISPRES-001.md`](../archive/tickets/193POLVMDISPRES-001.md) — Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files (COMPLETED; covers §4.1, §4.2, §4.4, §8 P1)
 - [`archive/tickets/193POLVMDISPRES-002.md`](../archive/tickets/193POLVMDISPRES-002.md) — Perf witness re-capture across 5 regressed FITL workloads (COMPLETED; covers §8 P3)
-- [`tickets/193POLVMDISPRES-003.md`](../tickets/193POLVMDISPRES-003.md) — Optional negative cache for unsupported-feature verdicts (P2 — gated on 002) (covers §4.3, §8 P2)
+- [`archive/tickets/193POLVMDISPRES-003.md`](../archive/tickets/193POLVMDISPRES-003.md) — Optional negative cache for unsupported-feature verdicts (NOT IMPLEMENTED — declined because ticket 002 showed P1 met the per-spec threshold; covers §4.3, §8 P2 gate)

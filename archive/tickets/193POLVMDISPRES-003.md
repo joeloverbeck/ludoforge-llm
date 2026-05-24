@@ -1,6 +1,6 @@
 # 193POLVMDISPRES-003: Optional negative cache for unsupported-feature verdicts (P2 — gated on ticket 002)
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (negative cache field + lookup in `evaluateCompiledExprWithVm`); possibly a new `policy-vm-negative-cache.ts` module if the cache class grows beyond a few lines.
@@ -156,3 +156,28 @@ After this ticket's code lands, re-run the Spec 192 baseline harness on the five
 6. `node --test packages/engine/dist/test/unit/agents/policy-vm-negative-cache.test.js` (new test standalone sanity).
 7. Re-run Spec 192 baseline harness per ticket 002's command list against five regressed workloads; record post-P2 measurement in `reports/fitl-perf-baseline-2026-05-24.md` and commit body.
 8. `pnpm run check:ticket-deps` (ticket integrity gate).
+
+## Outcome
+
+Completed: 2026-05-24
+
+Declined — P1 measured gain meets the per-spec threshold, so the optional P2 negative cache is not needed for Spec 193 completion.
+
+What changed:
+- No engine, cache, telemetry, unit-test, or post-P2 perf-witness code was added.
+- The gate condition in this ticket was evaluated against `archive/tickets/193POLVMDISPRES-002.md` and `reports/fitl-perf-baseline-2026-05-24.md`.
+- The recorded Spec 193 P3 measurement shows every measured regressed workload exceeded the >=10% individual wall-clock reduction threshold after ticket 001:
+  - `parity-drive`: 29.5%
+  - `bounded-termination-1002`: 21.4%
+  - `diagnose-parity-runGame-1001`: 24.5%
+  - `policy-preview-parity-arvn-1008`: 23.1%
+  - `arvn-tournament-parallel`: 20.4%
+- The same measurement records 100.0% unsupported-error self-time reduction across all five measured workloads and explicitly states `Ticket 003 (P2) disposition: Close-Declined`.
+
+Deviations from plan:
+- The negative cache implementation, new `policy-vm-negative-cache.test.ts`, and post-P2 measurement artifacts were skipped because the ticket's own gate condition disqualifies implementation once ticket 002 proves the threshold.
+
+Verification results:
+- `sed -n '55,85p' reports/fitl-perf-baseline-2026-05-24.md` — confirmed the Spec 193 P3 table, threshold-met verdict, ticket-003 close-declined disposition, and no accepted post-001 JSON contains `PolicyBytecodeVmUnsupportedError` in `cpuProfTop30SelfTime`.
+- `sed -n '135,175p' archive/tickets/193POLVMDISPRES-002.md` — confirmed ticket 002's archived outcome records the same gate verdict and measurement results.
+- `rg -n "PolicyBytecodeVmUnsupportedError|interface VMResult|type VmEvalResult|status: 'unsupported'|status: 'ok'" packages/engine/src/agents packages/engine/test/unit/agents packages/engine/test/integration packages/engine/test/architecture/candidate-param-refs` — confirmed `VmEvalResult` is present and no live `PolicyBytecodeVmUnsupportedError` or `VMResult` interface remains in the checked source/test surfaces.

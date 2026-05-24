@@ -73,7 +73,7 @@ The first sandboxed `parity-drive` run failed after nested profiler output parsi
 | `arvn-tournament-parallel` | 257342.062 | 204946.653 | 1.81% | 20.4% | 100.0% | Yes | `reports/perf-baseline/arvn-tournament-parallel-a8f00d0d22.json` |
 
 **Per-spec acceptance threshold**: met. Every measured regressed workload exceeds the >=10% individual wall-clock reduction threshold, and the deleted unsupported-error constructor accounts for 100% reduction in the named self-time bucket across the five workloads.
-**Ticket 003 (P2) disposition**: Close-Declined per the gate condition in `tickets/193POLVMDISPRES-003.md`; the P1 typed-verdict refactor already meets the per-spec threshold.
+**Ticket 003 (P2) disposition**: Close-Declined per the gate condition in `archive/tickets/193POLVMDISPRES-003.md`; the P1 typed-verdict refactor already meets the per-spec threshold.
 **Spec 192 §4.5 escalation trigger**: does not fire for Spec 193. The dispatch-restructure remediation achieved >=10% individual measured gain on all five regressed workloads, so this spec does not require immediate `Bytecode-VM expansion` or `WASM expansion` escalation.
 
 ## Stop-Criterion + Escalation-Trigger Evaluation

@@ -76,7 +76,7 @@ Append to `reports/fitl-perf-baseline-2026-05-24.md` a new sub-section under the
 | `arvn-tournament-parallel` | ... | ... | ... | ... | Yes/No |
 
 **Per-spec acceptance threshold**: <met / partially met / not met>
-**Ticket 003 (P2) disposition**: <Implement / Close-Declined> per the gate condition in `tickets/193POLVMDISPRES-003.md`
+**Ticket 003 (P2) disposition**: <Implement / Close-Declined> per the gate condition in `archive/tickets/193POLVMDISPRES-003.md`
 **Spec 192 §4.5 escalation trigger**: <fires / does not fire>
 ```
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — single env-gated diagnostic hook at agent or kernel decision boundary; one new integration test
-**Deps**: `specs/192-fitl-perf-profiling-methodology.md`
+**Deps**: `archive/specs/192-fitl-perf-profiling-methodology.md`
 
 ## Problem
 

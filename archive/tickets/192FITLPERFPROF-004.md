@@ -1,6 +1,6 @@
 # 192FITLPERFPROF-004: Findings categorisation + follow-up spec naming → `reports/fitl-perf-baseline-<date>.md`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — report only
@@ -141,3 +141,28 @@ None — this ticket produces a report and (optionally) an IMPLEMENTATION-ORDER 
 3. Lint + typecheck (sanity): `pnpm turbo lint typecheck`
 4. Dep check: `pnpm run check:ticket-deps`
 5. Manual review: cross-check every finding's %-contribution against the cited JSON's `runs` / `cpuProfTop30SelfTime` / `perDecisionByKind` fields.
+
+## Outcome
+
+Completion date: 2026-05-24.
+
+What landed:
+- Drafted `reports/fitl-perf-baseline-2026-05-24.md` from the 12 ticket-003 JSON artifacts under `reports/perf-baseline/`.
+- Named three independent candidate follow-up specs:
+  - Spec 193: Policy VM unsupported-feature dispatch restructure.
+  - Spec 194: Zobrist decision-stack digest optimization.
+  - Spec 195: Policy evaluation context allocation reduction.
+- Skipped `archive/specs/IMPLEMENTATION-ORDER-fitl-perf-recovery-2026-05-24.md` because the three follow-up seams are independent, not interdependent.
+
+Deviations from original plan:
+- The optional IMPLEMENTATION-ORDER index was not created; the report records the rationale.
+- No remediation spec files were authored, preserving this ticket's report-only boundary.
+
+Verification:
+- `ls reports/perf-baseline/*.json` — passed; all 12 ticket-003 JSON artifacts are present.
+- `rg -n "Spec 193|Spec 194|Spec 195|IMPLEMENTATION-ORDER|Spec 192 is COMPLETE|reports/perf-baseline/.*json" reports/fitl-perf-baseline-2026-05-24.md` — passed; report traceability, candidate spec names, implementation-order decision, and Spec 192 completion signal are present.
+- `git diff --check -- reports/fitl-perf-baseline-2026-05-24.md tickets/192FITLPERFPROF-004.md` — passed before terminal status.
+- `pnpm turbo lint typecheck` — passed from cache across engine and runner packages.
+- `pnpm -F @ludoforge/engine test` — passed; 169/169 files passed.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2500 archived tickets.
+- Proof byproducts from `perf-baseline-harness-smoke.test.ts` were removed after the engine test run: `reports/perf-baseline/alloc-prof/`, `reports/perf-baseline/cpu-prof/`, `reports/perf-baseline/per-decision/`, and `reports/perf-baseline/parity-drive-5ae567f379-smoke.json`.

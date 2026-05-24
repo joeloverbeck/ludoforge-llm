@@ -1,6 +1,6 @@
 # Spec 192 — FITL Plan-Primary Performance Recovery: Profiling Methodology and Baseline
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — the post-Spec-190 plan-primary architecture has tripled per-turn wall-clock on the FITL parity workload (32s → 96s/turn locally; 56s → 308s CI for `fitl-parity-drive.perf.test.ts`). Continued development on FITL (event-card lanes, slow-parity shards, policy-canaries, policy-preview-parity) pays that 3× tax on every PR; lane budgets had to be doubled or tripled across PR #280 just to land green. Recovery must be evidence-led, not speculation-led.
 **Complexity**: S–M (this spec is methodology only; complexity of remediation specs to follow depends on findings)
 **Date**: 2026-05-23
@@ -268,6 +268,26 @@ Decomposed via `/spec-to-tickets` on 2026-05-23:
 - [`archive/tickets/192FITLPERFPROF-001.md`](../archive/tickets/192FITLPERFPROF-001.md) — COMPLETED 2026-05-23 — Env-gated `ENGINE_PER_DECISION_PROFILE` hook + trajectory-identity test (covers §4.2 step 4 + §6 + §9)
 - [`archive/tickets/192FITLPERFPROF-002.md`](../archive/tickets/192FITLPERFPROF-002.md) — COMPLETED 2026-05-23 — Measurement harness scripts + harness-smoke test (covers §4.2 steps 1–3, 5 + §9)
 - [`archive/tickets/192FITLPERFPROF-003.md`](../archive/tickets/192FITLPERFPROF-003.md) — Baseline + delta capture across PR-HEAD and `775e93568` worktree (covers §4.3)
-- [`tickets/192FITLPERFPROF-004.md`](../tickets/192FITLPERFPROF-004.md) — Findings categorisation + follow-up spec naming → `reports/fitl-perf-baseline-<date>.md` (covers §4.4, §4.5, §5 Phase 3)
+- [`archive/tickets/192FITLPERFPROF-004.md`](../archive/tickets/192FITLPERFPROF-004.md) — COMPLETED 2026-05-24 — Findings categorisation + follow-up spec naming → `reports/fitl-perf-baseline-<date>.md` (covers §4.4, §4.5, §5 Phase 3)
 
 P1 (§8) is split between -001 and -002 because the instrumentation hook is a separate, smaller-scope deliverable from the harness scripts and benefits from independent review.
+
+## Outcome
+
+Completion date: 2026-05-24.
+
+What changed:
+- Implemented the env-gated `ENGINE_PER_DECISION_PROFILE` hook and trajectory-identity proof in `archive/tickets/192FITLPERFPROF-001.md`.
+- Implemented the perf-baseline capture scripts and smoke test in `archive/tickets/192FITLPERFPROF-002.md`.
+- Captured the HEAD vs. pre-Spec-190 baseline JSON corpus in `reports/perf-baseline/` through `archive/tickets/192FITLPERFPROF-003.md`.
+- Authored `reports/fitl-perf-baseline-2026-05-24.md` through `archive/tickets/192FITLPERFPROF-004.md`, naming candidate follow-up Specs 193, 194, and 195.
+
+Deviations from original plan:
+- The Phase 3 report did not create `archive/specs/IMPLEMENTATION-ORDER-fitl-perf-recovery-2026-05-24.md` because the three named remediation seams are independent rather than interdependent.
+- No remediation specs or remediation code were authored under Spec 192; the report preserves the methodology-only boundary.
+
+Verification:
+- `pnpm turbo lint typecheck` — passed from cache across engine and runner packages.
+- `pnpm -F @ludoforge/engine test` — passed; 169/169 files passed.
+- `pnpm run check:ticket-deps` — passed after ticket 004 archival for 0 active tickets and 2501 archived tickets.
+- `git diff --check -- specs/192-fitl-perf-profiling-methodology.md archive/tickets/192FITLPERFPROF-004.md reports/fitl-perf-baseline-2026-05-24.md` — passed after ticket archival/reference repair.

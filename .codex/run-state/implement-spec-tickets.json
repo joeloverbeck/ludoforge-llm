@@ -1,19 +1,17 @@
 {
-  "originating_spec": "specs/192-fitl-perf-profiling-methodology.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/192FITLPERFPROF-003.md",
-  "last_result": "implemented_archived",
-  "last_work_commit": "7a37c2dca4ce0d83f702d8c48d0a257479a590b8",
+  "originating_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
+  "archived_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
+  "last_ticket": "archive/tickets/192FITLPERFPROF-004.md",
+  "last_result": "final_spec_archived",
+  "last_work_commit": "8ccbbbe03afc57efdbe3293f7245057ae6bfa5f0",
   "last_state_commit": "self",
-  "next_target": "tickets/192FITLPERFPROF-004.md",
-  "queue": [
-    "tickets/192FITLPERFPROF-004.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
   "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-23"
+  "updated_at": "2026-05-24"
 }

@@ -1,0 +1,718 @@
+{
+  "workload": "diagnose-parity-runGame-1001",
+  "headSha": "775e93568e",
+  "smoke": false,
+  "runs": {
+    "wallClockMs": [
+      180333.387,
+      180880.944,
+      179867.668
+    ],
+    "median": 180333.387,
+    "cv": 0.00229605319513275
+  },
+  "cpuProfTop30SelfTime": [
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 14668,
+      "selfTimeMs": 15860.859,
+      "totalTimeMs": 15860.859
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 14356,
+      "selfTimeMs": 15522.595,
+      "totalTimeMs": 15522.595
+    },
+    {
+      "functionName": "(garbage collector)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 12466,
+      "selfTimeMs": 13762.861,
+      "totalTimeMs": 13762.861
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 5265,
+      "selfTimeMs": 5681.213,
+      "totalTimeMs": 5681.213
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 5163,
+      "selfTimeMs": 5578.913,
+      "totalTimeMs": 5578.913
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 1776,
+      "selfTimeMs": 1914.367,
+      "totalTimeMs": 32017.924
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 1689,
+      "selfTimeMs": 1822.281,
+      "totalTimeMs": 31184.339
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 1021,
+      "selfTimeMs": 1105.499,
+      "totalTimeMs": 16966.358
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 607,
+      "selfTimeMs": 659.994,
+      "totalTimeMs": 670.81
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 610,
+      "selfTimeMs": 656.202,
+      "totalTimeMs": 16178.797
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 584,
+      "selfTimeMs": 630.843,
+      "totalTimeMs": 6881.168
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 549,
+      "selfTimeMs": 592.438,
+      "totalTimeMs": 6508.921
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 420,
+      "selfTimeMs": 459.9,
+      "totalTimeMs": 481.699
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 422,
+      "selfTimeMs": 457.096,
+      "totalTimeMs": 478.759
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 404,
+      "selfTimeMs": 437.914,
+      "totalTimeMs": 6119.127
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 316,
+      "selfTimeMs": 342.099,
+      "totalTimeMs": 349.608
+    },
+    {
+      "functionName": "evaluateCompiledExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 794,
+      "columnNumber": 24,
+      "hitCount": 306,
+      "selfTimeMs": 330.123,
+      "totalTimeMs": 32373.877
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 300,
+      "selfTimeMs": 329.871,
+      "totalTimeMs": 329.871
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 290,
+      "selfTimeMs": 314.951,
+      "totalTimeMs": 314.951
+    },
+    {
+      "functionName": "fnv1a64FromState",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/fnv1a64.js",
+      "lineNumber": 24,
+      "columnNumber": 32,
+      "hitCount": 280,
+      "selfTimeMs": 302.023,
+      "totalTimeMs": 317.186
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 273,
+      "selfTimeMs": 296,
+      "totalTimeMs": 303.491
+    },
+    {
+      "functionName": "evaluateCompiledExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 794,
+      "columnNumber": 24,
+      "hitCount": 274,
+      "selfTimeMs": 295.827,
+      "totalTimeMs": 31521.359
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 242,
+      "selfTimeMs": 260.995,
+      "totalTimeMs": 5839.908
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 220,
+      "selfTimeMs": 238.929,
+      "totalTimeMs": 238.929
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 191,
+      "selfTimeMs": 207.024,
+      "totalTimeMs": 207.024
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 184,
+      "selfTimeMs": 197.45,
+      "totalTimeMs": 514.636
+    },
+    {
+      "functionName": "digestDecisionStackFrame",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 178,
+      "columnNumber": 40,
+      "hitCount": 180,
+      "selfTimeMs": 197.005,
+      "totalTimeMs": 1035.131
+    },
+    {
+      "functionName": "visitSelectableDecisionValues.consumeParamExpansionBudget.consumeParamExpansionBudget",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/free-operation-viability.js",
+      "lineNumber": 447,
+      "columnNumber": 110,
+      "hitCount": 180,
+      "selfTimeMs": 196.069,
+      "totalTimeMs": 198.231
+    },
+    {
+      "functionName": "visitSelectableDecisionValues.consumeParamExpansionBudget.consumeParamExpansionBudget",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/free-operation-viability.js",
+      "lineNumber": 447,
+      "columnNumber": 110,
+      "hitCount": 178,
+      "selfTimeMs": 191.838,
+      "totalTimeMs": 196.226
+    },
+    {
+      "functionName": "stableStringify",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-encoded-state-cache.js",
+      "lineNumber": 3,
+      "columnNumber": 24,
+      "hitCount": 128,
+      "selfTimeMs": 138.659,
+      "totalTimeMs": 222.242
+    }
+  ],
+  "cpuProfTop30TotalTime": [
+    {
+      "functionName": "(root)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 179546.858
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/integration/diagnose-parity-runGame.test.js",
+      "lineNumber": 37,
+      "columnNumber": 71,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 163350.199
+    },
+    {
+      "functionName": "runGame",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/simulator.js",
+      "lineNumber": 13,
+      "columnNumber": 23,
+      "hitCount": 4,
+      "selfTimeMs": 4.285,
+      "totalTimeMs": 82014.034
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 7,
+      "selfTimeMs": 7.564,
+      "totalTimeMs": 82009.749
+    },
+    {
+      "functionName": "runNoLegalMovesDiagnostic",
+      "url": "file:///tmp/perf-baseline-pre-190/campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs",
+      "lineNumber": 122,
+      "columnNumber": 41,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 81328.472
+    },
+    {
+      "functionName": "runGame",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/simulator.js",
+      "lineNumber": 13,
+      "columnNumber": 23,
+      "hitCount": 8,
+      "selfTimeMs": 8.752,
+      "totalTimeMs": 81328.472
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 6,
+      "selfTimeMs": 6.473,
+      "totalTimeMs": 81319.72
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 369,
+      "columnNumber": 18,
+      "hitCount": 3,
+      "selfTimeMs": 2.672,
+      "totalTimeMs": 76214.523
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 369,
+      "columnNumber": 18,
+      "hitCount": 3,
+      "selfTimeMs": 3.206,
+      "totalTimeMs": 75551.763
+    },
+    {
+      "functionName": "chooseActionSelectionDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 383,
+      "columnNumber": 33,
+      "hitCount": 3,
+      "selfTimeMs": 3.238,
+      "totalTimeMs": 66291.414
+    },
+    {
+      "functionName": "chooseActionSelectionDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 383,
+      "columnNumber": 33,
+      "hitCount": 3,
+      "selfTimeMs": 3.288,
+      "totalTimeMs": 65629.721
+    },
+    {
+      "functionName": "evaluatePolicyMove",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 635,
+      "columnNumber": 34,
+      "hitCount": 4,
+      "selfTimeMs": 4.26,
+      "totalTimeMs": 40901.78
+    },
+    {
+      "functionName": "evaluatePolicyMoveCore",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 222,
+      "columnNumber": 38,
+      "hitCount": 23,
+      "selfTimeMs": 24.019,
+      "totalTimeMs": 40896.444
+    },
+    {
+      "functionName": "evaluatePlannedSelector",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 275,
+      "columnNumber": 27,
+      "hitCount": 8,
+      "selfTimeMs": 8.779,
+      "totalTimeMs": 40003.031
+    },
+    {
+      "functionName": "evaluateSelectorView",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 1562,
+      "columnNumber": 24,
+      "hitCount": 63,
+      "selfTimeMs": 67.986,
+      "totalTimeMs": 39990.002
+    },
+    {
+      "functionName": "evaluateSelector",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 2,
+      "columnNumber": 32,
+      "hitCount": 0,
+      "selfTimeMs": 0.763,
+      "totalTimeMs": 39922.016
+    },
+    {
+      "functionName": "evaluateSelectorInternal",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 5,
+      "columnNumber": 33,
+      "hitCount": 10,
+      "selfTimeMs": 10.791,
+      "totalTimeMs": 39921.253
+    },
+    {
+      "functionName": "evaluatePolicyMove",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 635,
+      "columnNumber": 34,
+      "hitCount": 11,
+      "selfTimeMs": 12.126,
+      "totalTimeMs": 39669.604
+    },
+    {
+      "functionName": "evaluatePolicyMoveCore",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 222,
+      "columnNumber": 38,
+      "hitCount": 19,
+      "selfTimeMs": 20.455,
+      "totalTimeMs": 39656.327
+    },
+    {
+      "functionName": "evaluatePlannedSelector",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 275,
+      "columnNumber": 27,
+      "hitCount": 10,
+      "selfTimeMs": 9.762,
+      "totalTimeMs": 38788.968
+    },
+    {
+      "functionName": "evaluateSelectorView",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 1562,
+      "columnNumber": 24,
+      "hitCount": 74,
+      "selfTimeMs": 82.067,
+      "totalTimeMs": 38770.687
+    },
+    {
+      "functionName": "evaluateSelector",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 2,
+      "columnNumber": 32,
+      "hitCount": 4,
+      "selfTimeMs": 4.337,
+      "totalTimeMs": 38688.599
+    },
+    {
+      "functionName": "evaluateSelectorInternal",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 5,
+      "columnNumber": 33,
+      "hitCount": 11,
+      "selfTimeMs": 11.906,
+      "totalTimeMs": 38684.262
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 16,
+      "columnNumber": 32,
+      "hitCount": 7,
+      "selfTimeMs": 7.618,
+      "totalTimeMs": 32568.726
+    },
+    {
+      "functionName": "scoreItem",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 188,
+      "columnNumber": 18,
+      "hitCount": 116,
+      "selfTimeMs": 125.748,
+      "totalTimeMs": 32553.564
+    },
+    {
+      "functionName": "evaluateExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 1583,
+      "columnNumber": 26,
+      "hitCount": 8,
+      "selfTimeMs": 8.588,
+      "totalTimeMs": 32424.637
+    },
+    {
+      "functionName": "evaluateSelectorItemExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 1596,
+      "columnNumber": 28,
+      "hitCount": 33,
+      "selfTimeMs": 35.634,
+      "totalTimeMs": 32409.511
+    },
+    {
+      "functionName": "evaluateCompiledExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 794,
+      "columnNumber": 24,
+      "hitCount": 306,
+      "selfTimeMs": 330.123,
+      "totalTimeMs": 32373.877
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 1776,
+      "selfTimeMs": 1914.367,
+      "totalTimeMs": 32017.924
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 16,
+      "columnNumber": 32,
+      "hitCount": 5,
+      "selfTimeMs": 5.408,
+      "totalTimeMs": 31725.621
+    }
+  ],
+  "allocProfTopN": [
+    "Statistical profiling result from /tmp/perf-baseline-pre-190/reports/perf-baseline/alloc-prof/diagnose-parity-runGame-1001-775e93568e/isolate-0x2b410000-4008-isolate.log, (170750 ticks, 1724 unaccounted, 0 excluded).",
+    "",
+    " [Shared libraries]:",
+    "   ticks  total  nonlib   name",
+    "  74248   43.5%          /usr/local/bin/node",
+    "   7697    4.5%          /usr/lib/x86_64-linux-gnu/libc.so.6",
+    "    171    0.1%          /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+    "     17    0.0%          [vdso]",
+    "",
+    " [JavaScript]:",
+    "   ticks  total  nonlib   name",
+    "   9752    5.7%   11.0%  Builtin: CreateDataProperty",
+    "   5316    3.1%    6.0%  Builtin: LoadIC_Megamorphic",
+    "   3691    2.2%    4.2%  Builtin: KeyedLoadIC_Megamorphic",
+    "   3121    1.8%    3.5%  Builtin: FindOrderedHashMapEntry",
+    "   2995    1.8%    3.4%  Builtin: MapPrototypeSet",
+    "   1784    1.0%    2.0%  Builtin: CloneObjectIC",
+    "   1728    1.0%    1.9%  Builtin: CopyDataProperties",
+    "   1557    0.9%    1.8%  Builtin: WeakMapLookupHashIndex",
+    "   1359    0.8%    1.5%  JS: *digestEncodedDecisionStackFrame file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js:169:41",
+    "   1319    0.8%    1.5%  JS: *resolveRef file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/resolve-ref.js:234:27",
+    "   1263    0.7%    1.4%  Builtin: CloneObjectIC_Slow",
+    "   1250    0.7%    1.4%  Builtin: StringConstructor",
+    "   1191    0.7%    1.3%  JS: *boundToken file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/condition-compiler.js:130:20",
+    "   1092    0.6%    1.2%  Builtin: KeyedHasIC_Megamorphic",
+    "   1058    0.6%    1.2%  JS: *evaluateCompiledExprWithVm file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js:799:31",
+    "   1018    0.6%    1.1%  Builtin: StringEqual",
+    "    977    0.6%    1.1%  RegExp: (?:\\[\\d+\\])*$",
+    "    945    0.6%    1.1%  Builtin: MapConstructor",
+    "    935    0.5%    1.1%  Builtin: CompileLazy",
+    "    912    0.5%    1.0%  Builtin: FindOrderedHashSetEntry",
+    "    866    0.5%    1.0%  Builtin: LoadICTrampoline_Megamorphic",
+    "    822    0.5%    0.9%  JS: *applyEffectsWithBudgetStateScoped file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effect-dispatch.js:68:43",
+    "    820    0.5%    0.9%  Builtin: CallFunction_ReceiverIsNullOrUndefined",
+    "    732    0.4%    0.8%  Builtin: MapIteratorPrototypeNext",
+    "    731    0.4%    0.8%  JS: *visitEffects file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/move-runtime-bindings.js:19:26",
+    "    672    0.4%    0.8%  JS: *evalCondition file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-condition.js:22:30",
+    "    663    0.4%    0.7%  JS: *evalValue file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-value.js:218:26",
+    "    661    0.4%    0.7%  JS: *fnv1a64FromState file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/fnv1a64.js:25:33",
+    "    651    0.4%    0.7%  Builtin: LoadIC",
+    "    604    0.4%    0.7%  JS: *<anonymous> file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/condition-compiler.js:425:20",
+    "    596    0.3%    0.7%  Builtin: SetPrototypeAdd",
+    "    586    0.3%    0.7%  Builtin: CopyDataPropertiesWithExcludedPropertiesOnStack",
+    "    570    0.3%    0.6%  Builtin: KeyedStoreIC_Megamorphic",
+    "    566    0.3%    0.6%  JS: *applyChooseN file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effects-choice.js:499:29",
+    "    559    0.3%    0.6%  Builtin: Call_ReceiverIsNullOrUndefined",
+    "    497    0.3%    0.6%  JS: *refreshCachedTokenStateIndexEntries file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/token-state-index.js:243:52",
+    "    487    0.3%    0.5%  JS: *applyMoveToken file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effects-token.js:247:31",
+    "    464    0.3%    0.5%  Builtin: DefineNamedOwnIC",
+    "    462    0.3%    0.5%  JS: *applyZonesFilter file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-query.js:484:26",
+    "    442    0.3%    0.5%  Builtin: KeyedHasIC",
+    "    427    0.3%    0.5%  JS: *<anonymous> file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/token-filter-compiler.js:137:12",
+    "    411    0.2%    0.5%  JS: *countMatchingTokens file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-query.js:385:29",
+    "    399    0.2%    0.5%  Builtin: WeakCollectionSet",
+    "    397    0.2%    0.4%  Builtin: WeakMapGet",
+    "    394    0.2%    0.4%  Builtin: ArrayIncludesSmiOrObject",
+    "    373    0.2%    0.4%  Builtin: ArrayTimSort",
+    "    351    0.2%    0.4%  JS: *digestDecisionStackFrame file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js:179:41",
+    "    330    0.2%    0.4%  JS: *applyLet file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effects-control.js:59:25",
+    "    324    0.2%    0.4%  JS: *evalQuery file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-query.js:897:26",
+    "    314    0.2%    0.4%  JS: *countQueryResults file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/eval-query.js:664:34",
+    "    304    0.2%    0.3%  Builtin: GrowFastSmiOrObjectElements",
+    "    301    0.2%    0.3%  JS: *legalChoicesWithPreparedContextInternal file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/legal-choices.js:492:49",
+    "    299    0.2%    0.3%  JS: *resolveZoneSelCore file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/resolve-selectors.js:199:28",
+    "    298    0.2%    0.3%  Builtin: SetConstructor",
+    "    280    0.2%    0.3%  JS: *executeBytecode file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js:322:32",
+    "    277    0.2%    0.3%  Builtin: CallFunction_ReceiverIsAny",
+    "    273    0.2%    0.3%  JS: *resolvePipelineDecisionBindingsForMove file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/move-runtime-bindings.js:87:55",
+    "    267    0.2%    0.3%  Builtin: ArrayPrototypePush",
+    "    265    0.2%    0.3%  JS: *createPendingRequestFingerprint file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/decision-sequence-analysis.js:19:41",
+    "    247    0.1%    0.3%  Builtin: StringAdd_CheckNone",
+    "    239    0.1%    0.3%  JS: *applyForEach file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effects-control.js:116:29",
+    "    239    0.1%    0.3%  JS: *<anonymous> file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/condition-compiler.js:534:20",
+    "    223    0.1%    0.3%  JS: *resolveActionApplicabilityPreflight file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/action-applicability-preflight.js:24:52",
+    "    222    0.1%    0.3%  JS: *validateChooseNSelectionSequence file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/effects-choice.js:117:42",
+    "    221    0.1%    0.2%  JS: *computeFullHash file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js:354:32",
+    "    220    0.1%    0.2%  Builtin: StrictEqual",
+    "    217    0.1%    0.2%  Builtin: StoreIC_Megamorphic",
+    "    214    0.1%    0.2%  Builtin: CallFunction_ReceiverIsNotNullOrUndefined",
+    "    213    0.1%    0.2%  Builtin: RegExpMatchFast"
+  ],
+  "perDecisionByKind": {
+    "actionSelection": {
+      "count": 312,
+      "skippedInitialEntries": 0,
+      "p50": 297.3830499999958,
+      "p95": 736.9823990000004,
+      "p99": 2991.340298000003,
+      "max": 21819.481410000008,
+      "median": 297.3830499999958
+    },
+    "chooseOne": {
+      "count": 302,
+      "skippedInitialEntries": 0,
+      "p50": 1.5248500000016065,
+      "p95": 46.60880000000179,
+      "p99": 54.132500000006985,
+      "max": 448.5351010000013,
+      "median": 1.5248500000016065
+    },
+    "chooseNStep": {
+      "count": 480,
+      "skippedInitialEntries": 0,
+      "p50": 1.1400500000127067,
+      "p95": 176.59240000000136,
+      "p99": 294.53329900000244,
+      "max": 3685.9781010000006,
+      "median": 1.1400500000127067
+    },
+    "stochasticResolve": {
+      "count": 6,
+      "skippedInitialEntries": 0,
+      "p50": 1.6578999999983353,
+      "p95": 1.7660999999934575,
+      "p99": 1.7660999999934575,
+      "max": 1.7660999999934575,
+      "median": 1.6578999999983353
+    }
+  },
+  "warmedPerDecisionByKind": {
+    "chooseOne": {
+      "count": 299,
+      "skippedInitialEntries": 8,
+      "p50": 1.524199999999837,
+      "p95": 46.95679999999993,
+      "p99": 58.00019999999495,
+      "max": 448.5351010000013,
+      "median": 1.524199999999837
+    },
+    "actionSelection": {
+      "count": 310,
+      "skippedInitialEntries": 8,
+      "p50": 292.37115000000176,
+      "p95": 736.9823990000004,
+      "p99": 2991.340298000003,
+      "max": 21819.481410000008,
+      "median": 292.37115000000176
+    },
+    "chooseNStep": {
+      "count": 477,
+      "skippedInitialEntries": 8,
+      "p50": 1.13900000002468,
+      "p95": 176.59240000000136,
+      "p99": 294.53329900000244,
+      "max": 3685.9781010000006,
+      "median": 1.13900000002468
+    },
+    "stochasticResolve": {
+      "count": 6,
+      "skippedInitialEntries": 8,
+      "p50": 1.6578999999983353,
+      "p95": 1.7660999999934575,
+      "p99": 1.7660999999934575,
+      "max": 1.7660999999934575,
+      "median": 1.6578999999983353
+    }
+  },
+  "cacheStats": {},
+  "caveats": []
+}

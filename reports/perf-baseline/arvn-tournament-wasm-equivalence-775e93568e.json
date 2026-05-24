@@ -1,0 +1,700 @@
+{
+  "workload": "arvn-tournament-wasm-equivalence",
+  "headSha": "775e93568e",
+  "smoke": false,
+  "runs": {
+    "wallClockMs": [
+      32305.544,
+      32421.612,
+      32310.046
+    ],
+    "median": 32310.046,
+    "cv": 0.0016597341302665174
+  },
+  "cpuProfTop30SelfTime": [
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 2945,
+      "selfTimeMs": 3168.678,
+      "totalTimeMs": 3168.678
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 2728,
+      "selfTimeMs": 2941.737,
+      "totalTimeMs": 2941.737
+    },
+    {
+      "functionName": "(garbage collector)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 1940,
+      "selfTimeMs": 2112.789,
+      "totalTimeMs": 2112.789
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 1040,
+      "selfTimeMs": 1121.486,
+      "totalTimeMs": 1121.486
+    },
+    {
+      "functionName": "PolicyBytecodeVmUnsupportedError",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 30,
+      "columnNumber": 15,
+      "hitCount": 1021,
+      "selfTimeMs": 1100.845,
+      "totalTimeMs": 1100.845
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 411,
+      "selfTimeMs": 444.82,
+      "totalTimeMs": 3386.557
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 387,
+      "selfTimeMs": 416.798,
+      "totalTimeMs": 7178.588
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 364,
+      "selfTimeMs": 392.433,
+      "totalTimeMs": 6658.058
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 161,
+      "selfTimeMs": 172.39,
+      "totalTimeMs": 1293.876
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 114,
+      "selfTimeMs": 122.696,
+      "totalTimeMs": 1295.572
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 105,
+      "selfTimeMs": 112.903,
+      "totalTimeMs": 1438.124
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 79,
+      "selfTimeMs": 86,
+      "totalTimeMs": 3254.678
+    },
+    {
+      "functionName": "next",
+      "url": "file:///tmp/perf-baseline-pre-190/node_modules/.pnpm/yaml@2.8.4/node_modules/yaml/dist/parse/parser.js",
+      "lineNumber": 167,
+      "columnNumber": 9,
+      "hitCount": 78,
+      "selfTimeMs": 84.685,
+      "totalTimeMs": 144.651
+    },
+    {
+      "functionName": "next",
+      "url": "file:///tmp/perf-baseline-pre-190/node_modules/.pnpm/yaml@2.8.4/node_modules/yaml/dist/parse/parser.js",
+      "lineNumber": 167,
+      "columnNumber": 9,
+      "hitCount": 67,
+      "selfTimeMs": 71.89,
+      "totalTimeMs": 143.079
+    },
+    {
+      "functionName": "compileSourceTextModule",
+      "url": "node:internal/modules/esm/utils",
+      "lineNumber": 341,
+      "columnNumber": 32,
+      "hitCount": 57,
+      "selfTimeMs": 60.979,
+      "totalTimeMs": 64.196
+    },
+    {
+      "functionName": "next",
+      "url": "file:///tmp/perf-baseline-pre-190/node_modules/.pnpm/yaml@2.8.4/node_modules/yaml/dist/parse/parser.js",
+      "lineNumber": 167,
+      "columnNumber": 9,
+      "hitCount": 56,
+      "selfTimeMs": 60.224,
+      "totalTimeMs": 96.728
+    },
+    {
+      "functionName": "fnv1a64FromState",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/fnv1a64.js",
+      "lineNumber": 24,
+      "columnNumber": 32,
+      "hitCount": 55,
+      "selfTimeMs": 59.197,
+      "totalTimeMs": 68.527
+    },
+    {
+      "functionName": "evaluateCompiledExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 794,
+      "columnNumber": 24,
+      "hitCount": 54,
+      "selfTimeMs": 57.932,
+      "totalTimeMs": 7238.646
+    },
+    {
+      "functionName": "next",
+      "url": "file:///tmp/perf-baseline-pre-190/node_modules/.pnpm/yaml@2.8.4/node_modules/yaml/dist/parse/parser.js",
+      "lineNumber": 167,
+      "columnNumber": 9,
+      "hitCount": 53,
+      "selfTimeMs": 56.788,
+      "totalTimeMs": 83.556
+    },
+    {
+      "functionName": "evaluateCompiledExpr",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 794,
+      "columnNumber": 24,
+      "hitCount": 51,
+      "selfTimeMs": 54.782,
+      "totalTimeMs": 6725.798
+    },
+    {
+      "functionName": "resolveVmFallbackFeature",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 987,
+      "columnNumber": 28,
+      "hitCount": 51,
+      "selfTimeMs": 54.732,
+      "totalTimeMs": 1155.577
+    },
+    {
+      "functionName": "getPackageScopeConfig",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 15,
+      "selfTimeMs": 50.055,
+      "totalTimeMs": 50.055
+    },
+    {
+      "functionName": "readGameDefCache",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/helpers/gamedef-cache.js",
+      "lineNumber": 6,
+      "columnNumber": 32,
+      "hitCount": 42,
+      "selfTimeMs": 44.988,
+      "totalTimeMs": 82.732
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 31,
+      "selfTimeMs": 33.309,
+      "totalTimeMs": 34.385
+    },
+    {
+      "functionName": "executeBytecode",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-vm/vm.js",
+      "lineNumber": 321,
+      "columnNumber": 31,
+      "hitCount": 30,
+      "selfTimeMs": 32.695,
+      "totalTimeMs": 3435.437
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 30,
+      "selfTimeMs": 32.342,
+      "totalTimeMs": 33.431
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 24,
+      "selfTimeMs": 25.782,
+      "totalTimeMs": 26.844
+    },
+    {
+      "functionName": "scoreItem",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-selector-eval.js",
+      "lineNumber": 188,
+      "columnNumber": 18,
+      "hitCount": 24,
+      "selfTimeMs": 25.009,
+      "totalTimeMs": 7281.892
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 22,
+      "selfTimeMs": 24.643,
+      "totalTimeMs": 26.809
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 23,
+      "selfTimeMs": 24.621,
+      "totalTimeMs": 27.815
+    }
+  ],
+  "cpuProfTop30TotalTime": [
+    {
+      "functionName": "(root)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 32746.01
+    },
+    {
+      "functionName": "run",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 1414,
+      "columnNumber": 11,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 492,
+      "columnNumber": 29,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 495,
+      "columnNumber": 14,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "arrayToSafePromiseIterable",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 477,
+      "columnNumber": 35,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 481,
+      "columnNumber": 6,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "SafePromise",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 450,
+      "columnNumber": 15,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "node:internal/per_context/primordials",
+      "lineNumber": 482,
+      "columnNumber": 24,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 1439,
+      "columnNumber": 47,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "start",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 919,
+      "columnNumber": 7,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "run",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 983,
+      "columnNumber": 11,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15757.483
+    },
+    {
+      "functionName": "runInAsyncScope",
+      "url": "node:async_hooks",
+      "lineNumber": 206,
+      "columnNumber": 17,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15756.418
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js",
+      "lineNumber": 75,
+      "columnNumber": 124,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 15756.418
+    },
+    {
+      "functionName": "captureDecisionStream",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js",
+      "lineNumber": 32,
+      "columnNumber": 30,
+      "hitCount": 2,
+      "selfTimeMs": 2.119,
+      "totalTimeMs": 15755.329
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 2,
+      "selfTimeMs": 2.172,
+      "totalTimeMs": 14963.103
+    },
+    {
+      "functionName": "run",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 983,
+      "columnNumber": 11,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14546.45
+    },
+    {
+      "functionName": "postRun",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 1129,
+      "columnNumber": 9,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "processPendingSubtests",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 738,
+      "columnNumber": 30,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "run",
+      "url": "node:internal/test_runner/test",
+      "lineNumber": 983,
+      "columnNumber": 11,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "runInAsyncScope",
+      "url": "node:async_hooks",
+      "lineNumber": 206,
+      "columnNumber": 17,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js",
+      "lineNumber": 85,
+      "columnNumber": 127,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "captureDecisionStream",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js",
+      "lineNumber": 32,
+      "columnNumber": 30,
+      "hitCount": 1,
+      "selfTimeMs": 1.066,
+      "totalTimeMs": 14545.363
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 1,
+      "selfTimeMs": 1.085,
+      "totalTimeMs": 13961.385
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 369,
+      "columnNumber": 18,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 13825.946
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 369,
+      "columnNumber": 18,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 12989.98
+    },
+    {
+      "functionName": "chooseActionSelectionDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 383,
+      "columnNumber": 33,
+      "hitCount": 2,
+      "selfTimeMs": 2.137,
+      "totalTimeMs": 12941.903
+    },
+    {
+      "functionName": "chooseActionSelectionDecision",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 383,
+      "columnNumber": 33,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 12134.767
+    },
+    {
+      "functionName": "evaluatePolicyMove",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 635,
+      "columnNumber": 34,
+      "hitCount": 1,
+      "selfTimeMs": 1.068,
+      "totalTimeMs": 9166.105
+    },
+    {
+      "functionName": "evaluatePolicyMoveCore",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-eval.js",
+      "lineNumber": 222,
+      "columnNumber": 38,
+      "hitCount": 4,
+      "selfTimeMs": 4.273,
+      "totalTimeMs": 9165.037
+    },
+    {
+      "functionName": "evaluatePlannedSelector",
+      "url": "file:///tmp/perf-baseline-pre-190/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 275,
+      "columnNumber": 27,
+      "hitCount": 5,
+      "selfTimeMs": 5.368,
+      "totalTimeMs": 8848.653
+    }
+  ],
+  "allocProfTopN": [
+    "Statistical profiling result from /tmp/perf-baseline-pre-190/reports/perf-baseline/alloc-prof/arvn-tournament-wasm-equivalence-775e93568e/isolate-0xb3b7000-26193-isolate.log, (93 ticks, 0 unaccounted, 0 excluded).",
+    "",
+    " [Shared libraries]:",
+    "   ticks  total  nonlib   name",
+    "     44   47.3%          /usr/local/bin/node",
+    "      1    1.1%          /usr/lib/x86_64-linux-gnu/libc.so.6",
+    "",
+    " [JavaScript]:",
+    "   ticks  total  nonlib   name",
+    "      2    2.2%    4.2%  Builtin: Call_ReceiverIsAny",
+    "      1    1.1%    2.1%  JS: ^processTicksAndRejections node:internal/process/task_queues:72:35",
+    "      1    1.1%    2.1%  Builtin: ResolvePromise",
+    "      1    1.1%    2.1%  Builtin: GetProperty",
+    "      1    1.1%    2.1%  Builtin: Call_ReceiverIsNullOrUndefined",
+    "",
+    " [C++]:",
+    "   ticks  total  nonlib   name",
+    "     14   15.1%   29.2%  __write@@GLIBC_2.2.5",
+    "     13   14.0%   27.1%  _IO_fwrite@@GLIBC_2.2.5",
+    "      6    6.5%   12.5%  epoll_pwait@@GLIBC_2.6",
+    "      4    4.3%    8.3%  _IO_file_xsputn@@GLIBC_2.2.5",
+    "      2    2.2%    4.2%  std::ostream::sentry::sentry(std::ostream&)@@GLIBCXX_3.4",
+    "      2    2.2%    4.2%  std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long)@@GLIBCXX_3.4.9",
+    "      1    1.1%    2.1%  __pthread_rwlock_trywrlock@GLIBC_2.2.5",
+    "",
+    " [Summary]:",
+    "   ticks  total  nonlib   name",
+    "      6    6.5%   12.5%  JavaScript",
+    "     42   45.2%   87.5%  C++",
+    "      3    3.2%    6.3%  GC",
+    "     45   48.4%          Shared libraries",
+    "",
+    " [C++ entry points]:",
+    "   ticks    cpp   total   name",
+    "     13   40.6%   14.0%  _IO_fwrite@@GLIBC_2.2.5",
+    "     10   31.3%   10.8%  __write@@GLIBC_2.2.5",
+    "      4   12.5%    4.3%  _IO_file_xsputn@@GLIBC_2.2.5",
+    "      2    6.3%    2.2%  std::ostream::sentry::sentry(std::ostream&)@@GLIBCXX_3.4",
+    "      2    6.3%    2.2%  std::basic_ostream<char, std::char_traits<char> >& std::__ostream_insert<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*, long)@@GLIBCXX_3.4.9",
+    "      1    3.1%    1.1%  __pthread_rwlock_trywrlock@GLIBC_2.2.5",
+    "",
+    " [Bottom up (heavy) profile]:",
+    "  Note: percentage shows a share of a particular caller in the total",
+    "  amount of its parent calls.",
+    "  Callers occupying less than 1.0% are not shown.",
+    "",
+    "   ticks parent  name",
+    "     44   47.3%  /usr/local/bin/node",
+    "     14   31.8%    JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "     14  100.0%      JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      2   14.3%        JS: ~<anonymous> node:internal/test_runner/test:1:1",
+    "      2  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      2  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      2   14.3%        JS: ~<anonymous> node:internal/test_runner/mock/mock:1:1",
+    "      2  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      2  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      2   14.3%        JS: ~<anonymous> node:fs/promises:1:1",
+    "      2  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      2  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      1    7.1%        JS: ~tryBuiltinReporter node:internal/test_runner/utils:130:28",
+    "      1  100.0%          JS: ~<anonymous> node:internal/test_runner/utils:149:51",
+    "      1  100.0%            Builtin: PromiseConstructor",
+    "      1    7.1%        JS: ~lazyMinimatch node:internal/fs/glob:44:23",
+    "      1  100.0%          JS: ~createMatcher node:internal/fs/glob:99:23",
+    "      1  100.0%            JS: ~<anonymous> node:internal/fs/glob:298:49",
+    "      1    7.1%        JS: ~<anonymous> node:internal/worker:1:1",
+    "      1  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      1  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      1    7.1%        JS: ~<anonymous> node:internal/test_runner/runner:1:1",
+    "      1  100.0%          JS: ~<anonymous> node:internal/main/test_runner:1:1",
+    "      1    7.1%        JS: ~<anonymous> node:internal/test_runner/harness:1:1",
+    "      1  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      1  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      1    7.1%        JS: ~<anonymous> node:internal/readline/interface:1:1",
+    "      1  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      1  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      1    7.1%        JS: ~<anonymous> node:internal/fs/promises:1:1",
+    "      1  100.0%          JS: ^compileForInternalLoader node:internal/bootstrap/realm:384:27",
+    "      1  100.0%            JS: ^requireBuiltin node:internal/bootstrap/realm:421:24",
+    "      1    7.1%        JS: ~<anonymous> node:internal/child_process:1:1"
+  ],
+  "perDecisionByKind": {
+    "actionSelection": {
+      "count": 68,
+      "skippedInitialEntries": 0,
+      "p50": 360.3342510000002,
+      "p95": 1073.1190049999987,
+      "p99": 1377.9834059999998,
+      "max": 1377.9834059999998,
+      "median": 360.3342510000002
+    },
+    "chooseNStep": {
+      "count": 188,
+      "skippedInitialEntries": 0,
+      "p50": 0.7922499999995125,
+      "p95": 47.366799999999785,
+      "p99": 194.2313009999998,
+      "max": 199.9060010000012,
+      "median": 0.7922499999995125
+    },
+    "chooseOne": {
+      "count": 64,
+      "skippedInitialEntries": 0,
+      "p50": 0.9764000000004671,
+      "p95": 5.339299999999639,
+      "p99": 9.951900000000023,
+      "max": 9.951900000000023,
+      "median": 0.9764000000004671
+    }
+  },
+  "warmedPerDecisionByKind": {
+    "chooseNStep": {
+      "count": 185,
+      "skippedInitialEntries": 8,
+      "p50": 0.7867999999998574,
+      "p95": 47.366799999999785,
+      "p99": 194.2313009999998,
+      "max": 199.9060010000012,
+      "median": 0.7867999999998574
+    },
+    "actionSelection": {
+      "count": 65,
+      "skippedInitialEntries": 8,
+      "p50": 360.43890100000135,
+      "p95": 803.0702039999996,
+      "p99": 1160.7043029999986,
+      "max": 1160.7043029999986,
+      "median": 360.43890100000135
+    },
+    "chooseOne": {
+      "count": 62,
+      "skippedInitialEntries": 8,
+      "p50": 0.9520000000002256,
+      "p95": 5.339299999999639,
+      "p99": 9.951900000000023,
+      "max": 9.951900000000023,
+      "median": 0.9520000000002256
+    }
+  },
+  "cacheStats": {},
+  "caveats": []
+}

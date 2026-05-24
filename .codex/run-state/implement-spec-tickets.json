@@ -1,9 +1,9 @@
 {
-  "originating_spec": "archive/specs/190-plan-primary-root-selection.md",
-  "archived_spec": "archive/specs/190-plan-primary-root-selection.md",
-  "last_ticket": "archive/tickets/190PLANROOTSEL-002.md",
+  "originating_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
+  "archived_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
+  "last_ticket": "archive/tickets/192FITLPERFPROF-004.md",
   "last_result": "final_spec_archived",
-  "last_work_commit": "48fef9edbca152f33d83d9bacc2080cb03a9ab18",
+  "last_work_commit": "8ccbbbe03afc57efdbe3293f7245057ae6bfa5f0",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
@@ -13,5 +13,5 @@
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-23"
+  "updated_at": "2026-05-24"
 }

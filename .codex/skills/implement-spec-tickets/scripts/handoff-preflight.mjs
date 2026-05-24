@@ -97,7 +97,9 @@ function printScaffold(state, status) {
   const queue = Array.isArray(state?.queue) ? state.queue.join(', ') || '<empty>' : '<queue>';
   const dirty = status === '' ? 'clean' : status.replaceAll('\n', '; ');
 
-  console.log('Required-visible-block checkpoint:');
+  console.log('Required-visible-block checkpoint scaffold (not satisfied until filled in visibly):');
+  console.log('- This helper only prints placeholders and performs state/path checks.');
+  console.log('- Replace each placeholder with truthful emitted/not_applicable/blocked values before any gated commit, archive, or final response.');
   console.log('- implement-ticket audit block: <emitted | not_applicable: reason>');
   console.log('- Acceptance-to-command map: <emitted | not_applicable: reason | blocked: reason>');
   console.log('- pre-archive gate: <emitted before archive command | not_applicable: no ticket archive in this iteration | late_recovered: reason>');
@@ -114,7 +116,7 @@ function printScaffold(state, status) {
   console.log('- Harness handoff: <ready_to_emit | not_applicable: reason>');
   if (shouldPrintStateOnlyCheckpoint(state, status)) {
     console.log('');
-    console.log('State-only commit checkpoint:');
+    console.log('State-only commit checkpoint scaffold (not satisfied until filled in visibly):');
     console.log(`- staged state file: ${status.includes(STATE_PATH) ? '<yes | blocked: reason>' : 'not_applicable: state file not dirty'}`);
     console.log(`- recorded work commit: ${state?.last_work_commit ?? '<full sha | none>'}`);
     console.log(`- recorded state commit: ${state?.last_state_commit ?? '<self | full sha | none>'}`);
@@ -123,7 +125,7 @@ function printScaffold(state, status) {
     console.log('- planned revalidation: <retained validator + git status | manual state checks + git status>');
   }
   console.log('');
-  console.log('Harness handoff:');
+  console.log('Harness handoff scaffold (verify/fill before final response):');
   console.log(`- Originating spec: ${spec}`);
   console.log(`- Last ticket processed: ${state?.last_ticket ?? '<ticket>'} ${state?.last_result ?? '<result>'}`);
   console.log(`- Work commit: ${state?.last_work_commit ?? '<sha or none>'}`);

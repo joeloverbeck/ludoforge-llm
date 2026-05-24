@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-vm/vm.ts` (return shape + opcode unsupported conversion), `packages/engine/src/agents/policy-evaluation-core.ts` (catcher → tag branch, fallback resolver throw → sentinel return, class deletion). Four engine test files migrated atomically.
-**Deps**: `specs/193-policy-vm-unsupported-feature-dispatch-restructure.md`
+**Deps**: `archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md`
 
 ## Problem
 

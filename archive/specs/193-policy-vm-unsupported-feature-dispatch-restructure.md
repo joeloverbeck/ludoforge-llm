@@ -1,6 +1,6 @@
 # Spec 193 — Policy VM Unsupported-Feature Dispatch Restructure
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — `PolicyBytecodeVmUnsupportedError` construction is 14.3–36.2% of CPU self-time across all six measured workloads at HEAD (`reports/fitl-perf-baseline-2026-05-24.md`). It is the single largest above-floor hot path the Spec 192 baseline named, and it fires per-evaluation, per-unsupported-feature, capturing a stack trace each time.
 **Complexity**: M — engine change at the bytecode VM dispatch seam and its TS-evaluator fallback caller; behaviour-preserving (same fallback evaluator runs on the same predicates); no compiler/DSL changes.
 **Date**: 2026-05-24
@@ -210,6 +210,24 @@ P1 alone may land green and meet the gain target; P2 is gated on P1's measured r
 
 Decomposed via `/spec-to-tickets` on 2026-05-24:
 
-- [`archive/tickets/193POLVMDISPRES-001.md`](../archive/tickets/193POLVMDISPRES-001.md) — Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files (COMPLETED; covers §4.1, §4.2, §4.4, §8 P1)
-- [`archive/tickets/193POLVMDISPRES-002.md`](../archive/tickets/193POLVMDISPRES-002.md) — Perf witness re-capture across 5 regressed FITL workloads (COMPLETED; covers §8 P3)
-- [`archive/tickets/193POLVMDISPRES-003.md`](../archive/tickets/193POLVMDISPRES-003.md) — Optional negative cache for unsupported-feature verdicts (NOT IMPLEMENTED — declined because ticket 002 showed P1 met the per-spec threshold; covers §4.3, §8 P2 gate)
+- [`archive/tickets/193POLVMDISPRES-001.md`](../tickets/193POLVMDISPRES-001.md) — Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files (COMPLETED; covers §4.1, §4.2, §4.4, §8 P1)
+- [`archive/tickets/193POLVMDISPRES-002.md`](../tickets/193POLVMDISPRES-002.md) — Perf witness re-capture across 5 regressed FITL workloads (COMPLETED; covers §8 P3)
+- [`archive/tickets/193POLVMDISPRES-003.md`](../tickets/193POLVMDISPRES-003.md) — Optional negative cache for unsupported-feature verdicts (NOT IMPLEMENTED — declined because ticket 002 showed P1 met the per-spec threshold; covers §4.3, §8 P2 gate)
+
+## Outcome
+
+Completed: 2026-05-24
+
+What changed:
+- Ticket 001 replaced the exception-based VM unsupported-feature path with `VmEvalResult`, deleted `PolicyBytecodeVmUnsupportedError`, migrated the caller and affected tests, and preserved the Spec 154 paired-contract fallback invariant.
+- Ticket 002 re-ran the Spec 192 baseline harness across the five regressed workloads and recorded the Spec 193 P3 measurement in `reports/fitl-perf-baseline-2026-05-24.md` plus durable JSON summaries under `reports/perf-baseline/`.
+- Ticket 003 was closed as `NOT IMPLEMENTED` because ticket 002 proved the P1 typed-verdict refactor already met the per-spec threshold; no P2 negative cache was needed.
+
+Deviations from original plan:
+- The optional P2 negative cache was not implemented. The gate condition explicitly allowed close-decline when P1 met the threshold, and the P3 measurement showed every measured regressed workload exceeded the >=10% individual wall-clock reduction threshold with 100.0% unsupported-error self-time reduction.
+
+Verification results:
+- `pnpm -F @ludoforge/engine test` — passed in ticket 001.
+- `pnpm turbo typecheck` — passed in ticket 001.
+- Spec 192 baseline harness reruns for `parity-drive`, `bounded-termination-1002`, `diagnose-parity-runGame-1001`, `policy-preview-parity-arvn-1008`, and `arvn-tournament-parallel` — passed in ticket 002; the report records wall-clock reductions of 29.5%, 21.4%, 24.5%, 23.1%, and 20.4%.
+- `pnpm run check:ticket-deps` — passed after ticket 003 archival and reference repair.

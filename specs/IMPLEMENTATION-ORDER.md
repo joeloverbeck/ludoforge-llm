@@ -23,7 +23,7 @@ The three remediation specs are **independent and can be implemented in any orde
 
 Each spec carries its own replay-identity proof obligation against the existing Spec 192 trajectory-identity harness and the determinism corpus.
 
-1. **Spec 193 — Policy VM Unsupported-Feature Dispatch Restructure** (`specs/193-policy-vm-unsupported-feature-dispatch-restructure.md`).
+1. **Spec 193 — Policy VM Unsupported-Feature Dispatch Restructure** (`archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md`).
    Replace exception-based VM fallback with a typed non-throw verdict. Eliminates `Error` constructor stack-capture cost (14.3–36.2% per workload). Preserves Spec 154's paired-contract guarantee.
 
 2. **Spec 194 — Zobrist Decision-Stack Digest Optimization** (`specs/194-zobrist-decision-stack-digest-optimization.md`).

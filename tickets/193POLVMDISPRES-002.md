@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement-only ticket consuming the Spec 192 baseline harness; output is JSON summaries and an appended report section.
-**Deps**: `tickets/193POLVMDISPRES-001.md`
+**Deps**: `archive/tickets/193POLVMDISPRES-001.md`
 
 ## Problem
 

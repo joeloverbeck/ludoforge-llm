@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { executeBytecode } from '../../../src/agents/policy-vm/index.js';
+import { executeBytecode, type VmEvalResult } from '../../../src/agents/policy-vm/index.js';
 import {
   Opcode,
   type FeatureRef,
@@ -113,6 +113,13 @@ const execute = (
   resolveDynamic: () => 41,
 });
 
+const okValue = (result: VmEvalResult): unknown => {
+  if (result.status !== 'ok') {
+    assert.fail(result.reason);
+  }
+  return result.value;
+};
+
 const singleFeatureTable = (ref: FeatureRef): FeatureTable => ({
   refs: [ref],
   refToId: { [`${ref.kind}:${ref.layoutIndex}:${ref.aux.join(',')}`]: 0 },
@@ -120,26 +127,26 @@ const singleFeatureTable = (ref: FeatureRef): FeatureTable => ({
 
 describe('policy bytecode VM core', () => {
   it('executes numeric, comparison, boolean, coalesce, ref, dynamic, and halt opcodes', () => {
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.ADD_SCORE, Opcode.HALT], [3, 4]).value, 7);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.SUB_SCORE, Opcode.HALT], [9, 4]).value, 5);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MUL_SCORE, Opcode.HALT], [3, 4]).value, 12);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.DIV_SCORE, Opcode.HALT], [9, 2]).value, 4);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.NEG, Opcode.HALT], [9]).value, -9);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.ABS, Opcode.HALT], [-9]).value, 9);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MIN, Opcode.HALT], [9, 4]).value, 4);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MAX, Opcode.HALT], [9, 4]).value, 9);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.GT, Opcode.HALT], [9, 4]).value, true);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.LT, Opcode.HALT], [9, 4]).value, false);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.EQ, Opcode.HALT], [4, 4]).value, true);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.NEQ, Opcode.HALT], [4, 5]).value, true);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.GTE, Opcode.HALT], [4, 4]).value, true);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.LTE, Opcode.HALT], [5, 4]).value, false);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.BOOL_TO_NUMBER, Opcode.HALT], [1]).value, undefined);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.AND, Opcode.HALT], [1, 1]).value, undefined);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.NOT, Opcode.HALT], [0]).value, undefined);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.COALESCE, Opcode.HALT], [0, 7]).value, 0);
-    assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.RESOLVE_REF, 1, Opcode.IN, Opcode.HALT], [5]).value, true);
-    assert.equal(execute([Opcode.RESOLVE_DYNAMIC, 7, Opcode.HALT]).value, 41);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.ADD_SCORE, Opcode.HALT], [3, 4])), 7);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.SUB_SCORE, Opcode.HALT], [9, 4])), 5);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MUL_SCORE, Opcode.HALT], [3, 4])), 12);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.DIV_SCORE, Opcode.HALT], [9, 2])), 4);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.NEG, Opcode.HALT], [9])), -9);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.ABS, Opcode.HALT], [-9])), 9);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MIN, Opcode.HALT], [9, 4])), 4);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.MAX, Opcode.HALT], [9, 4])), 9);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.GT, Opcode.HALT], [9, 4])), true);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.LT, Opcode.HALT], [9, 4])), false);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.EQ, Opcode.HALT], [4, 4])), true);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.NEQ, Opcode.HALT], [4, 5])), true);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.GTE, Opcode.HALT], [4, 4])), true);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.LTE, Opcode.HALT], [5, 4])), false);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.BOOL_TO_NUMBER, Opcode.HALT], [1])), undefined);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.AND, Opcode.HALT], [1, 1])), undefined);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.NOT, Opcode.HALT], [0])), undefined);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.COALESCE, Opcode.HALT], [0, 7])), 0);
+    assert.equal(okValue(execute([Opcode.LOAD_CONST, 0, Opcode.RESOLVE_REF, 1, Opcode.IN, Opcode.HALT], [5])), true);
+    assert.equal(okValue(execute([Opcode.RESOLVE_DYNAMIC, 7, Opcode.HALT])), 41);
   });
 
   it('supports boolean opcodes with resolver-provided booleans', () => {
@@ -158,7 +165,7 @@ describe('policy bytecode VM core', () => {
       state: { activePlayer: 1 } as unknown as GameState,
       resolveRef: (refId) => refId === 1 ? true : refId === 2 ? false : false,
     });
-    assert.equal(result.value, true);
+    assert.equal(okValue(result), true);
   });
 
   it('executes conditional jumps over skipped bytecode ranges', () => {
@@ -174,18 +181,18 @@ describe('policy bytecode VM core', () => {
       resolveRef: () => condition,
     });
 
-    assert.equal(branch(true).value, 9);
-    assert.equal(branch(false).value, undefined);
+    assert.equal(okValue(branch(true)), 9);
+    assert.equal(okValue(branch(false)), undefined);
   });
 
   it('loads encoded-state features generically', () => {
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalVar', layoutIndex: 0, aux: [0] })).value, 23);
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'playerInt', layoutIndex: 0, aux: [0, 1, 0] })).value, 11);
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalMarker', layoutIndex: 0, aux: [0] })).value, 'on');
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'zoneProp', layoutIndex: 1, aux: [1, 0] })).value, 19);
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'zoneTokenAgg', layoutIndex: 0, aux: [0, 0, 1] })).value, 3);
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalTokenAgg', layoutIndex: 0, aux: [1, 0, 0, 0, 0] })).value, 10);
-    assert.equal(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalZoneAgg', layoutIndex: 0, aux: [1, 0, 1, 0, 0] })).value, 36);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalVar', layoutIndex: 0, aux: [0] }))), 23);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'playerInt', layoutIndex: 0, aux: [0, 1, 0] }))), 11);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalMarker', layoutIndex: 0, aux: [0] }))), 'on');
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'zoneProp', layoutIndex: 1, aux: [1, 0] }))), 19);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'zoneTokenAgg', layoutIndex: 0, aux: [0, 0, 1] }))), 3);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalTokenAgg', layoutIndex: 0, aux: [1, 0, 0, 0, 0] }))), 10);
+    assert.equal(okValue(execute([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], singleFeatureTable({ kind: 'globalZoneAgg', layoutIndex: 0, aux: [1, 0, 1, 0, 0] }))), 36);
   });
 
   it('aborts cleanly on malformed bytecode and aggregate-frame opcodes not emitted by the compiler yet', () => {

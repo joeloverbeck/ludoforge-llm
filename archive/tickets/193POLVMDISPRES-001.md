@@ -1,6 +1,6 @@
 # 193POLVMDISPRES-001: Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-vm/vm.ts` (return shape + opcode unsupported conversion), `packages/engine/src/agents/policy-evaluation-core.ts` (catcher → tag branch, fallback resolver throw → sentinel return, class deletion). Four engine test files migrated atomically.
@@ -160,3 +160,40 @@ The architectural invariant the test asserts (every emitter-producible feature k
 5. `node --test packages/engine/dist/test/integration/perf-baseline-trajectory-identity.test.js` (trajectory-identity standalone sanity).
 6. `node --test packages/engine/dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js` (Spec 154 paired-contract architectural invariant standalone sanity).
 7. `pnpm run check:ticket-deps` (ticket integrity gate).
+
+## Outcome
+
+Completed: 2026-05-24
+
+What changed:
+- Replaced the public `VMResult` interface with the `VmEvalResult` discriminated union in `packages/engine/src/agents/policy-vm/vm.ts`; the `ok` branch carries `value`, `scores`, and `usedDynamicFallback`, while unsupported VM paths now return a typed verdict instead of constructing `PolicyBytecodeVmUnsupportedError`.
+- Deleted `PolicyBytecodeVmUnsupportedError`; `UNSUPPORTED_FEATURE` is exported for the internal sentinel callback contract.
+- Converted the VM unsupported conversion points for `LOAD_FEATURE`, `RESOLVE_REF`, and `RESOLVE_DYNAMIC` to typed early returns. `RESOLVE_REF` records `refId` because no `FeatureRef` exists at that opcode boundary.
+- Replaced `evaluateCompiledExprWithVm`'s `try/catch` with a `result.status` branch that routes unsupported verdicts to `evaluateCompiledExprDirect`.
+- Rewrote `resolveVmFallbackFeature` to return `UNSUPPORTED_FEATURE` for unsupported/default cases instead of throwing.
+- Migrated the four named test files to branch on `result.status`, preserving the existing paired-contract architectural invariant coverage.
+
+Deviations:
+- No new architecture test file was added; the existing `policy-bytecode-fallback-completeness.test.ts` was shape-adapted as planned.
+- No negative cache, perf recapture, WASM throw-contract change, or bytecode feature expansion landed; those remain owned by tickets 002/003 or out of scope.
+- The full engine test lane produced untracked perf smoke byproducts under `reports/perf-baseline/`; they were not staged because this ticket does not own checked-in perf witness artifacts.
+
+Verification:
+- `pnpm turbo build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js` — passed (1 test).
+- `node --test packages/engine/dist/test/unit/agents/policy-vm-core.test.js` — passed (5 tests).
+- `node --test packages/engine/dist/test/architecture/candidate-param-refs/candidate-params-runtime-tracing.test.js` — passed (4 tests).
+- `node --test packages/engine/dist/test/integration/policy-bytecode-equivalence.test.js` — passed (9 tests).
+- `pnpm -F @ludoforge/engine test` — passed (169/169 files; includes `perf-baseline-trajectory-identity.test.js` across all six workloads).
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm -F @ludoforge/engine test:e2e` — passed (6 tests).
+- `pnpm run check:ticket-deps` — passed for 3 active tickets and 2501 archived tickets.
+- `rg -n "PolicyBytecodeVmUnsupportedError|interface VMResult\\b" packages/engine` — no hits.
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Active growth | Crossed cap? | Ledger status |
+|---|---:|---:|---:|---|---|
+| `packages/engine/src/agents/policy-vm/vm.ts` | 563 | 580 | +17 | no | below cap; no extraction needed |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2878 | 2872 | -6 | no | preexisting over guidance, active change shrank file; no extraction needed |

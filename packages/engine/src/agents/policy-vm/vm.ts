@@ -30,14 +30,7 @@ const CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE = 0;
 const CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER = 1;
 const CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING = 2;
 const CANDIDATE_PARAM_ON_MISSING_CONSTANT_BOOLEAN = 3;
-const UNSUPPORTED_FEATURE = Symbol('unsupported policy bytecode feature');
-
-export class PolicyBytecodeVmUnsupportedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'PolicyBytecodeVmUnsupportedError';
-  }
-}
+export const UNSUPPORTED_FEATURE = Symbol('unsupported policy bytecode feature');
 
 export interface VMContext {
   readonly def: GameDef;
@@ -49,17 +42,24 @@ export interface VMContext {
   readonly seatId?: string;
   readonly profileId?: string;
   readonly legalMoves?: readonly Move[];
-  readonly resolveFeature?: (ref: FeatureRef, context: VMContext) => PolicyValue;
-  readonly resolveRef?: (refId: number, context: VMContext) => PolicyValue;
-  readonly resolveDynamic?: (reason: number, context: VMContext) => PolicyValue;
+  readonly resolveFeature?: (ref: FeatureRef, context: VMContext) => PolicyValue | typeof UNSUPPORTED_FEATURE;
+  readonly resolveRef?: (refId: number, context: VMContext) => PolicyValue | typeof UNSUPPORTED_FEATURE;
+  readonly resolveDynamic?: (reason: number, context: VMContext) => PolicyValue | typeof UNSUPPORTED_FEATURE;
 }
 
-export interface VMResult {
-  readonly scores: readonly number[];
-  readonly value?: PolicyValue;
-  readonly pruned?: boolean;
-  readonly usedDynamicFallback: boolean;
-}
+export type VmEvalResult =
+  | {
+      readonly status: 'ok';
+      readonly value: PolicyValue | undefined;
+      readonly scores: readonly number[];
+      readonly usedDynamicFallback: boolean;
+    }
+  | {
+      readonly status: 'unsupported';
+      readonly feature?: FeatureRef;
+      readonly refId?: number;
+      readonly reason: string;
+    };
 
 type StackValue = number | boolean | string | readonly string[] | undefined;
 
@@ -358,7 +358,7 @@ function resolveBuiltInFeature(
   }
 }
 
-export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState, context: VMContext): VMResult {
+export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState, context: VMContext): VmEvalResult {
   const stack: StackValue[] = [];
   const instructions = bytecode.instructions;
   let pc = 0;
@@ -381,7 +381,11 @@ export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState,
         }
         const value = resolveBuiltInFeature(ref, encoded, context);
         if (value === UNSUPPORTED_FEATURE) {
-          throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the VM core.`);
+          return {
+            status: 'unsupported',
+            feature: ref,
+            reason: `Policy bytecode feature "${ref.kind}" is not supported by the VM core.`,
+          };
         }
         push(stack, value, opcode);
         break;
@@ -494,8 +498,12 @@ export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState,
         const refId = readOperand(instructions, pc, opcode);
         pc += 1;
         const value = context.resolveRef?.(refId, context);
-        if (value === undefined) {
-          throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode ref ${refId} is not supported by the VM core.`);
+        if (value === undefined || value === UNSUPPORTED_FEATURE) {
+          return {
+            status: 'unsupported',
+            refId,
+            reason: `Policy bytecode ref ${refId} is not supported by the VM core.`,
+          };
         }
         push(stack, value, opcode);
         break;
@@ -509,12 +517,20 @@ export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState,
         const reason = readOperand(instructions, pc, opcode);
         pc += 1;
         usedDynamicFallback = true;
-        push(stack, context.resolveDynamic?.(reason, context), opcode);
+        const value = context.resolveDynamic?.(reason, context);
+        if (value === UNSUPPORTED_FEATURE) {
+          return {
+            status: 'unsupported',
+            reason: `Policy bytecode dynamic fallback ${reason} is not supported by the VM core.`,
+          };
+        }
+        push(stack, value, opcode);
         break;
       }
       case Opcode.HALT: {
         const value = stack.at(-1);
         return {
+          status: 'ok',
           value,
           scores: typeof value === 'number' ? [value] : [],
           usedDynamicFallback,
@@ -527,6 +543,7 @@ export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState,
 
   const value = stack.at(-1);
   return {
+    status: 'ok',
     value,
     scores: typeof value === 'number' ? [value] : [],
     usedDynamicFallback,

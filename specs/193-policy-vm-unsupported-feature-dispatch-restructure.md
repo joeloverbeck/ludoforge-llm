@@ -210,6 +210,6 @@ P1 alone may land green and meet the gain target; P2 is gated on P1's measured r
 
 Decomposed via `/spec-to-tickets` on 2026-05-24:
 
-- [`tickets/193POLVMDISPRES-001.md`](../tickets/193POLVMDISPRES-001.md) — Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files (covers §4.1, §4.2, §4.4, §8 P1)
+- [`archive/tickets/193POLVMDISPRES-001.md`](../archive/tickets/193POLVMDISPRES-001.md) — Typed-verdict refactor — replace VMResult + delete PolicyBytecodeVmUnsupportedError; migrate 4 test files (COMPLETED; covers §4.1, §4.2, §4.4, §8 P1)
 - [`tickets/193POLVMDISPRES-002.md`](../tickets/193POLVMDISPRES-002.md) — Perf witness re-capture across 5 regressed FITL workloads (covers §8 P3)
 - [`tickets/193POLVMDISPRES-003.md`](../tickets/193POLVMDISPRES-003.md) — Optional negative cache for unsupported-feature verdicts (P2 — gated on 002) (covers §4.3, §8 P2)

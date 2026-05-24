@@ -1,17 +1,15 @@
 {
   "originating_spec": "specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/193POLVMDISPRES-002.md",
+  "last_ticket": "archive/tickets/193POLVMDISPRES-003.md",
   "last_result": "completed_archived",
-  "last_work_commit": "e1f776e4ce2e86f0c4c6bf479e7b47c7f9e9cd99",
+  "last_work_commit": "e91ab9ea5e6e2be418c8ea95f699b7e57e8bac1b",
   "last_state_commit": "self",
-  "next_target": "tickets/193POLVMDISPRES-003.md",
-  "queue": [
-    "tickets/193POLVMDISPRES-003.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "final_spec_archive",
+  "queue": [],
+  "phase": "ready_for_final_spec_archive",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "ticket 193POLVMDISPRES-002 completed and archived; next target is ticket 003 close-declined gate; retained untracked perf profiler byproducts are outside the checked-in deliverable set",
+  "owned_dirty_summary": "ticket 193POLVMDISPRES-003 completed as NOT IMPLEMENTED per close-declined gate and archived; next target is final spec archive; retained untracked perf profiler byproducts are outside the checked-in deliverable set",
   "blocked": false,
   "blocker": null,
   "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-303e6ab6c3-smoke.json, reports/perf-baseline/per-decision/",

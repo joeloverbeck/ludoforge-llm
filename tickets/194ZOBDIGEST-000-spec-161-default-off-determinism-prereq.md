@@ -1,6 +1,6 @@
 # 194ZOBDIGEST-000: Prerequisite — restore Spec 161 default-off determinism proof
 
-**Status**: PENDING
+**Status**: BLOCKED by `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — narrow determinism proof repair under `packages/engine/test/determinism/` and only the production source needed if diagnosis proves a real default-off behavior drift
@@ -50,7 +50,7 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Re-open Spec 194 proof lanes
 
-After the focused Spec 161 test is green, rerun the determinism lane and then return to `194ZOBDIGEST-001` so its replay proof can be cited truthfully.
+After the focused Spec 161 test is green and `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolves the broader determinism timeout, rerun the determinism lane and then return to `194ZOBDIGEST-001` so its replay proof can be cited truthfully.
 
 ## Files to Touch
 
@@ -96,3 +96,37 @@ After the focused Spec 161 test is green, rerun the determinism lane and then re
 4. `pnpm -F @ludoforge/engine run test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Blocked on 2026-05-24 after landing the focused Spec 161 snapshot repair.
+
+The focused red witness was reproduced after `pnpm turbo build` with:
+
+`node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` from `packages/engine`
+
+Diagnosis: this was a stale snapshot caused by later generic canonical-state and preview-trace evolution, not a chooseNStep default-off behavior leak. Spec 191 added `targetKinds` to published choice contexts, and Spec 185 added the `unknownPostGrantCap`, `unknownFreeOperationCap`, and `unknownGrantFlowPartial` preview outcome-breakdown counters. The current explicit-disabled and omitted-flag captures remain byte-identical to each other, both keep `previewUsage.mode: "disabled"`, evaluate zero candidates, and select `chooseNStep:$picks:add:"spare"`.
+
+Changed:
+
+- Regenerated `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json` from the current disabled fixture output.
+- No production source changed.
+- No Zobrist source, Spec 194 capture/report tooling, or policy-profile-quality witness changed.
+
+Remaining blocker:
+
+- `pnpm -F @ludoforge/engine run test:determinism` progressed through the first two determinism files, then stalled in `dist/test/determinism/draft-state-determinism-parity.test.js` with heartbeat output at 31s, 1m1s, 1m31s, 2m1s, 2m31s, and 3m1s quiet. The lane was interrupted with user approval under the 1-3-1 recommended option 2.
+- Replacement probe `timeout 120s node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` timed out with exit 124 after printing only `TAP version 13`.
+- Replacement probe `timeout 600s node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` also timed out with exit 124 after printing only `TAP version 13`.
+- No source file used by that stalled production-scale parity test changed in this ticket. The next owner is `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`.
+
+Snapshot generation command:
+
+`node --input-type=module -e "import {writeFileSync} from 'node:fs'; import {PolicyAgent} from './packages/engine/dist/src/agents/index.js'; import {applyDecision, serializeGameState} from './packages/engine/dist/src/kernel/index.js'; import {createChoosenStepPreviewFixture, legalAddStableKeys} from './packages/engine/dist/test/unit/agents/policy-preview-inner-choosenstep-fixture.js'; const fixture=createChoosenStepPreviewFixture(false); const agent=new PolicyAgent({traceLevel:'verbose'}); const result=agent.chooseDecision(fixture.input); const finalState=applyDecision(fixture.def, fixture.state, result.decision).state; const trace=result.agentDecision; const snapshot={serializedFinalState: serializeGameState(finalState), previewUsage: trace?.previewUsage, selectedStableMoveKey: trace?.selectedStableMoveKey, candidateStableKeys: trace?.candidates?.map((candidate)=>candidate.stableMoveKey) ?? [], candidatePreviewDrives: trace?.candidates?.map((candidate)=>candidate.previewDrive ?? null) ?? [], legalAddKeys: legalAddStableKeys(fixture.microturn)}; writeFileSync('/tmp/spec-161-current-snapshot.json', JSON.stringify(snapshot,null,2)+'\n'); console.log(JSON.stringify({stateHash: snapshot.serializedFinalState.stateHash, outcomeKeys: Object.keys(snapshot.previewUsage.outcomeBreakdown), hasTargetKinds: Object.prototype.hasOwnProperty.call(snapshot.serializedFinalState.decisionStack[1].context, 'targetKinds')}));"`
+
+Verification:
+
+- `pnpm turbo build` — passed from cache.
+- `node --input-type=module -e "<explicit-disabled vs omitted capture comparison>"` — passed; reported `byteIdentical: true`, `explicitHash: "0x2fb6f5427d98e3cc"`, `omittedHash: "0x2fb6f5427d98e3cc"`, and selected move `chooseNStep:$picks:add:"spare"`.
+- `node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` from `packages/engine` — passed, 2 tests.
+- `git diff --check -- packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` — passed before the blocker-ticket rewrite.

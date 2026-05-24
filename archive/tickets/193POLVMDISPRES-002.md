@@ -1,6 +1,6 @@
 # 193POLVMDISPRES-002: Perf witness re-capture across 5 regressed FITL workloads (P3)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — measurement-only ticket consuming the Spec 192 baseline harness; output is JSON summaries and an appended report section.
@@ -129,3 +129,38 @@ No new test files authored — this ticket runs the Spec 192 harness and capture
 2. For each workload: `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload>` (or the actual orchestrator script signature; confirm during implementation).
 3. Manual verification: spot-check at least one output JSON for `cpuProfTop30SelfTime` shape parity against the Spec 192 baseline files.
 4. `pnpm run check:ticket-deps` (ticket integrity gate).
+
+## Outcome
+
+Completed: 2026-05-24
+
+What changed:
+- Re-ran the Spec 192 baseline harness at HEAD `a8f00d0d22` for all five regressed workloads.
+- Added durable JSON summaries:
+  - `reports/perf-baseline/parity-drive-a8f00d0d22.json`
+  - `reports/perf-baseline/bounded-termination-1002-a8f00d0d22.json`
+  - `reports/perf-baseline/diagnose-parity-runGame-1001-a8f00d0d22.json`
+  - `reports/perf-baseline/policy-preview-parity-arvn-1008-a8f00d0d22.json`
+  - `reports/perf-baseline/arvn-tournament-parallel-a8f00d0d22.json`
+- Appended `reports/fitl-perf-baseline-2026-05-24.md` with `Spec 193 P3 Measurement (2026-05-24)`, including the measured gain table, the explicit ticket-003 gate verdict, and the Spec 192 escalation-trigger decision.
+
+Deviations from plan:
+- `pnpm turbo build` completed through Turbo cache replay. The harness consumes existing compiled `dist/test/...` files directly, and each final workload command executed those compiled tests successfully as part of the accepted measurement.
+- The first sandboxed `parity-drive` run failed after nested profiler output parsing with `Unexpected end of JSON input`. No matching profiler/test processes were left running. The exact same command was rerun outside the sandbox, and all accepted workload captures completed successfully.
+- The harness also produced profiler/per-decision byproduct directories under `reports/perf-baseline/alloc-prof/`, `reports/perf-baseline/cpu-prof/`, and `reports/perf-baseline/per-decision/`. Those directories are not part of this ticket's checked-in deliverable list and are intentionally left unstaged alongside pre-existing untracked perf byproducts.
+
+Verification results:
+- `pnpm turbo build` — passed.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs parity-drive` — passed outside sandbox; wrote `reports/perf-baseline/parity-drive-a8f00d0d22.json`.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs bounded-termination-1002` — passed outside sandbox; wrote `reports/perf-baseline/bounded-termination-1002-a8f00d0d22.json`.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs diagnose-parity-runGame-1001` — passed outside sandbox; wrote `reports/perf-baseline/diagnose-parity-runGame-1001-a8f00d0d22.json`.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs policy-preview-parity-arvn-1008` — passed outside sandbox; wrote `reports/perf-baseline/policy-preview-parity-arvn-1008-a8f00d0d22.json`.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs arvn-tournament-parallel` — passed outside sandbox; wrote `reports/perf-baseline/arvn-tournament-parallel-a8f00d0d22.json`.
+- Manual JSON spot-check across all five post-001 summaries — structure matches the baseline shape; each summary has empty `caveats`; post-run CV is below 15%; no `cpuProfTop30SelfTime` entry has `functionName: "PolicyBytecodeVmUnsupportedError"`.
+- Measured wall-clock reductions vs. `*-8203b4d023.json`: `parity-drive` 29.5%, `bounded-termination-1002` 21.4%, `diagnose-parity-runGame-1001` 24.5%, `policy-preview-parity-arvn-1008` 23.1%, `arvn-tournament-parallel` 20.4%.
+- Unsupported-error self-time reduction: 100.0% on all five measured workloads.
+
+Gate verdict:
+- Per-spec acceptance threshold: met.
+- Ticket 003 disposition: close declined per its gate condition; P1 already meets the threshold, so the optional negative cache is not needed for Spec 193 completion.
+- Spec 192 §4.5 escalation trigger: does not fire for Spec 193.

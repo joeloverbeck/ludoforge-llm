@@ -4,13 +4,13 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (negative cache field + lookup in `evaluateCompiledExprWithVm`); possibly a new `policy-vm-negative-cache.ts` module if the cache class grows beyond a few lines.
-**Deps**: `tickets/193POLVMDISPRES-002.md`
+**Deps**: `archive/tickets/193POLVMDISPRES-002.md`
 
 ## Problem
 
 Spec 193 §4.3 P2: once the typed-verdict refactor (ticket 001) lands and ticket 002's measurement shows insufficient gain, add a bounded negative cache keyed on `(decisionKey, featureKind)` so the unsupported verdict short-circuits the VM entry entirely on cache hit. The cache is bounded (LRU cap), deterministic (keyed on already-deterministic inputs), and structurally bound to Spec 189's `cacheBinding` lifetime.
 
-**Gate condition**: Close this ticket with `Outcome: Declined — P1 measured gain meets per-spec threshold` if `tickets/193POLVMDISPRES-002.md`'s recorded measurement shows ≥10% individual wall-clock reduction OR ≥10% combined reduction in `PolicyBytecodeVmUnsupportedError`-attributed self-time across the five regressed workloads (per Spec 193 §8 P3 acceptance). Only implement when the per-spec threshold is unmet. The explicit verdict is recorded in `reports/fitl-perf-baseline-2026-05-24.md`'s Spec 193 P3 Measurement sub-section per ticket 002.
+**Gate condition**: Close this ticket with `Outcome: Declined — P1 measured gain meets per-spec threshold` if `archive/tickets/193POLVMDISPRES-002.md`'s recorded measurement shows ≥10% individual wall-clock reduction OR ≥10% combined reduction in `PolicyBytecodeVmUnsupportedError`-attributed self-time across the five regressed workloads (per Spec 193 §8 P3 acceptance). Only implement when the per-spec threshold is unmet. The explicit verdict is recorded in `reports/fitl-perf-baseline-2026-05-24.md`'s Spec 193 P3 Measurement sub-section per ticket 002.
 
 ## Assumption Reassessment (2026-05-24)
 

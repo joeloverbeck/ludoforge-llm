@@ -1,0 +1,718 @@
+{
+  "workload": "diagnose-parity-runGame-1001",
+  "headSha": "a8f00d0d22",
+  "smoke": false,
+  "runs": {
+    "wallClockMs": [
+      230771.829,
+      233986.746,
+      233018.875
+    ],
+    "median": 233018.875,
+    "cv": 0.005789826059591145
+  },
+  "cpuProfTop30SelfTime": [
+    {
+      "functionName": "(garbage collector)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 32289,
+      "selfTimeMs": 35032.902,
+      "totalTimeMs": 35032.902
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 16988,
+      "selfTimeMs": 18309.795,
+      "totalTimeMs": 18361.445
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 9136,
+      "selfTimeMs": 9856.217,
+      "totalTimeMs": 14777.413
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 8495,
+      "selfTimeMs": 9150.847,
+      "totalTimeMs": 9331.186
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 8373,
+      "selfTimeMs": 9054.718,
+      "totalTimeMs": 9635.406
+    },
+    {
+      "functionName": "zobristKey",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 289,
+      "columnNumber": 26,
+      "hitCount": 8352,
+      "selfTimeMs": 9028.785,
+      "totalTimeMs": 9580.914
+    },
+    {
+      "functionName": "encodeDecisionStackFrameDigestInput",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 150,
+      "columnNumber": 44,
+      "hitCount": 7774,
+      "selfTimeMs": 8391.385,
+      "totalTimeMs": 8594.439
+    },
+    {
+      "functionName": "fnv1a64FromState",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/fnv1a64.js",
+      "lineNumber": 24,
+      "columnNumber": 32,
+      "hitCount": 4500,
+      "selfTimeMs": 4838.019,
+      "totalTimeMs": 4921.196
+    },
+    {
+      "functionName": "PolicyEvaluationContext",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 212,
+      "columnNumber": 15,
+      "hitCount": 4291,
+      "selfTimeMs": 4680.755,
+      "totalTimeMs": 7208.223
+    },
+    {
+      "functionName": "PolicyEvaluationContext",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 212,
+      "columnNumber": 15,
+      "hitCount": 4087,
+      "selfTimeMs": 4456.458,
+      "totalTimeMs": 7072.469
+    },
+    {
+      "functionName": "digestDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 178,
+      "columnNumber": 40,
+      "hitCount": 3937,
+      "selfTimeMs": 4250.633,
+      "totalTimeMs": 28772.672
+    },
+    {
+      "functionName": "PolicyEvaluationContext",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 212,
+      "columnNumber": 15,
+      "hitCount": 3509,
+      "selfTimeMs": 3800.316,
+      "totalTimeMs": 5871.196
+    },
+    {
+      "functionName": "PolicyEvaluationContext",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 212,
+      "columnNumber": 15,
+      "hitCount": 3246,
+      "selfTimeMs": 3514.781,
+      "totalTimeMs": 5578.781
+    },
+    {
+      "functionName": "stableStringify",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js",
+      "lineNumber": 3,
+      "columnNumber": 24,
+      "hitCount": 2321,
+      "selfTimeMs": 2524.074,
+      "totalTimeMs": 4332.348
+    },
+    {
+      "functionName": "stableStringify",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js",
+      "lineNumber": 3,
+      "columnNumber": 24,
+      "hitCount": 2283,
+      "selfTimeMs": 2481.373,
+      "totalTimeMs": 3960.848
+    },
+    {
+      "functionName": "computeFullHash",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 353,
+      "columnNumber": 31,
+      "hitCount": 2074,
+      "selfTimeMs": 2237.04,
+      "totalTimeMs": 12153.15
+    },
+    {
+      "functionName": "computeFullHash",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 353,
+      "columnNumber": 31,
+      "hitCount": 1888,
+      "selfTimeMs": 2038.666,
+      "totalTimeMs": 11949.519
+    },
+    {
+      "functionName": "createPolicyRuntimeProviders",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js",
+      "lineNumber": 176,
+      "columnNumber": 44,
+      "hitCount": 1038,
+      "selfTimeMs": 1130.613,
+      "totalTimeMs": 1470.767
+    },
+    {
+      "functionName": "createPolicyRuntimeProviders",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js",
+      "lineNumber": 176,
+      "columnNumber": 44,
+      "hitCount": 987,
+      "selfTimeMs": 1079.936,
+      "totalTimeMs": 1430.512
+    },
+    {
+      "functionName": "createPolicyRuntimeProviders",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js",
+      "lineNumber": 176,
+      "columnNumber": 44,
+      "hitCount": 860,
+      "selfTimeMs": 929.316,
+      "totalTimeMs": 1178.679
+    },
+    {
+      "functionName": "createPolicyRuntimeProviders",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js",
+      "lineNumber": 176,
+      "columnNumber": 44,
+      "hitCount": 790,
+      "selfTimeMs": 858.095,
+      "totalTimeMs": 1106.022
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 774,
+      "selfTimeMs": 852.896,
+      "totalTimeMs": 855.013
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 776,
+      "selfTimeMs": 846.808,
+      "totalTimeMs": 918.17
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 756,
+      "selfTimeMs": 829.585,
+      "totalTimeMs": 912.246
+    },
+    {
+      "functionName": "digestEncodedDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 168,
+      "columnNumber": 40,
+      "hitCount": 735,
+      "selfTimeMs": 796.782,
+      "totalTimeMs": 797.847
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js",
+      "lineNumber": 20,
+      "columnNumber": 17,
+      "hitCount": 730,
+      "selfTimeMs": 789.023,
+      "totalTimeMs": 1505.59
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 222,
+      "columnNumber": 80,
+      "hitCount": 722,
+      "selfTimeMs": 782.856,
+      "totalTimeMs": 782.856
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js",
+      "lineNumber": 20,
+      "columnNumber": 17,
+      "hitCount": 705,
+      "selfTimeMs": 762.971,
+      "totalTimeMs": 1211.074
+    },
+    {
+      "functionName": "get",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/shared/lru-cache.js",
+      "lineNumber": 12,
+      "columnNumber": 7,
+      "hitCount": 685,
+      "selfTimeMs": 742.393,
+      "totalTimeMs": 742.393
+    },
+    {
+      "functionName": "evaluateCompiledExprWithVm",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js",
+      "lineNumber": 798,
+      "columnNumber": 30,
+      "hitCount": 676,
+      "selfTimeMs": 732.214,
+      "totalTimeMs": 827.049
+    }
+  ],
+  "cpuProfTop30TotalTime": [
+    {
+      "functionName": "(root)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 239540.027
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/test/integration/diagnose-parity-runGame.test.js",
+      "lineNumber": 50,
+      "columnNumber": 71,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 202009.057
+    },
+    {
+      "functionName": "runNoLegalMovesDiagnostic",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs",
+      "lineNumber": 122,
+      "columnNumber": 41,
+      "hitCount": 0,
+      "selfTimeMs": 0,
+      "totalTimeMs": 101954.776
+    },
+    {
+      "functionName": "runGame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/sim/simulator.js",
+      "lineNumber": 13,
+      "columnNumber": 23,
+      "hitCount": 7,
+      "selfTimeMs": 7.533,
+      "totalTimeMs": 101954.776
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 3,
+      "selfTimeMs": 3.168,
+      "totalTimeMs": 101947.243
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 370,
+      "columnNumber": 18,
+      "hitCount": 1,
+      "selfTimeMs": 1.083,
+      "totalTimeMs": 100911.35
+    },
+    {
+      "functionName": "runGame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/sim/simulator.js",
+      "lineNumber": 13,
+      "columnNumber": 23,
+      "hitCount": 6,
+      "selfTimeMs": 6.429,
+      "totalTimeMs": 100053.219
+    },
+    {
+      "functionName": "runGameSteps",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/sim/run-game-steps.js",
+      "lineNumber": 119,
+      "columnNumber": 29,
+      "hitCount": 3,
+      "selfTimeMs": 3.288,
+      "totalTimeMs": 100046.79
+    },
+    {
+      "functionName": "chooseDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 370,
+      "columnNumber": 18,
+      "hitCount": 1,
+      "selfTimeMs": 1.059,
+      "totalTimeMs": 98962.259
+    },
+    {
+      "functionName": "chooseFrontierDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 412,
+      "columnNumber": 26,
+      "hitCount": 2,
+      "selfTimeMs": 2.186,
+      "totalTimeMs": 97472.155
+    },
+    {
+      "functionName": "chooseFrontierDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent.js",
+      "lineNumber": 412,
+      "columnNumber": 26,
+      "hitCount": 2,
+      "selfTimeMs": 2.163,
+      "totalTimeMs": 95357.421
+    },
+    {
+      "functionName": "createPolicyAgentChooseNStepInnerPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent-inner-preview.js",
+      "lineNumber": 319,
+      "columnNumber": 56,
+      "hitCount": 5,
+      "selfTimeMs": 5.386,
+      "totalTimeMs": 94950.144
+    },
+    {
+      "functionName": "createPolicyAgentChooseNStepInnerPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-agent-inner-preview.js",
+      "lineNumber": 319,
+      "columnNumber": 56,
+      "hitCount": 4,
+      "selfTimeMs": 4.359,
+      "totalTimeMs": 92842.683
+    },
+    {
+      "functionName": "runChooseNStepInnerPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 297,
+      "columnNumber": 42,
+      "hitCount": 45,
+      "selfTimeMs": 48.489,
+      "totalTimeMs": 66488.898
+    },
+    {
+      "functionName": "runChooseNStepInnerPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 297,
+      "columnNumber": 42,
+      "hitCount": 88,
+      "selfTimeMs": 95.391,
+      "totalTimeMs": 65041.293
+    },
+    {
+      "functionName": "runChooseNStepBeamPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 125,
+      "columnNumber": 41,
+      "hitCount": 117,
+      "selfTimeMs": 126.85,
+      "totalTimeMs": 63025.318
+    },
+    {
+      "functionName": "runChooseNStepBeamPreview",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 125,
+      "columnNumber": 41,
+      "hitCount": 137,
+      "selfTimeMs": 148.407,
+      "totalTimeMs": 61554.267
+    },
+    {
+      "functionName": "applyChooseNStepPreviewDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 95,
+      "columnNumber": 40,
+      "hitCount": 23,
+      "selfTimeMs": 24.682,
+      "totalTimeMs": 42977.166
+    },
+    {
+      "functionName": "applyPublishedDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 307,
+      "columnNumber": 38,
+      "hitCount": 37,
+      "selfTimeMs": 39.773,
+      "totalTimeMs": 42952.484
+    },
+    {
+      "functionName": "applyChooseNStepPreviewDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js",
+      "lineNumber": 95,
+      "columnNumber": 40,
+      "hitCount": 14,
+      "selfTimeMs": 15.099,
+      "totalTimeMs": 42454.725
+    },
+    {
+      "functionName": "applyPublishedDecision",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 307,
+      "columnNumber": 38,
+      "hitCount": 43,
+      "selfTimeMs": 46.16,
+      "totalTimeMs": 42435.305
+    },
+    {
+      "functionName": "(garbage collector)",
+      "url": "(native)",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "hitCount": 32289,
+      "selfTimeMs": 35032.902,
+      "totalTimeMs": 35032.902
+    },
+    {
+      "functionName": "applyPublishedDecisionInternal",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 326,
+      "columnNumber": 39,
+      "hitCount": 180,
+      "selfTimeMs": 193.28,
+      "totalTimeMs": 30401.672
+    },
+    {
+      "functionName": "applyPublishedDecisionInternal",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 326,
+      "columnNumber": 39,
+      "hitCount": 179,
+      "selfTimeMs": 197.165,
+      "totalTimeMs": 30134.43
+    },
+    {
+      "functionName": "updateHash",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 30,
+      "columnNumber": 19,
+      "hitCount": 33,
+      "selfTimeMs": 36.38,
+      "totalTimeMs": 29489.901
+    },
+    {
+      "functionName": "reconcileRunningHash",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist-phase-hash.js",
+      "lineNumber": 169,
+      "columnNumber": 36,
+      "hitCount": 52,
+      "selfTimeMs": 57.156,
+      "totalTimeMs": 29449.247
+    },
+    {
+      "functionName": "xorDecisionStack",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist-phase-hash.js",
+      "lineNumber": 110,
+      "columnNumber": 25,
+      "hitCount": 18,
+      "selfTimeMs": 19.526,
+      "totalTimeMs": 29387.771
+    },
+    {
+      "functionName": "(anonymous)",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist-phase-hash.js",
+      "lineNumber": 113,
+      "columnNumber": 18,
+      "hitCount": 3,
+      "selfTimeMs": 3.201,
+      "totalTimeMs": 29368.245
+    },
+    {
+      "functionName": "updateHash",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js",
+      "lineNumber": 30,
+      "columnNumber": 19,
+      "hitCount": 29,
+      "selfTimeMs": 31.285,
+      "totalTimeMs": 29143.794
+    },
+    {
+      "functionName": "digestDecisionStackFrame",
+      "url": "file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js",
+      "lineNumber": 178,
+      "columnNumber": 40,
+      "hitCount": 270,
+      "selfTimeMs": 296.428,
+      "totalTimeMs": 29108.543
+    }
+  ],
+  "allocProfTopN": [
+    "Statistical profiling result from /home/joeloverbeck/projects/ludoforge-llm/reports/perf-baseline/alloc-prof/diagnose-parity-runGame-1001-a8f00d0d22/isolate-0x20f7a000-5135-isolate.log, (232166 ticks, 315 unaccounted, 0 excluded).",
+    "",
+    " [Shared libraries]:",
+    "   ticks  total  nonlib   name",
+    "  152247   65.6%          /usr/local/bin/node",
+    "   8878    3.8%          /usr/lib/x86_64-linux-gnu/libc.so.6",
+    "     57    0.0%          /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33",
+    "     28    0.0%          [vdso]",
+    "",
+    " [JavaScript]:",
+    "   ticks  total  nonlib   name",
+    "  29722   12.8%   41.9%  JS: *digestEncodedDecisionStackFrame file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:169:41",
+    "   4891    2.1%    6.9%  JS: *fnv1a64FromState file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/fnv1a64.js:25:33",
+    "   4630    2.0%    6.5%  JS: *digestDecisionStackFrame file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:179:41",
+    "   2540    1.1%    3.6%  JS: *createPolicyRuntimeProviders file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js:177:45",
+    "   2460    1.1%    3.5%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:223:81",
+    "   2032    0.9%    2.9%  JS: *boundToken file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:130:20",
+    "   1995    0.9%    2.8%  JS: *computeFullHash file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:354:32",
+    "    901    0.4%    1.3%  JS: *isZoneConnected file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/spatial.js:232:32",
+    "    884    0.4%    1.2%  JS: *encodeFeature file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:64:23",
+    "    820    0.4%    1.2%  JS: *evaluateCompiledExprWithVm file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:799:31",
+    "    812    0.3%    1.1%  JS: *PolicyEvaluationContext file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:213:16",
+    "    671    0.3%    0.9%  JS: *resolveRef file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/resolve-ref.js:234:27",
+    "    611    0.3%    0.9%  JS: *evaluateSelectorItemExpr file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:1592:29",
+    "    595    0.3%    0.8%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:548:20",
+    "    549    0.2%    0.8%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js:20:19",
+    "    415    0.2%    0.6%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:360:20",
+    "    400    0.2%    0.6%  JS: *stableStringify file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js:4:25",
+    "    352    0.2%    0.5%  JS: *stringifyDecisionStackFrameDigestValue file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:139:48",
+    "    345    0.1%    0.5%  JS: *scoreItem file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-selector-eval.js:189:19",
+    "    335    0.1%    0.5%  JS: *evalCondition file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-condition.js:22:30",
+    "    325    0.1%    0.5%  JS: *resolveZoneSelCore file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/resolve-selectors.js:199:28",
+    "    324    0.1%    0.5%  JS: *selectorOptionsForRequest file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/microturn-option-eval.js:76:35",
+    "    310    0.1%    0.4%  JS: *countMatchingTokens file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-query.js:385:29",
+    "    301    0.1%    0.4%  JS: *visitEffects file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/move-runtime-bindings.js:19:26",
+    "    297    0.1%    0.4%  JS: *evalValue file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-value.js:218:26",
+    "    292    0.1%    0.4%  JS: *advanceChooseNStepContext file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/publish.js:260:42",
+    "    283    0.1%    0.4%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-selector-eval.js:221:36",
+    "    282    0.1%    0.4%  JS: *executeBytecode file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-vm/vm.js:316:32",
+    "    280    0.1%    0.4%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:534:20",
+    "    259    0.1%    0.4%  JS: *evaluateSelectorView file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:1558:25",
+    "    213    0.1%    0.3%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:379:16",
+    "    209    0.1%    0.3%  JS: *scoreMicroturnOptionWithContributions file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/microturn-option-eval.js:7:54",
+    "    199    0.1%    0.3%  JS: *applyPublishedDecisionInternal file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/apply.js:327:40",
+    "    193    0.1%    0.3%  JS: *zobristKey file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:290:27",
+    "    193    0.1%    0.3%  JS: *applyEffectsWithBudgetStateScoped file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/effect-dispatch.js:68:43",
+    "    171    0.1%    0.2%  JS: *countAggregateItems file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-value.js:23:29",
+    "    170    0.1%    0.2%  JS: *countQueryResults file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-query.js:664:34",
+    "    167    0.1%    0.2%  JS: *applyZonesFilter file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-query.js:484:26",
+    "    166    0.1%    0.2%  JS: *runChooseNStepBeamPreview file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-preview-inner-choosenstep.js:126:42",
+    "    166    0.1%    0.2%  JS: *createPolicyCompletionProvider file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-runtime.js:476:47",
+    "    160    0.1%    0.2%  JS: *resolveZoneRef file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/resolve-zone-ref.js:19:31",
+    "    158    0.1%    0.2%  JS: *applyChooseN file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/effects-choice.js:499:29",
+    "    157    0.1%    0.2%  JS: *encodedStateProjectionKey file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-encoded-state-cache.js:27:35",
+    "    155    0.1%    0.2%  JS: *compareStrings file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:352:24",
+    "    153    0.1%    0.2%  JS: *refreshCachedTokenStateIndexEntries file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/token-state-index.js:243:52",
+    "    153    0.1%    0.2%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/token-filter-compiler.js:137:12",
+    "    138    0.1%    0.2%  JS: *applyMoveToken file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/effects-token.js:247:31",
+    "    132    0.1%    0.2%  JS: *reconcileRunningHash file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist-phase-hash.js:170:37",
+    "    127    0.1%    0.2%  JS: *resolveAgentPolicyRef file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:1378:26",
+    "    119    0.1%    0.2%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/condition-compiler.js:533:86",
+    "    113    0.0%    0.2%  JS: *derivePlayerObservation file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/observation.js:60:40",
+    "    112    0.0%    0.2%  JS: *materializeSource file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-selector-eval.js:46:27",
+    "    103    0.0%    0.1%  JS: *legalChoicesWithPreparedContextInternal file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/legal-choices.js:492:49",
+    "    103    0.0%    0.1%  JS: *evalQuery file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-query.js:897:26",
+    "    101    0.0%    0.1%  JS: *updateFnv1a64State file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/fnv1a64.js:10:35",
+    "     94    0.0%    0.1%  JS: *createPendingRequestFingerprint file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/decision-sequence-analysis.js:19:41",
+    "     93    0.0%    0.1%  JS: *resolveBuiltInFeature file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-vm/vm.js:129:31",
+    "     87    0.0%    0.1%  JS: *resumeSuspendedEffectFrame file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/microturn/resume.js:204:43",
+    "     86    0.0%    0.1%  JS: *hashZobristFeature file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/zobrist.js:289:28",
+    "     81    0.0%    0.1%  JS: *applyLet file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/effects-control.js:59:25",
+    "     76    0.0%    0.1%  JS: *countTokensInZoneQuery file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-query.js:636:32",
+    "     74    0.0%    0.1%  JS: *selectChoiceOptionValuesByLegalityPrecedence file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/choice-option-policy.js:32:61",
+    "     67    0.0%    0.1%  JS: *evaluateConsideration file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:490:26",
+    "     65    0.0%    0.1%  JS: *resolveSingleZoneSel file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/resolve-selectors.js:316:37",
+    "     63    0.0%    0.1%  JS: *resolveActionApplicabilityPreflight file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/action-applicability-preflight.js:24:52",
+    "     63    0.0%    0.1%  JS: *evaluateExpr file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/agents/policy-evaluation-core.js:1579:27",
+    "     59    0.0%    0.1%  JS: *evalArithmetic file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/eval-value.js:177:24",
+    "     56    0.0%    0.1%  JS: *<anonymous> file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/kernel/token-filter-compiler.js:170:16",
+    "     54    0.0%    0.1%  JS: *set file:///home/joeloverbeck/projects/ludoforge-llm/packages/engine/dist/src/shared/lru-cache.js:22:8"
+  ],
+  "perDecisionByKind": {
+    "actionSelection": {
+      "count": 154,
+      "skippedInitialEntries": 0,
+      "p50": 52.13764949999313,
+      "p95": 119.21590000000288,
+      "p99": 221.547991000014,
+      "max": 242.74920100000008,
+      "median": 52.13764949999313
+    },
+    "chooseOne": {
+      "count": 76,
+      "skippedInitialEntries": 0,
+      "p50": 40.142399500000465,
+      "p95": 304.71229799999855,
+      "p99": 530.4130970000115,
+      "max": 530.4130970000115,
+      "median": 40.142399500000465
+    },
+    "chooseNStep": {
+      "count": 296,
+      "skippedInitialEntries": 0,
+      "p50": 1.471400000009453,
+      "p95": 4971.039592999994,
+      "p99": 5744.847485999984,
+      "max": 5956.271238000016,
+      "median": 1.471400000009453
+    },
+    "stochasticResolve": {
+      "count": 2,
+      "skippedInitialEntries": 0,
+      "p50": 2.7783999999919615,
+      "p95": 3.268999999992957,
+      "p99": 3.268999999992957,
+      "max": 3.268999999992957,
+      "median": 2.7783999999919615
+    }
+  },
+  "warmedPerDecisionByKind": {
+    "chooseNStep": {
+      "count": 292,
+      "skippedInitialEntries": 8,
+      "p50": 1.4634000000005472,
+      "p95": 4971.039592999994,
+      "p99": 5744.847485999984,
+      "max": 5956.271238000016,
+      "median": 1.4634000000005472
+    },
+    "actionSelection": {
+      "count": 152,
+      "skippedInitialEntries": 8,
+      "p50": 51.461798999993334,
+      "p95": 113.87709999999788,
+      "p99": 141.28579999999783,
+      "max": 221.547991000014,
+      "median": 51.461798999993334
+    },
+    "chooseOne": {
+      "count": 74,
+      "skippedInitialEntries": 8,
+      "p50": 40.59694949999903,
+      "p95": 304.71229799999855,
+      "p99": 530.4130970000115,
+      "max": 530.4130970000115,
+      "median": 40.59694949999903
+    },
+    "stochasticResolve": {
+      "count": 2,
+      "skippedInitialEntries": 8,
+      "p50": 2.7783999999919615,
+      "p95": 3.268999999992957,
+      "p99": 3.268999999992957,
+      "max": 3.268999999992957,
+      "median": 2.7783999999919615
+    }
+  },
+  "cacheStats": {},
+  "caveats": []
+}

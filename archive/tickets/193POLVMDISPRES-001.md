@@ -118,7 +118,7 @@ The architectural invariant the test asserts (every emitter-producible feature k
 - No change to caller-visible policy evaluation results (same TS fallback on same predicates → byte-identical output).
 - No change to preview-ref status semantics (Foundation #20 unchanged; verified empirically in ticket 002 via `policy-preview-parity-arvn-1008`).
 - No negative cache (P2 — `tickets/193POLVMDISPRES-003.md`; gated on ticket 002 measurement).
-- No perf witness re-capture (P3 — `tickets/193POLVMDISPRES-002.md`).
+- No perf witness re-capture (P3 — `archive/tickets/193POLVMDISPRES-002.md`).
 - WASM throw-contract is out-of-scope per Spec 192 §4.4 `WASM expansion`; `packages/engine/test/architecture/policy-wasm-throw-contract.test.ts` is NOT touched.
 - Cleanup of `VMResult.pruned` (declared but unread) is out of scope here — separate ticket if warranted; this ticket migrates `pruned`-consuming sites only if any exist (none found at audit time).
 

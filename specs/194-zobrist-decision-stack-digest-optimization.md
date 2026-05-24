@@ -167,7 +167,7 @@ Capture script runs each workload under `ENGINE_HOT_PATH_PROFILE=1` → existing
 
 Phase 1 introduces zero canonical-key risk; instrumentation is observation-only.
 
-**Active prerequisites (2026-05-24)**: Phase 1 terminal closeout is blocked until `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` restores the existing Spec 161 default-off determinism proof and `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolves the subsequent `draft-state-determinism-parity` timeout. This is a Foundations alignment requirement: the red/stalled lane is in `packages/engine/test/determinism/`, and `docs/FOUNDATIONS.md` classifies failures there as engine bugs that block CI.
+**Active prerequisites (2026-05-24)**: Phase 1 terminal closeout is blocked until `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` restores the existing Spec 161 default-off determinism proof, `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolves the subsequent `draft-state-determinism-parity` timeout, and `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md` resolves the follow-on `fitl-policy-agent-canary-determinism` timeout. This is a Foundations alignment requirement: the red/stalled lane is in `packages/engine/test/determinism/`, and `docs/FOUNDATIONS.md` classifies failures there as engine bugs that block CI.
 
 Phase 2 obligations depend on the chosen lever:
 
@@ -253,6 +253,8 @@ Inserted during implementation on 2026-05-24 after `docs/FOUNDATIONS.md` reasses
 - [`tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`](../tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md) — Prerequisite — restore Spec 161 default-off determinism proof before closing Phase 1
 
 - [`tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`](../tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md) — Prerequisite — resolve the `draft-state-determinism-parity` timeout before closing Phase 1
+
+- [`tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`](../tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md) — Prerequisite — resolve the `fitl-policy-agent-canary-determinism` timeout before closing Phase 1
 
 - [`tickets/194ZOBDIGEST-001.md`](../tickets/194ZOBDIGEST-001.md) — Phase 1 — Zobrist residual-cost capture and report
 

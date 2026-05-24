@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only; the six hot-path counters this ticket consumes already exist in `packages/engine/src/kernel/zobrist.ts`
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
+**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`, `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
 
 ## Problem
 
@@ -21,7 +21,7 @@ Spec 194 reframes the remediation as instrument-first (per Foundation #15: evide
 5. **Report destination**: `reports/perf-baseline/` exists and houses the Spec 192 baseline JSONs; the new markdown report file conforms to that location.
 6. **Five regressed workloads identified by name** in `reports/fitl-perf-baseline-2026-05-24.md`: `parity-drive`, `bounded-termination-1002`, `diagnose-parity-runGame-1001`, `policy-preview-parity-arvn-1008`, `arvn-tournament-parallel`. The flat control lane `arvn-tournament-wasm-equivalence` is excluded.
 7. **Archived dependencies are contract references, not implementation prerequisites**: Spec 80 (incremental Zobrist contract), Spec 168 (the predecessor cache that this ticket measures), and Spec 192 (the baseline methodology this ticket extends) are all COMPLETED. The spec file is the canonical Deps citation per the `/spec-to-tickets` "Archived-and-completed dependencies" rule.
-8. **Foundation-aligned prerequisite insertion** (user-approved 2026-05-24): terminal closeout is blocked by determinism-corpus failures/timeouts. `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` owns the focused Spec 161 default-off snapshot repair, and `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` owns the subsequent `draft-state-determinism-parity` timeout. `docs/FOUNDATIONS.md` classifies determinism-corpus failures as engine bugs that block CI, so both prerequisites must land before this ticket can be archived.
+8. **Foundation-aligned prerequisite insertion** (user-approved 2026-05-24): terminal closeout is blocked by determinism-corpus failures/timeouts. `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` owns the focused Spec 161 default-off snapshot repair, `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` owns the subsequent `draft-state-determinism-parity` timeout, and `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md` owns the follow-on `fitl-policy-agent-canary-determinism` timeout. `docs/FOUNDATIONS.md` classifies determinism-corpus failures as engine bugs that block CI, so all prerequisites must land before this ticket can be archived.
 
 ## Architecture Check
 

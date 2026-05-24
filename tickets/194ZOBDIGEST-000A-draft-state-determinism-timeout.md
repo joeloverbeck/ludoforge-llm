@@ -1,10 +1,10 @@
 # 194ZOBDIGEST-000A: Resolve draft-state determinism parity timeout
 
-**Status**: PENDING
+**Status**: BLOCKED by `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Possible — only if diagnosis proves a production determinism/runtime issue; otherwise harness/test-scope timeout repair only
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`
+**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
 
 ## Problem
 
@@ -93,3 +93,34 @@ After this ticket's proof is green, update `tickets/194ZOBDIGEST-000-spec-161-de
 4. `pnpm -F @ludoforge/engine run test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Blocked on 2026-05-24 after resolving this ticket's named draft-state timeout.
+
+Diagnosis:
+
+- `pnpm turbo build` completed before all compiled probes.
+- `timeout 120s node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` reproduced the pre-ticket symptom before the fix: exit 124 after only `TAP version 13`.
+- Direct compile probes showed production spec compilation was not the stall boundary: FITL compiled in 580ms and Texas compiled in 104ms.
+- A Texas single replay completed quickly (`seed 2000`, 215ms).
+- A FITL single full replay did not complete inside 60s. Iterator probing showed it advanced through hundreds of player/auto microturns while `turnCount` remained `0`, so the default `maxTurns: 200` budget did not bound the production-scale FITL opening window for this test.
+
+Changed:
+
+- `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` now keeps the Texas full-run replay parity sample unchanged.
+- The FITL half now uses a bounded-prefix replay proof over the same default curated seeds, stopping after five player decisions and asserting byte-identical state hashes plus identical reached prefix length across three runs.
+- No production source changed.
+- No Zobrist source, Spec 194 capture/report tooling, or policy-profile-quality witness changed.
+
+Verification:
+
+- `pnpm turbo build` — passed.
+- `node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` — passed, 13 subtests, ~14s.
+- `pnpm -F @ludoforge/engine run test:determinism` — cleared `dist/test/determinism/draft-state-determinism-parity.test.js` in 15s, then stalled in the next file, `dist/test/determinism/fitl-policy-agent-canary-determinism.test.js`.
+- User approved stopping the broad lane under the recommended 1-3-1 option 2. Replacement probe `timeout 180s node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js` from `packages/engine` timed out with exit 124 after only `TAP version 13`.
+
+Remaining blocker:
+
+- The broad determinism corpus is still not citeable because the next active blocker is `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`.
+- After `194ZOBDIGEST-000B` resolves the canary timeout, rerun `pnpm -F @ludoforge/engine run test:determinism`, then return to `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`.

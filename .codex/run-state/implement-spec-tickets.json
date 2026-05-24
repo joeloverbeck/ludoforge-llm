@@ -3,8 +3,8 @@
   "archived_spec": null,
   "last_ticket": "tickets/194ZOBDIGEST-001.md",
   "last_result": "retargeted_to_prerequisite",
-  "last_work_commit": "none",
-  "last_state_commit": "none",
+  "last_work_commit": "02d89eff5c81039bfa3307221c5ff8d96817e50d",
+  "last_state_commit": "self",
   "next_target": "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
   "queue": [
     "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
@@ -12,9 +12,9 @@
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "User-approved Foundations-aligned retarget inserted Spec 161 default-off determinism prerequisite ahead of 194ZOBDIGEST-001; Zobrist capture/report work remains dirty and unarchived pending replay proof restoration.",
+  "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
-  "dirty_state": "owned_dirty: .codex/run-state/implement-spec-tickets.json; specs/194-zobrist-decision-stack-digest-optimization.md; tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md; tickets/194ZOBDIGEST-001.md; campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs; reports/perf-baseline/zobrist-residual-cost-2026-05-24.md",
+  "dirty_state": "clean",
   "updated_at": "2026-05-24"
 }

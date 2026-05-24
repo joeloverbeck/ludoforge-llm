@@ -29,7 +29,7 @@ try {
 
 export function summarizeCpuProfile(profile) {
   const nodes = profile.nodes ?? [];
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const parentById = buildParentById(nodes);
   const selfTimeById = new Map(nodes.map((node) => [node.id, 0]));
   const totalTimeById = new Map(nodes.map((node) => [node.id, 0]));
   const samples = profile.samples ?? [];
@@ -41,10 +41,10 @@ export function summarizeCpuProfile(profile) {
   });
 
   for (const [nodeId, selfTime] of selfTimeById.entries()) {
-    let current = nodeById.get(nodeId);
-    while (current !== undefined) {
-      totalTimeById.set(current.id, (totalTimeById.get(current.id) ?? 0) + selfTime);
-      current = findParent(nodes, current.id);
+    let currentId = nodeId;
+    while (currentId !== undefined) {
+      totalTimeById.set(currentId, (totalTimeById.get(currentId) ?? 0) + selfTime);
+      currentId = parentById.get(currentId);
     }
   }
 
@@ -66,8 +66,14 @@ export function summarizeCpuProfile(profile) {
   };
 }
 
-function findParent(nodes, childId) {
-  return nodes.find((node) => (node.children ?? []).includes(childId));
+function buildParentById(nodes) {
+  const parentById = new Map();
+  for (const node of nodes) {
+    for (const childId of node.children ?? []) {
+      parentById.set(childId, node.id);
+    }
+  }
+  return parentById;
 }
 
 function topRows(rows, field) {

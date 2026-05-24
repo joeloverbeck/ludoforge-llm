@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/192-fitl-perf-profiling-methodology.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/192FITLPERFPROF-002.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "a62bd70566f871301a4358339c9267e69ea40d7c",
-  "last_state_commit": "self",
-  "next_target": "tickets/192FITLPERFPROF-003.md",
+  "last_ticket": "archive/tickets/192FITLPERFPROF-003.md",
+  "last_result": "implemented_archived",
+  "last_work_commit": "65530e9cd4d72701ca9c2eaeacd7ce212cd8341f",
+  "last_state_commit": "65530e9cd4d72701ca9c2eaeacd7ce212cd8341f",
+  "next_target": "tickets/192FITLPERFPROF-004.md",
   "queue": [
-    "tickets/192FITLPERFPROF-003.md",
     "tickets/192FITLPERFPROF-004.md"
   ],
   "phase": "ready_for_next_ticket",

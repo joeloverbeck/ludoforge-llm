@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — report only
-**Deps**: `tickets/192FITLPERFPROF-003.md`
+**Deps**: `archive/tickets/192FITLPERFPROF-003.md`
 
 ## Problem
 

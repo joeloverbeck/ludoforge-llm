@@ -58,7 +58,7 @@ function syntheticSmokeRun(workload, options) {
       synthetic: 'nested-node-spawn-unavailable',
     })}\n`,
     stderr: profileEnabled
-      ? `[per-decision-profile] ${JSON.stringify({
+      ? `# [per-decision-profile] ${JSON.stringify({
         kind: 'per-decision-profile',
         entries: [
           {

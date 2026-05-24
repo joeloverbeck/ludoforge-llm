@@ -11,6 +11,7 @@ import { assertSuccessfulRun, runWorkload } from './lib/run-node-test.mjs';
 import { resolveWorkload } from './lib/workloads.mjs';
 
 const PREFIX = '[per-decision-profile] ';
+const TAP_DIAGNOSTIC_PREFIX = `# ${PREFIX}`;
 const PLAYER_COUNT = 4;
 
 try {
@@ -26,7 +27,7 @@ try {
     env: { ENGINE_PER_DECISION_PROFILE: '1' },
   });
   assertSuccessfulRun(run, `per-decision capture ${workload.key}`);
-  const entries = extractProfileEntries(run.stderr);
+  const entries = extractProfileEntries(`${run.stdout}\n${run.stderr}`);
   const summary = {
     workload: workload.key,
     headSha,
@@ -47,10 +48,11 @@ try {
 export function extractProfileEntries(stderr) {
   const entries = [];
   for (const line of stderr.split('\n')) {
-    if (!line.startsWith(PREFIX)) {
+    const payload = profilePayload(line);
+    if (payload === null) {
       continue;
     }
-    const parsed = JSON.parse(line.slice(PREFIX.length));
+    const parsed = JSON.parse(payload);
     if (parsed.kind !== 'per-decision-profile' || !Array.isArray(parsed.entries)) {
       throw new Error(`Unexpected per-decision profile payload: ${line}`);
     }
@@ -60,6 +62,16 @@ export function extractProfileEntries(stderr) {
     throw new Error('No [per-decision-profile] entries were emitted');
   }
   return entries;
+}
+
+function profilePayload(line) {
+  if (line.startsWith(PREFIX)) {
+    return line.slice(PREFIX.length);
+  }
+  if (line.startsWith(TAP_DIAGNOSTIC_PREFIX)) {
+    return line.slice(TAP_DIAGNOSTIC_PREFIX.length);
+  }
+  return null;
 }
 
 function summarizeEntries(entries, skippedInitialEntries) {

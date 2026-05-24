@@ -267,7 +267,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-23:
 
 - [`archive/tickets/192FITLPERFPROF-001.md`](../archive/tickets/192FITLPERFPROF-001.md) — COMPLETED 2026-05-23 — Env-gated `ENGINE_PER_DECISION_PROFILE` hook + trajectory-identity test (covers §4.2 step 4 + §6 + §9)
 - [`archive/tickets/192FITLPERFPROF-002.md`](../archive/tickets/192FITLPERFPROF-002.md) — COMPLETED 2026-05-23 — Measurement harness scripts + harness-smoke test (covers §4.2 steps 1–3, 5 + §9)
-- [`tickets/192FITLPERFPROF-003.md`](../tickets/192FITLPERFPROF-003.md) — Baseline + delta capture across PR-HEAD and `775e93568` worktree (covers §4.3)
+- [`archive/tickets/192FITLPERFPROF-003.md`](../archive/tickets/192FITLPERFPROF-003.md) — Baseline + delta capture across PR-HEAD and `775e93568` worktree (covers §4.3)
 - [`tickets/192FITLPERFPROF-004.md`](../tickets/192FITLPERFPROF-004.md) — Findings categorisation + follow-up spec naming → `reports/fitl-perf-baseline-<date>.md` (covers §4.4, §4.5, §5 Phase 3)
 
 P1 (§8) is split between -001 and -002 because the instrumentation hook is a separate, smaller-scope deliverable from the harness scripts and benefits from independent review.

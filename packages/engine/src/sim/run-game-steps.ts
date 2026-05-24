@@ -46,6 +46,9 @@ interface PerDecisionProfileEntry {
   readonly sourceStateHash: string;
 }
 
+const pendingPerDecisionProfileBuffers = new Set<PerDecisionProfileEntry[]>();
+let perDecisionProfileBeforeExitRegistered = false;
+
 export interface RunGameInput {
   readonly def: ValidatedGameDef;
   readonly seed: number;
@@ -96,6 +99,16 @@ const shouldRecordPerDecisionProfile = (): boolean =>
 
 const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
+const createPerDecisionProfileBuffer = (): PerDecisionProfileEntry[] => {
+  if (!perDecisionProfileBeforeExitRegistered) {
+    process.once('beforeExit', flushPendingPerDecisionProfiles);
+    perDecisionProfileBeforeExitRegistered = true;
+  }
+  const buffer: PerDecisionProfileEntry[] = [];
+  pendingPerDecisionProfileBuffers.add(buffer);
+  return buffer;
+};
+
 const stateHashToHex = (stateHash: bigint): string => `0x${stateHash.toString(16)}`;
 
 const decisionKeyToString = (decisionKey: DecisionLog['decisionKey']): string =>
@@ -124,7 +137,16 @@ const flushPerDecisionProfile = (buffer: PerDecisionProfileEntry[] | undefined):
   if (buffer === undefined) {
     return;
   }
+  pendingPerDecisionProfileBuffers.delete(buffer);
   process.stderr.write(`[per-decision-profile] ${JSON.stringify({ kind: 'per-decision-profile', entries: buffer })}\n`);
+};
+
+const flushPendingPerDecisionProfiles = (): void => {
+  const buffers = [...pendingPerDecisionProfileBuffers];
+  pendingPerDecisionProfileBuffers.clear();
+  for (const buffer of buffers) {
+    flushPerDecisionProfile(buffer);
+  }
 };
 
 const maybeLogOomTrace = (
@@ -269,7 +291,7 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
   let currentChanceRng = chanceRng;
   let appliedDecisionCount = 0;
   const perDecisionProfileBuffer = shouldRecordPerDecisionProfile()
-    ? []
+    ? createPerDecisionProfileBuffer()
     : undefined;
 
   while (true) {

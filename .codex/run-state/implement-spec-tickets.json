@@ -1,17 +1,20 @@
 {
-  "originating_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
-  "archived_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
-  "last_ticket": "archive/tickets/192FITLPERFPROF-004.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "8ccbbbe03afc57efdbe3293f7245057ae6bfa5f0",
+  "originating_spec": "specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/193POLVMDISPRES-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "9a2d752cc85da2657fcf33e27ee6d29b3ea64657",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/193POLVMDISPRES-002.md",
+  "queue": [
+    "tickets/193POLVMDISPRES-002.md",
+    "tickets/193POLVMDISPRES-003.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": null,
+  "owned_dirty_summary": "ticket 193POLVMDISPRES-001 implemented and archived; next target is measurement ticket 002",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-303e6ab6c3-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-24"
 }

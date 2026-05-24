@@ -1,20 +1,21 @@
 {
   "originating_spec": "specs/194-zobrist-decision-stack-digest-optimization.md",
   "archived_spec": null,
-  "last_ticket": "tickets/194ZOBDIGEST-001.md",
-  "last_result": "retargeted_to_prerequisite",
-  "last_work_commit": "02d89eff5c81039bfa3307221c5ff8d96817e50d",
+  "last_ticket": "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
+  "last_result": "blocked",
+  "last_work_commit": "d30387777565b11d3920ec4d4b87732379b05ae4",
   "last_state_commit": "self",
-  "next_target": "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
+  "next_target": "tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md",
   "queue": [
+    "tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md",
     "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
     "tickets/194ZOBDIGEST-001.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": null,
+  "owned_dirty_summary": "post-state-commit repo expected clean; next target owns draft-state determinism timeout before returning to 194ZOBDIGEST-000",
   "blocked": false,
-  "blocker": null,
+  "blocker": "194ZOBDIGEST-000 landed focused Spec 161 snapshot repair but remains blocked by draft-state determinism parity timeout now owned by 194ZOBDIGEST-000A",
   "dirty_state": "clean",
   "updated_at": "2026-05-24"
 }

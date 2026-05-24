@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only; the six hot-path counters this ticket consumes already exist in `packages/engine/src/kernel/zobrist.ts`
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`
+**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`
 
 ## Problem
 
@@ -16,10 +16,12 @@ Spec 194 reframes the remediation as instrument-first (per Foundation #15: evide
 
 1. **Counter availability**: the six counters this ticket consumes — `zobrist:decisionStackFrameWeakCacheHit` (L219), `zobrist:encodeDecisionStackFrame` (L227, ms), `zobrist:decisionStackFrameRunLocalCacheHit` (L232), `zobrist:decisionStackFrameRunLocalCacheMiss` (L238), `zobrist:decisionStackFrameEncodedChars` (L239), `zobrist:digestDecisionStackFrame` (L201, ms) — exist in `packages/engine/src/kernel/zobrist.ts` at the cited lines (verified during Spec 194 reassessment, 2026-05-24).
 2. **Profiling flag**: `hotPathProfilingEnabled` gates the counters. The capture script must set `ENGINE_HOT_PATH_PROFILE=1` at engine boot and assert non-zero counter values before computing rates (per spec §7 "Phase 1 counter availability" edge case).
-3. **Harness sibling pattern**: `campaigns/fitl-perf-optimization/run-benchmark.mjs` is the established Spec 192 baseline harness; the new capture script lives as a sibling `.mjs` file in the same directory.
-4. **Report destination**: `reports/perf-baseline/` exists and houses the Spec 192 baseline JSONs; the new markdown report file conforms to that location.
-5. **Five regressed workloads identified by name** in `reports/fitl-perf-baseline-2026-05-24.md`: `parity-drive`, `bounded-termination-1002`, `diagnose-parity-runGame-1001`, `policy-preview-parity-arvn-1008`, `arvn-tournament-parallel`. The flat control lane `arvn-tournament-wasm-equivalence` is excluded.
-6. **Archived dependencies are contract references, not implementation prerequisites**: Spec 80 (incremental Zobrist contract), Spec 168 (the predecessor cache that this ticket measures), and Spec 192 (the baseline methodology this ticket extends) are all COMPLETED. The spec file is the canonical Deps citation per the `/spec-to-tickets` "Archived-and-completed dependencies" rule.
+3. **Measurement-shape boundary reset** (user-approved 2026-05-24): live `PerfHotPathBucket` values expose only `count` and `totalMs`; they do not retain per-call samples. To preserve the Phase 1 observation-only boundary, this ticket reports mean per-call encode/digest times and mean encoded characters per miss from existing buckets rather than adding profiler state to produce medians.
+4. **Harness sibling pattern**: `campaigns/fitl-perf-optimization/run-benchmark.mjs` is the established Spec 192 baseline harness; the new capture script lives as a sibling `.mjs` file in the same directory.
+5. **Report destination**: `reports/perf-baseline/` exists and houses the Spec 192 baseline JSONs; the new markdown report file conforms to that location.
+6. **Five regressed workloads identified by name** in `reports/fitl-perf-baseline-2026-05-24.md`: `parity-drive`, `bounded-termination-1002`, `diagnose-parity-runGame-1001`, `policy-preview-parity-arvn-1008`, `arvn-tournament-parallel`. The flat control lane `arvn-tournament-wasm-equivalence` is excluded.
+7. **Archived dependencies are contract references, not implementation prerequisites**: Spec 80 (incremental Zobrist contract), Spec 168 (the predecessor cache that this ticket measures), and Spec 192 (the baseline methodology this ticket extends) are all COMPLETED. The spec file is the canonical Deps citation per the `/spec-to-tickets` "Archived-and-completed dependencies" rule.
+8. **Foundation-aligned prerequisite insertion** (user-approved 2026-05-24): terminal closeout is blocked by the live `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.ts` failure. `docs/FOUNDATIONS.md` classifies determinism-corpus failures as engine bugs that block CI, so `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` must land before this ticket can be archived.
 
 ## Architecture Check
 
@@ -41,8 +43,8 @@ Sibling to `run-benchmark.mjs`. Responsibilities:
    - Identity-cache hit rate = `decisionStackFrameWeakCacheHit / total digestDecisionStackFrame calls`.
    - Content-cache hit rate (after identity miss) = `decisionStackFrameRunLocalCacheHit / (decisionStackFrameRunLocalCacheHit + decisionStackFrameRunLocalCacheMiss)`.
    - Encode-call rate = `decisionStackFrameRunLocalCacheHit + decisionStackFrameRunLocalCacheMiss`.
-   - Per-call median encode time (ms), per-call median digest time (ms), median encoded-chars per call.
-4. Decompose `digestEncodedDecisionStackFrame` aggregate self-time into encode-pass vs FNV-1a portions using the per-call timings from `zobrist:encodeDecisionStackFrame` (ms) and `zobrist:digestDecisionStackFrame` (ms).
+   - Mean per-call encode time (ms), mean per-call digest time (ms), mean encoded-chars per miss.
+4. Decompose `digestEncodedDecisionStackFrame` aggregate self-time into encode-pass vs FNV-1a portions using the aggregate `totalMs` buckets from `zobrist:encodeDecisionStackFrame` and `zobrist:digestDecisionStackFrame`.
 5. Assert non-zero counter values before computing rates (per spec §7 "Phase 1 counter availability"); an all-zero counter set indicates the profiling flag did not propagate — script aborts with an error in that case.
 6. Emit a structured JSON intermediate (per-workload object) that the report-authoring step consumes.
 
@@ -50,7 +52,7 @@ Sibling to `run-benchmark.mjs`. Responsibilities:
 
 Filename date set at run time (YYYY-MM-DD format matching `fitl-perf-baseline-2026-05-24.md`). Required sections:
 
-1. **Per-workload table** with columns: workload name, identity-cache hit rate, content-cache hit rate, encode-call rate, per-call median encode time (ms), per-call median digest time (ms), median encoded-chars per call.
+1. **Per-workload table** with columns: workload name, identity-cache hit rate, content-cache hit rate, encode-call rate, mean per-call encode time (ms), mean per-call digest time (ms), mean encoded-chars per miss.
 2. **Profiled-vs-unprofiled wall-clock comparison table** — confirms counter overhead does not distort hit-rate measurements (per spec §7 "Counter-driven sampling skew" edge case). Per-workload columns: profiled wall-clock (s), unprofiled wall-clock (s), overhead ratio.
 3. **Explicit hypothesis verdict on H1, H2, H3 from spec §1.2** — for each hypothesis, one of `accepted` / `refined` / `refuted`, with a one-paragraph evidence justification quoting the relevant counter values:
    - **H1** (identity-cache hit rate low due to Foundation #11 immutability churn).

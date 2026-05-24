@@ -1,17 +1,20 @@
 {
-  "originating_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
-  "archived_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
-  "last_ticket": "archive/tickets/193POLVMDISPRES-003.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "90b04d95d98d9cab00b94ecf5dcea80b9c1bd34c",
-  "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "originating_spec": "specs/194-zobrist-decision-stack-digest-optimization.md",
+  "archived_spec": null,
+  "last_ticket": "tickets/194ZOBDIGEST-001.md",
+  "last_result": "retargeted_to_prerequisite",
+  "last_work_commit": "none",
+  "last_state_commit": "none",
+  "next_target": "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
+  "queue": [
+    "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
+    "tickets/194ZOBDIGEST-001.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 193 final archive complete; all same-family tickets are archived; retained untracked perf profiler byproducts are outside the checked-in deliverable set",
+  "owned_dirty_summary": "User-approved Foundations-aligned retarget inserted Spec 161 default-off determinism prerequisite ahead of 194ZOBDIGEST-001; Zobrist capture/report work remains dirty and unarchived pending replay proof restoration.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-303e6ab6c3-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "owned_dirty: .codex/run-state/implement-spec-tickets.json; specs/194-zobrist-decision-stack-digest-optimization.md; tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md; tickets/194ZOBDIGEST-001.md; campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs; reports/perf-baseline/zobrist-residual-cost-2026-05-24.md",
   "updated_at": "2026-05-24"
 }

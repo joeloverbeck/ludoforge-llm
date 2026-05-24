@@ -19,7 +19,7 @@
 
 Determine why Spec 168 Phase 3's frame-digest cache leaves a 12.7–25.2% residual cost in the Zobrist decision-stack pipeline, then apply the targeted remediation that Phase 1 evidence selects. Concretely:
 
-1. **Instrument first.** Capture per-workload cache hit/miss rates using counters that already exist in `packages/engine/src/kernel/zobrist.ts` (see §3 for the enumerated counter list). Decompose `digestEncodedDecisionStackFrame` aggregate self-time into encode vs FNV-1a portions using per-call timings. Output: `reports/perf-baseline/zobrist-residual-cost-<YYYY-MM-DD>.md` with per-workload breakdown for the five regressed lanes.
+1. **Instrument first.** Capture per-workload cache hit/miss rates using counters that already exist in `packages/engine/src/kernel/zobrist.ts` (see §3 for the enumerated counter list). Decompose `digestEncodedDecisionStackFrame` aggregate self-time into encode vs FNV-1a portions using mean per-call timings derived from existing hot-path bucket `totalMs / count` values. Output: `reports/perf-baseline/zobrist-residual-cost-<YYYY-MM-DD>.md` with per-workload breakdown for the five regressed lanes.
 2. **Validate the working hypothesis.** The working hypothesis is three parts:
    - **H1** — Identity-keyed `decisionStackFrameDigestCache` hit rate is low in steady-state simulation because Foundation #11 immutability produces new frame objects on every state mutation, so the same frame object is rarely seen twice with matching parent digest.
    - **H2** — Content-keyed `frameDigestCache` (per-table LRU) hit rate is bounded by the fact that reaching that cache *requires* the `JSON.stringify` pass to compute its key, so the encode cost cannot be eliminated by content caching alone.
@@ -74,6 +74,8 @@ The existing Zobrist digest pipeline already implements two independent caches, 
   - `zobrist:decisionStackFrameEncodedChars` (`zobrist.ts:239`) — encoded JSON length distribution.
   - `zobrist:digestDecisionStackFrame` (`zobrist.ts:201`, ms) — FNV-1a self-time, per-call.
 
+- **Measurement-shape boundary reset** (approved 2026-05-24): live `PerfHotPathBucket` values expose only `count` and `totalMs`; they do not retain per-call samples. Phase 1 therefore reports mean per-call encode/digest times and mean encoded characters per miss, computed from the existing buckets, rather than medians. This preserves the observation-only boundary and avoids adding profiler state in a ticket whose scope is campaign tooling plus report only.
+
 - **Existing architectural-invariant test** `packages/engine/test/integration/zobrist-frame-digest-cache-equivalence.test.ts` proves the `(frame, parent-digest)` tuple-keyed cache returns byte-identical digests across cache hit, miss, and recompute paths on the FITL canary corpus, AND that the WeakMap memoization is scoped by parent-frame digest. `@test-class: architectural-invariant`. Any Phase 2 lever that touches `digestDecisionStackFrame` must keep this test green.
 
 - **Call sites** for the digest pipeline:
@@ -111,8 +113,8 @@ Add a `captureZobristResidualCostProfile` capture script alongside the existing 
    - Identity-cache hit rate = `decisionStackFrameWeakCacheHit / total digestDecisionStackFrame calls`.
    - Content-cache hit rate (after identity miss) = `decisionStackFrameRunLocalCacheHit / (decisionStackFrameRunLocalCacheHit + decisionStackFrameRunLocalCacheMiss)`.
    - Encode-call rate = `decisionStackFrameRunLocalCacheHit + decisionStackFrameRunLocalCacheMiss` (calls that did not hit identity cache).
-   - Per-call median encode time (ms), per-call median digest time (ms), median encoded-chars per call.
-4. Decomposes `digestEncodedDecisionStackFrame` aggregate self-time into encode vs FNV-1a portions using the per-call timings.
+   - Mean per-call encode time (ms), mean per-call digest time (ms), mean encoded-chars per miss.
+4. Decomposes `digestEncodedDecisionStackFrame` aggregate self-time into encode vs FNV-1a portions using the mean per-call timings and aggregate bucket totals.
 5. Writes the report to `reports/perf-baseline/zobrist-residual-cost-<YYYY-MM-DD>.md` with a per-workload table and an explicit hypothesis verdict (H1, H2, H3 from §1.2 — accepted, refined, or refuted).
 
 This is pure observation: zero changes to `zobrist.ts` code paths, zero changes to canonical key output. The replay-identity corpus + the Spec 168 frame-digest-cache equivalence test + the Spec 192 trajectory-identity test MUST remain 100% green throughout Phase 1.
@@ -124,7 +126,7 @@ The Phase 1 report selects exactly one of the following levers; ticket decomposi
 | Lever | Selection criterion (Phase 1 evidence) | Behavioral change | Determinism cost |
 |---|---|---|---|
 | **2A — Binary-canonical encoding** | `encodeDecisionStackFrameDigestInput` self-time dominates `digestEncodedDecisionStackFrame` aggregate (H3 accepted); identity-cache hit rate confirmed low (<25%) (H1 accepted) | Replace JSON encoder with length-prefixed binary canonical encoder of frame fields; `digestEncodedDecisionStackFrame` consumes the binary form | Kernel-version bump per Foundation #13; replay-corpus re-bless; new compile-twice byte-identity proof at new canonical encoding |
-| **2B — Encoded-surface reduction** | Median encoded-chars per call is large (>~2KB) AND specific `effectFrame` sub-fields can be proven irrelevant to canonical state identity (requires explicit field-irrelevance audit during the Phase 2 ticket) | Exclude the proven-irrelevant fields from `encodeDecisionStackFrameDigestInput`'s JSON output | Kernel-version bump per Foundation #13; replay-corpus re-bless; field-irrelevance proof recorded in the Phase 2 ticket |
+| **2B — Encoded-surface reduction** | Mean encoded-chars per miss is large (>~2KB) AND specific `effectFrame` sub-fields can be proven irrelevant to canonical state identity (requires explicit field-irrelevance audit during the Phase 2 ticket) | Exclude the proven-irrelevant fields from `encodeDecisionStackFrameDigestInput`'s JSON output | Kernel-version bump per Foundation #13; replay-corpus re-bless; field-irrelevance proof recorded in the Phase 2 ticket |
 | **2C — Structural-identity cache** | Identity-cache hit rate is low (<25%) AND a derived structural-identity key (e.g., `frameId + turnId + context + effectFrame.programCounter`) can be proven equivalence-class-correct for digest reuse (audit during Phase 2) | Add a second `WeakMap<StructuralIdentityKey, FrameDigestEntry>` short-circuiting the encode pass when structural identity matches; widens cache working set without reducing encoded surface | None — identity-keyed; canonical key preserved by construction (no kernel-version bump) |
 | **2D — Cost-is-floor** | All caches show hit rates near their structural ceiling AND encode/digest per-call costs are at language/algorithm floors | Document the cost as architecturally inherent; archive Spec 194 with a "validated as accepted cost" report referenced from Spec 192's perf-bucket categorization (`reports/fitl-perf-baseline-2026-05-24.md`) | None — no code change |
 
@@ -153,7 +155,7 @@ Re-shipping that infrastructure would violate Foundation #14 (parallel caches ar
 ## 5. Data flow / Process
 
 **Phase 1 (instrumentation)**:
-Capture script runs each workload under `ENGINE_HOT_PATH_PROFILE=1` → existing counters fire on the hot path inside `digestDecisionStackFrame` → script aggregates counter values + per-call timings → script computes per-workload hit-rate decomposition → report written to `reports/perf-baseline/zobrist-residual-cost-<YYYY-MM-DD>.md` with explicit hypothesis verdict → ticket decomposition reads the report and opens the chosen-lever Phase 2 ticket.
+Capture script runs each workload under `ENGINE_HOT_PATH_PROFILE=1` → existing counters fire on the hot path inside `digestDecisionStackFrame` → script aggregates counter values plus mean per-call timings from bucket totals → script computes per-workload hit-rate decomposition → report written to `reports/perf-baseline/zobrist-residual-cost-<YYYY-MM-DD>.md` with explicit hypothesis verdict → ticket decomposition reads the report and opens the chosen-lever Phase 2 ticket.
 
 **Phase 2 (conditional, one lever)**:
 - **2A**: `encodeDecisionStackFrameDigestInput` replaced with binary canonical encoder → `digestEncodedDecisionStackFrame` consumes the binary encoded form → canonical keys change at kernel-version boundary → replay corpus re-blessed.
@@ -164,6 +166,8 @@ Capture script runs each workload under `ENGINE_HOT_PATH_PROFILE=1` → existing
 ## 6. Determinism and replay (Foundations #8, #13, #16)
 
 Phase 1 introduces zero canonical-key risk; instrumentation is observation-only.
+
+**Active prerequisite (2026-05-24)**: Phase 1 terminal closeout is blocked until `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` restores the existing Spec 161 default-off determinism proof. This is a Foundations alignment requirement: the red lane is in `packages/engine/test/determinism/`, and `docs/FOUNDATIONS.md` classifies failures there as engine bugs that block CI.
 
 Phase 2 obligations depend on the chosen lever:
 
@@ -243,6 +247,10 @@ P1 is the minimum landing surface and is non-conditional. P2's scope and effort 
 ## Tickets
 
 Decomposed via `/spec-to-tickets` on 2026-05-24:
+
+Inserted during implementation on 2026-05-24 after `docs/FOUNDATIONS.md` reassessment:
+
+- [`tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`](../tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md) — Prerequisite — restore Spec 161 default-off determinism proof before closing Phase 1
 
 - [`tickets/194ZOBDIGEST-001.md`](../tickets/194ZOBDIGEST-001.md) — Phase 1 — Zobrist residual-cost capture and report
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { evaluatePolicyMoveCore } from '../../src/agents/policy-eval.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../src/agents/policy-evaluation-core.js';
-import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
+import { executeBytecode, type VmEvalResult } from '../../src/agents/policy-vm/index.js';
 import {
   __internal_for_tests as policyWasmRuntimeInternals,
   evaluateWasmCandidateFeatureRow,
@@ -75,7 +75,6 @@ interface ScoreRow {
 }
 
 type PolicyVmModule = {
-  readonly PolicyBytecodeVmUnsupportedError?: new (...args: never[]) => Error;
   readonly executeBytecode?: (
     bytecode: PolicyBytecode,
     encoded: EncodedState,
@@ -86,7 +85,7 @@ type PolicyVmModule = {
       readonly profileId: string;
       readonly legalMoves: readonly Move[];
     },
-  ) => { readonly scores?: readonly number[] };
+  ) => VmEvalResult;
 };
 
 const readCorpus = (): BytecodeEquivalenceCorpus => {
@@ -425,21 +424,17 @@ describe('policy bytecode equivalence harness', () => {
         assert.ok(defaultScores.length > 0);
         for (const expr of collectProfileExprs(def)) {
           const bytecode = compilePolicyBytecode(expr, def, layout);
-          try {
-            const result = vm.executeBytecode(bytecode, encoded, {
-              def,
-              layout,
-              state: corpusState.state,
-              profileId,
-              legalMoves: corpusState.legalMoves,
-            });
-            assert.ok(result.scores !== undefined, `VM should return scores for seed ${seed} profile ${profileId}`);
-          } catch (error) {
-            const unsupported = vm.PolicyBytecodeVmUnsupportedError;
-            if (unsupported === undefined || !(error instanceof unsupported)) {
-              throw error;
-            }
+          const result = vm.executeBytecode(bytecode, encoded, {
+            def,
+            layout,
+            state: corpusState.state,
+            profileId,
+            legalMoves: corpusState.legalMoves,
+          });
+          if (result.status === 'unsupported') {
+            continue;
           }
+          assert.ok(result.scores !== undefined, `VM should return scores for seed ${seed} profile ${profileId}`);
         }
       }
     }
@@ -457,27 +452,23 @@ describe('policy bytecode equivalence harness', () => {
         for (const expr of collectProfileExprs(def)) {
           const bytecode = compilePolicyBytecode(expr, def, layout);
           let tsValue: unknown;
-          try {
-            const result = executeBytecode(bytecode, encoded, {
-              def,
-              layout,
-              state: corpusState.state,
-              profileId,
-              legalMoves: corpusState.legalMoves,
-              playerId: Number(corpusState.state.activePlayer),
-            });
-            if (result.usedDynamicFallback) {
-              unsupported += 1;
-              continue;
-            }
-            tsValue = result.value;
-          } catch (error) {
-            if (error instanceof PolicyBytecodeVmUnsupportedError) {
-              unsupported += 1;
-              continue;
-            }
-            throw error;
+          const result = executeBytecode(bytecode, encoded, {
+            def,
+            layout,
+            state: corpusState.state,
+            profileId,
+            legalMoves: corpusState.legalMoves,
+            playerId: Number(corpusState.state.activePlayer),
+          });
+          if (result.status === 'unsupported') {
+            unsupported += 1;
+            continue;
           }
+          if (result.usedDynamicFallback) {
+            unsupported += 1;
+            continue;
+          }
+          tsValue = result.value;
           if (typeof tsValue !== 'number' && typeof tsValue !== 'boolean' && tsValue !== undefined) {
             unsupported += 1;
             continue;
@@ -522,27 +513,23 @@ describe('policy bytecode equivalence harness', () => {
         for (const expr of collectProfileExprs(def)) {
           const bytecode = compilePolicyBytecode(expr, def, layout);
           let tsValue: unknown;
-          try {
-            const result = executeBytecode(bytecode, encoded, {
-              def,
-              layout,
-              state: corpusState.state,
-              profileId,
-              legalMoves: corpusState.legalMoves,
-              playerId: Number(corpusState.state.activePlayer),
-            });
-            if (result.usedDynamicFallback) {
-              unsupportedRows += candidates.length;
-              continue;
-            }
-            tsValue = result.value;
-          } catch (error) {
-            if (error instanceof PolicyBytecodeVmUnsupportedError) {
-              unsupportedRows += candidates.length;
-              continue;
-            }
-            throw error;
+          const result = executeBytecode(bytecode, encoded, {
+            def,
+            layout,
+            state: corpusState.state,
+            profileId,
+            legalMoves: corpusState.legalMoves,
+            playerId: Number(corpusState.state.activePlayer),
+          });
+          if (result.status === 'unsupported') {
+            unsupportedRows += candidates.length;
+            continue;
           }
+          if (result.usedDynamicFallback) {
+            unsupportedRows += candidates.length;
+            continue;
+          }
+          tsValue = result.value;
           if (typeof tsValue !== 'number' && typeof tsValue !== 'boolean' && tsValue !== undefined) {
             unsupportedRows += candidates.length;
             continue;

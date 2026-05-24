@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../../src/agents/policy-evaluation-core.js';
-import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../../src/agents/policy-vm/index.js';
+import { executeBytecode, UNSUPPORTED_FEATURE } from '../../../src/agents/policy-vm/index.js';
 import {
   compilePolicyBytecode,
   collectFeatureRefsFromCompiledPolicyExpr,
@@ -283,7 +283,7 @@ function withoutGlobalRound(layout: EncodedStateLayout): EncodedStateLayout {
   };
 }
 
-function fallbackValue(ref: FeatureRef): number | string | boolean | readonly string[] {
+function fallbackValue(ref: FeatureRef): number | string | boolean | readonly string[] | typeof UNSUPPORTED_FEATURE {
   switch (ref.kind) {
     case 'candidateTags':
       return ['urgent'];
@@ -307,9 +307,9 @@ function fallbackValue(ref: FeatureRef): number | string | boolean | readonly st
       return 31;
     case 'adjacentTokenAgg':
     case 'seatAgg':
-      throw new PolicyBytecodeVmUnsupportedError(`fixture leaves ${ref.kind} unsupported`);
+      return UNSUPPORTED_FEATURE;
     default:
-      throw new PolicyBytecodeVmUnsupportedError(`fixture has no fallback for ${ref.kind}`);
+      return UNSUPPORTED_FEATURE;
   }
 }
 
@@ -339,25 +339,24 @@ describe('policy bytecode fallback completeness', () => {
       );
 
       const bytecode = compilePolicyBytecode(fixture.expr, def, layout);
-      try {
-        const result = executeBytecode(bytecode, encoded, {
-          def,
-          layout,
-          state,
-          playerId: Number(asPlayerId(0)),
-          seatId: 'alpha',
-          candidateIndex: 0,
-          legalMoves: [move],
-          resolveFeature: (ref) => fallbackValue(ref),
-          resolveDynamic: () => 37,
-        });
-        assertTypedValue(result.value, kind);
-      } catch (error) {
-        if (error instanceof PolicyBytecodeVmUnsupportedError && fixture.allowUnsupported === true) {
+      const result = executeBytecode(bytecode, encoded, {
+        def,
+        layout,
+        state,
+        playerId: Number(asPlayerId(0)),
+        seatId: 'alpha',
+        candidateIndex: 0,
+        legalMoves: [move],
+        resolveFeature: (ref) => fallbackValue(ref),
+        resolveDynamic: () => 37,
+      });
+      if (result.status === 'unsupported') {
+        if (fixture.allowUnsupported === true) {
           continue;
         }
-        throw error;
+        assert.fail(`${kind} unexpectedly returned unsupported verdict: ${result.reason}`);
       }
+      assertTypedValue(result.value, kind);
 
       const candidate = createCandidate();
       const context = new PolicyEvaluationContext(

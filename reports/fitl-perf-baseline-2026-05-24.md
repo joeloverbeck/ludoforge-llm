@@ -56,6 +56,26 @@ The projection uses only above-floor HEAD CPU self-time visible in the source JS
 | `parity-drive` | 21.4% | 23.8% | 5.4% | 50.6% | Meets target |
 | `policy-preview-parity-arvn-1008` | 22.5% | 19.7% | 4.8% | 47.0% | Near target |
 
+## Spec 193 P3 Measurement (2026-05-24)
+
+**HEAD SHA**: `a8f00d0d22`
+**Workloads measured**: 5 (regressed lanes; flat wasm-equivalence not re-measured)
+**Command**: `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload>` after `pnpm turbo build`
+
+The first sandboxed `parity-drive` run failed after nested profiler output parsing with `Unexpected end of JSON input`; the exact command was rerun outside the sandbox, and all five accepted workload captures below completed with empty `caveats` arrays. No accepted post-001 JSON contains `PolicyBytecodeVmUnsupportedError` in `cpuProfTop30SelfTime`.
+
+| Workload | Pre-001 median (ms) | Post-001 median (ms) | Post CV | Wall-clock reduction | Unsupported-err self-time reduction | Threshold met (>=10% either)? | JSON trace |
+|---|---:|---:|---:|---:|---:|---|---|
+| `parity-drive` | 157458.458 | 110937.414 | 1.28% | 29.5% | 100.0% | Yes | `reports/perf-baseline/parity-drive-a8f00d0d22.json` |
+| `bounded-termination-1002` | 565648.950 | 444757.103 | 0.37% | 21.4% | 100.0% | Yes | `reports/perf-baseline/bounded-termination-1002-a8f00d0d22.json` |
+| `diagnose-parity-runGame-1001` | 308794.162 | 233018.875 | 0.58% | 24.5% | 100.0% | Yes | `reports/perf-baseline/diagnose-parity-runGame-1001-a8f00d0d22.json` |
+| `policy-preview-parity-arvn-1008` | 260264.807 | 200209.400 | 1.36% | 23.1% | 100.0% | Yes | `reports/perf-baseline/policy-preview-parity-arvn-1008-a8f00d0d22.json` |
+| `arvn-tournament-parallel` | 257342.062 | 204946.653 | 1.81% | 20.4% | 100.0% | Yes | `reports/perf-baseline/arvn-tournament-parallel-a8f00d0d22.json` |
+
+**Per-spec acceptance threshold**: met. Every measured regressed workload exceeds the >=10% individual wall-clock reduction threshold, and the deleted unsupported-error constructor accounts for 100% reduction in the named self-time bucket across the five workloads.
+**Ticket 003 (P2) disposition**: Close-Declined per the gate condition in `archive/tickets/193POLVMDISPRES-003.md`; the P1 typed-verdict refactor already meets the per-spec threshold.
+**Spec 192 §4.5 escalation trigger**: does not fire for Spec 193. The dispatch-restructure remediation achieved >=10% individual measured gain on all five regressed workloads, so this spec does not require immediate `Bytecode-VM expansion` or `WASM expansion` escalation.
+
 ## Stop-Criterion + Escalation-Trigger Evaluation
 
 - **Per-finding floor**: satisfied. Specs 193 and 194 exceed 5% in multiple regressed workloads. Spec 195 exceeds 5% in the strongest affected workloads and is retained because its adjacent GC burden is material in the same HEAD profiles. Sub-floor cache-stringify findings remain appendix-only.

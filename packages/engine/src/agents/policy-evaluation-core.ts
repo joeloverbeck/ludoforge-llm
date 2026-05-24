@@ -59,7 +59,7 @@ import type {
 import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
 import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
-import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
+import { executeBytecode, UNSUPPORTED_FEATURE, type VMContext } from './policy-vm/index.js';
 import { resolvePolicyEvalCacheBinding, type PolicyEvalCacheBinding } from './policy-evaluation-cache-binding.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
@@ -1176,15 +1176,11 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledExprDirect(expr, candidate);
       },
     };
-    try {
-      const result = executeBytecode(bytecode, this.encodedState, vmContext);
+    const result = executeBytecode(bytecode, this.encodedState, vmContext);
+    if (result.status === 'ok') {
       return result.value;
-    } catch (error) {
-      if (error instanceof PolicyBytecodeVmUnsupportedError) {
-        return this.evaluateCompiledExprDirect(expr, candidate);
-      }
-      throw error;
     }
+    return this.evaluateCompiledExprDirect(expr, candidate);
   }
 
   private resolvePolicyBytecodeCache(): WeakMap<CompiledPolicyExpr, PolicyBytecode> {
@@ -1350,7 +1346,7 @@ export class PolicyEvaluationContext {
     ref: FeatureRef,
     expr: CompiledPolicyExpr,
     candidate: PolicyEvaluationCandidate | undefined,
-  ): PolicyValue {
+  ): PolicyValue | typeof UNSUPPORTED_FEATURE {
     switch (ref.kind) {
       case 'dynamicSurface': {
         const surfaceRef = this.findDynamicSurfaceRef(expr, ref);
@@ -1385,13 +1381,11 @@ export class PolicyEvaluationContext {
       }
       case 'adjacentTokenAgg':
       case 'seatAgg':
-        throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
+        return UNSUPPORTED_FEATURE;
       default:
-        throw new PolicyBytecodeVmUnsupportedError(
-          `Policy bytecode feature kind "${(ref as { kind: string }).kind}" has no handler in resolveVmFallbackFeature; falling back to direct evaluator.`,
-        );
+        return UNSUPPORTED_FEATURE;
     }
-    throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
+    return UNSUPPORTED_FEATURE;
   }
 
   private findPhaseScheduleAgentRef(expr: CompiledPolicyExpr, ref: FeatureRef): CompiledAgentPolicyRef | undefined {

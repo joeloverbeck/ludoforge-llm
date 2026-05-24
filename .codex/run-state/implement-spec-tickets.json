@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
-  "archived_spec": "archive/specs/192-fitl-perf-profiling-methodology.md",
-  "last_ticket": "archive/tickets/192FITLPERFPROF-004.md",
+  "originating_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
+  "archived_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
+  "last_ticket": "archive/tickets/193POLVMDISPRES-003.md",
   "last_result": "final_spec_archived",
-  "last_work_commit": "8ccbbbe03afc57efdbe3293f7245057ae6bfa5f0",
+  "last_work_commit": "90b04d95d98d9cab00b94ecf5dcea80b9c1bd34c",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": null,
+  "owned_dirty_summary": "Spec 193 final archive complete; all same-family tickets are archived; retained untracked perf profiler byproducts are outside the checked-in deliverable set",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-303e6ab6c3-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-24"
 }

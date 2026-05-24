@@ -142,6 +142,9 @@ describe('candidate param runtime resolver and trace map', () => {
         legalMoves: [candidate.move],
       });
       assert.equal(interpreted, true);
+      if (vm.status !== 'ok') {
+        assert.fail(vm.reason);
+      }
       assert.equal(vm.value, true);
     } finally {
       evaluation.dispose();

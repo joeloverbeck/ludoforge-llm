@@ -1,6 +1,6 @@
 # Implementation Order — FITL Plan-Primary Perf Recovery
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Date**: 2026-05-24
 **Source report**: `reports/fitl-perf-baseline-2026-05-24.md`
 
@@ -65,3 +65,18 @@ Per-spec individual gain targets are recorded in each spec's P3 acceptance row.
 ## Stop criterion
 
 Per `reports/fitl-perf-baseline-2026-05-24.md` §Stop-Criterion: the campaign closes when the named specs recover the aggregate target on the regressed lanes OR when two consecutive remediation specs land with less than 10% individual measured gain. The flat `arvn-tournament-wasm-equivalence` lane remains a guardrail, not a recovery target.
+
+## Outcome
+
+Completed on 2026-05-25.
+
+- The implementation-order file served as the live ordering record for the FITL plan-primary perf recovery batch.
+- Spec 193, Spec 194, and Spec 195 are now archived under `archive/specs/`, and their ticket families are closed.
+- The final live dependency verdict remains unchanged: the three remediation specs were independent and had no required ordering.
+- The active planning artifact is archived with a dated filename so a future batch can create a fresh `specs/IMPLEMENTATION-ORDER.md` if needed.
+
+Verification:
+
+- `git status --short` — clean before this archival pass.
+- Destination collision check for `archive/specs/IMPLEMENTATION-ORDER-2026-05-25.md` — clear.
+- `rg -n "IMPLEMENTATION-ORDER\\.md|IMPLEMENTATION-ORDER-2026-05-25" .` — found no live active-path references outside historical archived implementation-order prose before the move.

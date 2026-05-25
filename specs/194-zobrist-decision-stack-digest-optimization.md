@@ -1,6 +1,6 @@
 # Spec 194 — Zobrist Decision-Stack Digest: Residual-Cost Investigation and Targeted Remediation
 
-**Status**: PROPOSED
+**Status**: IN-FLIGHT — Phase 2 landed; Phase 3 pending
 **Priority**: High — Zobrist decision-stack hashing (`digestEncodedDecisionStackFrame`, `encodeDecisionStackFrameDigestInput`, `zobristKey`) is 12.7–25.2% of CPU self-time across the five regressed FITL workloads at HEAD (`reports/fitl-perf-baseline-2026-05-24.md`). The cost existed pre-Spec-190 and was amplified by the plan-primary decision mix; on `bounded-termination-1002` it is the single largest above-floor category at 25.2%. **The Spec 168 Phase 3 frame-digest cache (`archive/tickets/168ENGHOTPATH-004.md`, COMPLETED 2026-05-13) is already in place** — this residual cost persists *despite* that cache. Root cause is unconfirmed; remediation must follow evidence, not assumption.
 **Complexity**: M — Phase 1 is instrumentation only (engine-internal counters; no behavioral change). Phase 2 selects one remediation lever from a decision matrix; the chosen lever's complexity is gated on Phase 1 evidence (S to L). Must preserve byte-identical canonical Zobrist keys (Foundation #8 sacred).
 **Date**: 2026-05-24
@@ -262,7 +262,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-25 for the selected `2B - Encoded-s
 
 - [`archive/tickets/194ZOBDECSTA-001.md`](../archive/tickets/194ZOBDECSTA-001.md) — Field-irrelevance audit for decision-stack frame digest (covers §4.2 Lever 2B audit prerequisite; completed 2026-05-25)
 - [`archive/tickets/194ZOBDECSTA-002A.md`](../archive/tickets/194ZOBDECSTA-002A.md) — Prerequisite — resolved the `spec-140-replay-identity` timeout before applying the v2 encoded-surface reduction
-- [`tickets/194ZOBDECSTA-002.md`](../tickets/194ZOBDECSTA-002.md) — Apply encoded-surface reduction + digest-version bump + replay-corpus re-bless (covers §8 P2; F#14 atomic cut)
+- [`archive/tickets/194ZOBDECSTA-002.md`](../archive/tickets/194ZOBDECSTA-002.md) — Apply encoded-surface reduction + digest-version bump + replay-corpus re-bless (covers §8 P2; F#14 atomic cut; completed 2026-05-25)
 - [`tickets/194ZOBDECSTA-003.md`](../tickets/194ZOBDECSTA-003.md) — Phase 3 — Re-capture Zobrist perf witness and archive Spec 194 (covers §8 P3)
 
 **Phase-gated decomposition note**: Phase 2 and Phase 3 are now decomposed under the `194ZOBDECSTA` namespace above. Keep this spec active until all three Phase 2/3 tickets land; Spec 194 archive is owned by `tickets/194ZOBDECSTA-003.md`'s Outcome (conditional on the §8 P3 gain target being met).

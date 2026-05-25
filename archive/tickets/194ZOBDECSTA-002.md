@@ -1,6 +1,6 @@
 # 194ZOBDECSTA-002: Apply encoded-surface reduction + digest-version bump + replay-corpus re-bless
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel/zobrist.ts` (encoded-surface reduction, version salt bump), new architectural-invariant test, replay-corpus stateHash re-bless across all pinned fixtures and snapshots
@@ -184,3 +184,48 @@ Additional fixture / snapshot files MAY surface during the test-driven re-bless 
 6. Full engine suite: `pnpm -F @ludoforge/engine run test`.
 7. Lint + typecheck (project canonical): `pnpm turbo lint typecheck`.
 8. Dependency integrity: `pnpm run check:ticket-deps`.
+
+## Outcome
+
+Completed: 2026-05-25
+
+What changed:
+
+- Applied the audit-selected v2 encoded-surface reduction in `packages/engine/src/kernel/zobrist.ts`: `effectFrame.pendingTriggerQueue` and `effectFrame.decisionHistory` no longer feed `encodeDecisionStackFrameDigestInput`; all KEEP fields remain in their prior JSON insertion order.
+- Bumped the Zobrist decision-stack-frame digest salts from `decision-stack-frame-v1:*` to `decision-stack-frame-v2:*`; no v1 encoder, compatibility flag, or parallel cache path was retained.
+- Added `packages/engine/test/architecture/zobrist-canonical-key-byte-identity.test.ts` as the Spec 194 architectural invariant. It asserts the compiled salt is v2, no compiled v1 salt remains, repeated full hashes are byte-identical, and recompute/cold-cache/warm-cache frame digests agree.
+- Added `docs/migration/spec-194-zobrist-decision-stack-encoding-v2.md` documenting the v1 to v2 reproducibility boundary and the dropped fields.
+- Re-blessed the only suite-reported pinned hash fallout: `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json` top-level `serializedFinalState.stateHash` changed from `0x2fb6f5427d98e3cc` to `0x32fa1019e7a46390`. The nested suspended-state hash remained unchanged because that state does not include the v2 decision-stack surface.
+
+Deviations:
+
+- The seeded 12-file fixture list did not all require edits. The TDD re-bless loop found one actual failing pinned hash, and the full engine suite passed after that single update.
+- `packages/engine/test/unit/zobrist-table.test.ts` did not embed a salt literal and required no edit.
+
+Verification:
+
+- `pnpm turbo build` — passed after the new test fixture typing fixes.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/zobrist-canonical-key-byte-identity.test.js` — passed, 2/2 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/zobrist-frame-digest-cache-equivalence.test.js` — passed, 4/4 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/perf-baseline-trajectory-identity.test.js` — passed, 6/6 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` — passed after the snapshot re-bless, 2/2 tests.
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 determinism files.
+- `pnpm -F @ludoforge/engine run test` — passed; schema artifact check plus 170/170 default test files.
+- `pnpm turbo lint typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `rg -n "decision-stack-frame-v1" packages/engine/src` — no matches; the only remaining v1 literals are historical/provenance prose in this ticket and the migration doc.
+
+Source-size ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+|---|---:|---:|---|---:|---|---|
+| `packages/engine/src/kernel/zobrist.ts` | 645 | 643 | no | -2 | below 800-line cap; no extraction needed | none |
+
+Generated artifact provenance:
+
+- artifact path(s): `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json`
+- generation command: direct focused witness `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` exposed the expected/actual mismatch; the committed change is the suite-reported actual top-level `stateHash`
+- canonical inputs: current v2 Zobrist salts, Spec 161 chooseNStep default-off fixture, and `serializeGameState(finalState)` from the focused determinism test
+- expected refresh reason: intentional canonical hash version bump and encoded-surface reduction under Spec 194 Phase 2
+- generator durability: retained generator: `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.ts`
+- hygiene proof: focused witness plus full determinism corpus and full engine suite passed

@@ -4,13 +4,13 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only
-**Deps**: `tickets/194ZOBDECSTA-002.md`
+**Deps**: `archive/tickets/194ZOBDECSTA-002.md`
 
 ## Problem
 
 Spec 194 §8 Phase 3 requires a perf-witness re-capture after the lever 2B encoded-surface reduction lands: "Re-run Spec 192 baseline harness on the five regressed workloads at post-remediation HEAD; record measured gain; named gain target is ≥10% individual wall-clock reduction OR ≥15% combined reduction in Zobrist-trio self-time across the five regressed workloads." This ticket delivers that re-capture as a checked-in Phase 3 report, evaluates the measured gain against the spec's named target, and (if the target is met) archives Spec 194 per `docs/archival-workflow.md`.
 
-The Phase 2 ticket (`tickets/194ZOBDECSTA-002.md`) lands the canonical encoding change but does not measure its effect. Phase 3 is the witness: it converts the encoded-surface shrink into a wall-clock and self-time delta against the Phase 1 baseline (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`) and the spec's source-of-truth profile (`reports/fitl-perf-baseline-2026-05-24.md`).
+The Phase 2 ticket (`archive/tickets/194ZOBDECSTA-002.md`) lands the canonical encoding change but does not measure its effect. Phase 3 is the witness: it converts the encoded-surface shrink into a wall-clock and self-time delta against the Phase 1 baseline (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`) and the spec's source-of-truth profile (`reports/fitl-perf-baseline-2026-05-24.md`).
 
 ## Assumption Reassessment (2026-05-25)
 

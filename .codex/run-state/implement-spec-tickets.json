@@ -9,9 +9,9 @@
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 195 ticket family completed and archived, final spec archived, report updated, and five post-195 perf JSON summaries produced in work commit fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9. No owned dirty paths are expected after the state-only commit; pre-existing perf smoke/byproduct artifacts remain out of scope.",
+  "owned_dirty_summary": "Spec 195 ticket family completed and archived, final spec archived, report updated, and five post-195 perf JSON summaries produced in work commit fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9. Perf profiler byproducts and obsolete smoke JSONs were removed after the state-only commit; no dirty paths remain.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-a35be6032b-smoke.json, reports/perf-baseline/parity-drive-e8c4d26237-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "clean",
   "updated_at": "2026-05-25"
 }

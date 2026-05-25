@@ -1,6 +1,6 @@
 # Spec 195 — Policy Evaluation Context Allocation Reduction
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium-High — `PolicyEvaluationContext` construction is 3.4–5.7% of CPU self-time per regressed FITL workload at HEAD (`reports/fitl-perf-baseline-2026-05-24.md`), with high adjacent GC self-time across the same heavy workloads. The constructor self-time aggregates across **four** source-side construction sites; the dominant per-evaluation multipliers are `num_distinct_microturn_options × num_selector_items_referencing_them` (inner-selector fall-through) and `num_completion_options_scored` (per-option scoring), not per-candidate.
 **Complexity**: S–M — engine change introducing a substructure-sharing wrapper on `PolicyEvaluationContext` and routing the inner-selector fall-through (P1 deliverable site) through it; must preserve Spec 189's structural `cacheBinding` contract and Foundation #11 immutability. Broadening to the two follow-on sites (`microturn-option-eval.ts:121`, `plan-proposal.ts:513`) is deferred to a Spec 195-FOLLOWUP unless P3 measurement demands it.
 **Date**: 2026-05-24 (authored), 2026-05-25 (reassessed)
@@ -249,9 +249,29 @@ P1 lands the mechanism + the line 2040 migration. P2 proves the isolation guaran
 
 ## Tickets
 
-Decomposed via `/spec-to-tickets` on 2026-05-25:
+Decomposed via `/spec-to-tickets` on 2026-05-25 (P1+P2); P3 added via `/spec-to-tickets` on 2026-05-25 after 001/002 landed:
 
 - [`archive/tickets/195POLEVACON-001.md`](../archive/tickets/195POLEVACON-001.md) — COMPLETED: Inner-selector substructure-sharing wrapper at `policy-evaluation-core.ts:2040` (covers §8 P1)
 - [`archive/tickets/195POLEVACON-002.md`](../archive/tickets/195POLEVACON-002.md) — COMPLETED: Outer-state isolation architectural-invariant test (covers §8 P2)
+- [`archive/tickets/195POLEVACON-003.md`](../archive/tickets/195POLEVACON-003.md) — COMPLETED: Perf witness re-capture across 5 regressed FITL workloads (covers §8 P3)
 
-P3 (perf witness re-capture) intentionally not ticketed in this run — phase-gated on P1's measured gain per §8 and the reassessment's recommendation. Author the P3 ticket (and any §4.6 follow-on-site promotion) once 195POLEVACON-001 lands and real measurements are available.
+195POLEVACON-003 recorded the §4.6 follow-on-site verdict: no follow-up is needed for the current Spec 195 acceptance gate, so `microturn-option-eval.ts:121` and `plan-proposal.ts:513` are not promoted to P4 and no Spec 195-FOLLOWUP ticket is opened by this spec.
+
+## Outcome
+
+Completed on 2026-05-25.
+
+- P1 landed in `archive/tickets/195POLEVACON-001.md`: the inner-selector fall-through at `policy-evaluation-core.ts:2040` now uses the substructure-sharing wrapper while preserving Spec 189 `cacheBinding` discipline.
+- P2 landed in `archive/tickets/195POLEVACON-002.md`: `packages/engine/test/architecture/policy-evaluation-context-outer-state-isolation.test.ts` proves the wrapper does not mutate outer caller-visible state.
+- P3 landed in `archive/tickets/195POLEVACON-003.md`: full non-smoke Spec 192 baseline captures at HEAD `de6d82e538` recorded 15.1% to 29.2% wall-clock reductions across all five regressed heavy plan-primary workloads.
+- The P3 acceptance threshold is met for every measured workload; all accepted JSON summaries have empty `caveats` arrays and CV below 15%.
+- The §4.6 follow-on-site disposition is no follow-up for this spec's acceptance gate. `microturn-option-eval.ts:121` and `plan-proposal.ts:513` remain potential future optimization targets only if a later campaign establishes a new gap.
+- No engine source changes were made in the P3 closeout; the final ticket-family diff is report/spec/ticket/state plus five checked-in JSON measurement summaries.
+
+Verification:
+
+- `pnpm turbo build` — passed before P3 captures.
+- Five `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload>` commands — passed on accepted unsandboxed runs and produced the five `reports/perf-baseline/*-de6d82e538.json` summaries.
+- JSON shape/CV spot-check against `reports/perf-baseline/parity-drive-a8f00d0d22.json` — passed for all five post-195 summaries.
+- `pnpm run check:ticket-deps` — passed after ticket archival.
+- `git diff --check -- .codex/run-state/implement-spec-tickets.json archive/specs/195-policy-evaluation-context-allocation-reduction.md reports/fitl-perf-baseline-2026-05-24.md archive/tickets/195POLEVACON-003.md` — passed after ticket archival; final archive-path rerun is recorded in the harness closeout.

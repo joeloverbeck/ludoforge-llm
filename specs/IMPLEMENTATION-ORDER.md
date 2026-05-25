@@ -29,7 +29,7 @@ Each spec carries its own replay-identity proof obligation against the existing 
 2. **Spec 194 — Zobrist Decision-Stack Digest Optimization** (`archive/specs/194-zobrist-decision-stack-digest-optimization.md`).
    Cache decision-stack frame encoding by frame identity; memoize per-frame digests; bind `zobristKey` dynamic-feature cache to `cacheBinding` lifetime. Eliminates redundant `JSON.stringify` and FNV-1a passes (12.7–25.2% per regressed workload). Preserves byte-identical canonical Zobrist keys.
 
-3. **Spec 195 — Policy Evaluation Context Allocation Reduction** (`specs/195-policy-evaluation-context-allocation-reduction.md`).
+3. **Spec 195 — Policy Evaluation Context Allocation Reduction** (`archive/specs/195-policy-evaluation-context-allocation-reduction.md`).
    Share heavy immutable substructure across nested selector evaluations. Eliminates per-inner-selector full constructor cost (3.4–5.7% per workload + adjacent GC). Preserves Spec 189's structural `cacheBinding` contract.
 
 **Dependency direction:** none — the three specs are mutually independent. Per-spec perf witnesses are recoverable in any sequence; the Spec 192 baseline harness re-runs cleanly per spec independently.

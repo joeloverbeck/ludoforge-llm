@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (introduce substructure-sharing wrapper; route the inner-selector fall-through through it)
-**Deps**: `specs/195-policy-evaluation-context-allocation-reduction.md`
+**Deps**: `archive/specs/195-policy-evaluation-context-allocation-reduction.md`
 
 ## Problem
 

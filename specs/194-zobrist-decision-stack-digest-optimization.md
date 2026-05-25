@@ -258,4 +258,10 @@ Inserted during implementation on 2026-05-24 after `docs/FOUNDATIONS.md` reasses
 
 - [`archive/tickets/194ZOBDIGEST-001.md`](../archive/tickets/194ZOBDIGEST-001.md) — Phase 1 — Zobrist residual-cost capture and report; completed 2026-05-25, selected `2B - Encoded-surface reduction` for Phase 2 decomposition
 
-**Phase-gated decomposition note**: Phase 2 is now gated on a future `/spec-to-tickets` invocation for the selected `2B - Encoded-surface reduction` lever, including the required field-irrelevance audit, kernel-version/reproducibility obligations, and replay-corpus proof. Phase 3 (perf witness re-capture per §8 P3) remains deferred until the Phase 2 result is known. Keep this spec active until those remaining phases are decomposed and completed.
+Decomposed via `/spec-to-tickets` on 2026-05-25 for the selected `2B - Encoded-surface reduction` lever:
+
+- [`tickets/194ZOBDECSTA-001.md`](../tickets/194ZOBDECSTA-001.md) — Field-irrelevance audit for decision-stack frame digest (covers §4.2 Lever 2B audit prerequisite)
+- [`tickets/194ZOBDECSTA-002.md`](../tickets/194ZOBDECSTA-002.md) — Apply encoded-surface reduction + digest-version bump + replay-corpus re-bless (covers §8 P2; F#14 atomic cut)
+- [`tickets/194ZOBDECSTA-003.md`](../tickets/194ZOBDECSTA-003.md) — Phase 3 — Re-capture Zobrist perf witness and archive Spec 194 (covers §8 P3)
+
+**Phase-gated decomposition note**: Phase 2 and Phase 3 are now decomposed under the `194ZOBDECSTA` namespace above. Keep this spec active until all three Phase 2/3 tickets land; Spec 194 archive is owned by `tickets/194ZOBDECSTA-003.md`'s Outcome (conditional on the §8 P3 gain target being met).

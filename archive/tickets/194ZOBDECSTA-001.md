@@ -1,6 +1,6 @@
 # 194ZOBDECSTA-001: Field-irrelevance audit for decision-stack frame digest
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — audit/report only
@@ -99,3 +99,23 @@ Pure observation cannot regress these; the verification confirms the contract.
 3. Verify existing test suites green: `pnpm -F @ludoforge/engine run test`.
 4. Lint + typecheck (project canonical): `pnpm turbo lint typecheck`.
 5. Verify ticket dependency graph: `pnpm run check:ticket-deps`.
+
+## Outcome
+
+Completed: 2026-05-25
+
+This ticket produced the standalone audit report at `reports/audits/zobrist-encoded-surface-field-irrelevance-2026-05-25.md`. The audit keeps all rule-authoritative frame identity, continuation-binding, control/resume, suspended-frame, and active-context fields, and yields a nonempty Drop list for ticket `tickets/194ZOBDECSTA-002.md`:
+
+- `effectFrame.pendingTriggerQueue` — `DROP-PROVEN-IRRELEVANT`; current digest-time active frames always encode `[]`.
+- `effectFrame.decisionHistory` — `DROP-PROVEN-IRRELEVANT`; observation-only compound-turn trace accumulator, removed only under the v2 digest-version bump owned by `tickets/194ZOBDECSTA-002.md`.
+
+No engine source, engine tests, schemas, fixtures, replay artifacts, or kernel-version metadata changed in this ticket. The audit's encoded-size projection is explicitly approximate; Phase 3 remains responsible for measured perf recapture.
+
+Verification:
+
+- `git diff packages/engine/src/ packages/engine/test/` — empty.
+- `pnpm turbo build` — passed; Turbo cache replay across 3/3 packages, acceptable as sanity proof because this ticket changed only markdown/state artifacts and no executable source, test, schema, generated runtime artifact, or package manifest.
+- `pnpm -F @ludoforge/engine run test` — passed; schema artifact check plus default engine lane, 169/169 files passed, including `perf-baseline-trajectory-identity.test.js` and `zobrist-frame-digest-cache-equivalence.test.js`.
+- `pnpm turbo lint typecheck` — passed; Turbo cache replay across 5/5 tasks, acceptable as supplemental proof for this report-only ticket.
+- `pnpm run check:ticket-deps` — passed for 3 active tickets and 2508 archived tickets.
+- `git diff --check -- tickets/194ZOBDECSTA-001.md reports/audits/zobrist-encoded-surface-field-irrelevance-2026-05-25.md .codex/run-state/implement-spec-tickets.json` — passed.

@@ -260,7 +260,7 @@ Inserted during implementation on 2026-05-24 after `docs/FOUNDATIONS.md` reasses
 
 Decomposed via `/spec-to-tickets` on 2026-05-25 for the selected `2B - Encoded-surface reduction` lever:
 
-- [`tickets/194ZOBDECSTA-001.md`](../tickets/194ZOBDECSTA-001.md) — Field-irrelevance audit for decision-stack frame digest (covers §4.2 Lever 2B audit prerequisite)
+- [`archive/tickets/194ZOBDECSTA-001.md`](../archive/tickets/194ZOBDECSTA-001.md) — Field-irrelevance audit for decision-stack frame digest (covers §4.2 Lever 2B audit prerequisite; completed 2026-05-25)
 - [`tickets/194ZOBDECSTA-002.md`](../tickets/194ZOBDECSTA-002.md) — Apply encoded-surface reduction + digest-version bump + replay-corpus re-bless (covers §8 P2; F#14 atomic cut)
 - [`tickets/194ZOBDECSTA-003.md`](../tickets/194ZOBDECSTA-003.md) — Phase 3 — Re-capture Zobrist perf witness and archive Spec 194 (covers §8 P3)
 

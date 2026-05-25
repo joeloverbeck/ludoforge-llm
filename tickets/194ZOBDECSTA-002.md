@@ -4,17 +4,17 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel/zobrist.ts` (encoded-surface reduction, version salt bump), new architectural-invariant test, replay-corpus stateHash re-bless across all pinned fixtures and snapshots
-**Deps**: `tickets/194ZOBDECSTA-001.md`
+**Deps**: `archive/tickets/194ZOBDECSTA-001.md`
 
 ## Problem
 
-Spec 194 Phase 2 lever 2B ("Encoded-surface reduction"; `specs/194-zobrist-decision-stack-digest-optimization.md` §4.2) requires three obligations to land atomically in one Foundation #14 cut: (1) shrink `encodeDecisionStackFrameDigestInput` to drop the fields the field-irrelevance audit (ticket `tickets/194ZOBDECSTA-001.md`) verdicts as `DROP-*`; (2) bump the Zobrist decision-stack-frame digest version salt (Foundation #13 reproducibility-metadata migration) so historical replays can be tied to the pre-reduction encoding by version pin; (3) re-bless every pinned `stateHash` in the determinism corpus, integration fixtures, and golden snapshots so the suite remains 100% green at the new canonical encoding. Splitting any of these into a follow-on ticket would leave the repository in a parallel-encoding state that violates Foundation #14 ("no parallel kernel versions in production code", per spec §4.2 closing paragraph).
+Spec 194 Phase 2 lever 2B ("Encoded-surface reduction"; `specs/194-zobrist-decision-stack-digest-optimization.md` §4.2) requires three obligations to land atomically in one Foundation #14 cut: (1) shrink `encodeDecisionStackFrameDigestInput` to drop the fields the field-irrelevance audit (ticket `archive/tickets/194ZOBDECSTA-001.md`) verdicts as `DROP-*`; (2) bump the Zobrist decision-stack-frame digest version salt (Foundation #13 reproducibility-metadata migration) so historical replays can be tied to the pre-reduction encoding by version pin; (3) re-bless every pinned `stateHash` in the determinism corpus, integration fixtures, and golden snapshots so the suite remains 100% green at the new canonical encoding. Splitting any of these into a follow-on ticket would leave the repository in a parallel-encoding state that violates Foundation #14 ("no parallel kernel versions in production code", per spec §4.2 closing paragraph).
 
 The Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`) anchors the expected gain: aggregate mean encoded chars per miss is 23 647.62; aggregate encode total is 44 355.641 ms; aggregate FNV-1a digest total is 82 289.213 ms. Reducing the encoded surface should drop both proportionally, materializing the wall-clock gain the Phase 3 ticket (`tickets/194ZOBDECSTA-003.md`) is responsible for measuring.
 
 ## Assumption Reassessment (2026-05-25)
 
-1. **Audit gate**: `tickets/194ZOBDECSTA-001.md` produces the authoritative Drop field list. This ticket consumes that list verbatim from the audit report at `reports/audits/zobrist-encoded-surface-field-irrelevance-<DATE>.md` — the Drop list determines the exact edit to `encodeDecisionStackFrameDigestInput`. If the audit yields zero `DROP-*` verdicts, this ticket is structurally infeasible and the spec must be re-evaluated.
+1. **Audit gate**: `archive/tickets/194ZOBDECSTA-001.md` produces the authoritative Drop field list. This ticket consumes that list verbatim from the audit report at `reports/audits/zobrist-encoded-surface-field-irrelevance-<DATE>.md` — the Drop list determines the exact edit to `encodeDecisionStackFrameDigestInput`. If the audit yields zero `DROP-*` verdicts, this ticket is structurally infeasible and the spec must be re-evaluated.
 2. **Edit target verified**: `encodeDecisionStackFrameDigestInput` at `packages/engine/src/kernel/zobrist.ts:174-194`. Companion: `summarizeSuspendedFrameForDigestCache` at `zobrist.ts:160-172`. Both are the only producers of the JSON string consumed by `digestEncodedDecisionStackFrame` (`zobrist.ts:196-204`) and the only feed into the FNV-1a digest pass.
 3. **Version salt mechanism**: the digest version is encoded as `decision-stack-frame-v1:a` / `decision-stack-frame-v1:b` at `zobrist.ts:140-141`. Bumping to `decision-stack-frame-v2:a` / `:b` causes `FRAME_DIGEST_PREFIX_A` / `_B` to recompute, so the FNV-1a chains produce a different canonical output even if the JSON content were identical — this is the version-pin mechanism per Foundation #13. No separate metadata file change is required, since the kernel version IS the salt string; record the bump in the migration doc and ticket Outcome.
 4. **Fixture/snapshot blast radius** (verified by `grep -rln '"stateHash":\s*"0x[0-9a-f]' packages/engine/test/`):
@@ -40,7 +40,7 @@ The Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md
 ## Architecture Check
 
 1. **Single canonical encoding at every commit**: after this ticket lands, `decision-stack-frame-v2` is the only Zobrist decision-stack-frame canonical encoding in production code. There is no parallel v1 path, no feature flag, no opt-in branch — Foundation #14 satisfied by construction. Historical replays use the v1 encoding only at the pre-ticket kernel version, which is reproducible via Git commit pinning (Foundation #13).
-2. **Reduction proves field-irrelevance via the audit gate**: the field drops are not heuristic; each is justified by `tickets/194ZOBDECSTA-001.md`'s audit, which proves field-irrelevance against current consumer graph and Spec 80 / Spec 168 contracts. The ticket implements the audit's verdict, not new judgment.
+2. **Reduction proves field-irrelevance via the audit gate**: the field drops are not heuristic; each is justified by `archive/tickets/194ZOBDECSTA-001.md`'s audit, which proves field-irrelevance against current consumer graph and Spec 80 / Spec 168 contracts. The ticket implements the audit's verdict, not new judgment.
 3. **F#14 mechanical-uniformity exception applies**: the re-bless across 12 fixture files is mechanically uniform (substitute pinned stateHash hex literal at the suite-reported mismatch). The encoding edit itself is a small, localized diff. The Large effort rating reflects file count, not per-file complexity.
 4. **Determinism preservation is proof-bound, not assumed**: the new `zobrist-canonical-key-byte-identity.test.ts` asserts that random decision-stack shapes hashed twice in the same process produce byte-identical `computeFullHash` outputs at the new canonical encoding. Combined with the Spec 168 cache-equivalence test and the Spec 192 trajectory-identity test, the determinism contract has three independent proof surfaces at the new encoding (per spec §6).
 5. **No backwards-compatibility aliasing/shims introduced**: no `v1Encode`/`legacyEncodeFrame` paths, no feature flags, no `pre-v2` shim. The salt bump replaces v1 in place; the audit gates which fields disappear from the JSON.
@@ -145,7 +145,7 @@ Additional fixture / snapshot files MAY surface during the test-driven re-bless 
 - **Engine-WASM Zobrist parity** — out of scope per spec §2.
 - **Phase 3 perf witness re-capture** — owned by `tickets/194ZOBDECSTA-003.md`.
 - **Spec 194 archive** — owned by `tickets/194ZOBDECSTA-003.md` (after Phase 3 confirms the gain target).
-- **Audit re-authoring** — the audit ticket (`tickets/194ZOBDECSTA-001.md`) is the gate; this ticket consumes its verdict.
+- **Audit re-authoring** — the audit ticket (`archive/tickets/194ZOBDECSTA-001.md`) is the gate; this ticket consumes its verdict.
 - **Splitting the re-bless into a separate ticket** — Foundation #14 atomic discipline forbids it; the cut MUST be one commit.
 
 ## Acceptance Criteria

@@ -1,19 +1,17 @@
 {
   "originating_spec": "specs/194-zobrist-decision-stack-digest-optimization.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md",
-  "last_result": "completed",
-  "last_work_commit": null,
+  "last_ticket": "archive/tickets/194ZOBDIGEST-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "0b555e9f24e770cfc2bb9eec99fe59386caa3f41",
   "last_state_commit": "self",
-  "next_target": "tickets/194ZOBDIGEST-001.md",
-  "queue": [
-    "tickets/194ZOBDIGEST-001.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "blocked",
+  "queue": [],
+  "phase": "blocked",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "194ZOBDIGEST-000/000A/000B prerequisites completed and archived; next target is 194ZOBDIGEST-001",
-  "blocked": false,
-  "blocker": null,
-  "dirty_state": "owned changes plus untracked perf smoke reports",
+  "owned_dirty_summary": "194ZOBDIGEST-001 completed and archived; originating spec remains active until Phase 2/Phase 3 are decomposed",
+  "blocked": true,
+  "blocker": "Phase 1 is complete and archived; no active Phase 2 ticket exists yet. Next owner is /spec-to-tickets for selected lever 2B - Encoded-surface reduction.",
+  "dirty_state": "clean",
   "updated_at": "2026-05-25"
 }

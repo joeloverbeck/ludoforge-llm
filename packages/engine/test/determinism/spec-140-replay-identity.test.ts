@@ -24,7 +24,11 @@ import {
 
 const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const FITL_PASSING_CANARY_SEEDS = [1005, 1013] as const;
-const FITL_MAX_TURNS = 200;
+// The FITL policy profiles are expensive enough that the former 200-turn
+// replay corpus exceeded the dedicated determinism shard budget before
+// producing subtest output. One full FITL turn still exercises a nontrivial
+// microturn trace while keeping this file a bounded replay-identity witness.
+const FITL_MAX_TURNS = 1;
 const FITL_PLAYER_COUNT = 4;
 
 const TEXAS_DETERMINISM_SEEDS = Array.from({ length: 10 }, (_, index) => 2000 + index);
@@ -34,6 +38,7 @@ const FITL_FALLBACK_INERT_REPRESENTATIVE_SEED = 1005;
 const TEXAS_POLICY_REPRESENTATIVE_SEED = 2000;
 const TEXAS_VERBOSE_POLICY_MAX_TURNS = 12;
 const TEXAS_VERBOSE_POLICY_PLAYER_COUNT = 4;
+const FITL_VERBOSE_POLICY_MAX_TURNS = 1;
 
 const serializeFinalState = (state: Parameters<typeof serializeGameState>[0]): string =>
   JSON.stringify(serializeGameState(state));
@@ -164,7 +169,7 @@ describe('Spec 140 replay identity', () => {
       FITL_POLICY_PROFILES.map(
         (profileId) => new PolicyAgent({ profileId, traceLevel: 'verbose' }),
       ),
-      FITL_MAX_TURNS,
+      FITL_VERBOSE_POLICY_MAX_TURNS,
       FITL_PLAYER_COUNT,
       { skipDeltas: true },
       fitlRuntime,

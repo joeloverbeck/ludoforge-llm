@@ -1,6 +1,6 @@
 # 194ZOBDECSTA-002A: Resolve Spec 140 replay-identity timeout before v2 Zobrist cut
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Possible — only if diagnosis proves a production replay/runtime issue; otherwise determinism-harness or test-scope timeout repair only
@@ -90,3 +90,27 @@ The clean-baseline timeout shows the stalled proof is pre-existing and not cause
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-140-replay-identity.test.js`
 3. `pnpm -F @ludoforge/engine run test:determinism`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-25
+
+What changed:
+
+- Repaired the Spec 140 replay-identity determinism shard by bounding the FITL policy replay checks to one full FITL turn in `packages/engine/test/determinism/spec-140-replay-identity.test.ts`.
+- Kept the replay oracle as byte-identical decisions, compound turns, serialized traces, and canonical serialized final state; no hash-only proxy was introduced.
+- Left Texas replay coverage at its existing bounds because it was not the timeout source.
+- Did not change the canonical Zobrist encoding, v1/v2 salts, replay fixtures, or `tickets/194ZOBDECSTA-002.md`; the existing `002` proof commands remain valid after this prerequisite.
+
+Diagnosis:
+
+- `timeout 120s pnpm -F @ludoforge/engine exec node --test --test-name-pattern "FITL passing canary" dist/test/determinism/spec-140-replay-identity.test.js` timed out with only `TAP version 13`, proving the first FITL replay subtest was enough to exceed the local bounded proof shape.
+- A manual timing probe showed one FITL turn still emits substantial replay data: seed `1005` produced 91 decisions and seed `1013` produced 142 decisions, with byte-identical final-state and compound-turn comparisons on rerun.
+- The representative verbose FITL replay also remains meaningful at one turn: it produced 91 decisions, byte-identical serialized trace/final state, and still asserted the microturn-only diagnostics condition.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-140-replay-identity.test.js` — passed, 5/5 subtests, duration about 146s.
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 determinism files.
+- `pnpm run check:ticket-deps` — passed.

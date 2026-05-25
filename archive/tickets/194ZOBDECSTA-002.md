@@ -8,9 +8,9 @@
 
 ## Problem
 
-Spec 194 Phase 2 lever 2B ("Encoded-surface reduction"; `specs/194-zobrist-decision-stack-digest-optimization.md` §4.2) requires three obligations to land atomically in one Foundation #14 cut: (1) shrink `encodeDecisionStackFrameDigestInput` to drop the fields the field-irrelevance audit (ticket `archive/tickets/194ZOBDECSTA-001.md`) verdicts as `DROP-*`; (2) bump the Zobrist decision-stack-frame digest version salt (Foundation #13 reproducibility-metadata migration) so historical replays can be tied to the pre-reduction encoding by version pin; (3) re-bless every pinned `stateHash` in the determinism corpus, integration fixtures, and golden snapshots so the suite remains 100% green at the new canonical encoding. Splitting any of these into a follow-on ticket would leave the repository in a parallel-encoding state that violates Foundation #14 ("no parallel kernel versions in production code", per spec §4.2 closing paragraph).
+Spec 194 Phase 2 lever 2B ("Encoded-surface reduction"; `archive/specs/194-zobrist-decision-stack-digest-optimization.md` §4.2) requires three obligations to land atomically in one Foundation #14 cut: (1) shrink `encodeDecisionStackFrameDigestInput` to drop the fields the field-irrelevance audit (ticket `archive/tickets/194ZOBDECSTA-001.md`) verdicts as `DROP-*`; (2) bump the Zobrist decision-stack-frame digest version salt (Foundation #13 reproducibility-metadata migration) so historical replays can be tied to the pre-reduction encoding by version pin; (3) re-bless every pinned `stateHash` in the determinism corpus, integration fixtures, and golden snapshots so the suite remains 100% green at the new canonical encoding. Splitting any of these into a follow-on ticket would leave the repository in a parallel-encoding state that violates Foundation #14 ("no parallel kernel versions in production code", per spec §4.2 closing paragraph).
 
-The Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`) anchors the expected gain: aggregate mean encoded chars per miss is 23 647.62; aggregate encode total is 44 355.641 ms; aggregate FNV-1a digest total is 82 289.213 ms. Reducing the encoded surface should drop both proportionally, materializing the wall-clock gain the Phase 3 ticket (`tickets/194ZOBDECSTA-003.md`) is responsible for measuring.
+The Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`) anchors the expected gain: aggregate mean encoded chars per miss is 23 647.62; aggregate encode total is 44 355.641 ms; aggregate FNV-1a digest total is 82 289.213 ms. Reducing the encoded surface should drop both proportionally, materializing the wall-clock gain the Phase 3 ticket (`archive/tickets/194ZOBDECSTA-003.md`) is responsible for measuring.
 
 ## Assumption Reassessment (2026-05-25)
 
@@ -105,7 +105,7 @@ The `dist/` matches regenerate from `tsc` at build. The source matches are `zobr
 ### 6. Migration-doc and Spec 194 status update
 
 - Add a one-paragraph entry under `docs/migration/` (sibling to `docs/migration/spec-140-trace-transform.md`) named `docs/migration/spec-194-zobrist-decision-stack-encoding-v2.md` describing the v1 → v2 bump, the dropped fields (verbatim from the audit), and the reproducibility-pin guidance for historical replays.
-- The Spec 194 status update to `IN-FLIGHT — Phase 2 landed; Phase 3 pending` is owned by the Outcome line of this ticket and the spec back-link in `tickets/194ZOBDECSTA-003.md`. Do not archive Spec 194 here — Phase 3 (`tickets/194ZOBDECSTA-003.md`) handles archive.
+- The Spec 194 status update to `IN-FLIGHT — Phase 2 landed; Phase 3 pending` is owned by the Outcome line of this ticket and the spec back-link in `archive/tickets/194ZOBDECSTA-003.md`. Do not archive Spec 194 here — Phase 3 (`archive/tickets/194ZOBDECSTA-003.md`) handles archive.
 
 ### 7. Determinism verification (post-implementation)
 
@@ -144,8 +144,8 @@ Additional fixture / snapshot files MAY surface during the test-driven re-bless 
 - **Adding any new cache / parallel encoding pathway** — Spec 194 §4.4 explicitly rejects this. The only allowed mechanism is the in-place encoded-surface shrink.
 - **Changing the FNV-1a algorithm itself** — only the encoded surface changes; the digest hashing pipeline is unchanged.
 - **Engine-WASM Zobrist parity** — out of scope per spec §2.
-- **Phase 3 perf witness re-capture** — owned by `tickets/194ZOBDECSTA-003.md`.
-- **Spec 194 archive** — owned by `tickets/194ZOBDECSTA-003.md` (after Phase 3 confirms the gain target).
+- **Phase 3 perf witness re-capture** — owned by `archive/tickets/194ZOBDECSTA-003.md`.
+- **Spec 194 archive** — owned by `archive/tickets/194ZOBDECSTA-003.md` (after Phase 3 confirms the gain target).
 - **Audit re-authoring** — the audit ticket (`archive/tickets/194ZOBDECSTA-001.md`) is the gate; this ticket consumes its verdict.
 - **Splitting the re-bless into a separate ticket** — Foundation #14 atomic discipline forbids it; the cut MUST be one commit.
 

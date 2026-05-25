@@ -4,13 +4,13 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — audit/report only
-**Deps**: `archive/tickets/194ZOBDIGEST-001.md`, `specs/194-zobrist-decision-stack-digest-optimization.md`
+**Deps**: `archive/tickets/194ZOBDIGEST-001.md`, `archive/specs/194-zobrist-decision-stack-digest-optimization.md`
 
 ## Problem
 
 Spec 194 Phase 1 (`archive/tickets/194ZOBDIGEST-001.md`, COMPLETED 2026-05-25) selected lever **2B — Encoded-surface reduction** per the §4.2 decision matrix. Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`): aggregate mean encoded chars per miss is **23 647.62** (target trigger >~2 KB; matched ×11), aggregate encode total is **44 355.641 ms** vs FNV-1a digest total **82 289.213 ms**, encode-call rate **32.72%**. Encoded-surface reduction is the only lever that addresses both the JSON-encode cost (proportional to encoded surface) and the FNV-1a cost (proportional to encoded length).
 
-Per Spec 194 §4.2 lever 2B row, applying the reduction requires "an explicit field-irrelevance audit" before any source change. This ticket delivers that audit as a standalone checked-in artifact so Phase 2 implementation (ticket `tickets/194ZOBDECSTA-002.md`) lands on a reviewed proof rather than authoring the audit during the same change that bumps the canonical Zobrist encoding. Splitting the audit from the F#14 atomic implementation cut keeps the audit reviewable in isolation and gives the implementation ticket a single concrete Drop/Keep field list.
+Per Spec 194 §4.2 lever 2B row, applying the reduction requires "an explicit field-irrelevance audit" before any source change. This ticket delivers that audit as a standalone checked-in artifact so Phase 2 implementation (ticket `archive/tickets/194ZOBDECSTA-002.md`) lands on a reviewed proof rather than authoring the audit during the same change that bumps the canonical Zobrist encoding. Splitting the audit from the F#14 atomic implementation cut keeps the audit reviewable in isolation and gives the implementation ticket a single concrete Drop/Keep field list.
 
 ## Assumption Reassessment (2026-05-25)
 
@@ -65,7 +65,7 @@ Pure observation cannot regress these; the verification confirms the contract.
 - **Any change to `packages/engine/src/kernel/zobrist.ts` or any other source/test file** — this ticket is observation-only. The implementation of the Drop verdicts is owned by `tickets/194ZOBDECSTA-002.md`.
 - **Kernel-version bump / reproducibility-metadata edits** — the version bump is a side-effect of the Drop application; both belong in `tickets/194ZOBDECSTA-002.md` per Foundation #14 atomic-cut discipline.
 - **Replay-corpus re-bless** — same as above; owned by `tickets/194ZOBDECSTA-002.md`.
-- **Phase 3 perf witness re-capture** — owned by `tickets/194ZOBDECSTA-003.md`, gated on `tickets/194ZOBDECSTA-002.md` landing.
+- **Phase 3 perf witness re-capture** — owned by `archive/tickets/194ZOBDECSTA-003.md`, gated on `archive/tickets/194ZOBDECSTA-002.md` landing.
 - **Engine-WASM Zobrist** — out of scope per spec §2 (no Rust Zobrist implementation exists in `packages/engine-wasm/policy-vm/`; canonical keys are TS-only).
 - **New automated tests** — this ticket is an audit deliverable; the existing determinism corpus is the safety net and stays green by construction (no code change).
 
@@ -104,10 +104,10 @@ Pure observation cannot regress these; the verification confirms the contract.
 
 Completed: 2026-05-25
 
-This ticket produced the standalone audit report at `reports/audits/zobrist-encoded-surface-field-irrelevance-2026-05-25.md`. The audit keeps all rule-authoritative frame identity, continuation-binding, control/resume, suspended-frame, and active-context fields, and yields a nonempty Drop list for ticket `tickets/194ZOBDECSTA-002.md`:
+This ticket produced the standalone audit report at `reports/audits/zobrist-encoded-surface-field-irrelevance-2026-05-25.md`. The audit keeps all rule-authoritative frame identity, continuation-binding, control/resume, suspended-frame, and active-context fields, and yields a nonempty Drop list for ticket `archive/tickets/194ZOBDECSTA-002.md`:
 
 - `effectFrame.pendingTriggerQueue` — `DROP-PROVEN-IRRELEVANT`; current digest-time active frames always encode `[]`.
-- `effectFrame.decisionHistory` — `DROP-PROVEN-IRRELEVANT`; observation-only compound-turn trace accumulator, removed only under the v2 digest-version bump owned by `tickets/194ZOBDECSTA-002.md`.
+- `effectFrame.decisionHistory` — `DROP-PROVEN-IRRELEVANT`; observation-only compound-turn trace accumulator, removed only under the v2 digest-version bump owned by `archive/tickets/194ZOBDECSTA-002.md`.
 
 No engine source, engine tests, schemas, fixtures, replay artifacts, or kernel-version metadata changed in this ticket. The audit's encoded-size projection is explicitly approximate; Phase 3 remains responsible for measured perf recapture.
 

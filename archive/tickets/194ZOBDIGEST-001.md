@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only; the six hot-path counters this ticket consumes already exist in `packages/engine/src/kernel/zobrist.ts`
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`, `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
+**Deps**: `archive/specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`, `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
 
 ## Problem
 

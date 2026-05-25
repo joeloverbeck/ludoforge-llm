@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — narrow determinism proof repair under `packages/engine/test/determinism/` and only the production source needed if diagnosis proves a real default-off behavior drift
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/161CHOOSNINNPREV-009.md`
+**Deps**: `archive/specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/161CHOOSNINNPREV-009.md`
 
 ## Problem
 

@@ -26,7 +26,7 @@ Each spec carries its own replay-identity proof obligation against the existing 
 1. **Spec 193 — Policy VM Unsupported-Feature Dispatch Restructure** (`archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md`).
    Replace exception-based VM fallback with a typed non-throw verdict. Eliminates `Error` constructor stack-capture cost (14.3–36.2% per workload). Preserves Spec 154's paired-contract guarantee.
 
-2. **Spec 194 — Zobrist Decision-Stack Digest Optimization** (`specs/194-zobrist-decision-stack-digest-optimization.md`).
+2. **Spec 194 — Zobrist Decision-Stack Digest Optimization** (`archive/specs/194-zobrist-decision-stack-digest-optimization.md`).
    Cache decision-stack frame encoding by frame identity; memoize per-frame digests; bind `zobristKey` dynamic-feature cache to `cacheBinding` lifetime. Eliminates redundant `JSON.stringify` and FNV-1a passes (12.7–25.2% per regressed workload). Preserves byte-identical canonical Zobrist keys.
 
 3. **Spec 195 — Policy Evaluation Context Allocation Reduction** (`specs/195-policy-evaluation-context-allocation-reduction.md`).

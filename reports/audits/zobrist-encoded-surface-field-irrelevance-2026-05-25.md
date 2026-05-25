@@ -1,7 +1,7 @@
 # Zobrist Encoded-Surface Field-Irrelevance Audit
 
 **Date**: 2026-05-25
-**Spec**: `specs/194-zobrist-decision-stack-digest-optimization.md`
+**Spec**: `archive/specs/194-zobrist-decision-stack-digest-optimization.md`
 **Ticket**: `archive/tickets/194ZOBDECSTA-001.md`
 **Phase 1 input**: `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`
 **Boundary**: Observation-only audit. No engine source, engine test, fixture, schema, or replay artifact is changed by this ticket.
@@ -135,7 +135,7 @@ This audit does not have per-field byte counters, so the projection is a structu
 - Dropping `pendingTriggerQueue` removes a constant JSON member from every encoded frame. The exact serialized fragment is small, approximately 24-26 chars depending on neighboring comma placement.
 - Dropping `decisionHistory` removes the only field that grows with the number and serialized size of prior microturn decisions in the current compound turn. Each history entry carries `seatId`, `decisionContextKind`, `decisionKey`, a serialized `decision`, and `frameId`; root histories are appended in apply and drive before new child frames are spawned. In the Phase 1 workloads, a conservative one-entry average of roughly 150-250 chars would project a post-reduction mean near **23,375-23,475 chars per miss**. Longer choose-N/action-continuation sequences should shrink more.
 
-Projected aggregate mean encoded chars per miss after the Drop list: **about 23.4K chars/miss**, with the important caveat that this is not the final perf witness. `tickets/194ZOBDECSTA-003.md` owns the measured post-implementation recapture.
+Projected aggregate mean encoded chars per miss after the Drop list: **about 23.4K chars/miss**, with the important caveat that this is not the final perf witness. `archive/tickets/194ZOBDECSTA-003.md` owns the measured post-implementation recapture.
 
 ## 6. Final Drop Field List
 

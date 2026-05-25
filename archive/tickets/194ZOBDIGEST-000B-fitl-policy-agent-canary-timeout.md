@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Possible — only if diagnosis proves a production determinism/runtime issue; otherwise harness/test-scope timeout repair only
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
+**Deps**: `archive/specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
 
 ## Problem
 

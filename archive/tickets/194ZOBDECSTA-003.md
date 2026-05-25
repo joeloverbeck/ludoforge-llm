@@ -1,6 +1,6 @@
 # 194ZOBDECSTA-003: Phase 3 — Re-capture Zobrist perf witness and archive Spec 194
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only
@@ -116,3 +116,44 @@ Pure observation cannot regress these; the verification confirms the contract.
 6. Lint + typecheck (project canonical): `pnpm turbo lint typecheck`.
 7. Dependency integrity: `pnpm run check:ticket-deps`.
 8. (Conditional) Archive Spec 194: `node scripts/archive-spec.mjs specs/194-zobrist-decision-stack-digest-optimization.md archive/specs/` (or equivalent per `docs/archival-workflow.md`).
+
+## Outcome
+
+Completed: 2026-05-25
+
+What changed:
+
+- Added `reports/perf-baseline/zobrist-residual-cost-phase3-2026-05-25.md` as the Phase 3 checked-in witness for Spec 194.
+- Re-ran the Phase 1 Zobrist residual-cost capture script at post-002 HEAD in a temp worktree at commit `32e4d98e50`; all five profiled/unprofiled final state hashes matched.
+- Re-ran the Spec 192 baseline harness for the five regressed workloads with one wall-clock run per workload plus CPU/allocation/per-decision sidecars. The run-count is intentionally recorded as a current-head Phase 3 witness, not a replacement calibrated baseline.
+- Evaluated the Spec 194 P3 gate: individual wall-clock reductions were 34.42%, 22.25%, 27.87%, 23.55%, and 30.01%, so the `>=10% individual wall-clock reduction` OR gate is met. Combined Zobrist-trio self-time reduction was 4.19%, below the alternate 15% combined-self-time gate.
+- Recommended and performed Spec 194 archival because the ticket's archive gate was satisfied.
+
+Deviations:
+
+- The retained Phase 1 capture script hard-codes `zobrist-residual-cost-2026-05-25.md`, which would overwrite the checked-in Phase 1 report in the main checkout. The full capture therefore ran in `/tmp/ludoforge-spec194-phase3`, and only the Phase 3 report was checked in from the transcribed output.
+- The first sandboxed Spec 192 baseline harness run failed with `Unexpected end of JSON input` from nested profiler output parsing. The exact command was rerun outside the sandbox and passed; the remaining baseline-harness workloads also ran outside the sandbox.
+- The temp worktree's cached build replay did not materialize the WASM binary required by `arvn-tournament-parallel`, so `cargo build --manifest-path packages/engine-wasm/policy-vm/Cargo.toml --target wasm32-unknown-unknown --release` was run in the temp worktree before rerunning that workload.
+
+Generated artifact provenance:
+
+- artifact path(s): `reports/perf-baseline/zobrist-residual-cost-phase3-2026-05-25.md`
+- generation command: retained scripts `node campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs` and `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload> --runs 1` in temp worktree `/tmp/ludoforge-spec194-phase3`
+- canonical inputs: current HEAD `32e4d98e50`, `data/games/fire-in-the-lake.game-spec.md`, the five Spec 194 workload definitions in the retained scripts, the Phase 1 baseline report `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`, and the Spec 192 baseline report `reports/fitl-perf-baseline-2026-05-24.md`
+- expected refresh reason: Spec 194 Phase 3 perf witness after `archive/tickets/194ZOBDECSTA-002.md` landed the v2 encoded-surface reduction
+- generator durability: retained generators: `campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs` and `packages/engine/scripts/perf-baseline/run-baseline.mjs`
+- hygiene proof: `git diff --check` passed, and `git diff --no-index --check /dev/null reports/perf-baseline/zobrist-residual-cost-phase3-2026-05-25.md` produced no whitespace errors.
+
+Verification:
+
+- `pnpm turbo build` — passed in the main checkout before measurement.
+- `node campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs` — passed in `/tmp/ludoforge-spec194-phase3`; all five workload rows populated and profiled/unprofiled final state hashes matched.
+- `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload> --runs 1` — passed for all five regressed workloads in `/tmp/ludoforge-spec194-phase3` after the sandbox/parser and temp-WASM setup issues described above.
+- `git diff packages/engine/src/ packages/engine/test/` — empty after Phase 3 report/spec/ticket edits.
+- `pnpm -F @ludoforge/engine run test` — passed; schema artifact check plus 170/170 default test files.
+- `pnpm turbo lint typecheck` — passed from cache; 5/5 tasks.
+- `pnpm run check:ticket-deps` — passed after archive/reference repair; checked 0 active tickets and 2512 archived tickets.
+
+Archive status:
+
+- Ready for post-ticket review and archive after final verification.

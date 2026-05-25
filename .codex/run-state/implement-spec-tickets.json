@@ -1,17 +1,19 @@
 {
-  "originating_spec": "archive/specs/194-zobrist-decision-stack-digest-optimization.md",
-  "archived_spec": "archive/specs/194-zobrist-decision-stack-digest-optimization.md",
-  "last_ticket": "archive/tickets/194ZOBDECSTA-003.md",
+  "originating_spec": "specs/195-policy-evaluation-context-allocation-reduction.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/195POLEVACON-001.md",
   "last_result": "completed_archived",
-  "last_work_commit": "8de5bc0f6f8177f5edd34b30098d28bb7fbd3f3b",
+  "last_work_commit": "92331ac6b67906be38bca35c756f60c08c27fe45",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/195POLEVACON-002.md",
+  "queue": [
+    "tickets/195POLEVACON-002.md"
+  ],
+  "phase": "ticket_iteration_complete",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "194ZOBDECSTA-003 and Spec 194 completed and archived in work commit 8de5bc0f6f8177f5edd34b30098d28bb7fbd3f3b; only unrelated perf-baseline byproducts remain after the state commit.",
+  "owned_dirty_summary": "195POLEVACON-001 completed and archived in work commit 92331ac6b67906be38bca35c756f60c08c27fe45; originating spec and dependent 195POLEVACON-002 were truth-synced to the completed private-cache wrapper contract. Next target is 195POLEVACON-002.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-32e4d98e50-smoke.json, reports/perf-baseline/parity-drive-c4c92961fb-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-e8c4d26237-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-25"
 }

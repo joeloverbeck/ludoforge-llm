@@ -1,20 +1,21 @@
 {
   "originating_spec": "specs/194-zobrist-decision-stack-digest-optimization.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/194ZOBDECSTA-001.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "a6b595ace764bf1693b387fc576434ec0de76c02",
+  "last_ticket": "tickets/194ZOBDECSTA-002.md",
+  "last_result": "retargeted_to_prerequisite",
+  "last_work_commit": "4e994fa9bb3af3a935846b5af7680a020976823a",
   "last_state_commit": "self",
-  "next_target": "tickets/194ZOBDECSTA-002.md",
+  "next_target": "tickets/194ZOBDECSTA-002A.md",
   "queue": [
+    "tickets/194ZOBDECSTA-002A.md",
     "tickets/194ZOBDECSTA-002.md",
     "tickets/194ZOBDECSTA-003.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Post-state-commit repo has only unrelated untracked perf profiler byproducts; 194ZOBDECSTA-002 is next",
+  "owned_dirty_summary": "194ZOBDECSTA-002 retargeted to new replay-timeout prerequisite; post-state-commit repo should retain only unrelated untracked perf profiler byproducts",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-64158316e1-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-64158316e1-smoke.json, reports/perf-baseline/parity-drive-9fb0b9d009-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-25"
 }

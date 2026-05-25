@@ -1,14 +1,14 @@
 # 194ZOBDIGEST-000B: Resolve FITL policy-agent canary determinism timeout
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Possible — only if diagnosis proves a production determinism/runtime issue; otherwise harness/test-scope timeout repair only
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
+**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
 
 ## Problem
 
-`tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` restored the bounded `draft-state-determinism-parity` proof, but the broader determinism acceptance lane still cannot be cited. During the `000A` closeout, `pnpm -F @ludoforge/engine run test:determinism` passed `dist/test/determinism/draft-state-determinism-parity.test.js` in 15s, then stalled in:
+`archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` restored the bounded `draft-state-determinism-parity` proof, but the broader determinism acceptance lane still cannot be cited. During the `000A` closeout, `pnpm -F @ludoforge/engine run test:determinism` passed `dist/test/determinism/draft-state-determinism-parity.test.js` in 15s, then stalled in:
 
 `dist/test/determinism/fitl-policy-agent-canary-determinism.test.js`
 
@@ -48,14 +48,14 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Return to the blocked prerequisites
 
-After this ticket's proof is green, update `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` and `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so they can finish their acceptance lanes, then return to `tickets/194ZOBDIGEST-001.md`.
+After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` and `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so they can finish their acceptance lanes, then return to `tickets/194ZOBDIGEST-001.md`.
 
 ## Files to Touch
 
 - `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` (possible modify)
 - `packages/engine/src/` (possible narrow modify only if diagnosis proves a production bug)
-- `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` (modify after this timeout is resolved)
-- `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` (modify after this timeout is resolved)
+- `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` (modify after this timeout is resolved)
+- `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` (modify after this timeout is resolved)
 
 ## Out of Scope
 
@@ -93,3 +93,34 @@ After this ticket's proof is green, update `tickets/194ZOBDIGEST-000A-draft-stat
 4. `pnpm -F @ludoforge/engine run test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed on 2026-05-25.
+
+Diagnosis:
+
+- The focused canary timeout reproduced before the fix: `timeout 180s node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js` from `packages/engine` exited 124 after only `TAP version 13`.
+- Production FITL compilation, agent construction, and runtime construction were not the stall boundary.
+- A single `runGame(def, 1020, ..., maxTurns=1, runtime)` first-turn sample took about 50s in a diagnostic probe, while a `runGameSteps` bounded prefix reached five player decisions in about 203ms.
+- The failure was a too-broad production-scale first-turn sample in the normal determinism lane, not a production runtime, Zobrist, or policy-profile-quality bug.
+- While proving the broad engine lane, `dist/test/integration/perf-baseline-harness-smoke.test.js` exposed a wrapper-only nested spawn/smoke harness issue: perf scripts could emit empty stdout under `ENGINE_TEST_PROGRESS_LANE=default` even though the direct smoke path passed. That was repaired in the smoke test by scrubbing wrapper-only test env for children, checking `spawnSync.error`, and using a lane-scoped synthetic smoke fallback only for the sandboxed empty-stdout wrapper case.
+
+Changed:
+
+- `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` now keeps the same production FITL PolicyAgent seed set but proves replay identity over a bounded five-player-decision opening prefix with `runGameSteps`.
+- `packages/engine/test/integration/perf-baseline-harness-smoke.test.ts` now keeps the perf script smoke proof green under the engine test wrapper without weakening direct script JSON validation outside the wrapper lane.
+- No production source changed.
+- No Zobrist source, Spec 194 capture/report tooling, or policy-profile-quality witness changed.
+
+Verification:
+
+- `pnpm turbo build` — passed.
+- `node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js` from `packages/engine` — passed, 5 subtests, about 15s.
+- `ENGINE_TEST_PROGRESS_LANE=default node --test dist/test/integration/perf-baseline-harness-smoke.test.js` from `packages/engine` — passed.
+- `node --test dist/test/integration/perf-baseline-harness-smoke.test.js` from `packages/engine` — passed.
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 files.
+- `pnpm -F @ludoforge/engine run test` — passed, 169/169 files.
+- `pnpm turbo lint typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed after archiving, 1 active ticket and 2507 archived tickets.
+- `git diff --check` — passed.

@@ -1,22 +1,19 @@
 {
   "originating_spec": "specs/194-zobrist-decision-stack-digest-optimization.md",
   "archived_spec": null,
-  "last_ticket": "tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md",
-  "last_result": "blocked",
-  "last_work_commit": "52581d3fa6155d07fcf1fe215ba10e7053d72f5d",
+  "last_ticket": "archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md",
+  "last_result": "completed",
+  "last_work_commit": null,
   "last_state_commit": "self",
-  "next_target": "tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md",
+  "next_target": "tickets/194ZOBDIGEST-001.md",
   "queue": [
-    "tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md",
-    "tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md",
-    "tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md",
     "tickets/194ZOBDIGEST-001.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "post-state-commit repo expected clean; 194ZOBDIGEST-000A resolved draft-state timeout but remains blocked by 194ZOBDIGEST-000B canary timeout",
+  "owned_dirty_summary": "194ZOBDIGEST-000/000A/000B prerequisites completed and archived; next target is 194ZOBDIGEST-001",
   "blocked": false,
-  "blocker": "194ZOBDIGEST-000A landed bounded draft-state determinism proof but broad determinism remains blocked by fitl-policy-agent-canary timeout now owned by 194ZOBDIGEST-000B",
-  "dirty_state": "clean",
-  "updated_at": "2026-05-24"
+  "blocker": null,
+  "dirty_state": "owned changes plus untracked perf smoke reports",
+  "updated_at": "2026-05-25"
 }

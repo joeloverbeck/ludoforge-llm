@@ -1,14 +1,14 @@
 # 194ZOBDIGEST-000A: Resolve draft-state determinism parity timeout
 
-**Status**: BLOCKED by `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Possible — only if diagnosis proves a production determinism/runtime issue; otherwise harness/test-scope timeout repair only
-**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
+**Deps**: `specs/194-zobrist-decision-stack-digest-optimization.md`, `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`
 
 ## Problem
 
-`tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` restored the focused Spec 161 default-off snapshot witness, but the broader determinism acceptance lane still cannot be cited. During the prerequisite closeout, `pnpm -F @ludoforge/engine run test:determinism` progressed through the first two determinism files and then stalled in:
+`archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` restored the focused Spec 161 default-off snapshot witness, but the broader determinism acceptance lane still cannot be cited. During the prerequisite closeout, `pnpm -F @ludoforge/engine run test:determinism` progressed through the first two determinism files and then stalled in:
 
 `dist/test/determinism/draft-state-determinism-parity.test.js`
 
@@ -49,13 +49,13 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Return to the blocked prerequisite
 
-After this ticket's proof is green, update `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so it can finish its acceptance lane, then return to `tickets/194ZOBDIGEST-001.md`.
+After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so it can finish its acceptance lane, then return to `tickets/194ZOBDIGEST-001.md`.
 
 ## Files to Touch
 
 - `packages/engine/test/determinism/draft-state-determinism-parity.test.ts` (possible modify)
 - `packages/engine/src/` (possible narrow modify only if diagnosis proves a production bug)
-- `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` (modify after this timeout is resolved)
+- `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` (modify after this timeout is resolved)
 
 ## Out of Scope
 
@@ -122,5 +122,14 @@ Verification:
 
 Remaining blocker:
 
-- The broad determinism corpus is still not citeable because the next active blocker is `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`.
-- After `194ZOBDIGEST-000B` resolves the canary timeout, rerun `pnpm -F @ludoforge/engine run test:determinism`, then return to `tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`.
+- The broad determinism corpus is still not citeable because the next active blocker is `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`.
+- After `194ZOBDIGEST-000B` resolves the canary timeout, rerun `pnpm -F @ludoforge/engine run test:determinism`, then return to `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`.
+
+Outcome amended: 2026-05-25.
+
+`archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md` resolved the canary timeout with a bounded FITL PolicyAgent prefix proof. The broad acceptance lanes are now citeable again:
+
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 files.
+- `pnpm -F @ludoforge/engine run test` — passed, 169/169 files.
+
+This ticket's draft-state bounded-prefix repair remains unchanged, and no production source, Zobrist source, Spec 194 capture/report tooling, or policy-profile-quality witness changed here.

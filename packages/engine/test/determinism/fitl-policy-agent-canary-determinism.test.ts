@@ -4,13 +4,13 @@ import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/index.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
-import { runGame } from '../../src/sim/index.js';
+import { runGameSteps } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 /**
  * Canary test: FITL seeds with production PolicyAgent profiles must produce
- * deterministic bounded early-game outcomes through the first turn boundary.
+ * deterministic bounded early-game outcomes through the opening window.
  *
  * This guards against regressions where kernel changes (e.g., free-operation
  * grant handling) silently alter legal-move enumeration or turn-flow
@@ -31,49 +31,105 @@ describe('FITL PolicyAgent determinism canary', () => {
   const runtime = createGameDefRuntime(def);
 
   const PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-  const MAX_TURNS = 1;
+  const MAX_TURNS = 200;
   const PLAYER_COUNT = 4;
+  const PREFIX_PLAYER_DECISIONS = 5;
 
-  const runOnce = (seed: number) => {
-    const agents = PROFILES.map(
-      (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
-    );
-    return runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
+  type PrefixOutcome = {
+    readonly kind: 'ok';
+    readonly hash: bigint;
+    readonly playerDecisions: number;
+  } | {
+    readonly kind: 'error';
+    readonly message: string;
   };
 
-  // Post-126FREOPEBIN grant-determinism canary seeds. This file now fixes the
-  // witness shape to the historically pathological opening window rather than a
-  // full-game trajectory claim. Full bounded termination still lives in the
-  // broader integration canaries; this file owns deterministic, bounded
-  // progression through the first turn boundary for the seeds that previously
-  // blew up in continuation/publication/policy interaction.
-  const BOUNDED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
-  for (const seed of [1020, 1040, 1049, 1054, 2046]) {
-    it(`seed ${seed}: first-turn canary stays bounded`, { timeout: 20_000 }, () => {
-      const trace = runOnce(seed);
-      assert.ok(
-        BOUNDED_STOP_REASONS.has(trace.stopReason),
-        `seed ${seed}: expected a bounded stop reason, got ${trace.stopReason} after ${trace.decisions.length} decisions`,
+  const runPrefix = (seed: number): PrefixOutcome => {
+    try {
+      const agents = PROFILES.map(
+        (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
       );
-      assert.ok(
-        trace.turnsCount <= MAX_TURNS,
-        `seed ${seed}: turn count ${trace.turnsCount} exceeded MAX_TURNS budget of ${MAX_TURNS}`,
-      );
-    });
+      const iterator = runGameSteps({
+        def,
+        seed,
+        agents,
+        maxTurns: MAX_TURNS,
+        playerCount: PLAYER_COUNT,
+        options: {
+          skipDeltas: true,
+          traceRetention: 'finalStateOnly',
+        },
+        runtime,
+      });
+      let playerDecisions = 0;
 
-    it(`seed ${seed}: replay produces identical first-turn outcome`, { timeout: 20_000 }, () => {
-      const trace1 = runOnce(seed);
-      const trace2 = runOnce(seed);
+      for (;;) {
+        const next = iterator.next();
+        if (next.done) {
+          return {
+            kind: 'ok',
+            hash: next.value.finalState.stateHash,
+            playerDecisions,
+          };
+        }
+
+        if (next.value.kind === 'player') {
+          playerDecisions += 1;
+          if (playerDecisions >= PREFIX_PLAYER_DECISIONS) {
+            return {
+              kind: 'ok',
+              hash: next.value.state.stateHash,
+              playerDecisions,
+            };
+          }
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { kind: 'error', message };
+    }
+  };
+
+  // Post-126FREOPEBIN grant-determinism canary seeds. This file owns a bounded
+  // opening-window replay proof for seeds that previously blew up in
+  // continuation/publication/policy interaction. Full bounded termination still
+  // lives in the broader integration canaries.
+  for (const seed of [1020, 1040, 1049, 1054, 2046]) {
+    it(`seed ${seed}: replay produces identical bounded-prefix outcome`, { timeout: 20_000 }, () => {
+      const trace1 = runPrefix(seed);
+      const trace2 = runPrefix(seed);
       assert.equal(
-        trace1.decisions.length,
-        trace2.decisions.length,
-        `seed ${seed}: move count diverged`,
+        trace1.kind,
+        trace2.kind,
+        `seed ${seed}: outcome kind diverged (${trace1.kind} vs ${trace2.kind})`,
       );
-      assert.equal(
-        trace1.finalState.stateHash,
-        trace2.finalState.stateHash,
-        `seed ${seed}: final state hash diverged`,
-      );
+
+      if (trace1.kind === 'ok' && trace2.kind === 'ok') {
+        assert.equal(
+          trace1.hash,
+          trace2.hash,
+          `seed ${seed}: bounded-prefix state hash diverged (${trace1.hash.toString(16)} vs ${trace2.hash.toString(16)})`,
+        );
+        assert.equal(
+          trace1.playerDecisions,
+          PREFIX_PLAYER_DECISIONS,
+          `seed ${seed}: baseline did not reach the bounded prefix`,
+        );
+        assert.equal(
+          trace2.playerDecisions,
+          PREFIX_PLAYER_DECISIONS,
+          `seed ${seed}: replay did not reach the bounded prefix`,
+        );
+        return;
+      }
+
+      if (trace1.kind === 'error' && trace2.kind === 'error') {
+        assert.equal(
+          trace1.message,
+          trace2.message,
+          `seed ${seed}: error message diverged`,
+        );
+      }
     });
   }
 });

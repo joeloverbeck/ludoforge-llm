@@ -1,6 +1,6 @@
 # 194ZOBDIGEST-000: Prerequisite — restore Spec 161 default-off determinism proof
 
-**Status**: BLOCKED by `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — narrow determinism proof repair under `packages/engine/test/determinism/` and only the production source needed if diagnosis proves a real default-off behavior drift
@@ -50,7 +50,7 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Re-open Spec 194 proof lanes
 
-After the focused Spec 161 test is green and `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolves the broader determinism timeout, rerun the determinism lane and then return to `194ZOBDIGEST-001` so its replay proof can be cited truthfully.
+After the focused Spec 161 test is green and `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolves the broader determinism timeout, rerun the determinism lane and then return to `194ZOBDIGEST-001` so its replay proof can be cited truthfully.
 
 ## Files to Touch
 
@@ -118,11 +118,11 @@ Remaining blocker:
 - `pnpm -F @ludoforge/engine run test:determinism` progressed through the first two determinism files, then stalled in `dist/test/determinism/draft-state-determinism-parity.test.js` with heartbeat output at 31s, 1m1s, 1m31s, 2m1s, 2m31s, and 3m1s quiet. The lane was interrupted with user approval under the 1-3-1 recommended option 2.
 - Replacement probe `timeout 120s node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` timed out with exit 124 after printing only `TAP version 13`.
 - Replacement probe `timeout 600s node --test dist/test/determinism/draft-state-determinism-parity.test.js` from `packages/engine` also timed out with exit 124 after printing only `TAP version 13`.
-- No source file used by that stalled production-scale parity test changed in this ticket. The next owner is `tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`.
+- No source file used by that stalled production-scale parity test changed in this ticket. The next owner is `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`.
 
 Outcome amended: 2026-05-24.
 
-`tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolved the draft-state timeout with a bounded FITL prefix proof, but the broad determinism lane then stalled in `dist/test/determinism/fitl-policy-agent-canary-determinism.test.js`. The next owner before this prerequisite can finish is `tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`.
+`archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` resolved the draft-state timeout with a bounded FITL prefix proof, but the broad determinism lane then stalled in `dist/test/determinism/fitl-policy-agent-canary-determinism.test.js`. The next owner before this prerequisite can finish is `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`.
 
 Snapshot generation command:
 
@@ -133,4 +133,13 @@ Verification:
 - `pnpm turbo build` — passed from cache.
 - `node --input-type=module -e "<explicit-disabled vs omitted capture comparison>"` — passed; reported `byteIdentical: true`, `explicitHash: "0x2fb6f5427d98e3cc"`, `omittedHash: "0x2fb6f5427d98e3cc"`, and selected move `chooseNStep:$picks:add:"spare"`.
 - `node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` from `packages/engine` — passed, 2 tests.
-- `git diff --check -- packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` — passed before the blocker-ticket rewrite.
+- `git diff --check -- packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` — passed before the blocker-ticket rewrite.
+
+Outcome amended: 2026-05-25.
+
+`archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md` resolved the remaining FITL PolicyAgent canary timeout. This prerequisite's broad acceptance lanes are now citeable:
+
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 files.
+- `pnpm -F @ludoforge/engine run test` — passed, 169/169 files.
+
+This ticket's Spec 161 default-off snapshot repair remains unchanged, and no production source, Zobrist source, Spec 194 capture/report tooling, or policy-profile-quality witness changed here.

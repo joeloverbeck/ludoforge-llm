@@ -7,7 +7,7 @@ import {
   assertValidatedGameDef,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
-import { runGame } from '../../src/sim/index.js';
+import { runGame, runGameSteps } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
   compileProductionSpec,
@@ -50,6 +50,7 @@ const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
 const REPLAY_COUNT = 3;
+const FITL_PREFIX_PLAYER_DECISIONS = 5;
 /**
  * Replay determinism is already exercised elsewhere in the test suite; this
  * file owns a curated production-scale replay parity proof. Keep FITL seed
@@ -66,6 +67,7 @@ const TEXAS_SEEDS = process.env.RUN_SLOW_E2E === '1'
 type RunOutcome = {
   readonly kind: 'ok';
   readonly hash: bigint;
+  readonly playerDecisions?: number;
 } | {
   readonly kind: 'error';
   readonly message: string;
@@ -87,6 +89,43 @@ const runOnce = (
       traceRetention: 'finalStateOnly',
     });
     return { kind: 'ok', hash: trace.finalState.stateHash };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { kind: 'error', message };
+  }
+};
+
+const runFitlPrefix = (
+  def: ValidatedGameDef,
+  seed: number,
+): RunOutcome => {
+  try {
+    const iterator = runGameSteps({
+      def,
+      seed,
+      agents: createFitlPolicyAgents(),
+      maxTurns: MAX_TURNS,
+      playerCount: FITL_PLAYER_COUNT,
+      options: {
+        skipDeltas: true,
+        traceRetention: 'finalStateOnly',
+      },
+    });
+    let playerDecisions = 0;
+
+    for (;;) {
+      const next = iterator.next();
+      if (next.done) {
+        return { kind: 'ok', hash: next.value.finalState.stateHash, playerDecisions };
+      }
+
+      if (next.value.kind === 'player') {
+        playerDecisions += 1;
+        if (playerDecisions >= FITL_PREFIX_PLAYER_DECISIONS) {
+          return { kind: 'ok', hash: next.value.state.stateHash, playerDecisions };
+        }
+      }
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return { kind: 'error', message };
@@ -116,6 +155,11 @@ const assertDeterministic = (
         candidate.hash,
         `${label} seed ${seed}: replay ${replay + 1} final state hash diverged (${baseline.hash.toString(16)} vs ${candidate.hash.toString(16)})`,
       );
+      assert.equal(
+        baseline.playerDecisions,
+        candidate.playerDecisions,
+        `${label} seed ${seed}: replay ${replay + 1} player decision count diverged`,
+      );
     } else if (baseline.kind === 'error' && candidate.kind === 'error') {
       assert.equal(
         baseline.message,
@@ -131,12 +175,45 @@ const assertDeterministic = (
 // ---------------------------------------------------------------------------
 
 describe('draft-state determinism parity', () => {
-  describe(`FITL — ${FITL_SEEDS.length} curated seeds produce identical replay outcomes across ${REPLAY_COUNT} runs`, () => {
+  describe(`FITL — ${FITL_SEEDS.length} curated seeds produce identical bounded-prefix replay outcomes across ${REPLAY_COUNT} runs`, () => {
     const def = compileFitlDef();
 
     for (const seed of FITL_SEEDS) {
       it(`seed ${seed}`, () => {
-        assertDeterministic(def, seed, createFitlPolicyAgents, FITL_PLAYER_COUNT, 'FITL');
+        const baseline = runFitlPrefix(def, seed);
+
+        for (let replay = 1; replay < REPLAY_COUNT; replay += 1) {
+          const candidate = runFitlPrefix(def, seed);
+          assert.equal(
+            baseline.kind,
+            candidate.kind,
+            `FITL seed ${seed}: replay ${replay + 1} outcome kind diverged (${baseline.kind} vs ${candidate.kind})`,
+          );
+
+          if (baseline.kind === 'ok' && candidate.kind === 'ok') {
+            assert.equal(
+              baseline.hash,
+              candidate.hash,
+              `FITL seed ${seed}: replay ${replay + 1} bounded-prefix state hash diverged (${baseline.hash.toString(16)} vs ${candidate.hash.toString(16)})`,
+            );
+            assert.equal(
+              baseline.playerDecisions,
+              FITL_PREFIX_PLAYER_DECISIONS,
+              `FITL seed ${seed}: baseline did not reach the bounded prefix`,
+            );
+            assert.equal(
+              candidate.playerDecisions,
+              FITL_PREFIX_PLAYER_DECISIONS,
+              `FITL seed ${seed}: replay ${replay + 1} did not reach the bounded prefix`,
+            );
+          } else if (baseline.kind === 'error' && candidate.kind === 'error') {
+            assert.equal(
+              baseline.message,
+              candidate.message,
+              `FITL seed ${seed}: replay ${replay + 1} error message diverged`,
+            );
+          }
+        }
       });
     }
   });

@@ -137,8 +137,8 @@ const encodeFeature = (feature: ZobristFeature): string => {
   }
 };
 
-const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
-const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v2:a';
+const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v2:b';
 const FRAME_DIGEST_PREFIX_A = updateFnv1a64State(`${FRAME_DIGEST_SALT_A}|`);
 const FRAME_DIGEST_PREFIX_B = updateFnv1a64State(`${FRAME_DIGEST_SALT_B}|`);
 const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
@@ -185,8 +185,6 @@ const encodeDecisionStackFrameDigestInput = (
     programCounter: frame.effectFrame.programCounter,
     boundedIterationCursors: frame.effectFrame.boundedIterationCursors,
     localBindings: frame.effectFrame.localBindings,
-    pendingTriggerQueue: frame.effectFrame.pendingTriggerQueue,
-    ...(frame.effectFrame.decisionHistory === undefined ? {} : { decisionHistory: frame.effectFrame.decisionHistory }),
     ...(frame.effectFrame.suspendedFrame === undefined
       ? {}
       : { suspendedFrame: summarizeSuspendedFrameForDigestCache(frame.effectFrame.suspendedFrame) }),

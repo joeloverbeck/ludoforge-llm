@@ -22,7 +22,7 @@
         "0xda3e39cb94b95a99"
       ]
     },
-    "stateHash": "0xa1ef2aba789f84f",
+    "stateHash": "0x32fa1019e7a46390",
     "actionUsage": {},
     "markers": {},
     "globalMarkers": {},
@@ -106,6 +106,7 @@
               "resolution": "exact"
             }
           ],
+          "targetKinds": [],
           "selectedSoFar": [
             "spare"
           ],
@@ -277,6 +278,9 @@
       "unknownHidden": 0,
       "unknownUnresolved": 0,
       "unknownDepthCap": 0,
+      "unknownPostGrantCap": 0,
+      "unknownFreeOperationCap": 0,
+      "unknownGrantFlowPartial": 0,
       "unknownNoPreviewDecision": 0,
       "unknownGated": 0,
       "unknownFailed": 0

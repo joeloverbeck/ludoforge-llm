@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
-  "archived_spec": "archive/specs/193-policy-vm-unsupported-feature-dispatch-restructure.md",
-  "last_ticket": "archive/tickets/193POLVMDISPRES-003.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "90b04d95d98d9cab00b94ecf5dcea80b9c1bd34c",
+  "originating_spec": "archive/specs/194-zobrist-decision-stack-digest-optimization.md",
+  "archived_spec": "archive/specs/194-zobrist-decision-stack-digest-optimization.md",
+  "last_ticket": "archive/tickets/194ZOBDECSTA-003.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "8de5bc0f6f8177f5edd34b30098d28bb7fbd3f3b",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 193 final archive complete; all same-family tickets are archived; retained untracked perf profiler byproducts are outside the checked-in deliverable set",
+  "owned_dirty_summary": "194ZOBDECSTA-003 and Spec 194 completed and archived in work commit 8de5bc0f6f8177f5edd34b30098d28bb7fbd3f3b; only unrelated perf-baseline byproducts remain after the state commit.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-303e6ab6c3-smoke.json, reports/perf-baseline/per-decision/",
-  "updated_at": "2026-05-24"
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-32e4d98e50-smoke.json, reports/perf-baseline/parity-drive-c4c92961fb-smoke.json, reports/perf-baseline/per-decision/",
+  "updated_at": "2026-05-25"
 }

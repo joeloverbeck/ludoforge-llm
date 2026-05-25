@@ -1,6 +1,6 @@
 # 195POLEVACON-002: Outer-state isolation architectural-invariant test for substructure-sharing wrapper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only addition under `packages/engine/test/architecture/`
@@ -46,7 +46,7 @@ The test must:
   - `encodedState`, `encodedStateLayout`, `encodedZoneIndexById` (assert identity equality before/after — same object reference).
   - `runtime` (identity equality).
   - `cacheBinding` (identity equality; reinforces the Spec 189 structural guarantee at the runtime level).
-  - `runtimeProviders` (identity equality).
+  - Non-completion `runtimeProviders` surfaces (`intrinsics`, `phaseSchedule`, `candidates`, `currentSurface`, `previewSurface`, `lookupSurface`) are identity-equal. The wrapper intentionally creates a fresh `completion` provider for the inner option, per `archive/tickets/195POLEVACON-001.md` Outcome, so the whole `runtimeProviders` object is not identity-equal.
   - The semantic caches documented in `archive/tickets/195POLEVACON-001.md` Outcome as lazy/private per context. Assert the outer cache identities and sizes are unchanged for any outer cache materialized before the wrapper evaluation; the inner wrapper must not populate or clear the outer's semantic caches.
 - **Inner evaluation**: exercise the different-microturn-option selector path that calls `withInnerMicroturnOption(microturnOption, selectorItemKey)`, passing a synthetic `SelectorEvalMicroturnOption` with a key that differs from the outer's current option. Run an expression through the wrapper path to exercise the private working state.
 - **Post-evaluation assertions**: every captured snapshot field passes the identity / size assertion per its sharing classification above. Any failure means the wrapper has accidentally allowed the inner to mutate caller-visible outer state — a Foundation #11 violation.
@@ -72,7 +72,7 @@ Add a small `it('preserves cacheBinding identity across outer→inner', ...)` bl
 
 ### Tests That Must Pass
 
-1. New test green: outer-context fields (encoded state, layout, zone-index map, runtime, cache-binding, runtime providers) identity-equal before and after inner-wrapper evaluation; outer semantic cache assertions match the wrapper's documented private-cache decision; wrapper `dispose()` does not clear outer caches.
+1. New test green: outer-context fields (encoded state, layout, zone-index map, runtime, cache-binding, non-completion runtime provider surfaces) identity-equal before and after inner-wrapper evaluation; the inner completion provider evaluates the inner option correctly; outer semantic cache assertions match the wrapper's documented private-cache decision; wrapper `dispose()` does not clear outer caches.
 2. Existing architectural invariants green: `packages/engine/test/architecture/policy-evaluation-context-constructor-invariant.test.ts`, `packages/engine/test/architecture/policy-eval-cache-binding-dedup.test.ts` — both must remain green to confirm this ticket does not regress the sibling guarantees.
 3. Existing suite: `pnpm -F @ludoforge/engine test`.
 
@@ -95,3 +95,25 @@ Add a small `it('preserves cacheBinding identity across outer→inner', ...)` bl
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js packages/engine/dist/test/architecture/policy-evaluation-context-constructor-invariant.test.js` (sibling invariants regression sweep)
 3. `pnpm turbo test --filter @ludoforge/engine`
 4. `pnpm turbo lint --filter @ludoforge/engine`
+
+## Outcome
+
+Completed on 2026-05-25.
+
+- Added `packages/engine/test/architecture/policy-evaluation-context-outer-state-isolation.test.ts` with the line-1 `// @test-class: architectural-invariant` marker and top-of-file sibling-test citations.
+- The new test constructs a synthetic policy-evaluation context, materializes outer semantic caches, exercises both the public wrapper path (`withInnerMicroturnOption`) and the different-microturn-option selector path (`evaluateSelectorItemExpr`), and asserts outer shared infrastructure plus private semantic-cache identities/sizes remain unchanged through evaluation and disposal.
+- The ticket was truth-corrected during implementation: `archive/tickets/195POLEVACON-001.md` intentionally creates a fresh inner `completion` provider while sharing non-completion provider surfaces. The test now asserts identity equality for the non-completion provider surfaces and verifies the inner completion provider evaluates the inner option correctly.
+- No production code changed; this was a test-only P2 proof for the already-landed P1 wrapper.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/architecture/policy-evaluation-context-outer-state-isolation.test.js` — passed.
+- `node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js packages/engine/dist/test/architecture/policy-evaluation-context-constructor-invariant.test.js` — passed.
+- `pnpm turbo test --filter @ludoforge/engine` — passed, 171/171 files.
+- `pnpm turbo lint --filter @ludoforge/engine` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `git diff --check -- archive/tickets/195POLEVACON-002.md` — passed after archival.
+- `git diff --no-index --check /dev/null packages/engine/test/architecture/policy-evaluation-context-outer-state-isolation.test.ts` — no whitespace diagnostics; exit code 1 is expected for no-index differences.
+
+Worktree note: existing unrelated `reports/perf-baseline/` byproducts remained untracked and unstaged.

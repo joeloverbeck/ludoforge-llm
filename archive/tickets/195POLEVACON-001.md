@@ -23,7 +23,7 @@
 1. **Extends the existing fast path**: the current code at lines 2026-2038 already implements substructure reuse for the same-microturn-option case via `return this.evaluateCompiledExpr(...)`. This ticket adds a third path between "reuse `this`" and "full per-call construction" — a wrapper that shares heavy substructure with `this` while overriding only the per-inner private state. Architecturally continuous with the existing optimization rather than a parallel mechanism.
 2. **Engine-agnostic** (Foundation #1): substructure-sharing applies to any GameDef whose authored policies use nested selectors with per-microturn-option completion variants. No game-specific identifiers, no per-game branching.
 3. **Preserves Spec 189's structural `cacheBinding` contract** (§4.3): inner inherits the outer's `cacheBinding` directly — no `resolvePolicyEvalCacheBinding` re-call. The silent-degradation class Spec 189 closed remains closed: if the outer binding is wrong, the inner inherits the wrong binding; the compile-time requirement gates both.
-4. **Foundation #11 immutability**: outer-context substructure is shared by reference but read-only from the inner perspective. Inner's private working state (overridden `completion`, scoped `currentSelectorItemKey`, any per-inner score accumulator) is allocated fresh per evaluation and disposed when the evaluation returns. The dispose discipline is asymmetric: inner disposes its private state only; outer disposal remains the responsibility of `policy-eval.ts:691`. Architectural-invariant test proving the isolation guarantee is authored in `tickets/195POLEVACON-002.md`.
+4. **Foundation #11 immutability**: outer-context substructure is shared by reference but read-only from the inner perspective. Inner's private working state (overridden `completion`, scoped `currentSelectorItemKey`, any per-inner score accumulator) is allocated fresh per evaluation and disposed when the evaluation returns. The dispose discipline is asymmetric: inner disposes its private state only; outer disposal remains the responsibility of `policy-eval.ts:691`. Architectural-invariant test proving the isolation guarantee is archived in `archive/tickets/195POLEVACON-002.md`.
 5. **No backwards-compat shims** (Foundation #14): the new wrapper path is additive. Existing call sites continue to work; the fall-through to per-call construction is preserved as the safe path for any future `cacheBinding`-mismatch case (none currently observed, but architecturally available per §7).
 
 ## What to Change
@@ -63,7 +63,7 @@ The wrapper's `dispose()` MUST clear only its private working state — never th
 - The wrapper's `dispose()` is a no-op for the inherited substructure; it only resets any per-inner private fields (scoped `currentSelectorItemKey` if not already restored, the overridden `input` synthetic, any score accumulator).
 - Calling `wrapper.dispose()` multiple times must be idempotent (no double-clear of any state).
 
-The architectural-invariant test in `tickets/195POLEVACON-002.md` proves the dispose discipline mechanically.
+The architectural-invariant test in `archive/tickets/195POLEVACON-002.md` proves the dispose discipline mechanically.
 
 ## Files to Touch
 
@@ -74,7 +74,7 @@ The architectural-invariant test in `tickets/195POLEVACON-002.md` proves the dis
 - Migration of `packages/engine/src/agents/microturn-option-eval.ts:121` (per-completion-option scoring) and `packages/engine/src/agents/plan-proposal.ts:513` (plan-posture evaluation) to the substructure-sharing mechanism — deferred to Spec 195-FOLLOWUP per §4.6 unless promoted at P3 measurement time.
 - Outer construction at `packages/engine/src/agents/policy-eval.ts:691` — cannot share substructure (it IS the outer).
 - Object pool / free-list pattern — gated on P3 measurement per §2 Non-Goals.
-- The architectural-invariant outer-state isolation test — authored in `tickets/195POLEVACON-002.md`.
+- The architectural-invariant outer-state isolation test — archived in `archive/tickets/195POLEVACON-002.md`.
 - Perf measurement re-capture (Spec 195 §8 P3) — deferred per the phase-gated decomposition; will be authored as a follow-up ticket once this ticket lands and real numbers are available.
 - Tightening or modifying any existing perf gate — no perf threshold changes in this ticket.
 
@@ -91,7 +91,7 @@ The architectural-invariant test in `tickets/195POLEVACON-002.md` proves the dis
 ### Invariants
 
 1. Inner evaluation via the wrapper produces byte-identical results to per-call construction — same encoded state, layout, runtime providers, `cacheBinding`. (Foundation #8 replay identity; proven transitively by the determinism corpus.)
-2. Outer-context substructure is read-only from the inner-evaluation perspective — no observable mutation through any wrapper path. (Foundation #11; full mechanical proof in `tickets/195POLEVACON-002.md`.)
+2. Outer-context substructure is read-only from the inner-evaluation perspective — no observable mutation through any wrapper path. (Foundation #11; full mechanical proof in `archive/tickets/195POLEVACON-002.md`.)
 3. `cacheBinding` is the same object across outer and inner — inherited by reference, not re-resolved via `resolvePolicyEvalCacheBinding`. (Spec 189 structural guarantee.)
 4. The wrapper's `dispose()` does NOT clear the outer's collection caches. (Dispose discipline contract.)
 
@@ -99,7 +99,7 @@ The architectural-invariant test in `tickets/195POLEVACON-002.md` proves the dis
 
 ### New/Modified Tests
 
-None new in this ticket — the optimization is covered transitively by the determinism corpus + existing architectural-invariant tests per the spec's §8 phase split. The dedicated outer-state isolation invariant is authored in `tickets/195POLEVACON-002.md`.
+None new in this ticket — the optimization is covered transitively by the determinism corpus + existing architectural-invariant tests per the spec's §8 phase split. The dedicated outer-state isolation invariant is archived in `archive/tickets/195POLEVACON-002.md`.
 
 ### Commands
 

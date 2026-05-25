@@ -252,6 +252,6 @@ P1 lands the mechanism + the line 2040 migration. P2 proves the isolation guaran
 Decomposed via `/spec-to-tickets` on 2026-05-25:
 
 - [`archive/tickets/195POLEVACON-001.md`](../archive/tickets/195POLEVACON-001.md) — COMPLETED: Inner-selector substructure-sharing wrapper at `policy-evaluation-core.ts:2040` (covers §8 P1)
-- [`tickets/195POLEVACON-002.md`](../tickets/195POLEVACON-002.md) — Outer-state isolation architectural-invariant test (covers §8 P2)
+- [`archive/tickets/195POLEVACON-002.md`](../archive/tickets/195POLEVACON-002.md) — COMPLETED: Outer-state isolation architectural-invariant test (covers §8 P2)
 
 P3 (perf witness re-capture) intentionally not ticketed in this run — phase-gated on P1's measured gain per §8 and the reassessment's recommendation. Author the P3 ticket (and any §4.6 follow-on-site promotion) once 195POLEVACON-001 lands and real measurements are available.

@@ -1,6 +1,6 @@
 # 195POLEVACON-001: Inner-selector substructure-sharing wrapper at policy-evaluation-core.ts:2040
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (introduce substructure-sharing wrapper; route the inner-selector fall-through through it)
@@ -110,3 +110,53 @@ None new in this ticket — the optimization is covered transitively by the dete
 5. `pnpm turbo test --filter @ludoforge/engine`
 6. `pnpm turbo typecheck --filter @ludoforge/engine`
 7. `pnpm turbo lint --filter @ludoforge/engine`
+
+## Outcome
+
+Completed on 2026-05-25.
+
+Implemented the P1 inner-selector allocation reduction in
+`packages/engine/src/agents/policy-evaluation-core.ts`:
+
+- Added `withInnerMicroturnOption(...)` and a shared-infrastructure constructor
+  path for the different-microturn-option selector fall-through.
+- Reused invariant runtime infrastructure by reference: encoded state layout,
+  encoded state, zone index map, runtime, `cacheBinding`, and non-completion
+  runtime provider surfaces.
+- Preserved completion correctness by creating a fresh completion provider for
+  the inner option, because the completion provider captures the option value
+  and option index.
+- Kept semantic caches private and lazy per context. During implementation, the
+  live code proved their keys do not encode every microturn-option field, so
+  sharing them by reference would risk cross-option contamination. This follows
+  the ticket's explicit per-cache decision clause while still eliminating the
+  heavy encoded-state/runtime-provider/zone-index allocation path.
+- Preserved wrapper disposal discipline: inner wrappers do not dispose shared
+  provider infrastructure; only owning outer contexts dispose their runtime
+  providers.
+
+Source-size deviation: `policy-evaluation-core.ts` was already over the
+repository guideline cap at 2872 lines and ended at 3007 lines. Per the 1-3-1
+checkpoint, the user approved recommended option 1: keep the tightly coupled
+implementation in the file for this ticket and record the source-size deferral
+instead of forcing a broader extraction into the P1 mechanism ticket.
+
+Command substitution: the literal ticket command
+`node --test packages/engine/dist/test/determinism/` failed because Node treated
+the directory as a module and raised `MODULE_NOT_FOUND`. The deterministic corpus
+was verified with the equivalent compiled-file glob
+`node --test packages/engine/dist/test/determinism/*.test.js`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after final source edit.
+- `node --test packages/engine/dist/test/architecture/policy-eval-cache-binding-dedup.test.js` — passed, 2 tests.
+- `node --test packages/engine/dist/test/architecture/policy-evaluation-context-constructor-invariant.test.js` — passed, 1 test.
+- `node --test packages/engine/dist/test/integration/perf-baseline-trajectory-identity.test.js` — passed, 6 tests.
+- `node --test packages/engine/dist/test/determinism/*.test.js` — passed, 97 tests across 34 suites.
+- `pnpm -F @ludoforge/engine test` — passed, 170/170 files.
+- `pnpm turbo typecheck --filter @ludoforge/engine` — passed.
+- `pnpm turbo lint --filter @ludoforge/engine` — passed.
+
+Untracked proof byproducts from the perf-baseline harness smoke were left
+unstaged under `reports/perf-baseline/`.

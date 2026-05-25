@@ -43,6 +43,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
+  createPolicyCompletionProvider,
   createPolicyRuntimeProviders,
   type PreviewOptionProjectedState,
   type PolicyRuntimeCandidate,
@@ -264,6 +265,15 @@ export interface CreatePolicyEvaluationContextInput {
   };
 }
 
+interface PolicyEvaluationContextSharedInfrastructure {
+  readonly runtimeProviders: PolicyRuntimeProviders;
+  readonly runtime: GameDefRuntime | undefined;
+  readonly encodedStateLayout: EncodedStateLayout;
+  readonly usesCanonicalEncodedStateLayout: boolean;
+  readonly encodedState: EncodedState | undefined;
+  readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
+}
+
 function resolveZoneTokenAggOwner(
   owner: AgentPolicyZoneTokenAggOwner,
   input: CreatePolicyEvaluationContextInput,
@@ -416,25 +426,29 @@ export function matchesZoneFilter(
 }
 
 export class PolicyEvaluationContext {
-  private readonly rootStateFeatureCache = new Map<string, PolicyValue>();
-  private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
-  private readonly aggregateCache = new Map<string, PolicyValue>();
-  private readonly selectorCache = new Map<string, SelectedSelectorView>();
-  private readonly strategyModuleActivationCache = new Map<string, StrategyModuleActivationView>();
-  private readonly strategyModuleEvaluationCache = new Map<string, StrategyModuleEvaluationView>();
-  private readonly guardrailWhenCache = new Map<string, PolicyValue>();
+  // Semantic caches stay per context and lazy because their keys do not encode
+  // every microturn-option field; inner wrappers share only invariant runtime
+  // infrastructure and get isolated caches to avoid cross-option contamination.
+  private rootStateFeatureCache: Map<string, PolicyValue> | undefined;
+  private candidateFeatureCache: Map<string, Map<string, PolicyValue>> | undefined;
+  private aggregateCache: Map<string, PolicyValue> | undefined;
+  private selectorCache: Map<string, SelectedSelectorView> | undefined;
+  private strategyModuleActivationCache: Map<string, StrategyModuleActivationView> | undefined;
+  private strategyModuleEvaluationCache: Map<string, StrategyModuleEvaluationView> | undefined;
+  private guardrailWhenCache: Map<string, PolicyValue> | undefined;
   private currentGuardrailRefView: GuardrailRefView | undefined;
-  private readonly turnShapeEvaluationCache = new Map<string, TurnShapeEvaluatorResult>();
-  private readonly strategicConditionCache = new Map<string, PolicyValue>();
-  private readonly relationshipCache = new Map<string, PolicyValue>();
-  private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
-  private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
+  private turnShapeEvaluationCache: Map<string, TurnShapeEvaluatorResult> | undefined;
+  private strategicConditionCache: Map<string, PolicyValue> | undefined;
+  private relationshipCache: Map<string, PolicyValue> | undefined;
+  private fallbackPolicyBytecodeCache: WeakMap<CompiledPolicyExpr, PolicyBytecode> | undefined;
+  private resolvedPreviewRefValues: Map<string, Map<string, number>> | undefined;
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private readonly runtime: GameDefRuntime | undefined;
   private readonly encodedStateLayout: EncodedStateLayout;
   private readonly usesCanonicalEncodedStateLayout: boolean;
   private readonly encodedState: EncodedState | undefined;
   private readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
+  private readonly ownsRuntimeProviders: boolean;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
   private transientZoneReadContext: { readonly stateHash: bigint; readonly context: ReadContext } | null = null;
   private currentCandidates: PolicyEvaluationCandidate[];
@@ -450,62 +464,197 @@ export class PolicyEvaluationContext {
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
     candidates: PolicyEvaluationCandidate[],
+    sharedInfrastructure?: PolicyEvaluationContextSharedInfrastructure,
   ) {
     this.currentCandidates = candidates;
     this.activeState = input.state;
-    const canonicalEncodedStateLayout = getPolicyEncodedStateLayout(input.def);
-    const { runtime, preEncoded } = resolvePolicyEvalCacheBinding(input.cacheBinding);
-    this.runtime = runtime;
-    this.encodedStateLayout = preEncoded?.layout ?? canonicalEncodedStateLayout;
-    this.usesCanonicalEncodedStateLayout = this.encodedStateLayout === canonicalEncodedStateLayout;
-    this.encodedState = preEncoded?.encoded ?? this.resolveEncodedState(input.state);
-    this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
-    this.runtimeProviders = createPolicyRuntimeProviders({
-      def: input.def,
-      state: input.state,
-      playerId: input.playerId,
-      seatId: input.seatId,
-      trustedMoveIndex: input.trustedMoveIndex,
-      ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
-      catalog: input.catalog,
-      ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
-      runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
-      ...(this.runtime === undefined ? {} : { runtime: this.runtime }),
-      ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
-      encodedStateLayout: this.encodedStateLayout,
-      ...(this.encodedState === undefined ? {} : { encodedState: this.encodedState }),
-      ...(input.completion === undefined ? {} : { completion: input.completion }),
-    });
+    this.ownsRuntimeProviders = sharedInfrastructure === undefined;
+    if (sharedInfrastructure !== undefined) {
+      this.runtime = sharedInfrastructure.runtime;
+      this.encodedStateLayout = sharedInfrastructure.encodedStateLayout;
+      this.usesCanonicalEncodedStateLayout = sharedInfrastructure.usesCanonicalEncodedStateLayout;
+      this.encodedState = sharedInfrastructure.encodedState;
+      this.encodedZoneIndexById = sharedInfrastructure.encodedZoneIndexById;
+      const sharedProviders = sharedInfrastructure.runtimeProviders;
+      const runtimeProviders = {
+        intrinsics: sharedProviders.intrinsics,
+        phaseSchedule: sharedProviders.phaseSchedule,
+        candidates: sharedProviders.candidates,
+        currentSurface: sharedProviders.currentSurface,
+        previewSurface: sharedProviders.previewSurface,
+        lookupSurface: sharedProviders.lookupSurface,
+      };
+      this.runtimeProviders = input.completion === undefined
+        ? { ...runtimeProviders, dispose() {} }
+        : {
+            ...runtimeProviders,
+            completion: createPolicyCompletionProvider(
+              input.completion.request,
+              input.completion.optionValue,
+              input.completion.optionIndex,
+            ),
+            dispose() {},
+          };
+    } else {
+      const canonicalEncodedStateLayout = getPolicyEncodedStateLayout(input.def);
+      const { runtime, preEncoded } = resolvePolicyEvalCacheBinding(input.cacheBinding);
+      this.runtime = runtime;
+      this.encodedStateLayout = preEncoded?.layout ?? canonicalEncodedStateLayout;
+      this.usesCanonicalEncodedStateLayout = this.encodedStateLayout === canonicalEncodedStateLayout;
+      this.encodedState = preEncoded?.encoded ?? this.resolveEncodedState(input.state);
+      this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
+      this.runtimeProviders = createPolicyRuntimeProviders({
+        def: input.def,
+        state: input.state,
+        playerId: input.playerId,
+        seatId: input.seatId,
+        trustedMoveIndex: input.trustedMoveIndex,
+        ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
+        catalog: input.catalog,
+        ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
+        runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
+        ...(this.runtime === undefined ? {} : { runtime: this.runtime }),
+        ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
+        encodedStateLayout: this.encodedStateLayout,
+        ...(this.encodedState === undefined ? {} : { encodedState: this.encodedState }),
+        ...(input.completion === undefined ? {} : { completion: input.completion }),
+      });
+    }
   }
 
   dispose(): void {
-    this.rootStateFeatureCache.clear();
-    this.candidateFeatureCache.clear();
-    this.aggregateCache.clear();
-    this.selectorCache.clear();
-    this.strategyModuleActivationCache.clear();
-    this.strategyModuleEvaluationCache.clear();
-    this.guardrailWhenCache.clear();
+    this.rootStateFeatureCache?.clear();
+    this.candidateFeatureCache?.clear();
+    this.aggregateCache?.clear();
+    this.selectorCache?.clear();
+    this.strategyModuleActivationCache?.clear();
+    this.strategyModuleEvaluationCache?.clear();
+    this.guardrailWhenCache?.clear();
     this.currentGuardrailRefView = undefined;
-    this.turnShapeEvaluationCache.clear();
-    this.strategicConditionCache.clear();
-    this.relationshipCache.clear();
-    this.resolvedPreviewRefValues.clear();
+    this.turnShapeEvaluationCache?.clear();
+    this.strategicConditionCache?.clear();
+    this.relationshipCache?.clear();
+    this.resolvedPreviewRefValues?.clear();
     this.transientStateFeatureCache?.cache.clear();
     this.transientStateFeatureCache = null;
     this.transientZoneReadContext = null;
     this.currentCandidates = [];
     this.currentSeatContext = undefined;
     this.currentSeatMatrixContext = undefined;
-    this.runtimeProviders.dispose();
+    if (this.ownsRuntimeProviders) {
+      this.runtimeProviders.dispose();
+    }
   }
 
   invalidateAggregates(): void {
-    this.aggregateCache.clear();
-    this.selectorCache.clear();
-    this.strategyModuleEvaluationCache.clear();
-    this.guardrailWhenCache.clear();
-    this.turnShapeEvaluationCache.clear();
+    this.aggregateCache?.clear();
+    this.selectorCache?.clear();
+    this.strategyModuleEvaluationCache?.clear();
+    this.guardrailWhenCache?.clear();
+    this.turnShapeEvaluationCache?.clear();
+  }
+
+  private rootStateFeatures(): Map<string, PolicyValue> {
+    this.rootStateFeatureCache ??= new Map<string, PolicyValue>();
+    return this.rootStateFeatureCache;
+  }
+
+  private candidateFeatures(): Map<string, Map<string, PolicyValue>> {
+    this.candidateFeatureCache ??= new Map<string, Map<string, PolicyValue>>();
+    return this.candidateFeatureCache;
+  }
+
+  private aggregates(): Map<string, PolicyValue> {
+    this.aggregateCache ??= new Map<string, PolicyValue>();
+    return this.aggregateCache;
+  }
+
+  private selectors(): Map<string, SelectedSelectorView> {
+    this.selectorCache ??= new Map<string, SelectedSelectorView>();
+    return this.selectorCache;
+  }
+
+  private strategyModuleActivations(): Map<string, StrategyModuleActivationView> {
+    this.strategyModuleActivationCache ??= new Map<string, StrategyModuleActivationView>();
+    return this.strategyModuleActivationCache;
+  }
+
+  private strategyModuleEvaluations(): Map<string, StrategyModuleEvaluationView> {
+    this.strategyModuleEvaluationCache ??= new Map<string, StrategyModuleEvaluationView>();
+    return this.strategyModuleEvaluationCache;
+  }
+
+  private guardrailWhens(): Map<string, PolicyValue> {
+    this.guardrailWhenCache ??= new Map<string, PolicyValue>();
+    return this.guardrailWhenCache;
+  }
+
+  private turnShapeEvaluations(): Map<string, TurnShapeEvaluatorResult> {
+    this.turnShapeEvaluationCache ??= new Map<string, TurnShapeEvaluatorResult>();
+    return this.turnShapeEvaluationCache;
+  }
+
+  private strategicConditions(): Map<string, PolicyValue> {
+    this.strategicConditionCache ??= new Map<string, PolicyValue>();
+    return this.strategicConditionCache;
+  }
+
+  private relationships(): Map<string, PolicyValue> {
+    this.relationshipCache ??= new Map<string, PolicyValue>();
+    return this.relationshipCache;
+  }
+
+  private fallbackPolicyBytecodes(): WeakMap<CompiledPolicyExpr, PolicyBytecode> {
+    this.fallbackPolicyBytecodeCache ??= new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
+    return this.fallbackPolicyBytecodeCache;
+  }
+
+  private resolvedPreviewValues(): Map<string, Map<string, number>> {
+    this.resolvedPreviewRefValues ??= new Map<string, Map<string, number>>();
+    return this.resolvedPreviewRefValues;
+  }
+
+  private sharedInfrastructure(): PolicyEvaluationContextSharedInfrastructure {
+    return {
+      runtimeProviders: this.runtimeProviders,
+      runtime: this.runtime,
+      encodedStateLayout: this.encodedStateLayout,
+      usesCanonicalEncodedStateLayout: this.usesCanonicalEncodedStateLayout,
+      encodedState: this.encodedState,
+      encodedZoneIndexById: this.encodedZoneIndexById,
+    };
+  }
+
+  private withInnerMicroturnOption(
+    microturnOption: SelectorEvalMicroturnOption,
+    selectorItemKey: string | undefined,
+  ): PolicyEvaluationContext {
+    const input: CreatePolicyEvaluationContextInput = {
+      def: this.input.def,
+      state: this.activeState,
+      playerId: this.input.playerId,
+      seatId: this.input.seatId,
+      catalog: this.input.catalog,
+      parameterValues: this.input.parameterValues,
+      trustedMoveIndex: this.input.trustedMoveIndex,
+      ...(this.input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: this.input.phase1ActionPreviewIndex }),
+      ...(this.input.previewDependencies === undefined ? {} : { previewDependencies: this.input.previewDependencies }),
+      cacheBinding: this.input.cacheBinding,
+      ...(this.input.traceLevel === undefined ? {} : { traceLevel: this.input.traceLevel }),
+      completion: {
+        request: this.input.completion!.request,
+        optionValue: microturnOption.value,
+        optionIndex: microturnOption.index,
+      },
+      ...(this.input.selectorMicroturnOptions === undefined ? {} : { selectorMicroturnOptions: this.input.selectorMicroturnOptions }),
+      ...(selectorItemKey === undefined ? {} : { selectorItemKey }),
+    };
+
+    return new PolicyEvaluationContext(
+      input,
+      this.currentCandidates,
+      this.activeState === this.input.state ? this.sharedInfrastructure() : undefined,
+    );
   }
 
   setCurrentCandidates(candidates: PolicyEvaluationCandidate[]): void {
@@ -531,12 +680,13 @@ export class PolicyEvaluationContext {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown guardrail "${guardrailId}".`, { guardrailId });
     }
     const cacheKey = `${guardrailId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
-    const cached = this.guardrailWhenCache.get(cacheKey);
-    if (cached !== undefined || this.guardrailWhenCache.has(cacheKey)) {
+    const cache = this.guardrailWhens();
+    const cached = cache.get(cacheKey);
+    if (cached !== undefined || cache.has(cacheKey)) {
       return cached;
     }
     const value = this.evaluateCompiledExpr(guardrail.when, candidate);
-    this.guardrailWhenCache.set(cacheKey, value);
+    cache.set(cacheKey, value);
     return value;
   }
 
@@ -548,12 +698,12 @@ export class PolicyEvaluationContext {
   }
 
   getEvaluatedGuardrailWhenCacheSize(): number {
-    return this.guardrailWhenCache.size;
+    return this.guardrailWhenCache?.size ?? 0;
   }
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
     const result: Record<string, number | string | boolean> = {};
-    for (const [id, value] of this.rootStateFeatureCache) {
+    for (const [id, value] of this.rootStateFeatureCache ?? []) {
       if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
         result[id] = value;
       }
@@ -562,17 +712,17 @@ export class PolicyEvaluationContext {
   }
 
   getEvaluatedSelectorCacheSize(): number {
-    return this.selectorCache.size;
+    return this.selectorCache?.size ?? 0;
   }
 
   getEvaluatedStrategyModuleActivationCacheSize(): number {
-    return this.strategyModuleActivationCache.size;
+    return this.strategyModuleActivationCache?.size ?? 0;
   }
 
   getEvaluatedSelectorTraces(traceLevel: 'summary' | 'verbose' = 'summary'): readonly PolicySelectorTraceEntry[] {
     const seen = new Set<string>();
     const entries: PolicySelectorTraceEntry[] = [];
-    for (const [, view] of [...this.selectorCache.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+    for (const [, view] of [...(this.selectorCache?.entries() ?? [])].sort(([left], [right]) => left.localeCompare(right))) {
       if (seen.has(view.selectorId)) {
         continue;
       }
@@ -587,7 +737,7 @@ export class PolicyEvaluationContext {
     selectedCandidate?: PolicyEvaluationCandidate,
   ): ReturnType<typeof buildStrategyModuleTrace> {
     return buildStrategyModuleTrace(
-      this.strategyModuleEvaluationCache.values(),
+      this.strategyModuleEvaluationCache?.values() ?? [],
       this.input.catalog,
       traceLevel,
       selectedCandidate?.stableMoveKey,
@@ -601,7 +751,7 @@ export class PolicyEvaluationContext {
     const selectedStableMoveKey = selectedCandidate?.stableMoveKey;
     const results: TurnShapeEvaluatorResult[] = [];
     const seen = new Set<string>();
-    for (const [cacheKey, result] of [...this.turnShapeEvaluationCache.entries()].sort(([left], [right]) => {
+    for (const [cacheKey, result] of [...(this.turnShapeEvaluationCache?.entries() ?? [])].sort(([left], [right]) => {
       if (left < right) return -1;
       if (left > right) return 1;
       return 0;
@@ -628,10 +778,11 @@ export class PolicyEvaluationContext {
   }
 
   evaluateCandidateFeature(candidate: PolicyEvaluationCandidate, featureId: string): PolicyValue {
-    let candidateCache = this.candidateFeatureCache.get(candidate.stableMoveKey);
+    const cache = this.candidateFeatures();
+    let candidateCache = cache.get(candidate.stableMoveKey);
     if (candidateCache === undefined) {
       candidateCache = new Map<string, PolicyValue>();
-      this.candidateFeatureCache.set(candidate.stableMoveKey, candidateCache);
+      cache.set(candidate.stableMoveKey, candidateCache);
     }
     if (candidateCache.has(featureId)) {
       return candidateCache.get(featureId);
@@ -646,13 +797,14 @@ export class PolicyEvaluationContext {
   }
 
   setCandidateFeatureValue(candidate: PolicyEvaluationCandidate, featureId: string, value: PolicyValue): void {
-    let candidateCache = this.candidateFeatureCache.get(candidate.stableMoveKey);
+    const cache = this.candidateFeatures();
+    let candidateCache = cache.get(candidate.stableMoveKey);
     if (candidateCache === undefined) {
       candidateCache = new Map<string, PolicyValue>();
-      this.candidateFeatureCache.set(candidate.stableMoveKey, candidateCache);
+      cache.set(candidate.stableMoveKey, candidateCache);
     }
     candidateCache.set(featureId, value);
-    this.aggregateCache.clear();
+    this.aggregateCache?.clear();
   }
 
   evaluatePreviewSurfaceRef(candidate: PolicyEvaluationCandidate, ref: CompiledSurfaceRef): PolicyValue {
@@ -667,17 +819,18 @@ export class PolicyEvaluationContext {
     if (typeof value !== 'number') {
       return;
     }
-    let candidateValues = this.resolvedPreviewRefValues.get(candidate.stableMoveKey);
+    const cache = this.resolvedPreviewValues();
+    let candidateValues = cache.get(candidate.stableMoveKey);
     if (candidateValues === undefined) {
       candidateValues = new Map<string, number>();
-      this.resolvedPreviewRefValues.set(candidate.stableMoveKey, candidateValues);
+      cache.set(candidate.stableMoveKey, candidateValues);
     }
     candidateValues.set(refId, value);
     this.recordSeatMatrixCell(candidate, refId, { status: 'ready', value });
   }
 
   getResolvedPreviewRefValue(candidate: PolicyEvaluationCandidate, refId: string): number | undefined {
-    return this.resolvedPreviewRefValues.get(candidate.stableMoveKey)?.get(refId);
+    return this.resolvedPreviewRefValues?.get(candidate.stableMoveKey)?.get(refId);
   }
 
   hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
@@ -705,8 +858,9 @@ export class PolicyEvaluationContext {
   }
 
   evaluateAggregate(aggregateId: string): PolicyValue {
-    if (this.aggregateCache.has(aggregateId)) {
-      return this.aggregateCache.get(aggregateId);
+    const cache = this.aggregates();
+    if (cache.has(aggregateId)) {
+      return cache.get(aggregateId);
     }
     const aggregate = this.input.catalog.compiled.candidateAggregates[aggregateId];
     if (aggregate === undefined) {
@@ -773,7 +927,7 @@ export class PolicyEvaluationContext {
         );
     }
 
-    this.aggregateCache.set(aggregateId, value);
+    cache.set(aggregateId, value);
     return value;
   }
 
@@ -1187,7 +1341,7 @@ export class PolicyEvaluationContext {
     if (this.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
       return this.runtime.policyBytecodeCache;
     }
-    return this.fallbackPolicyBytecodeCache;
+    return this.fallbackPolicyBytecodes();
   }
 
   private resolveEncodedState(state: GameState): EncodedState | undefined {
@@ -1937,8 +2091,8 @@ export class PolicyEvaluationContext {
       ...(this.input.completion === undefined ? {} : { completionRequestType: this.input.completion.request.type }),
       actionTagIndex: this.input.def.actionTagIndex,
       ...(this.input.previewOption === undefined ? {} : { previewResolvedRefs: this.input.previewOption.resolvedRefs }),
-      activationCache: this.strategyModuleActivationCache,
-      evaluationCache: this.strategyModuleEvaluationCache,
+      activationCache: this.strategyModuleActivations(),
+      evaluationCache: this.strategyModuleEvaluations(),
       evaluateExpr: (expr, exprCandidate) => this.evaluateCompiledExpr(expr, exprCandidate),
       evaluateSelector: (selectorId, selectorCandidate) => this.evaluateSelectorView(selectorId, selectorCandidate),
     });
@@ -1982,7 +2136,8 @@ export class PolicyEvaluationContext {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown selector "${selectorId}".`, { selectorId });
     }
     const cacheKey = `${selectorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
-    const cached = this.selectorCache.get(cacheKey);
+    const cache = this.selectors();
+    const cached = cache.get(cacheKey);
     if (cached !== undefined) {
       return cached;
     }
@@ -2009,7 +2164,7 @@ export class PolicyEvaluationContext {
         ...(fallback.value === undefined ? {} : { value: fallback.value }),
       }),
     });
-    this.selectorCache.set(cacheKey, view);
+    cache.set(cacheKey, view);
     return view;
   }
 
@@ -2037,30 +2192,7 @@ export class PolicyEvaluationContext {
       }
     }
 
-    const context = new PolicyEvaluationContext({
-      def: this.input.def,
-      state: this.activeState,
-      playerId: this.input.playerId,
-      seatId: this.input.seatId,
-      catalog: this.input.catalog,
-      parameterValues: this.input.parameterValues,
-      trustedMoveIndex: this.input.trustedMoveIndex,
-      ...(this.input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: this.input.phase1ActionPreviewIndex }),
-      ...(this.input.previewDependencies === undefined ? {} : { previewDependencies: this.input.previewDependencies }),
-      cacheBinding: this.input.cacheBinding,
-      ...(this.input.traceLevel === undefined ? {} : { traceLevel: this.input.traceLevel }),
-      ...(this.input.completion === undefined || microturnOption === undefined
-        ? {}
-        : {
-            completion: {
-              request: this.input.completion.request,
-              optionValue: microturnOption.value,
-              optionIndex: microturnOption.index,
-            },
-          }),
-      ...(this.input.selectorMicroturnOptions === undefined ? {} : { selectorMicroturnOptions: this.input.selectorMicroturnOptions }),
-      ...(selectorItemKey === undefined ? {} : { selectorItemKey }),
-    }, this.currentCandidates);
+    const context = this.withInnerMicroturnOption(microturnOption, selectorItemKey);
     try {
       return context.evaluateCompiledExpr(expr, candidate);
     } finally {
@@ -2099,8 +2231,9 @@ export class PolicyEvaluationContext {
     field: 'satisfied' | 'proximity',
   ): PolicyValue {
     const cacheKey = `${conditionId}.${field}`;
-    if (this.strategicConditionCache.has(cacheKey)) {
-      return this.strategicConditionCache.get(cacheKey);
+    const cache = this.strategicConditions();
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey);
     }
 
     const condition = this.input.catalog.compiled.strategicConditions[conditionId];
@@ -2128,7 +2261,7 @@ export class PolicyEvaluationContext {
       }
     }
 
-    this.strategicConditionCache.set(cacheKey, value);
+    cache.set(cacheKey, value);
     return value;
   }
 
@@ -2137,11 +2270,12 @@ export class PolicyEvaluationContext {
     field: Extract<CompiledAgentPolicyRef, { readonly kind: 'relationship' }>['field'],
   ): PolicyValue {
     const cacheKey = `${role}.${field}`;
-    if (this.relationshipCache.has(cacheKey)) {
-      return this.relationshipCache.get(cacheKey);
+    const cache = this.relationships();
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey);
     }
     const value = resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, field);
-    this.relationshipCache.set(cacheKey, value);
+    cache.set(cacheKey, value);
     return value;
   }
 
@@ -2216,7 +2350,8 @@ export class PolicyEvaluationContext {
     candidate: PolicyEvaluationCandidate | undefined,
   ): TurnShapeEvaluatorResult {
     const cacheKey = `${evaluatorId}:${candidate?.stableMoveKey ?? '__state__'}:${this.input.previewOption === undefined ? 'current' : 'preview'}`;
-    const cached = this.turnShapeEvaluationCache.get(cacheKey);
+    const cache = this.turnShapeEvaluations();
+    const cached = cache.get(cacheKey);
     if (cached !== undefined) {
       return cached;
     }
@@ -2242,11 +2377,11 @@ export class PolicyEvaluationContext {
       previewStatus: objectiveResult.previewStatus,
       ...this.evaluateTurnShapeDemotePenalty(evaluatorId, evaluator, objectiveResult.previewStatus, candidate),
     };
-    this.turnShapeEvaluationCache.set(cacheKey, provisional);
+    cache.set(cacheKey, provisional);
     const minimumImpactSatisfied = objectiveResult.previewStatus === 'ready'
       && this.evaluateCompiledExpr(evaluator.minimumImpact, candidate) === true;
     const finalResult = { ...provisional, minimumImpactSatisfied };
-    this.turnShapeEvaluationCache.set(cacheKey, finalResult);
+    cache.set(cacheKey, finalResult);
     const hasPreviewOutcome = candidate === undefined || this.input.previewOption !== undefined
       ? hadPreviewOutcome
       : this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
@@ -2748,7 +2883,7 @@ export class PolicyEvaluationContext {
 
   private getStateFeatureCache(state: GameState): Map<string, PolicyValue> {
     if (state.stateHash === this.input.state.stateHash) {
-      return this.rootStateFeatureCache;
+      return this.rootStateFeatures();
     }
     if (this.transientStateFeatureCache?.stateHash === state.stateHash) {
       return this.transientStateFeatureCache.cache;

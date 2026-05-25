@@ -76,6 +76,26 @@ The first sandboxed `parity-drive` run failed after nested profiler output parsi
 **Ticket 003 (P2) disposition**: Close-Declined per the gate condition in `archive/tickets/193POLVMDISPRES-003.md`; the P1 typed-verdict refactor already meets the per-spec threshold.
 **Spec 192 §4.5 escalation trigger**: does not fire for Spec 193. The dispatch-restructure remediation achieved >=10% individual measured gain on all five regressed workloads, so this spec does not require immediate `Bytecode-VM expansion` or `WASM expansion` escalation.
 
+## Spec 195 P3 Measurement (2026-05-25)
+
+**HEAD SHA**: `de6d82e538`
+**Workloads measured**: 5 (regressed lanes; flat wasm-equivalence not re-measured)
+**Command**: `node packages/engine/scripts/perf-baseline/run-baseline.mjs <workload>` after `pnpm turbo build`
+
+The first sandboxed `parity-drive` run failed after nested profiler output parsing with `Unexpected end of JSON input`; the exact command was rerun outside the sandbox, and all five accepted workload captures below completed with empty `caveats` arrays. The `PolicyEvaluationContext` and GC columns compare post-Spec-193 JSON summaries (`*-a8f00d0d22.json`) against the post-Spec-195 summaries below. For workloads where `PolicyEvaluationContext` no longer appears in `cpuProfTop30SelfTime`, the table records the visible top-30 lower-bound reduction and the post-195 top-30 floor.
+
+| Workload | Post-193 median (ms) | Post-195 median (ms) | Post CV | Wall-clock reduction | PolicyEvaluationContext self-time reduction | GC self-time reduction | Threshold met (>=5% wall-clock incl. GC)? | JSON trace |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| `parity-drive` | 110,937 | 86,690 | 0.7% | 21.9% | 8,240 ms (7.6% -> 0.3%) | 5,695 ms (13.7% -> 10.8%) | Yes | `reports/perf-baseline/parity-drive-de6d82e538.json` |
+| `bounded-termination-1002` | 444,757 | 349,650 | 2.5% | 21.4% | 31,560 ms (7.5% -> 0.3%) | 17,182 ms (14.9% -> 12.8%) | Yes | `reports/perf-baseline/bounded-termination-1002-de6d82e538.json` |
+| `diagnose-parity-runGame-1001` | 233,019 | 197,858 | 1.6% | 15.1% | >=15,888 ms (6.9% -> below top-30, <564 ms per entry) | 12,376 ms (14.6% -> 11.8%) | Yes | `reports/perf-baseline/diagnose-parity-runGame-1001-de6d82e538.json` |
+| `policy-preview-parity-arvn-1008` | 200,209 | 141,823 | 0.6% | 29.2% | 14,310 ms (7.0% -> 0.3%) | 18,887 ms (16.0% -> 10.1%) | Yes | `reports/perf-baseline/policy-preview-parity-arvn-1008-de6d82e538.json` |
+| `arvn-tournament-parallel` | 204,947 | 145,626 | 1.7% | 28.9% | >=9,130 ms (4.7% -> below top-30, <233 ms per entry) | 9,918 ms (9.8% -> 6.8%) | Yes | `reports/perf-baseline/arvn-tournament-parallel-de6d82e538.json` |
+
+**Per-spec acceptance threshold**: met. Every measured regressed workload exceeds the >=5% individual wall-clock reduction threshold, and every accepted JSON has an empty `caveats` array with CV below the Spec 192 15% noise threshold.
+**§4.6 follow-on-site disposition**: No follow-up needed for the current Spec 195 acceptance gate. The line-2040 substructure-sharing site produced 15.1% to 29.2% individual wall-clock reductions across all five heavy plan-primary workloads, and visible `PolicyEvaluationContext` self-time either fell to 0.3% of profile total time or dropped below the top-30 self-time table. The deferred `microturn-option-eval.ts:121` and `plan-proposal.ts:513` sites remain potential future optimization targets only if a later performance campaign establishes a new gap; this P3 verdict does not promote them to P4 or open Spec 195-FOLLOWUP.
+**Spec 192 §4.5 escalation trigger**: does not fire for Spec 195. The allocator-reduction remediation achieved >=10% individual measured gain on all five regressed workloads, so this spec does not require immediate `Bytecode-VM expansion` or `WASM expansion` escalation.
+
 ## Stop-Criterion + Escalation-Trigger Evaluation
 
 - **Per-finding floor**: satisfied. Specs 193 and 194 exceed 5% in multiple regressed workloads. Spec 195 exceeds 5% in the strongest affected workloads and is retained because its adjacent GC burden is material in the same HEAD profiles. Sub-floor cache-stringify findings remain appendix-only.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel/zobrist.ts` (encoded-surface reduction, version salt bump), new architectural-invariant test, replay-corpus stateHash re-bless across all pinned fixtures and snapshots
-**Deps**: `archive/tickets/194ZOBDECSTA-001.md`
+**Deps**: `archive/tickets/194ZOBDECSTA-001.md`, `tickets/194ZOBDECSTA-002A.md`
 
 ## Problem
 
@@ -36,6 +36,7 @@ The Phase 1 evidence (`reports/perf-baseline/zobrist-residual-cost-2026-05-25.md
 7. **New architectural-invariant test target**: `packages/engine/test/architecture/zobrist-canonical-key-byte-identity.test.ts` per spec §9. Target directory exists (`packages/engine/test/architecture/`); marker required: `// @test-class: architectural-invariant`.
 8. **Spec 80 incremental contract preservation**: `recomputeDecisionStackFrameDigest` (`zobrist.ts:206-209`) and `digestDecisionStackFrame` (`zobrist.ts:211-245`) share `encodeDecisionStackFrameDigestInput`; both paths receive the reduction uniformly, so the incremental update path produces the same digest as a full recompute at the new encoding by construction (Spec 80 contract preserved).
 9. **No WASM-side migration**: verified — `packages/engine-wasm/policy-vm/` contains no Zobrist routine. The canonical key is TS-only and the salt bump applies uniformly.
+10. **Replay-identity prerequisite inserted 2026-05-25**: A Foundations reassessment after the first implementation attempt rejected closing this canonical hash migration without the full replay-identity proof. The active determinism lane and focused `spec-140-replay-identity.test.js` replacement probes timed out with only `TAP version 13`; the same 600s focused timeout reproduced in a clean `HEAD` baseline worktree, proving the timeout is pre-existing but still blocking under Foundations #8 and #16. New prerequisite `tickets/194ZOBDECSTA-002A.md` owns restoring a citeable Spec 140 replay-identity proof before this ticket resumes.
 
 ## Architecture Check
 

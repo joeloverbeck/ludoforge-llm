@@ -1,6 +1,6 @@
 # 194ZOBDIGEST-001: Phase 1 — Zobrist residual-cost capture and report
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign tooling + report only; the six hot-path counters this ticket consumes already exist in `packages/engine/src/kernel/zobrist.ts`
@@ -113,3 +113,50 @@ Pure observation cannot regress these; the verification confirms the contract.
 3. Verify zero engine source drift: `git diff packages/engine/src/ packages/engine/test/` — must be empty.
 4. Verify existing test suites green: `pnpm -F @ludoforge/engine run test`.
 5. Lint + typecheck (project canonical): `pnpm turbo lint typecheck`.
+
+## Outcome
+
+Completed on 2026-05-25.
+
+Changed:
+
+- Added `campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs`, an observation-only capture script that runs the five regressed FITL workload shapes once with `ENGINE_HOT_PATH_PROFILE=1` and once without profiling, asserts non-zero Zobrist hot-path counters, and renders the residual-cost report.
+- Added the current Phase 1 report at `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`, generated at HEAD `0003afbc8b`.
+- No `packages/engine/src/` or `packages/engine/test/` source drift was introduced by this ticket.
+
+Report result:
+
+- Aggregate identity-cache hit rate: 67.28%.
+- Aggregate content-cache hit rate after identity miss: 1.05%.
+- Aggregate encode-call rate: 32.72%.
+- Aggregate mean encoded chars per miss: 23647.62.
+- Aggregate encode total: 44355.641 ms.
+- Aggregate FNV-1a digest total: 82289.213 ms.
+- H1/H2/H3 verdicts: `refined`, `refined`, `refined`.
+- Exclusive Phase 2 lever selected by the report: `2B - Encoded-surface reduction`.
+
+Generated artifact provenance:
+
+- artifact path(s): `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`
+- generation command: `node campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs`
+- canonical inputs: current HEAD `0003afbc8b`, `data/games/fire-in-the-lake.game-spec.md`, the five Spec 194 workload definitions embedded in `campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs`, and the existing hot-path counters in `packages/engine/src/kernel/zobrist.ts`
+- expected refresh reason: current-head Phase 1 evidence after the `194ZOBDIGEST-000/000A/000B` determinism prerequisites restored the replay-identity proof lane
+- generator durability: retained generator: `campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs`
+- hygiene proof: `git diff --no-index --check /dev/null reports/perf-baseline/zobrist-residual-cost-2026-05-25.md` reported no whitespace diagnostics; `git diff --check` passed for edited tracked files
+
+Verification:
+
+- `pnpm turbo build` — passed from cache.
+- `node campaigns/fitl-perf-optimization/capture-zobrist-residual-cost.mjs` — passed; wrote `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md` with all five workload rows populated and final state hashes matching between profiled and unprofiled runs.
+- `git diff packages/engine/src/ packages/engine/test/` — empty.
+- `pnpm -F @ludoforge/engine run test:determinism` — passed, 31/31 files.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/zobrist-frame-digest-cache-equivalence.test.js` — passed, 4 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/perf-baseline-trajectory-identity.test.js` — passed, 6 tests.
+- `pnpm -F @ludoforge/engine run test` — passed, 169/169 files.
+- `pnpm turbo lint typecheck` — passed from cache, 5/5 tasks.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2507 archived tickets.
+
+Deferred:
+
+- Phase 2 lever implementation is out of scope for this ticket. A future `/spec-to-tickets` invocation should decompose the selected `2B - Encoded-surface reduction` lever and include the field-irrelevance audit, kernel-version/reproducibility obligations, and replay-corpus proof required by Spec 194.
+- Phase 3 perf witness recapture remains gated on the Phase 2 result.

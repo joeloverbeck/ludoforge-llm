@@ -48,7 +48,7 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Return to the blocked prerequisites
 
-After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` and `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so they can finish their acceptance lanes, then return to `tickets/194ZOBDIGEST-001.md`.
+After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md` and `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so they can finish their acceptance lanes, then return to `archive/tickets/194ZOBDIGEST-001.md`.
 
 ## Files to Touch
 

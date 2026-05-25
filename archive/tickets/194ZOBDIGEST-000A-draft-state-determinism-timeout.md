@@ -49,7 +49,7 @@ Choose the narrow repair based on diagnosis:
 
 ### 3. Return to the blocked prerequisite
 
-After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so it can finish its acceptance lane, then return to `tickets/194ZOBDIGEST-001.md`.
+After this ticket's proof is green, update `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md` so it can finish its acceptance lane, then return to `archive/tickets/194ZOBDIGEST-001.md`.
 
 ## Files to Touch
 

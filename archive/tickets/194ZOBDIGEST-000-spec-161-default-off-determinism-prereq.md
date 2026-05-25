@@ -57,7 +57,7 @@ After the focused Spec 161 test is green and `archive/tickets/194ZOBDIGEST-000A-
 - `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.ts` (possible modify)
 - `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json` (possible modify only if diagnosis proves legitimate canonical trace evolution)
 - `packages/engine/src/` (possible narrow modify only if diagnosis proves a production default-off behavior bug)
-- `tickets/194ZOBDIGEST-001.md` (modify after prerequisite completion only if closeout proof text needs refresh)
+- `archive/tickets/194ZOBDIGEST-001.md` (Phase 1 closeout completed after prerequisite completion)
 
 ## Out of Scope
 

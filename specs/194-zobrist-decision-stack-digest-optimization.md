@@ -167,7 +167,7 @@ Capture script runs each workload under `ENGINE_HOT_PATH_PROFILE=1` → existing
 
 Phase 1 introduces zero canonical-key risk; instrumentation is observation-only.
 
-**Prerequisites completed (2026-05-25)**: Phase 1 terminal closeout was blocked by three Foundations-aligned determinism prerequisites, now archived at `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`, and `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`. The replay-identity corpus is citeable again (`pnpm -F @ludoforge/engine run test:determinism` passed 31/31 files), so Phase 1 can proceed to `tickets/194ZOBDIGEST-001.md`.
+**Prerequisites completed (2026-05-25)**: Phase 1 terminal closeout was blocked by three Foundations-aligned determinism prerequisites, now archived at `archive/tickets/194ZOBDIGEST-000-spec-161-default-off-determinism-prereq.md`, `archive/tickets/194ZOBDIGEST-000A-draft-state-determinism-timeout.md`, and `archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`. The replay-identity corpus is citeable again (`pnpm -F @ludoforge/engine run test:determinism` passed 31/31 files), and Phase 1 completed in `archive/tickets/194ZOBDIGEST-001.md` with report `reports/perf-baseline/zobrist-residual-cost-2026-05-25.md`.
 
 Phase 2 obligations depend on the chosen lever:
 
@@ -256,6 +256,6 @@ Inserted during implementation on 2026-05-24 after `docs/FOUNDATIONS.md` reasses
 
 - [`archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md`](../archive/tickets/194ZOBDIGEST-000B-fitl-policy-agent-canary-timeout.md) — Prerequisite — resolve the `fitl-policy-agent-canary-determinism` timeout before closing Phase 1
 
-- [`tickets/194ZOBDIGEST-001.md`](../tickets/194ZOBDIGEST-001.md) — Phase 1 — Zobrist residual-cost capture and report
+- [`archive/tickets/194ZOBDIGEST-001.md`](../archive/tickets/194ZOBDIGEST-001.md) — Phase 1 — Zobrist residual-cost capture and report; completed 2026-05-25, selected `2B - Encoded-surface reduction` for Phase 2 decomposition
 
-**Phase-gated decomposition note**: Phase 2 (lever selection from {2A, 2B, 2C, 2D} per §4.2) and Phase 3 (perf witness re-capture per §8 P3) are deferred to a future `/spec-to-tickets` invocation once Phase 1's evidence lands. Per spec §4.2, the Phase 2 lever is selected from observed measurements — opening Phase 2 tickets ahead of that evidence would author hypothetical scope.
+**Phase-gated decomposition note**: Phase 2 is now gated on a future `/spec-to-tickets` invocation for the selected `2B - Encoded-surface reduction` lever, including the required field-irrelevance audit, kernel-version/reproducibility obligations, and replay-corpus proof. Phase 3 (perf witness re-capture per §8 P3) remains deferred until the Phase 2 result is known. Keep this spec active until those remaining phases are decomposed and completed.

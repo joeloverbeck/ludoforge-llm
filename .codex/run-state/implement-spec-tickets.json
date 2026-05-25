@@ -1,19 +1,17 @@
 {
-  "originating_spec": "specs/195-policy-evaluation-context-allocation-reduction.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/195POLEVACON-001.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "92331ac6b67906be38bca35c756f60c08c27fe45",
+  "originating_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
+  "archived_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
+  "last_ticket": "archive/tickets/195POLEVACON-003.md",
+  "last_result": "implemented_archived",
+  "last_work_commit": "fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9",
   "last_state_commit": "self",
-  "next_target": "tickets/195POLEVACON-002.md",
-  "queue": [
-    "tickets/195POLEVACON-002.md"
-  ],
-  "phase": "ticket_iteration_complete",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "195POLEVACON-001 completed and archived in work commit 92331ac6b67906be38bca35c756f60c08c27fe45; originating spec and dependent 195POLEVACON-002 were truth-synced to the completed private-cache wrapper contract. Next target is 195POLEVACON-002.",
+  "owned_dirty_summary": "Spec 195 ticket family completed and archived, final spec archived, report updated, and five post-195 perf JSON summaries produced in work commit fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9. No owned dirty paths are expected after the state-only commit; pre-existing perf smoke/byproduct artifacts remain out of scope.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-e8c4d26237-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-a35be6032b-smoke.json, reports/perf-baseline/parity-drive-e8c4d26237-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-25"
 }

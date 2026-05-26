@@ -2,16 +2,18 @@
   "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
   "archived_spec": null,
   "last_ticket": "archive/tickets/196ROLECONROUTE-003.md",
-  "last_result": "implemented_archived",
-  "last_work_commit": "3437cef5bb5a05238d6cef827abe9b4619cac4bc",
+  "last_result": "retargeted_to_prerequisite",
+  "last_work_commit": "4c890b97e1341f59d3126f1d0ae062ee242a30c9",
   "last_state_commit": "self",
-  "next_target": "tickets/196ROLECONROUTE-004.md",
+  "next_target": "tickets/196ROLECONROUTE-004A.md",
   "queue": [
-    "tickets/196ROLECONROUTE-004.md"
+    "tickets/196ROLECONROUTE-004A.md",
+    "tickets/196ROLECONROUTE-004.md",
+    "tickets/196ROLECONROUTE-005.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 196 ticket 003 implemented and archived in work commit 3437cef5bb5a05238d6cef827abe9b4619cac4bc. Queue advances to ticket 004. Only unrelated perf-baseline byproducts from engine/root proof remain untracked.",
+  "owned_dirty_summary": "User approved Foundations-aligned option 1: retarget to prerequisite 004A for current-role constraint validation before resuming FITL route migration in 004; earlier 004/005 boundary split remains. Abandoned FITL probe edits were removed; unrelated perf-baseline byproducts remain untracked.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/parity-drive-cb3f665535-smoke.json, reports/perf-baseline/per-decision/",

@@ -10,12 +10,14 @@
 - `archive/specs/190-plan-primary-root-selection.md` (COMPLETED — plan root authority)
 - `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED — `targetKind` validation surface that authoring-error negative tests exercise)
 - `archive/specs/170-partial-visibility-observer-policy.md` (COMPLETED — observer policy that hidden-info conformance asserts)
+- `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED — role-constraint registry extended beyond `notEqual`; authoring-error negative tests exercise the extended registry)
+- `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED — `enablesPlanTemplates` field; authoring-error negative tests exercise unknown-id rejection)
 
 **Trigger reports**:
-- `reports/ai-agent-policy-overhaul-second-iteration.md` (ChatGPT-Pro second iteration, 2026-05-26). Adopts proposals #8, #10, #11; this spec is their joint operationalization. Spec 191 §11 said "the conformance hidden-info card game exercises [observer-safety]" — i.e., the corpus is the architectural vehicle. Now that Spec 191 has landed, this spec authors the corpus and the proof harness on top of it.
+- `reports/ai-agent-policy-overhaul-second-iteration.md` (ChatGPT-Pro second iteration, 2026-05-26). Adopts proposals #8, #10, #11; this spec is their joint operationalization. Spec 191 §11 deferred a formal hidden-info validation enum until the conformance hidden-info card game existed to exercise it — i.e., the corpus is the architectural vehicle. Now that Spec 191 has landed, this spec authors the corpus and the proof harness on top of it.
 - `reports/fitl-competent-agent-ai.md` — supplies hidden-info / asymmetric requirements that the corpus must keep proving on FITL alongside the new game families.
 
-**Ticket namespace**: `198GAMECONFCORP` (proposed)
+**Ticket namespace**: `198GAMECONFCORP`
 
 ---
 
@@ -45,7 +47,7 @@ Make Foundation #16's conformance corpus exist, and use it to prove agent-layer 
   - **Texas Hold'em** — hidden-information (private hole cards) + stochastic (community-card reveal). Covers axes 2 + 3 partially. Spec 33 archived.
   - **Perfect-information board game** — *MISSING*. No `data/games/<name>/` directory satisfies this axis.
 - **Observer-safety machinery** — `archive/specs/170-partial-visibility-observer-policy.md` (COMPLETED) introduced the partial-visibility observer policy and its compile-time enforcement. `Foundations #4` mandates the contract; `Foundations #20` (preview signal integrity) extended it to previews via Spec 162/180. Today, no architectural-invariant test asserts the contract holds across every selector source / preview ref / posture evaluator / trace field — observer-safety is enforced piecemeal where authors remember to consider it.
-- **Authoring-error negative tests** — Specs 191 and (proposed) 196 / 197 introduce new validation surfaces. Each spec's own test plan covers happy-path validation. Cross-cutting negative-test coverage (which kinds of malformed authoring fail with which diagnostic) lives nowhere coherent today.
+- **Authoring-error negative tests** — Specs 191, 196, and 197 (all COMPLETED) introduce new validation surfaces. Each spec's own test plan covers happy-path validation. Cross-cutting negative-test coverage (which kinds of malformed authoring fail with which diagnostic) lives nowhere coherent today.
 - **Agent layer entry points** — `policy-agent.ts`, `plan-proposal.ts`, `plan-controller.ts`, `policy-posture-eval.ts`, `policy-selector-eval.ts`, `policy-relationship-eval.ts` are the surfaces the cross-family harness exercises. Each takes an `input.def` (GameDef) and `input.state` (GameState); the harness invokes them against each corpus game and asserts cross-cutting invariants.
 - **Test harness convention** — `packages/engine/test/architecture/` holds architectural-invariant tests; `@test-class: architectural-invariant` per `.claude/rules/testing.md`. New conformance tests land here.
 
@@ -84,7 +86,7 @@ Add `packages/engine/test/architecture/cross-family-conformance.test.ts` (and su
 Add `packages/engine/test/architecture/observer-safety-invariants.test.ts` asserting:
 
 1. **Selector source observer scope**: for every selector source kind (`collection`, `product`, `routePairs`, `subset`, `candidateParams`, `microturnOptions`), evaluating against a state with hidden zones/tokens/cards returns only observer-visible items at the agent's scope. Hidden items are absent from the evaluated set; their absence does not leak (the agent cannot distinguish "no item exists" from "item exists but is hidden").
-2. **Preview ref provenance** (Foundation #20): every preview ref consulted by the proposer/controller exposes `status: ready | unknown | hidden | stochastic | unresolved | failed | depth-capped | partial` per Foundation #20; no preview ref silently coerces unavailable status to a scalar contribution.
+2. **Preview ref provenance** (Foundation #20): every preview ref consulted by the proposer/controller exposes `status: ready | unknown | hidden | stochastic | unresolved | failed | depth-capped | partial` per Foundation #20; no preview ref silently coerces unavailable status to a scalar contribution. The architectural-invariant test asserts the *semantic property* — every preview ref carries a typed status, and any non-`ready` status carries a declared fallback path or runtime advisory — not the literal abstract-vocabulary set, since the implementation enum (`PolicyWasmPreviewStatus` in `packages/engine/src/agents/policy-wasm-preview-drive.ts`, schema `previewStatus` in `packages/engine/src/kernel/schemas-core.ts`) is richer and uses concrete names (`gated`, `depthCap`, `postGrantCap`, `freeOperationCap`, `grantFlowPartial`, `noPreviewDecision`).
 3. **Posture evaluator observer scope**: posture evaluators consult only observer-safe state; tests assert that posture deltas on hidden information are absent rather than guessed.
 4. **Trace field observer scope**: plan trace fields that surface evidence (active doctrines, role bindings, rejected alternatives, guardrail effects) do not leak hidden information to the receiving observer.
 
@@ -162,9 +164,16 @@ Each test asserts the diagnostic message identifies the offending authoring elem
 
 ## 11. Out of scope (named follow-on / sibling)
 
-- **Spec 196** — generic role constraints + authored route/map semantics (mutually independent).
-- **Spec 197** — doctrine-gated plan-template eligibility (mutually independent).
 - **Spec 199** — compound availability at root proposal (mutually independent).
 - Stochastic-axis-pure game data spec.
 - Engine primitives surfaced by P3 as needed by the new corpus game but not currently available — promoted to follow-on specs as discovered.
 - Visual-config / runner integration of the new corpus game.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-26:
+
+- [`tickets/198GAMECONFCORP-001.md`](../tickets/198GAMECONFCORP-001.md) — Author minimal perfect-info board game data spec (covers §4.1 / P1)
+- [`tickets/198GAMECONFCORP-002.md`](../tickets/198GAMECONFCORP-002.md) — Cross-family architectural-invariant tests (covers §4.2 / P2)
+- [`tickets/198GAMECONFCORP-003.md`](../tickets/198GAMECONFCORP-003.md) — Observer-safety invariant proofs (covers §4.3 / P3)
+- [`tickets/198GAMECONFCORP-004.md`](../tickets/198GAMECONFCORP-004.md) — Authoring-error negative-test infrastructure (covers §4.4 / P4)

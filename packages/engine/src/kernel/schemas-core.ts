@@ -1433,7 +1433,20 @@ const CompiledAgentStrategyModuleSchema = z.object({
 
 const CompiledPlanRoleConstraintSchema = z.union([
   z.object({ kind: z.literal('notEqual'), role: StringSchema }).strict(),
-  z.object({ kind: z.literal('locatedIn'), role: StringSchema }).strict(),
+  z.object({ kind: z.literal('locatedIn'), role: StringSchema, container: StringSchema }).strict(),
+  z.object({
+    kind: z.literal('distinctOriginDestination'),
+    origin: StringSchema,
+    destination: StringSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal('reachable'),
+    from: StringSchema,
+    to: StringSchema,
+    via: StringSchema.optional(),
+    maxHops: z.number().int().positive().optional(),
+  }).strict(),
+  z.object({ kind: z.literal('adjacent'), a: StringSchema, b: StringSchema }).strict(),
 ]);
 
 const CompiledPlanTemplateSchema = z.object({

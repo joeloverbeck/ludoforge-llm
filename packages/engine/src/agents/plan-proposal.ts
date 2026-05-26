@@ -298,7 +298,9 @@ function orderedPlanRoles(
 
   while (remaining.length > 0) {
     const index = remaining.findIndex(([, role]) =>
-      role.constraints.every((constraint) => emitted.has(constraint.role) || template.roles[constraint.role] === undefined),
+      role.constraints.every((constraint) =>
+        constraintRoleRefs(constraint).every((ref) => emitted.has(ref) || template.roles[ref] === undefined),
+      ),
     );
     const nextIndex = index === -1 ? 0 : index;
     const [next] = remaining.splice(nextIndex, 1);
@@ -310,6 +312,22 @@ function orderedPlanRoles(
   }
 
   return ordered;
+}
+
+function constraintRoleRefs(constraint: CompiledPlanTemplate['roles'][string]['constraints'][number]): readonly string[] {
+  switch (constraint.kind) {
+    case 'notEqual':
+      return [constraint.role];
+    case 'locatedIn':
+      return [constraint.role, constraint.container];
+    case 'distinctOriginDestination':
+      return [constraint.origin, constraint.destination];
+    case 'reachable':
+      return [constraint.from, constraint.to];
+    case 'adjacent':
+      return [constraint.a, constraint.b];
+  }
+  return [];
 }
 
 function selectRoleBinding(
@@ -429,18 +447,17 @@ function constraintsSatisfied(
   existing: Readonly<Record<string, PlanRoleBinding>>,
 ): boolean {
   return constraints.every((constraint) => {
-    const other = existing[constraint.role];
-    if (other === undefined) {
-      return true;
-    }
     if (constraint.kind === 'notEqual') {
+      const other = existing[constraint.role];
+      if (other === undefined) {
+        return true;
+      }
       return binding.selectedId !== other.selectedId;
     }
-    if (!isSupportedPlanRoleConstraintKind(constraint.kind)) {
-      throw new Error(`Unsupported plan role constraint kind "${constraint.kind}" reached runtime evaluation.`);
+    if (isSupportedPlanRoleConstraintKind(constraint.kind)) {
+      throw new Error(`Plan role constraint kind "${constraint.kind}" reached runtime evaluation before runtime support landed.`);
     }
-    const _exhaustive: never = constraint.kind;
-    return _exhaustive;
+    throw new Error(`Unsupported plan role constraint kind "${constraint.kind}" reached runtime evaluation.`);
   });
 }
 

@@ -1215,7 +1215,10 @@ export interface CompiledPlanRoot {
 
 export type CompiledPlanRoleConstraint =
   | { readonly kind: 'notEqual'; readonly role: string }
-  | { readonly kind: 'locatedIn'; readonly role: string };
+  | { readonly kind: 'locatedIn'; readonly role: string; readonly container: string }
+  | { readonly kind: 'distinctOriginDestination'; readonly origin: string; readonly destination: string }
+  | { readonly kind: 'reachable'; readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number }
+  | { readonly kind: 'adjacent'; readonly a: string; readonly b: string };
 
 export interface CompiledPlanRole {
   readonly selectorId: SelectorId;

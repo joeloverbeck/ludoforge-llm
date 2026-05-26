@@ -3,18 +3,18 @@
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `agents/plan-proposal.ts` `constraintsSatisfied` restructured; per-kind runtime branches for `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`
+**Engine Changes**: Yes — `agents/plan-proposal.ts` fail-closed registered-kind branches replaced with per-kind runtime branches for `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`
 **Deps**: `tickets/196ROLECONROUTE-002.md`
 
 ## Problem
 
-Tickets 001 and 002 land the compile-time surface for the four new/restructured role-constraint kinds and the `routeGraph` data asset that `reachable`/`adjacent` depend on. The runtime evaluator `constraintsSatisfied` at `packages/engine/src/agents/plan-proposal.ts:426-444` still admits only `notEqual` semantics — any constraint reaching it with kind `locatedIn`, `distinctOriginDestination`, `reachable`, or `adjacent` throws via the unsupported-kind error path despite being now registered and compile-valid.
+Tickets 001 and 002 land the compile-time surface for the four new/restructured role-constraint kinds and the `routeGraph` data asset that `reachable`/`adjacent` depend on. Ticket 001 also made the minimal `agents/plan-proposal.ts` type-fallout change needed after widening the compiled union: role ordering no longer assumes every constraint has a single `role` field, and registered but runtime-unimplemented kinds fail closed if they reach evaluation. The runtime evaluator still admits only `notEqual` semantics — any constraint reaching it with kind `locatedIn`, `distinctOriginDestination`, `reachable`, or `adjacent` throws until this ticket replaces the fail-closed branches with real semantics.
 
-This ticket implements the runtime evaluator branches and folds the existing `existing[constraint.role]` early-return (which presumes every constraint has a single `role` field — `notEqual`-specific shape) into the `notEqual` branch, so each new-kind branch resolves its own role refs independently.
+This ticket implements the runtime evaluator branches and preserves the P1 type-fallout cleanup: each new-kind branch resolves its own role refs independently rather than relying on a notEqual-shaped `constraint.role` contract.
 
 ## Assumption Reassessment (2026-05-26)
 
-1. `constraintsSatisfied` currently entry-points with `const other = existing[constraint.role]; if (other === undefined) return true;` (`plan-proposal.ts:432-434`). This early-return is `notEqual`-specific — the new variants do not have a single `constraint.role` field. The restructure folds the early-return into the `notEqual` branch.
+1. `constraintsSatisfied` now keeps the `existing[constraint.role]` lookup inside the `notEqual` branch and throws for registered but runtime-unimplemented kinds. This is the P1 type-fallout guard; the ticket still owns replacing those throws with real per-kind evaluators.
 2. Role precedence (Spec 191 P1) already guarantees that every role referenced by a constraint is bound before evaluation, so the new branches can directly access `existing[<roleRef>]` without revalidating boundness.
 3. The runtime needs access to the `RouteGraphProvider` (from ticket 002) for `reachable` and `adjacent`. The provider is constructed at GameDef-compile time and must be available to `constraintsSatisfied` — either via the `ProposeAdvisoryTurnPlanInput` (which already carries `profile`, `state`, etc.) or via the compiled `GameDef` accessible at this call site. The implementation chooses the route already used to expose other GameDef-derived providers to plan proposal (verify at implementation time and document in the assumption reassessment if the route differs from this assumption).
 4. `locatedIn` with `container: zone.X` needs `state.tokenPositions[<role-binding-target>]` to read the bound role's current zone and compare against the literal zone ref. `locatedIn` with `container: role.Y` needs to read the zone of role Y's binding and compare. Both reads are observer-safe state available to the proposer.
@@ -24,7 +24,7 @@ This ticket implements the runtime evaluator branches and folds the existing `ex
 ## Architecture Check
 
 1. **Single source of truth via registry remains intact**: The new branches dispatch on `constraint.kind`; the trailing unsupported-kind throw and `_exhaustive: never` exhaustiveness assertion are preserved. Adding a future kind without a runtime branch still fails compilation (the `never` assertion) and runtime (the throw) — Foundation 14.
-2. **Contract change is internal, signature stable**: `constraintsSatisfied(binding, constraints, existing) -> boolean` is unchanged externally. Only the function's internal contract changes: the `existing[constraint.role]` early-return is folded into the `notEqual` branch (the only branch whose semantics it expressed); each new-kind branch handles its own role-ref resolution.
+2. **Contract change is internal, signature stable**: `constraintsSatisfied(binding, constraints, existing) -> boolean` is unchanged externally until this ticket threads the state and route-graph provider inputs required by runtime semantics. The notEqual-specific early-return has already been isolated by P1; each new-kind branch must now handle its own role-ref resolution.
 3. **Pure functions, no side effects (Foundation 11)**: Each branch reads `state`, `roleBindings`, and `constraint`; returns a boolean. No mutation of state or bindings.
 4. **Observer-safe state reads (Foundation 4)**: `locatedIn` reads `state.tokenPositions` and zone bindings — both already accessible to the proposer at its observer scope. `reachable`/`adjacent` consult the `RouteGraphProvider`, which is GameDef-derived public data (private route graphs are explicitly out of scope per spec §11).
 5. **Hop-bounded reachable (Foundation 10)**: `reachable` defers to `RouteGraphProvider.reachable(from, to, via, maxHops)`, which is hop-bounded by either the constraint's `maxHops` or the provider's `defaultMaxHops`. No unbounded BFS surface here.
@@ -34,7 +34,7 @@ This ticket implements the runtime evaluator branches and folds the existing `ex
 
 ### 1. Restructure `constraintsSatisfied` (`packages/engine/src/agents/plan-proposal.ts:426-444`)
 
-Replace the current body with per-kind dispatch:
+Replace the current fail-closed registered-kind path with per-kind dispatch:
 
 ```ts
 function constraintsSatisfied(
@@ -83,7 +83,7 @@ function constraintsSatisfied(
 }
 ```
 
-Update the call site (existing `selectRoleBinding` caller at `plan-proposal.ts:333` per the reassessment) to pass `state` and the GameDef-resident `RouteGraphProvider` (or `null` if the GameDef has no `routeGraph` data asset — the compile-time validator from ticket 002 already rejects `reachable`/`adjacent` constraints without a routeGraph, so a `null` provider is unreachable for those kinds but defensive).
+Update the call site (existing `selectRoleBinding` caller at `plan-proposal.ts:333` per the reassessment) to pass `state` and the GameDef-resident `RouteGraphProvider` (or `null` if the GameDef has no `routeGraph` data asset — the compile-time validator from ticket 002 already rejects `reachable`/`adjacent` constraints without a routeGraph, so a `null` provider is unreachable for those kinds but defensive). Preserve the P1 `orderedPlanRoles` behavior unless the new runtime semantics require a narrower helper.
 
 ### 2. Per-kind evaluator helpers
 

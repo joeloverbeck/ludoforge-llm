@@ -374,13 +374,19 @@ describe('plan proposal', () => {
   });
 
   it('fails closed if an unsupported role constraint reaches runtime evaluation', () => {
-    assert.deepEqual(SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS, ['notEqual']);
+    assert.deepEqual(SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS, [
+      'notEqual',
+      'locatedIn',
+      'distinctOriginDestination',
+      'reachable',
+      'adjacent',
+    ]);
     const template = planTemplate({
       roles: {
         trainSpace: planTemplate().roles.trainSpace!,
         governSpace: {
           ...planTemplate().roles.trainSpace!,
-          constraints: [{ kind: 'locatedIn', role: 'trainSpace' }],
+          constraints: [{ kind: 'unknownConstraint', role: 'trainSpace' } as any],
         },
       },
     });
@@ -401,7 +407,38 @@ describe('plan proposal', () => {
         catalog: def.agents!,
         actionDecisions: [actionDecision('branch')],
       }),
-      /Unsupported plan role constraint kind "locatedIn"/u,
+      /Unsupported plan role constraint kind "unknownConstraint"/u,
+    );
+  });
+
+  it('fails closed if a registered but unimplemented role constraint reaches runtime evaluation', () => {
+    const template = planTemplate({
+      roles: {
+        trainSpace: planTemplate().roles.trainSpace!,
+        governSpace: {
+          ...planTemplate().roles.trainSpace!,
+          constraints: [{ kind: 'locatedIn', role: 'trainSpace', container: 'trainSpace' }],
+        },
+      },
+    });
+    const def = {
+      ...createDef(),
+      agents: createCatalog({ template, selector: roleSelector(2) }),
+    };
+    const state = initialState(def, 186, 2).state;
+    const profile = def.agents!.profiles.baseline!;
+
+    assert.throws(
+      () => proposeAdvisoryTurnPlan({
+        def,
+        state,
+        seatId: 'alpha',
+        playerId: asPlayerId(0),
+        profile,
+        catalog: def.agents!,
+        actionDecisions: [actionDecision('branch')],
+      }),
+      /Plan role constraint kind "locatedIn" reached runtime evaluation before runtime support landed/u,
     );
   });
 

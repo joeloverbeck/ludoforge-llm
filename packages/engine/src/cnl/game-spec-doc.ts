@@ -796,7 +796,10 @@ export interface GameSpecPlanRootDef {
 
 export type GameSpecPlanRoleConstraint =
   | { readonly notEqual: string }
-  | { readonly locatedIn: string };
+  | { readonly locatedIn: { readonly role: string; readonly container: string } }
+  | { readonly distinctOriginDestination: { readonly origin: string; readonly destination: string } }
+  | { readonly reachable: { readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number } }
+  | { readonly adjacent: { readonly a: string; readonly b: string } };
 
 export interface GameSpecPlanRoleDef {
   readonly selector: string;

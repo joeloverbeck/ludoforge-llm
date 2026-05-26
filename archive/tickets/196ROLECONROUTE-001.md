@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-001: P1 — Constraint registry extension and compile-time surface for new role-constraint kinds
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `kernel/plan-role-constraints.ts` registry; `kernel/types-core.ts` `CompiledPlanRoleConstraint` union; `kernel/schemas-core.ts` zod schema; `cnl/game-spec-doc.ts` authored YAML union; `cnl/validate-agent-plan-templates.ts` parser + per-kind shape checks; `cnl/compile-agent-plan-templates.ts` lowering
@@ -162,3 +162,46 @@ Both new files declare `// @test-class: architectural-invariant` per `.claude/ru
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-validation.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-lowering.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-26)
+
+Implemented the P1 compile-time role-constraint surface:
+
+- Extended `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS` and the compiled type/schema/YAML/lowering/validator surfaces to the five intended kinds: `notEqual`, restructured `locatedIn`, `distinctOriginDestination`, `reachable`, and `adjacent`.
+- Added template/role-named invalid-shape diagnostics for malformed new payloads, including positive-integer `reachable.maxHops`, required `locatedIn.container`, `routeClass.*` shape for `reachable.via`, and role-precedence validation across multi-role constraints.
+- Added architectural-invariant tests for valid payload acceptance, unsupported-kind rejection, invalid payloads, role-precedence rejection, lowering payload shape, and byte-identical repeat compilation.
+- Regenerated `packages/engine/schemas/GameDef.schema.json` from the canonical schema source with `pnpm -F @ludoforge/engine run schema:artifacts`.
+
+Boundary notes:
+
+- No `routeGraph` data asset/provider, route-ref resolution, hidden-info `locatedIn` rejection, runtime semantics, or FITL data migration landed here; those remain owned by tickets 002-004.
+- `packages/engine/src/agents/plan-proposal.ts` was touched only for type fallout after widening the compiled union. It now orders roles without assuming every constraint has a `role` field and fails closed if a registered but runtime-unimplemented kind reaches evaluation. Ticket 003 remains responsible for replacing that fail-closed path with real runtime semantics.
+- The approved source-size deferral was applied as option 1 from the implementation discussion: this ticket records the debt and does not extract large existing modules while landing the narrow P1 surface.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/plan-proposal.ts`: 759 lines after change; +17 net lines; still under the 800-line hard cap.
+- `packages/engine/src/cnl/compile-agent-plan-templates.ts`: 252 lines after change; +67 net lines; under cap.
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts`: 460 lines after change; +1 net line; under cap.
+- `packages/engine/src/cnl/game-spec-doc.ts`: 1092 lines after change; +3 net lines; preexisting oversized file, deferred by approved option 1.
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts`: 845 lines after change; +177 net lines; crossed the cap due to this P1 parser/validator work, deferred by approved option 1 so the ticket boundary did not widen into a validator extraction.
+- `packages/engine/src/kernel/plan-role-constraints.ts`: 15 lines after change; +6 net lines; under cap.
+- `packages/engine/src/kernel/schemas-core.ts`: 3287 lines after change; +13 net lines; preexisting oversized generated-schema source, deferred by approved option 1.
+- `packages/engine/src/kernel/types-core.ts`: 2936 lines after change; +3 net lines; preexisting oversized kernel type surface, deferred by approved option 1.
+
+Generated artifact provenance:
+
+- Artifact: `packages/engine/schemas/GameDef.schema.json`.
+- Command: `pnpm -F @ludoforge/engine run schema:artifacts`.
+- Canonical input: `packages/engine/src/kernel/schemas-core.ts` and the retained generator script `packages/engine/scripts/schema-artifacts.mjs`.
+- Expected refresh: `CompiledPlanRoleConstraint` schema union widened to the five compile-time variants.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-validation.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-lowering.test.js packages/engine/dist/test/unit/cnl/agent-plan-template-validate.test.js packages/engine/dist/test/unit/agents/plan-proposal.test.js` passed: 27 tests / 4 suites.
+- `pnpm -F @ludoforge/engine test` passed after regenerating schema artifacts: 171/171 files passed.
+- `pnpm turbo build` passed.
+- `pnpm turbo test` passed: 5/5 tasks.
+- `pnpm turbo lint` passed.
+- `pnpm turbo typecheck` passed.

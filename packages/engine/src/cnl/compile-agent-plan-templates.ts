@@ -144,16 +144,83 @@ function lowerPlanCaps(
 function lowerRoleConstraints(
   constraints: readonly NonNullable<GameSpecPlanTemplateDef['roles'][string]['constraints']>[number][],
 ): readonly CompiledPlanRoleConstraint[] {
-  return constraints.map((constraint) => {
+  const lowered: CompiledPlanRoleConstraint[] = [];
+  for (const constraint of constraints) {
     if ('notEqual' in constraint) {
-      return { kind: 'notEqual', role: normalizeRoleRef(constraint.notEqual) };
+      lowered.push({ kind: 'notEqual', role: normalizeRoleRef(constraint.notEqual) });
+    } else if ('locatedIn' in constraint && isLocatedInPayload(constraint.locatedIn)) {
+      lowered.push({
+        kind: 'locatedIn',
+        role: normalizeRoleRef(constraint.locatedIn.role),
+        container: normalizeZoneOrRoleRef(constraint.locatedIn.container),
+      });
+    } else if (
+      'distinctOriginDestination' in constraint
+      && isDistinctOriginDestinationPayload(constraint.distinctOriginDestination)
+    ) {
+      lowered.push({
+        kind: 'distinctOriginDestination',
+        origin: normalizeRoleRef(constraint.distinctOriginDestination.origin),
+        destination: normalizeRoleRef(constraint.distinctOriginDestination.destination),
+      });
+    } else if ('reachable' in constraint && isReachablePayload(constraint.reachable)) {
+      lowered.push({
+        kind: 'reachable',
+        from: normalizeRoleRef(constraint.reachable.from),
+        to: normalizeRoleRef(constraint.reachable.to),
+        ...(constraint.reachable.via === undefined ? {} : { via: normalizeRouteClassRef(constraint.reachable.via) }),
+        ...(constraint.reachable.maxHops === undefined ? {} : { maxHops: constraint.reachable.maxHops }),
+      });
+    } else if ('adjacent' in constraint && isAdjacentPayload(constraint.adjacent)) {
+      lowered.push({
+        kind: 'adjacent',
+        a: normalizeRoleRef(constraint.adjacent.a),
+        b: normalizeRoleRef(constraint.adjacent.b),
+      });
     }
-    return { kind: 'locatedIn', role: normalizeRoleRef(constraint.locatedIn) };
-  });
+  }
+  return lowered;
 }
 
 function normalizeRoleRef(ref: string): string {
   return ref.startsWith('role.') ? ref.slice('role.'.length) : ref;
+}
+
+function normalizeZoneOrRoleRef(ref: string): string {
+  if (ref.startsWith('zone.')) return ref.slice('zone.'.length);
+  return normalizeRoleRef(ref);
+}
+
+function normalizeRouteClassRef(ref: string): string {
+  return ref.startsWith('routeClass.') ? ref.slice('routeClass.'.length) : ref;
+}
+
+function isLocatedInPayload(value: unknown): value is { readonly role: string; readonly container: string } {
+  return isRecord(value) && typeof value.role === 'string' && typeof value.container === 'string';
+}
+
+function isDistinctOriginDestinationPayload(
+  value: unknown,
+): value is { readonly origin: string; readonly destination: string } {
+  return isRecord(value) && typeof value.origin === 'string' && typeof value.destination === 'string';
+}
+
+function isReachablePayload(
+  value: unknown,
+): value is { readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number } {
+  return isRecord(value)
+    && typeof value.from === 'string'
+    && typeof value.to === 'string'
+    && (value.via === undefined || typeof value.via === 'string')
+    && (value.maxHops === undefined || typeof value.maxHops === 'number');
+}
+
+function isAdjacentPayload(value: unknown): value is { readonly a: string; readonly b: string } {
+  return isRecord(value) && typeof value.a === 'string' && typeof value.b === 'string';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function mergePlanDependencies(

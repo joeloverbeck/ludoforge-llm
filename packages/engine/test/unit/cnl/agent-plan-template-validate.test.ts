@@ -87,13 +87,13 @@ describe('agent plan-template validation diagnostics', () => {
             governSpace: {
               selector: 'governSpace',
               required: true,
-              constraints: [{ locatedIn: 'role.trainSpace' }],
+              constraints: [{ unknownKind: 'role.trainSpace' }],
             },
           },
         }),
       }),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED,
-      /trainGovern.*governSpace.*locatedIn.*no runtime implementation/u,
+      /trainGovern.*governSpace.*unknownKind.*no runtime implementation/u,
     );
   });
 

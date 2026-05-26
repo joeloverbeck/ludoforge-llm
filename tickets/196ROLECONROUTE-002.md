@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `kernel/types-core.ts` `KNOWN_DATA_ASSET_KINDS` extension; `kernel/schemas-core.ts` routeGraph payload schema; new `kernel/route-graph-provider.ts` module; `cnl/validate-agent-plan-templates.ts` route-ref resolution validator (completes ticket 001's deferral); `cnl/game-spec-doc.ts` routeGraph dataAsset typing
-**Deps**: `tickets/196ROLECONROUTE-001.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-001.md`
 
 ## Problem
 

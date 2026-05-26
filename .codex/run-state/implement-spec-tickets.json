@@ -1,17 +1,21 @@
 {
-  "originating_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
-  "archived_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
-  "last_ticket": "archive/tickets/195POLEVACON-003.md",
+  "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/196ROLECONROUTE-001.md",
   "last_result": "implemented_archived",
-  "last_work_commit": "fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9",
+  "last_work_commit": "179623446a1903b0ca8a86d29a07188a8247c009",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/196ROLECONROUTE-002.md",
+  "queue": [
+    "tickets/196ROLECONROUTE-002.md",
+    "tickets/196ROLECONROUTE-003.md",
+    "tickets/196ROLECONROUTE-004.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 195 ticket family completed and archived, final spec archived, report updated, and five post-195 perf JSON summaries produced in work commit fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9. Perf profiler byproducts and obsolete smoke JSONs were removed after the state-only commit; no dirty paths remain.",
+  "owned_dirty_summary": "Spec 196 ticket 001 implemented and archived in work commit 179623446a1903b0ca8a86d29a07188a8247c009. Queue advances to ticket 002. Only unrelated perf-baseline byproducts from engine proof remain untracked.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
-  "updated_at": "2026-05-25"
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/per-decision/",
+  "updated_at": "2026-05-26"
 }

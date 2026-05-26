@@ -248,7 +248,7 @@ planTemplates:
     postureHook: arvn.preserveAidAndMargin
 ```
 
-`postureEvaluators` are separate from preview budget configuration. The FITL `grantFlowContinuation` preview option can make post-grant or free-operation projection available to posture scoring, while `outcomeGrantContinuation` controls a different post-grant continuation surface. Do not use either preview option as a substitute for explicit posture `fallback.contribution`.
+`postureEvaluators` are separate from preview budget configuration. The FITL `grantFlowContinuation` preview option can make post-grant or free-operation projection available to posture scoring, but it is not a substitute for explicit posture `fallback.contribution`.
 
 ## Authoring Relationships
 
@@ -309,6 +309,8 @@ Use these freely in `stateFeatures`, `candidateFeatures`, `pruningRules`, and mo
 | `condition.<id>.satisfied` | strategic condition boolean |
 | `condition.<id>.proximity` | strategic condition proximity |
 
+For the full enumeration of every ref family the compiler accepts — including `activeCard.*`, `selector.*`, `module.*`, `guardrail.*`, `turnShape.*`, `relationship.*`, `phase.*`, and `schedule.distance.toPhase.*` — see [Reference Paths Index](#reference-paths-index).
+
 ### Candidate Refs
 
 These remain part of the production-safe move-scoped contract:
@@ -319,7 +321,9 @@ These remain part of the production-safe move-scoped contract:
 | `candidate.tag.<name>` | whether the candidate has a tag |
 | `candidate.tags` | all candidate tags |
 | `candidate.stableMoveKey` | deterministic move identity |
+| `candidate.paramCount` | number of declared params on the candidate |
 | `candidate.params.<name>` | typed scalar parameter on the published action-selection candidate |
+| `move.actionId`, `move.stableMoveKey`, `move.paramCount` | aliases for the matching `candidate.*` refs |
 
 Use `candidate.params.<name>` only for same-action variants whose discriminating value is already published on the candidate, such as an event side or card id. It is action-selection scoped (`scopes: [move]`), state-local, and does not invoke preview.
 
@@ -345,7 +349,7 @@ Preview remains useful when it stays bounded. Action-selection candidates now us
 | `preview.globalMarker.<id>` | projected marker state |
 | `preview.feature.<id>` | current `stateFeature` re-evaluated on preview state |
 
-**Per-seat preview refs**: `preview.victory.currentMargin.<seat>` and `preview.victory.currentRank.<seat>` accept any seat token, including opponents. By default (no `outcomeGrantContinuation` opt-in), opponent-margin refs may be uniform across candidates when the action's effects on opponent state live behind `outcomeGrantResolve` frames the bounded drive exits on. See the `outcomeGrantContinuation` opt-in below.
+**Per-seat preview refs**: `preview.victory.currentMargin.<seat>` and `preview.victory.currentRank.<seat>` accept any seat token, including opponents. By default (no `grantFlowContinuation` opt-in), opponent-margin refs may be uniform across candidates when the action's effects on opponent state live behind `outcomeGrantResolve` frames that the bounded drive exits on. See the `grantFlowContinuation` opt-in below.
 
 Always `coalesce` preview refs because preview can legitimately fail or become unknown:
 
@@ -361,24 +365,299 @@ candidateFeatures:
 
 When tuning preview, read `previewUsage.utility` and `previewUsage.readyRefStats` in the agent-decision trace to confirm the refs differentiate ready candidates.
 
-### `outcomeGrantContinuation` opt-in
+### `grantFlowContinuation` opt-in
 
-Profiles that need opponent-effect visibility at action-selection scope can opt into a bounded post-grant drive continuation:
+Profiles that need opponent-effect visibility at action-selection scope can opt into a bounded grant-flow drive continuation. The block has two independent caps: one for post-grant continuation, one for free-operation continuation:
 
 ```yaml
 preview:
   # ... existing fields ...
-  outcomeGrantContinuation:
+  grantFlowContinuation:
     enabled: true
-    extraDepthCap: 4
-    capClass: postGrant16
+    postGrantDepthCap: 4
+    postGrantCapClass: postGrant16
+    freeOperationDepthCap: 16
+    freeOperationCapClass: grantFlow16
 ```
 
-When enabled, the drive continues past the first `outcomeGrantResolve` frame up to `extraDepthCap` additional resolution steps. `capClass` is a named bounded-computation tier (Foundation 10); `postGrant16` is the current registered class with a depth budget of 4. The trace surfaces per-decision aggregate exit counts via `previewUsage.outcomeGrantContinuation.exitCounts`.
+Fields:
 
-**Cost**: per-candidate preview cost grows with effect-chain complexity. Profile workloads with measurable wall-time regression should validate the budget on their target workload before enabling this broadly. The trace should show non-zero `previewUsage.outcomeGrantContinuation.exitCounts` before authors rely on post-grant opponent signal. Profiles without an opponent-aware authoring use case should not opt in.
+| Field | Meaning |
+| --- | --- |
+| `enabled` | Required boolean; turns the continuation on. |
+| `postGrantDepthCap` | Depth budget for continuing past the first `outcomeGrantResolve` frame. Must equal the cap-class budget exactly. |
+| `postGrantCapClass` | Named cap-class tier (Foundation 10). Currently only `postGrant16` is registered (budget `4`). |
+| `freeOperationDepthCap` | Depth budget for continuing through free-operation grant flow. Must equal the cap-class budget. |
+| `freeOperationCapClass` | `grantFlow16` (budget `16`) or `grantFlow32` (budget `32`). |
 
-**Partial coverage warning**: When `outcomeGrantContinuation` is opted in but a candidate's post-grant resolution exceeds `extraDepthCap`, the trace reports `previewDrive.kind = 'postGrantCap'` and the opponent-state-dependent preview refs may still be uniform or stale for that candidate. Treat `postGrantCap` as a Foundation 20 unavailable-status equivalent to `depthCap`; author considerations with explicit `previewFallback` when unavailable preview signal must not contribute.
+The trace surfaces per-decision aggregate exit counts under `previewUsage.grantFlowContinuation.exitCounts`.
+
+**Cost**: per-candidate preview cost grows with effect-chain complexity. Profile workloads with measurable wall-time regression should validate the budget on their target workload before enabling this broadly. The trace should show non-zero `previewUsage.grantFlowContinuation.exitCounts` before authors rely on post-grant opponent signal. Profiles without an opponent-aware authoring use case should not opt in.
+
+**Partial coverage warning**: When `grantFlowContinuation` is opted in but a candidate's post-grant resolution exceeds the configured cap, the trace reports `previewDrive.kind = 'postGrantCap'` and the opponent-state-dependent preview refs may still be uniform or stale for that candidate. Treat `postGrantCap` as a Foundation 20 unavailable-status equivalent to `depthCap`; author considerations with explicit `previewFallback` when unavailable preview signal must not contribute.
+
+## Expression Operators Reference
+
+Every authored `expr`, `value`, `when`, `weight`, and `target` field reduces to a tree of single-key objects whose key is one of the operators below, plus the leaf forms `string`, `number`, `boolean`, `null`, and `readonly string[]` (treated as an id-list literal).
+
+| Operator | Arg shape | Result | Semantics / notes |
+| --- | --- | --- | --- |
+| `param` | id string | scalar | Reads a profile parameter declared in `agents.parameters.<id>`. |
+| `ref` | path string or structured object | scalar / boolean / id / idList | Reads a published policy ref. Structured form `{ ref: { 'candidate.params.<n>': { onMissing, appliesToActions } } }` exists for candidate-params only. |
+| `const` | nested expression | same as inner | Wraps a literal/sub-expression. Used when YAML would otherwise misparse a scalar (e.g., `{ const: "shaded" }` inside an `eq:` arg list). |
+| `add` | array of ≥2 number exprs | number | Sum. Returns `undefined` if any arg is non-numeric. |
+| `sub` | array of exactly 2 number exprs | number | `args[0] - args[1]`. |
+| `mul` | array of ≥2 number exprs | number | Product. |
+| `div` | array of exactly 2 number exprs | number | **Integer-truncated division** (`Math.trunc(a/b)`). A statically-zero divisor is rejected at compile time; a runtime zero throws. |
+| `neg` | one number expr | number | Negation. |
+| `abs` | one number expr | number | Absolute value. |
+| `min` / `max` | array of ≥2 number exprs | number | Numeric min/max. |
+| `clamp` | array of exactly 3 number exprs `[value, lo, hi]` | number | Clamps `value` to `[lo, hi]`. |
+| `eq` / `ne` | array of exactly 2 exprs of compatible type | boolean | Strict equality / inequality. |
+| `lt` / `lte` / `gt` / `gte` | array of exactly 2 number exprs | boolean | Numeric comparison. |
+| `and` / `or` | array of ≥2 boolean exprs | boolean | Short-circuit semantics (handles `undefined` mid-array). |
+| `not` | one boolean expr | boolean | Logical negation. |
+| `if` | array of exactly 3 exprs `[cond, then, else]` | type of then/else | Ternary; both branches must unify to the same scalar type. |
+| `in` | `[id-valued expr, idList expr]` | boolean | Membership check. Right operand must resolve to an `idList` (literal `[..]` or `idOrder` parameter). |
+| `coalesce` | array of ≥2 same-type exprs | first defined | Returns the first arg whose value is not `undefined`. |
+| `boolToNumber` | one boolean expr | number | `true → 1`, `false → 0`, `undefined → undefined`. |
+| `lookup` | lookup object | scalar | Reads a keyed property from the observer-projected state. See [Static State Lookups](#static-state-lookups-at-choosen-frontiers). |
+| `zoneProp` | `{ zone, prop }` | unknown | Reads one zone property by id. `zone` may be a literal id or an id-valued expression. |
+| `zoneTokenAgg` | `{ zone, owner, prop, op }` | number | Aggregates one token property across the tokens in `zone` owned by `owner`. Uses **`op`**, not `aggOp`. |
+| `globalTokenAgg` | `{ aggOp, tokenFilter?, prop?, zoneFilter?, zoneScope? }` | number | Aggregates a token property across all matching tokens in all matching zones. `prop` is required unless `aggOp: count`. |
+| `globalZoneAgg` | `{ source?, field, aggOp, zoneFilter?, zoneScope? }` | number | Aggregates a zone variable or attribute (`source: variable` or `attribute`, defaults to `variable`) across matching zones. |
+| `adjacentTokenAgg` | `{ anchorZone, aggOp, tokenFilter?, prop? }` | number | Aggregates token property across zones adjacent to `anchorZone`. `prop` is required unless `aggOp: count`. |
+| `seatAgg` | `{ over, expr, aggOp, availability? }` | number | Aggregates the inner expression across seats. See [seatAgg.over](#seatagg-over). |
+
+**Aggregate keyword convention**
+
+| Operator | Field name for the reduction op |
+| --- | --- |
+| `zoneTokenAgg` | `op` |
+| `globalTokenAgg` | `aggOp` |
+| `globalZoneAgg` | `aggOp` |
+| `adjacentTokenAgg` | `aggOp` |
+| `seatAgg` | `aggOp` |
+| `candidateAggregates.<id>` | `op` |
+
+The `op` ↔ `aggOp` split is historical. The compiler enforces the exact field name; a `op` inside `globalTokenAgg` (or vice versa) is rejected.
+
+**`div` is integer-truncated.** Normalization expressions that divide a small `feature` by a larger denominator collapse to `0`. Either multiply by a large weight before dividing or accept that the normalized term is a coarse integer rank. Treat the "Normalization Pattern" example below as a sketch, not a finished pattern.
+
+### Operator quick examples
+
+```yaml
+# const wraps a literal in argument position
+boolToNumber:
+  eq:
+    - { ref: globalMarker.cap_boobyTraps }
+    - { const: "shaded" }
+```
+
+```yaml
+# if as a conditional expression
+weight: 8
+value:
+  if:
+    - { ref: feature.facingBet }       # condition
+    - { ref: feature.projectedSelfMargin }  # then
+    - 0                                # else
+```
+
+```yaml
+# zoneProp scores a single zone attribute
+preferHighPopulationCapital:
+  scopes: [move]
+  when: { ref: candidate.tag.govern }
+  weight: 50
+  value:
+    zoneProp:
+      zone: saigon:none
+      prop: population
+```
+
+```yaml
+# globalZoneAgg sums opposition across the political board
+totalOpposition:
+  type: number
+  expr:
+    globalZoneAgg:
+      source: variable
+      field: opposition
+      aggOp: sum
+      zoneScope: board
+```
+
+```yaml
+# adjacentTokenAgg counts hostile tokens around an anchor
+hostileNeighbors:
+  type: number
+  expr:
+    adjacentTokenAgg:
+      anchorZone: { ref: microturn.option.value }
+      aggOp: count
+      tokenFilter:
+        props:
+          faction: { eq: VC }
+```
+
+### seatAgg over
+
+`seatAgg.over` accepts four forms:
+
+| Form | Meaning |
+| --- | --- |
+| `over: opponents` | All seats except `self`. |
+| `over: all` | Every seat. |
+| `over: [seatA, seatB, …]` | A literal seat-id list. |
+| `over: { role: <standingRole> }` | A standing-role selector: `currentLeader`, `nearestThreat`, `closestAhead`, `closestBehind`. |
+
+The inner `expr` can use the `$seat` placeholder, which resolves once per seat in the aggregation set.
+
+### Aggregate ops
+
+`globalTokenAgg`, `zoneTokenAgg`, `globalZoneAgg`, `adjacentTokenAgg`, and `seatAgg` all use the same five reduction values:
+
+| Value | Result |
+| --- | --- |
+| `sum` | Numeric sum of the matched property. |
+| `count` | Number of matched rows (does not require a `prop`). |
+| `min` / `max` | Numeric extremum. |
+| `avg` is **not** supported; compose with `div: [{ sum }, { count }]` if needed. |
+
+`candidateAggregates.<id>.op` is broader and accepts:
+
+| Value | Input | Result |
+| --- | --- | --- |
+| `max` / `min` | number | number |
+| `count` | any | number |
+| `any` / `all` | boolean | boolean |
+| `rankDense` / `rankOrdinal` | number or id | number (1-based rank) |
+
+### Token and zone filter enums
+
+`tokenFilter.props.<name>` accepts only `{ eq: <value> }` comparisons.
+
+`zoneFilter` accepts `category`, `attribute`, and `variable` clauses. The comparison operators are:
+
+| Op | Meaning |
+| --- | --- |
+| `eq` | equal |
+| `gt` / `gte` | greater than / greater-or-equal |
+| `lt` / `lte` | less than / less-or-equal |
+
+`zoneScope` selects which zones the aggregation walks:
+
+| Value | Meaning |
+| --- | --- |
+| `board` | Spatial board zones only (default for most aggregations). |
+| `aux` | Non-spatial auxiliary zones. |
+| `all` | Both. |
+
+`globalZoneAgg.source` selects what to aggregate:
+
+| Value | Meaning |
+| --- | --- |
+| `variable` | A zone variable declared in `zoneVars` (default). |
+| `attribute` | A static zone attribute defined on the zone. |
+
+### Token aggregation owner values
+
+`zoneTokenAgg.owner` accepts:
+
+| Value | Meaning |
+| --- | --- |
+| `self` | The acting seat at runtime. |
+| `active` | The currently active seat. |
+| `none` | Tokens with no owner (e.g., neutral pieces). |
+| `<numericPlayerId>` (e.g., `"0"`, `"1"`) | A literal runtime player id. |
+
+## Reference Paths Index
+
+The tables under [Recommended Reference Paths](#recommended-reference-paths) and [Preview Refs](#preview-refs) cover the most common refs. The full set of ref families the compiler accepts is below; every family the cookbook describes is also reachable from this index.
+
+| Family | Path shape | Result |
+| --- | --- | --- |
+| Victory | `victory.currentMargin.<seatToken>`, `victory.currentRank.<seatToken>` | number |
+| Global var | `var.global.<id>` | number |
+| Global marker | `globalMarker.<id>` | id |
+| Per-player var (acting) | `var.player.{self|active}.<id>` | number |
+| Per-seat var | `var.seat.<seatId>.<id>` | number |
+| Derived metric | `metric.<id>` | number |
+| Active card identity | `activeCard.id`, `activeCard.deckId` | id |
+| Active card tag | `activeCard.hasTag.<tag>` | boolean |
+| Active card metadata | `activeCard.metadata.<key>` | unknown |
+| Active card annotation | `activeCard.annotation.{unshaded\|shaded}.<metric>[.<seatToken>]` | number |
+| Turn intrinsics | `turn.round`, `turn.phaseId`, `turn.stepId` | number / id |
+| Seat intrinsics | `seat.self`, `seat.active` | id |
+| Phase | `phase.current.id`, `phase.next.id` | id |
+| Schedule (boundary) | `schedule.distance.toBoundary.<boundaryId>.{cards\|microturns\|actions\|turns\|rounds}` | number |
+| Schedule (phase) | `schedule.distance.toPhase.<phaseId>.<unit>` | number |
+| Schedule next-boundary | `schedule.nextBoundary.id` | id |
+| Candidate intrinsics | `candidate.actionId`, `candidate.stableMoveKey`, `candidate.paramCount` | id / id / number |
+| Candidate alias | `move.actionId`, `move.stableMoveKey`, `move.paramCount` | same as `candidate.*` |
+| Candidate tag | `candidate.tag.<tagName>` | boolean |
+| Candidate tags list | `candidate.tags` | idList |
+| Candidate params | `candidate.params.<name>` (move scope only) | typed scalar |
+| Microturn intrinsics | `microturn.{kind\|decisionKey\|actorSeat\|remainingRequiredCount\|remainingMaxCount}` | id / number |
+| Microturn option | `microturn.option.{value\|index\|stableKey\|tags\|targetKind}` | id / number / idList |
+| Library | `feature.<id>`, `aggregate.<id>` | typed by the library entry |
+| Strategic condition | `condition.<id>.satisfied`, `condition.<id>.proximity` | boolean / number |
+| Relationship | `relationship.<role>.{seat\|gainValue}` | id / number |
+| Selector | `selector.<id>.<field>` (see [Selector ref fields](#selector-ref-fields)) | varies |
+| Selector iteration | `selector.item.key` (selector-scope only) | id |
+| Strategy module | `module.<id>.<field>` (see [Strategy module ref fields](#strategy-module-ref-fields)) | varies |
+| Guardrail | `guardrail.<id>.<field>` (see [Guardrail ref fields](#guardrail-ref-fields)) | varies |
+| Turn-shape evaluator | `turnShape.<id>.<field>` (see [Turn-shape ref fields](#turn-shape-ref-fields)) | varies |
+| Preview state surface | `preview.<surface-ref>` (current-state ref names re-prefixed; see [Preview Refs](#preview-refs)) | varies |
+| Preview library feature | `preview.feature.<stateFeatureId>` | typed by the underlying state feature |
+| Preview option scalar | `preview.option.<scalar>` (see [`preview.option.*` Refs](#previewoption-refs)) | varies |
+| Preview plan delta | `preview.plan.delta.victory.currentMargin.self` | number |
+| Context discriminator | `context.kind` | id |
+
+### Selector ref fields
+
+| Field | Result |
+| --- | --- |
+| `selected.matches` | boolean — did the selector produce any results? |
+| `selected.key` | id — stable key of the top-ranked result. |
+| `selected.quality` | number — quality of the top-ranked result. |
+| `selected.rank` | number — rank of the top-ranked result. |
+| `selected.component.<componentId>` | number — that component's contribution for the selected result. |
+| `current.matches`, `current.quality`, `current.rank` | as `selected.*` but for the option/item currently being scored. |
+| `current.component.<componentId>` | number. |
+| `candidate.<key>.quality` | number — quality of the selector candidate with `stableKey = <key>`. |
+| `size` | number — number of selector results. |
+| `impactSatisfied` | boolean — whether the selector's `minImpact` expression cleared. |
+
+### Strategy module ref fields
+
+| Field | Result |
+| --- | --- |
+| `active` | boolean — module's `when` evaluated true. |
+| `contribution` | number — combined weighted score. |
+| `priority.value` | number — resolved priority value. |
+| `scoreGroup.<id>.value` | number — that score group's reduced value. |
+| `selector.<role>.id` | id — the resolved selector id for a module role. |
+
+### Guardrail ref fields
+
+| Field | Result |
+| --- | --- |
+| `fired` | boolean. |
+| `penalty` | number. |
+| `severity` | id — `prune`, `demote`, `warn`, `auditOnly`. |
+| `status` | id — runtime status. |
+| `onUnavailable` | id — configured unavailable behavior. |
+
+### Turn-shape ref fields
+
+| Field | Result |
+| --- | --- |
+| `minimumImpactSatisfied` | boolean. |
+| `previewStatus` | id. |
+| `objective.<id>.value` | number. |
+| `objective.<id>.delta` | number. |
 
 ## Action-Selection Candidate Parameter Refs
 
@@ -408,12 +687,13 @@ Use `candidateParamFallback` when a `candidate.params.*` ref can be unavailable.
 ```yaml
 avoidShadedEvent:
   scopes: [move]
-  appliesToActions: [event]
   weight: -800
   value:
     boolToNumber:
       eq:
-        - { ref: candidate.params.side }
+        - ref:
+            candidate.params.side:
+              appliesToActions: [event]
         - shaded
   candidateParamFallback:
     onUnavailable: noContribution
@@ -442,17 +722,18 @@ Because every `candidate.params.mode` read in this expression has an `onMissing`
 
 ### Multi-Card Pivotal Preference
 
-Use `appliesToActions` when a consideration is intentionally limited to an action that declares the param. This makes the declaration check stricter and keeps the profile from scoring unrelated candidates.
+Use `appliesToActions` when the param read must be intentionally limited to actions that declare it. `appliesToActions` is **not** a top-level consideration field; it lives inside the structured `candidate.params.<name>` ref. The compiler enforces this and rejects unknown action ids.
 
 ```yaml
 preferSpecificPivotal:
   scopes: [move]
-  appliesToActions: [pivotalEvent]
   weight: 500
   value:
     boolToNumber:
       in:
-        - { ref: candidate.params.eventCardId }
+        - ref:
+            candidate.params.eventCardId:
+              appliesToActions: [pivotalEvent]
         - [card-121, card-122]
   candidateParamFallback:
     onUnavailable: noContribution
@@ -460,18 +741,19 @@ preferSpecificPivotal:
 
 ### Mixed Candidate Param And Lookup Signal
 
-When one expression mixes state sources, declare every fallback channel that can become unavailable. This example reads a candidate param and a current-state lookup, so it declares both `candidateParamFallback` and `lookupFallback`.
+When one expression mixes state sources, declare every fallback channel that can become unavailable. This example reads a candidate param and a current-state lookup, so it declares both `candidateParamFallback` and `lookupFallback`. `appliesToActions` is again attached to the structured `candidate.params.side` ref, not to the consideration.
 
 ```yaml
 preferUnshadedOnPopulatedBoard:
   scopes: [move]
-  appliesToActions: [event]
   weight: 100
   value:
     add:
       - boolToNumber:
           eq:
-            - { ref: candidate.params.side }
+            - ref:
+                candidate.params.side:
+                  appliesToActions: [event]
             - unshaded
       - lookup:
           surface: policyState
@@ -840,6 +1122,25 @@ preferHighPopulationTarget:
 ```
 
 Use verbose trace output to confirm the scoring path. Ready lookups appear as normal `scoreContributions[]` entries. Unavailable lookups appear in `unknownLookupRefs`; explicit fallback use appears in `lookupFallbackFired`. The canonical architecture fixture `canonicalCookbookProfile()` in `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts` exercises `zones`, `tokens`, `players`, and `globals` in one profile.
+
+For the `globals` collection, the key is a plain string (the global variable id) and `keyType: string`:
+
+```yaml
+weighPatronageDirectly:
+  scopes: [microturn]
+  costClass: state
+  weight: 5
+  value:
+    lookup:
+      surface: policyState
+      collection: globals
+      keyType: string
+      key: patronage
+      path: [value]
+      onMissing: unavailable
+  lookupFallback:
+    onUnavailable: noContribution
+```
 
 ### Projected-State Lookups at chooseN Frontiers
 
@@ -1255,7 +1556,15 @@ Avoid using candidate features as a backdoor to inspect hidden move-template str
 
 ## Candidate Aggregates
 
-Use aggregates for cross-candidate context such as normalization or pass suppression.
+Use aggregates for cross-candidate context such as normalization or pass suppression. Candidate aggregates support a broader op set than the token/zone aggregators:
+
+| Op | Input | Result |
+| --- | --- | --- |
+| `max`, `min` | number | number |
+| `count` | any (uses `where`) | number |
+| `any`, `all` | boolean | boolean |
+| `rankDense` | number or id | number — dense rank, same-value rows share a rank |
+| `rankOrdinal` | number or id | number — strict 1-based rank |
 
 ```yaml
 candidateAggregates:
@@ -1274,7 +1583,21 @@ candidateAggregates:
     op: min
     of:
       ref: feature.projectedSelfMargin
+
+  marginRank:
+    op: rankOrdinal
+    of:
+      ref: feature.projectedSelfMargin
+
+  governCandidateCount:
+    op: count
+    of:
+      ref: candidate.tag.govern
+    where:
+      not: { ref: candidate.tag.pass }
 ```
+
+`feature.<id>` and `aggregate.<id>` are not magic globals — they only resolve when a matching entry exists in `agents.library.stateFeatures` (or `candidateFeatures`) and `agents.library.candidateAggregates` respectively. Authoring a ref to an undeclared id is a compile error.
 
 ## Pruning Rules
 
@@ -1320,9 +1643,32 @@ considerations:
 
 When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Author inner-frontier preferences with `scopes: [microturn]` and `microturn.*` refs; completion-scoped examples must not be added to new profiles.
 
+### Term Clamping and Unknown Fallback
+
+Considerations and module/posture score terms accept two optional shaping fields:
+
+| Field | Effect |
+| --- | --- |
+| `unknownAs: <integer>` | If the consideration's `value` evaluates to `undefined` and no other fallback fired, contribute this integer. Use sparingly — explicit `previewFallback` / `lookupFallback` / `candidateParamFallback` declarations are preferred because they record the unavailable reason in the trace. |
+| `clamp: { min?, max? }` | Clamps the final weighted contribution into `[min, max]` after `weight × value`. Prevents a single unbounded heuristic from dominating the score. |
+
+```yaml
+preferProjectedMargin:
+  scopes: [move]
+  weight: 5
+  value:
+    ref: feature.projectedSelfMargin
+  unknownAs: 0
+  clamp:
+    min: -200
+    max: 200
+```
+
+`unknownAs` and `clamp` apply only to score-producing positions (consideration `value`, module `scoreGroup.terms[].value`, posture `prefer[].value`). They are not valid on `weight`, `when`, or `target` expressions.
+
 ### Normalization Pattern
 
-Do normalization in the consideration, not in the candidate feature, because considerations can see both `feature.*` and `aggregate.*`.
+Do normalization in the consideration, not in the candidate feature, because considerations can see both `feature.*` and `aggregate.*`. **Note:** `div` is integer-truncated, so the pattern below produces a coarse 0/1/… rank rather than a smooth `[0, 1]` ratio. Multiply the numerator by a fixed scale before dividing if you need finer resolution.
 
 ```yaml
 preferNormalizedMargin:
@@ -1629,6 +1975,28 @@ agents:
 - Default to `stableMoveKey` as the final tiebreaker.
 - Normalize with aggregates inside considerations, not candidate features.
 - If a heuristic seems to require unpublished completion structure, remove or redesign it instead of reintroducing pre-microturn assumptions.
+
+## Common Pitfalls
+
+Recurring authoring traps. Most surface as a compile-time diagnostic; a few are silent contribution gaps the trace surfaces only on inspection.
+
+| Pitfall | Symptom | Fix |
+| --- | --- | --- |
+| Writing `aggOp` inside `zoneTokenAgg` or `op` inside `globalTokenAgg`/`adjacentTokenAgg`/`seatAgg` | Compiler rejects the operator | `zoneTokenAgg` and `candidateAggregates` use `op`; the global/adjacent/seat aggregators use `aggOp`. |
+| `appliesToActions` placed at the top level of a consideration | The field is silently accepted by YAML but ignored — declared params still resolve as unavailable for non-matching candidates | Nest `appliesToActions` inside the structured `candidate.params.<n>` ref. |
+| Using singular `candidate.param.<n>` | `CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_REQUIRES_EXPLICIT_FALLBACK` or "unknown ref" | Use plural `candidate.params.<n>`. The singular form is retired. |
+| Using `option.value`, `decision.type`, `decision.name`, `decision.targetKind`, `decision.optionCount`, `preview.phase1` | "ref is removed" diagnostic | Migrate to the `microturn.*` family at `scopes: [microturn]`. |
+| Authoring a preview ref without `previewFallback` | `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` | Declare `previewFallback.onUnavailable: noContribution` (or an explicit constant). |
+| Reading `preview.victory.currentMargin.<opponent>` and seeing constant values across candidates | Opponent-state effects live behind a grant-flow frame the drive exits on | Enable `preview.grantFlowContinuation` with appropriate cap classes, and verify `previewUsage.grantFlowContinuation.exitCounts > 0`. |
+| `coalesce` omitted on a `preview.*` ref | Candidate scores collapse to `undefined` whenever preview fails | Always wrap preview refs in `coalesce` against a `feature.*` current-state baseline, or declare an explicit `previewFallback`. |
+| `dropPassWhenOtherMovesExist` pruning rule omitted | Profile selects `pass` when better candidates exist | Add the canonical pass-suppression rule (see [Pruning Rules](#pruning-rules)). |
+| Using `globalTokenAgg` with `aggOp: sum`/`min`/`max` but no `prop` | "globalTokenAgg.prop is required when aggOp is …" | Set `prop` to the numeric token property to aggregate, or use `aggOp: count`. |
+| `lookup` without the matching `*Fallback` declaration | "Consideration … references … lookup refs … but does not declare lookupFallback" | Add `lookupFallback.onUnavailable` for `policyState` lookups, `previewFallback.onUnavailable` for `previewOptionState` lookups. A mixed expression needs both. |
+| Treating `div` as float division | Numerator < denominator silently collapses to `0` | Either multiply the numerator by a fixed scale before dividing, or use an integer rank pattern. |
+| `seatAgg.expr` without `$seat` | Compiles but every seat reduces to the same value | Use `$seat` inside the inner expression so refs resolve per-seat. |
+| Using `lookup.surface: previewOptionState` from `scopes: [move]` | "lookup expressions are only supported …" or unrelated diagnostic | Projected lookups are microturn-scope only; move scope uses scalar `preview.*` refs. |
+| `scheduleFallback.onUnavailable` omitted on a hidden-deck schedule ref | Compiler accepts at parse time, runtime reports `hiddenDeck` unavailability with no fallback | Always declare `scheduleFallback.onUnavailable` when reading `schedule.distance.*` against a deck that can be hidden. |
+| Misnaming `outcomeGrantContinuation` for the profile-level block | "preview.outcomeGrantContinuation is not a known field" | The current name is `grantFlowContinuation`. `outcomeGrantResolve` is a runtime microturn kind, not an authoring block. |
 
 ## When You Find Older Patterns
 

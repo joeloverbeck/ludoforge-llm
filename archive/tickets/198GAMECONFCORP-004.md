@@ -1,6 +1,6 @@
 # 198GAMECONFCORP-004: Authoring-error negative-test infrastructure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only (the validation surfaces being negative-tested are already in the engine, delivered by Specs 191/196/197)
@@ -85,11 +85,34 @@ Use a fixture sub-directory (e.g., `packages/engine/test/architecture/authoring-
 ### New/Modified Tests
 
 1. `packages/engine/test/architecture/authoring-error-negatives.test.ts` — primary deliverable.
-2. Eight minimal malformed YAML fixture fragments (paths TBD against existing fixture convention).
-3. Golden-diagnostic files for replay-byte-identity.
+2. Eight minimal malformed authoring fixtures embedded as typed `GameSpecDoc` fixture builders in the test file, matching the existing architecture/unit test-helper convention for these validation surfaces.
+3. Consolidated golden-diagnostic table in `authoring-error-negatives.test.ts` for replay-byte-identity.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/architecture/authoring-error-negatives.test.js` — targeted run.
 2. `pnpm turbo test` — full suite regression.
 3. `pnpm turbo lint && pnpm turbo typecheck` — pre-completion verification.
+
+## Outcome
+
+Completed: 2026-05-26
+
+What changed:
+- Added `packages/engine/test/architecture/authoring-error-negatives.test.ts` with `// @test-class: architectural-invariant`.
+- Covered the eight Spec 198 P4 negative cases: unsupported role-constraint kind, `targetKind` mismatch, out-of-range `stageIndex`, ungrantable compound timing, unknown `enablesPlanTemplates`, unbounded subset selector, card observer-policy visible-prefix source missing `take`, and preview ref without `previewFallback`.
+- Each case compiles a minimal malformed `GameSpecDoc`, selects the expected compiler diagnostic, asserts exact `{ code, path, message }`, recompiles to prove byte-identical diagnostic replay, and verifies the offending role/template/module/boundary element is named by path or message.
+- Documented the extension pattern directly in the test via the ordered negative-case table.
+
+Deviation from draft:
+- The draft's "YAML fragments" fixture wording was corrected to the live repo convention for these compiler authoring checks: typed `GameSpecDoc` fixture builders plus a consolidated golden table in the architecture test file. No parser/YAML path was invented, and no production validation rule changed.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/architecture/authoring-error-negatives.test.js` from `packages/engine` — passed; 9 tests, 0 failures.
+- `pnpm turbo test` — passed; 5 tasks successful; engine default lane summary `176/176 files passed`.
+- `pnpm turbo lint` — passed; 2 tasks successful.
+- `pnpm turbo typecheck` — passed; 3 tasks successful.
+
+Source-size / artifact notes:
+- New test file is 384 lines, under repo guidance. No generated artifacts were produced or checked in.

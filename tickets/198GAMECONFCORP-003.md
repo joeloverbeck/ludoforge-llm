@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Possibly — if the harness surfaces engine bugs whose fix is small and local, fix in scope. Larger engine gaps (new primitives) are deferred per spec §6/§11.
-**Deps**: `tickets/198GAMECONFCORP-001.md`
+**Deps**: `archive/tickets/198GAMECONFCORP-001.md`
 
 ## Problem
 

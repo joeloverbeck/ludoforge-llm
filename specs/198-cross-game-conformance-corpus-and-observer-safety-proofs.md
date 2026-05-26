@@ -173,7 +173,7 @@ Each test asserts the diagnostic message identifies the offending authoring elem
 
 Decomposed via `/spec-to-tickets` on 2026-05-26:
 
-- [`tickets/198GAMECONFCORP-001.md`](../tickets/198GAMECONFCORP-001.md) — Author minimal perfect-info board game data spec (covers §4.1 / P1)
+- [`archive/tickets/198GAMECONFCORP-001.md`](../archive/tickets/198GAMECONFCORP-001.md) — Author minimal perfect-info board game data spec (COMPLETED 2026-05-26; covers §4.1 / P1)
 - [`tickets/198GAMECONFCORP-002.md`](../tickets/198GAMECONFCORP-002.md) — Cross-family architectural-invariant tests (covers §4.2 / P2)
 - [`tickets/198GAMECONFCORP-003.md`](../tickets/198GAMECONFCORP-003.md) — Observer-safety invariant proofs (covers §4.3 / P3)
 - [`tickets/198GAMECONFCORP-004.md`](../tickets/198GAMECONFCORP-004.md) — Authoring-error negative-test infrastructure (covers §4.4 / P4)

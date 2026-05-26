@@ -1,6 +1,6 @@
 # 198GAMECONFCORP-001: Author minimal perfect-info board game data spec
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data-asset authoring only
@@ -16,6 +16,7 @@ Foundation #16 mandates a conformance corpus spanning materially different game 
 2. GameSpecDoc convention is a multi-markdown-file structure with fenced YAML — confirmed by inspecting both existing games. Texas Hold'em uses the smaller file set: `00-metadata.md`, `05-verbalization.md`, `10-vocabulary.md`, `20-macros.md`, `30-rules-actions.md`, `40-content-data-assets.md`, `90-terminal.md`, `92-agents.md`, `93-observability.md`, `visual-config.yaml`. This is the appropriate template for a minimal new corpus game.
 3. Spec §4.1 enumerates three candidate game shapes (Generic Race, Generic Capture, Generic Control). The implementation must present these to the user for selection before authoring, per spec §6 edge case (`the implementation runs the spec by the user before committing the final game choice`).
 4. Spec §2 marks `visual-config.yaml` as not required — the corpus axis is engine-side conformance, not runner integration.
+5. Boundary reset approved 2026-05-26: the user confirmed the Foundations-aligned recommendation to author **Generic Control** as a minimal two-player public-observability control game. The approved constraint is data-only authoring with no new engine primitives; if the live DSL cannot express the minimal control game, implementation must stop and narrow rather than add engine code in this ticket.
 
 ## Architecture Check
 
@@ -35,6 +36,8 @@ Present the three spec §4.1 candidate shapes:
 - **Generic Control** — 2-player control-majority with placement + movement; terminal when a chosen zone-set is uniformly controlled.
 
 Selection criterion (per spec §4.1): the spec whose minimal authoring covers the largest fraction of the agent layer's surfaces — selectors, role constraints, posture, plan templates with composed turns. Recommend whichever candidate maximizes that coverage; defer to user choice.
+
+Implementation decision: **Generic Control** selected by user confirmation on 2026-05-26 after reassessment against `docs/FOUNDATIONS.md`.
 
 ### 2. Author `data/games/<chosen-name>/` following the Texas Hold'em file layout
 
@@ -110,3 +113,33 @@ Likely surface — exact directory name (`<chosen-name>`) deferred to user selec
 1. `pnpm turbo build` (run twice; diff compiled GameDef) — determinism check.
 2. `pnpm -F @ludoforge/engine test` — verify the fixture passes.
 3. `pnpm turbo test` — full suite regression check.
+
+## Outcome
+
+Completed 2026-05-26.
+
+Implemented **Generic Control** as the user-approved, Foundation-aligned, data-only perfect-information control corpus game:
+
+- Added `data/games/generic-control.game-spec.md` and `data/games/generic-control/` with metadata, verbalization, vocabulary, rules/actions, data assets, terminal scoring, agents, and public observability.
+- Added `packages/engine/test/architecture/fixtures/generic-control-terminal-fixture.ts` to pin the seeded bounded play-through fixture.
+- Added `packages/engine/test/architecture/generic-control-corpus-game.test.ts` to prove byte-identical double compilation and terminal fixture play.
+
+Scope notes:
+
+- No engine primitives, schemas, or runtime logic changed.
+- `visual-config.yaml` remains intentionally omitted because runner integration is out of scope for Spec 198 ticket 001.
+- The fixture is a TS architecture fixture helper, matching the existing `packages/engine/test/architecture/fixtures/` convention.
+
+Verification:
+
+- `pnpm turbo build` — passed.
+- `pnpm turbo build` — passed again from cache; the new architecture test also compares the two compiled Generic Control `GameDef` JSON byte strings.
+- `pnpm -F @ludoforge/engine build` — passed after adding the explicit fixture helper.
+- `node --test dist/test/architecture/generic-control-corpus-game.test.js` from `packages/engine` — passed.
+- `pnpm -F @ludoforge/engine test` — passed; default lane reported `173/173 files passed`.
+- `pnpm turbo test` — passed after the final fixture helper change; Turbo reported `5 successful, 5 total`.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `rg -n '[ \t]+$' ...` over changed files — no matches.
+- `git diff --check` — passed.

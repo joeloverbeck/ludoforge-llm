@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only (engine bugs surfaced are out of scope here, see Out of Scope)
-**Deps**: `tickets/198GAMECONFCORP-001.md`
+**Deps**: `archive/tickets/198GAMECONFCORP-001.md`
 
 ## Problem
 

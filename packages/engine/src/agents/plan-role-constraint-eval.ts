@@ -1,16 +1,27 @@
 import type { RouteGraphProvider } from '../kernel/route-graph-provider.js';
 import { compileRouteGraphProvider } from '../kernel/route-graph-provider.js';
+import { applyMove } from '../kernel/apply-move.js';
 import type {
   CompiledPlanTemplate,
   GameDef,
   GameState,
+  Move,
   RouteGraphPayload,
   RuntimeDataAsset,
 } from '../kernel/types.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { isSupportedPlanRoleConstraintKind } from '../kernel/plan-role-constraints.js';
 import type { PlanRoleBinding } from './plan-execution.js';
 
 type PlanRoleConstraint = CompiledPlanTemplate['roles'][string]['constraints'][number];
+type PostStateConstraint = Extract<PlanRoleConstraint, { readonly kind: 'postState' }>;
+
+export interface PostStateConstraintContext {
+  readonly def: GameDef;
+  readonly rootMove: Move;
+  readonly steps: readonly CompiledPlanTemplate['steps'][number][];
+  readonly runtime?: GameDefRuntime;
+}
 
 const routeGraphProviderByDef = new WeakMap<GameDef, RouteGraphProvider | null>();
 
@@ -31,6 +42,7 @@ export function constraintsSatisfied(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   state: GameState,
   routeGraph: RouteGraphProvider | null,
+  postStateContext?: PostStateConstraintContext,
 ): boolean {
   return constraints.every((constraint) => {
     switch (constraint.kind) {
@@ -55,6 +67,11 @@ export function constraintsSatisfied(
           throw new Error('adjacent constraint reached runtime evaluation without a compiled RouteGraphProvider.');
         }
         return evaluateAdjacent(binding, constraint, existing, state, routeGraph);
+      case 'postState':
+        if (postStateContext === undefined) {
+          throw new Error('postState constraint reached runtime evaluation without a bounded post-state probe context.');
+        }
+        return evaluatePostState(binding, constraint, existing, state, postStateContext);
       default: {
         if (!isSupportedPlanRoleConstraintKind((constraint as { kind: string }).kind)) {
           throw new Error(`Unsupported plan role constraint kind "${(constraint as { kind: string }).kind}" reached runtime evaluation.`);
@@ -64,6 +81,69 @@ export function constraintsSatisfied(
       }
     }
   });
+}
+
+function evaluatePostState(
+  binding: PlanRoleBinding,
+  constraint: PostStateConstraint,
+  existing: Readonly<Record<string, PlanRoleBinding>>,
+  state: GameState,
+  context: PostStateConstraintContext,
+): boolean {
+  const postState = probeRoleBoundPostState(binding, constraint, context, state);
+  if (postState === null) {
+    return false;
+  }
+  switch (constraint.predicate.kind) {
+    case 'roleLocatedIn': {
+      const { role, container } = constraint.predicate;
+      return evaluateLocatedIn(binding, { kind: 'locatedIn', role, container }, existing, postState);
+    }
+  }
+}
+
+export function probeRoleBoundPostState(
+  binding: PlanRoleBinding,
+  constraint: PostStateConstraint,
+  context: PostStateConstraintContext,
+  state: GameState,
+): GameState | null {
+  const step = context.steps.find((entry) => entry.label === constraint.step);
+  if (step === undefined || step.role !== constraint.role) {
+    return null;
+  }
+  const move = bindStepTarget(context.rootMove, step, binding.selectedId);
+  if (move === null) {
+    return null;
+  }
+  const result = applyMove(
+    context.def,
+    state,
+    move,
+    { advanceToDecisionPoint: true, maxPhaseTransitionsPerMove: constraint.maxSteps },
+    context.runtime,
+  );
+  return result.state;
+}
+
+function bindStepTarget(
+  rootMove: Move,
+  step: CompiledPlanTemplate['steps'][number],
+  selectedId: string,
+): Move | null {
+  if (step.match.decisionKind !== 'actionSelection' && step.match.decisionKind !== 'chooseOne') {
+    return null;
+  }
+  if (step.match.decisionPath === 'actionId') {
+    return null;
+  }
+  return {
+    ...rootMove,
+    params: {
+      ...rootMove.params,
+      [step.match.decisionPath]: selectedId,
+    },
+  };
 }
 
 function evaluateLocatedIn(

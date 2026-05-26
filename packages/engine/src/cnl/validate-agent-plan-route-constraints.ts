@@ -8,6 +8,8 @@ export interface ParsedPlanRoleConstraint {
   readonly refs: readonly string[];
   readonly via?: string;
   readonly locatedInContainer?: string;
+  readonly postStateStep?: string;
+  readonly postStateMaxSteps?: number;
 }
 
 export function parsePlanRoleConstraint(
@@ -141,11 +143,116 @@ export function parsePlanRoleConstraint(
     );
     return { kind: 'adjacent', refs };
   }
+  if (constraint.postState !== undefined) {
+    if (!isRecord(constraint.postState)) {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        path,
+        templateId,
+        roleName,
+        'postState requires an object payload with step, role, maxSteps, and predicate.',
+      );
+      return { kind: 'postState', refs: [] };
+    }
+    const { step, role, maxSteps, predicate } = constraint.postState;
+    const refs: string[] = [];
+    if (!isNonEmptyString(step)) {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        `${path}.postState.step`,
+        templateId,
+        roleName,
+        'postState step must name a plan step label.',
+      );
+    }
+    if (!isRoleRef(role)) {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        `${path}.postState.role`,
+        templateId,
+        roleName,
+        'postState role must be a role.* reference.',
+      );
+    } else {
+      refs.push(role);
+    }
+    if (typeof maxSteps !== 'number' || !Number.isInteger(maxSteps) || maxSteps <= 0) {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        `${path}.postState.maxSteps`,
+        templateId,
+        roleName,
+        'postState maxSteps must be a positive integer.',
+      );
+    }
+    if (!isRecord(predicate) || !isRecord(predicate.roleLocatedIn)) {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        `${path}.postState.predicate`,
+        templateId,
+        roleName,
+        'postState predicate requires roleLocatedIn with role and container references.',
+      );
+    } else {
+      const { role: predicateRole, container } = predicate.roleLocatedIn;
+      if (!isRoleRef(predicateRole)) {
+        pushInvalidPlanRoleConstraintDiagnostic(
+          diagnostics,
+          `${path}.postState.predicate.roleLocatedIn.role`,
+          templateId,
+          roleName,
+          'postState roleLocatedIn predicate requires a role reference.',
+        );
+      } else {
+        refs.push(predicateRole);
+      }
+      if (!isZoneOrRoleRef(container)) {
+        pushInvalidPlanRoleConstraintDiagnostic(
+          diagnostics,
+          `${path}.postState.predicate.roleLocatedIn.container`,
+          templateId,
+          roleName,
+          'postState roleLocatedIn predicate requires a container reference to a zone.* or role.* value.',
+        );
+      } else if (isRoleRef(container)) {
+        refs.push(container);
+      }
+    }
+    return {
+      kind: 'postState',
+      refs,
+      ...(isNonEmptyString(step) ? { postStateStep: step } : {}),
+      ...(typeof maxSteps === 'number' ? { postStateMaxSteps: maxSteps } : {}),
+    };
+  }
   const [kind] = Object.keys(constraint);
   if (kind !== undefined) {
     return { kind, refs: [] };
   }
   return undefined;
+}
+
+export function validatePostStateConstraintRefs(
+  parsed: ParsedPlanRoleConstraint,
+  templateId: string,
+  roleName: string,
+  path: string,
+  stepLabels: ReadonlySet<string>,
+  diagnostics: Diagnostic[],
+): void {
+  if (parsed.kind !== 'postState') {
+    return;
+  }
+  if (parsed.postStateStep !== undefined && !stepLabels.has(parsed.postStateStep)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_REF_UNKNOWN,
+      path: `${path}.postState.step`,
+      severity: 'error',
+      message: `Plan template "${templateId}" role "${roleName}" postState constraint references unknown step "${parsed.postStateStep}".`,
+      suggestion: 'Reference a label declared in the same plan template steps list.',
+      alternatives: [...stepLabels].sort(),
+    });
+  }
 }
 
 export interface RouteGraphValidationContext {

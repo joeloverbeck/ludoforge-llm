@@ -78,6 +78,14 @@ describe('plan role constraint validation', () => {
             { distinctOriginDestination: { origin: 'role.trainSpace', destination: 'role.trainSpace' } },
             { reachable: { from: 'role.trainSpace', to: 'role.trainSpace', via: 'routeClass.land', maxHops: 2 } },
             { adjacent: { a: 'role.trainSpace', b: 'role.trainSpace' } },
+            {
+              postState: {
+                step: 'select-govern-space',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
+              },
+            },
           ],
         },
       }),
@@ -135,6 +143,51 @@ describe('plan role constraint validation', () => {
     );
   });
 
+  it('rejects malformed and unresolved postState metadata', () => {
+    assertCode(
+      createDoc({
+        trainGovern: templateWithRoles({
+          trainSpace: { selector: 'trainSpace', required: true },
+          governSpace: {
+            selector: 'governSpace',
+            required: true,
+            constraints: [{
+              postState: {
+                step: 'missing-step',
+                role: 'role.governSpace',
+                maxSteps: 0,
+                predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
+              },
+            }],
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_INVALID,
+      /maxSteps must be a positive integer/u,
+    );
+    assertCode(
+      createDoc({
+        trainGovern: templateWithRoles({
+          trainSpace: { selector: 'trainSpace', required: true },
+          governSpace: {
+            selector: 'governSpace',
+            required: true,
+            constraints: [{
+              postState: {
+                step: 'missing-step',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
+              },
+            }],
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_REF_UNKNOWN,
+      /unknown step "missing-step"/u,
+    );
+  });
+
   it('accepts constraints that reference the current role candidate', () => {
     assertNoCompileErrors(createDoc({
       trainGovern: templateWithRoles({
@@ -158,6 +211,14 @@ describe('plan role constraint validation', () => {
       { distinctOriginDestination: { origin: 'role.futureSpace', destination: 'role.trainSpace' } },
       { reachable: { from: 'role.trainSpace', to: 'role.futureSpace' } },
       { adjacent: { a: 'role.trainSpace', b: 'role.futureSpace' } },
+      {
+        postState: {
+          step: 'select-govern-space',
+          role: 'role.governSpace',
+          maxSteps: 2,
+          predicate: { roleLocatedIn: { role: 'role.futureSpace', container: 'zone.zone-b' } },
+        },
+      },
     ]) {
       assertCode(
         createDoc({

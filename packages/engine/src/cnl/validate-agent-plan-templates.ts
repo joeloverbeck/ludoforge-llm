@@ -10,6 +10,7 @@ import {
   collectRouteGraphContext,
   parsePlanRoleConstraint,
   validateLocatedInObserverSafety,
+  validatePostStateConstraintRefs,
   validateRouteGraphConstraintRefs,
 } from './validate-agent-plan-route-constraints.js';
 import { isNonEmptyString, isRecord } from './validate-spec-shared.js';
@@ -62,6 +63,12 @@ function validatePlanTemplateRoles(
   const declaredRoles = new Set(Object.keys(roles));
   const boundRoles = new Set<string>();
   const routeGraphContext = collectRouteGraphContext(doc);
+  const stepLabels = new Set(
+    (Array.isArray(templateDef.steps) ? templateDef.steps : [])
+      .filter(isRecord)
+      .map((step) => step.label)
+      .filter(isNonEmptyString),
+  );
 
   for (const [roleName, roleDef] of Object.entries(roles)) {
     const rolePath = `${templatePath}.roles.${roleName}`;
@@ -102,6 +109,7 @@ function validatePlanTemplateRoles(
       }
       validateRouteGraphConstraintRefs(parsed, templateId, roleName, constraintPath, routeGraphContext, diagnostics);
       validateLocatedInObserverSafety(parsed, templateId, roleName, constraintPath, roles, selectors, doc, diagnostics);
+      validatePostStateConstraintRefs(parsed, templateId, roleName, constraintPath, stepLabels, diagnostics);
       for (const ref of parsed.refs) {
         const referencedRole = normalizeRoleRef(ref);
         if (!declaredRoles.has(referencedRole) || (!boundRoles.has(referencedRole) && referencedRole !== roleName)) {

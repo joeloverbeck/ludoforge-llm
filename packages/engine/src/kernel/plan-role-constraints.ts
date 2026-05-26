@@ -4,6 +4,7 @@ export const SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS = [
   'distinctOriginDestination',
   'reachable',
   'adjacent',
+  'postState',
 ] as const;
 
 export type SupportedPlanRoleConstraintKind = typeof SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS[number];

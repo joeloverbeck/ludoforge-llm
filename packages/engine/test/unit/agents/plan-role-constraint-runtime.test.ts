@@ -8,9 +8,11 @@ import {
 } from '../../../src/agents/plan-role-constraint-eval.js';
 import type { PlanRoleBinding } from '../../../src/agents/plan-execution.js';
 import {
+  asActionId,
   asTokenId,
   type GameDef,
   type GameState,
+  initialState,
 } from '../../../src/kernel/index.js';
 import { createSyntheticDecisionDef } from '../../helpers/synthetic-decision-fixture.js';
 
@@ -181,5 +183,54 @@ describe('plan role constraint runtime evaluation', () => {
       ),
       /adjacent constraint reached runtime evaluation without a compiled RouteGraphProvider/u,
     );
+  });
+
+  it('evaluates bounded postState predicates after applying a role-bound decision', () => {
+    const def = routeGraphDef();
+    const baseState = {
+      ...initialState(def, 7, 2).state,
+      zones: { left: [], right: [] },
+    } as unknown as GameState;
+    const context = {
+      def,
+      rootMove: { actionId: asActionId('branch'), params: {} },
+      steps: [{
+        label: 'choose-side',
+        role: 'side',
+        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: '$pick' },
+      }],
+    };
+    const constraint = {
+      kind: 'postState' as const,
+      step: 'choose-side',
+      role: 'side',
+      maxSteps: 2,
+      predicate: { kind: 'roleLocatedIn' as const, role: 'side', container: 'left' },
+    };
+
+    assert.equal(constraintsSatisfied(
+      roleBinding('side', 'left'),
+      [constraint],
+      {},
+      baseState,
+      null,
+      context,
+    ), true);
+    assert.equal(constraintsSatisfied(
+      roleBinding('side', 'right'),
+      [constraint],
+      {},
+      baseState,
+      null,
+      context,
+    ), false);
+    assert.equal(JSON.stringify(constraintsSatisfied(
+      roleBinding('side', 'left'),
+      [constraint],
+      {},
+      baseState,
+      null,
+      context,
+    )), JSON.stringify(true));
   });
 });

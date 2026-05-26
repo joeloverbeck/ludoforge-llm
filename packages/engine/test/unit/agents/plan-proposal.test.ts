@@ -380,6 +380,7 @@ describe('plan proposal', () => {
       'distinctOriginDestination',
       'reachable',
       'adjacent',
+      'postState',
     ]);
     const template = planTemplate({
       roles: {

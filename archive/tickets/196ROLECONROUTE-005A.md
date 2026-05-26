@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-005A: P4B prerequisite - bounded post-state role-constraint evaluation contract
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - generic plan-role constraint evaluation contract, role-bound post-state probe plumbing, compiler/runtime validation and witnesses
@@ -99,3 +99,33 @@ Add focused tests proving:
 
 1. `pnpm -F @ludoforge/engine build && node --test <focused dist test paths>`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Implemented the generic bounded `postState` role-constraint substrate across the compiled role-constraint types, schema source, YAML validation/lowering, proposal binding, and runtime evaluation. The authored shape names a step, role-bound target, positive `maxSteps`, and a generic `roleLocatedIn` post-state predicate. Runtime probes apply the selected role-bound decision through the same generic `applyMove` protocol used by execution, with `maxPhaseTransitionsPerMove` enforcing the authored bound.
+
+Added focused CNL validation/lowering coverage for valid and malformed `postState` metadata, role/step reference checks, and precedence behavior. Added runtime coverage proving a bounded post-state predicate admits satisfying bindings and rejects non-satisfying bindings. Updated proposal constraint-kind coverage to include `postState`.
+
+Regenerated `packages/engine/schemas/GameDef.schema.json` from the retained generator after the compiled schema source changed.
+
+### Deviations and Scope Notes
+
+No FITL, ARVN, Transport, control-preservation, or fake-zone compatibility branch was added. The concrete FITL control-preservation migration remains owned by `tickets/196ROLECONROUTE-005.md`.
+
+Source-size review found pre-existing oversized canonical schema/type surfaces (`types-core.ts`, `schemas-core.ts`, and `game-spec-doc.ts`) with small active growth from this ticket. The user approved the recommended option to keep this prerequisite focused and defer extraction rather than widen the ticket into schema/type decomposition. New shared runtime and compiler files touched by the implementation remain under the repository size cap.
+
+### Generated Artifact Provenance
+
+- Artifact path: `packages/engine/schemas/GameDef.schema.json`
+- Generation command: `pnpm -F @ludoforge/engine run schema:artifacts`
+- Canonical inputs: `packages/engine/src/kernel/schemas-core.ts` and `packages/engine/scripts/schema-artifacts.mjs`
+- Refresh reason: new compiled `postState` plan-role constraint schema
+- Generator durability: retained generator, `packages/engine/scripts/schema-artifacts.mjs`
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build`
+- `cd packages/engine && node --test dist/test/unit/agents/plan-proposal.test.js dist/test/unit/agents/plan-role-constraint-runtime.test.js dist/test/unit/cnl/plan-role-constraint-lowering.test.js dist/test/unit/cnl/plan-role-constraint-validation.test.js`
+- `pnpm -F @ludoforge/engine test` (`171/171` files passed)

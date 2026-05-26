@@ -799,7 +799,17 @@ export type GameSpecPlanRoleConstraint =
   | { readonly locatedIn: { readonly role: string; readonly container: string } }
   | { readonly distinctOriginDestination: { readonly origin: string; readonly destination: string } }
   | { readonly reachable: { readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number } }
-  | { readonly adjacent: { readonly a: string; readonly b: string } };
+  | { readonly adjacent: { readonly a: string; readonly b: string } }
+  | {
+    readonly postState: {
+      readonly step: string;
+      readonly role: string;
+      readonly maxSteps: number;
+      readonly predicate: {
+        readonly roleLocatedIn: { readonly role: string; readonly container: string };
+      };
+    };
+  };
 
 export interface GameSpecPlanRoleDef {
   readonly selector: string;

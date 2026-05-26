@@ -1447,6 +1447,17 @@ const CompiledPlanRoleConstraintSchema = z.union([
     maxHops: z.number().int().positive().optional(),
   }).strict(),
   z.object({ kind: z.literal('adjacent'), a: StringSchema, b: StringSchema }).strict(),
+  z.object({
+    kind: z.literal('postState'),
+    step: StringSchema,
+    role: StringSchema,
+    maxSteps: z.number().int().positive(),
+    predicate: z.object({
+      kind: z.literal('roleLocatedIn'),
+      role: StringSchema,
+      container: StringSchema,
+    }).strict(),
+  }).strict(),
 ]);
 
 const CompiledPlanTemplateSchema = z.object({

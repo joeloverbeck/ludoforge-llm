@@ -1218,7 +1218,14 @@ export type CompiledPlanRoleConstraint =
   | { readonly kind: 'locatedIn'; readonly role: string; readonly container: string }
   | { readonly kind: 'distinctOriginDestination'; readonly origin: string; readonly destination: string }
   | { readonly kind: 'reachable'; readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number }
-  | { readonly kind: 'adjacent'; readonly a: string; readonly b: string };
+  | { readonly kind: 'adjacent'; readonly a: string; readonly b: string }
+  | {
+    readonly kind: 'postState';
+    readonly step: string;
+    readonly role: string;
+    readonly maxSteps: number;
+    readonly predicate: { readonly kind: 'roleLocatedIn'; readonly role: string; readonly container: string };
+  };
 
 export interface CompiledPlanRole {
   readonly selectorId: SelectorId;

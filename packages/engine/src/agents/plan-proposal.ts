@@ -277,7 +277,7 @@ function bindPlanRoles(
             return Array.isArray(value) ? undefined : value;
           },
         }).selected;
-    const binding = selectRoleBinding(roleName, role, selectedItems, input, bindings);
+    const binding = selectRoleBinding(roleName, role, selectedItems, input, bindings, template, root);
     if (binding === null) {
       if (role.required) {
         return null;
@@ -326,6 +326,8 @@ function constraintRoleRefs(constraint: CompiledPlanTemplate['roles'][string]['c
       return [constraint.from, constraint.to];
     case 'adjacent':
       return [constraint.a, constraint.b];
+    case 'postState':
+      return [constraint.role, constraint.predicate.role, constraint.predicate.container];
   }
   return [];
 }
@@ -336,6 +338,8 @@ function selectRoleBinding(
   selectedItems: readonly SelectedItem[] | undefined,
   input: ProposeAdvisoryTurnPlanInput,
   existing: Readonly<Record<string, PlanRoleBinding>>,
+  template: CompiledPlanTemplate,
+  root: PlanProposalRootCandidate,
 ): PlanRoleBinding | null {
   const candidates = selectedItems === undefined
     ? fallbackRoleSelections(role, input.state)
@@ -349,7 +353,12 @@ function selectRoleBinding(
       rank: selected.rank,
       components: Object.fromEntries(selected.components ?? []),
     };
-    if (constraintsSatisfied(binding, role.constraints, existing, input.state, routeGraph)) {
+    if (constraintsSatisfied(binding, role.constraints, existing, input.state, routeGraph, {
+      def: input.def,
+      rootMove: root.move,
+      steps: template.steps,
+      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    })) {
       return binding;
     }
   }

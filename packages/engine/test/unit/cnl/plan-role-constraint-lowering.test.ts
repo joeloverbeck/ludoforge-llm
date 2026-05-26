@@ -23,6 +23,14 @@ function compileTemplate() {
             { distinctOriginDestination: { origin: 'role.trainSpace', destination: 'role.trainSpace' } },
             { reachable: { from: 'role.trainSpace', to: 'role.trainSpace', via: 'routeClass.land', maxHops: 2 } },
             { adjacent: { a: 'role.trainSpace', b: 'role.trainSpace' } },
+            {
+              postState: {
+                step: 'select-govern-space',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
+              },
+            },
           ],
         },
       },
@@ -60,6 +68,13 @@ describe('plan role constraint lowering', () => {
       { kind: 'distinctOriginDestination', origin: 'trainSpace', destination: 'trainSpace' },
       { kind: 'reachable', from: 'trainSpace', to: 'trainSpace', via: 'land', maxHops: 2 },
       { kind: 'adjacent', a: 'trainSpace', b: 'trainSpace' },
+      {
+        kind: 'postState',
+        step: 'select-govern-space',
+        role: 'governSpace',
+        maxSteps: 2,
+        predicate: { kind: 'roleLocatedIn', role: 'governSpace', container: 'zone-b' },
+      },
     ]);
   });
 

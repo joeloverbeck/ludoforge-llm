@@ -177,6 +177,18 @@ function lowerRoleConstraints(
         a: normalizeRoleRef(constraint.adjacent.a),
         b: normalizeRoleRef(constraint.adjacent.b),
       });
+    } else if ('postState' in constraint && isPostStatePayload(constraint.postState)) {
+      lowered.push({
+        kind: 'postState',
+        step: constraint.postState.step,
+        role: normalizeRoleRef(constraint.postState.role),
+        maxSteps: constraint.postState.maxSteps,
+        predicate: {
+          kind: 'roleLocatedIn',
+          role: normalizeRoleRef(constraint.postState.predicate.roleLocatedIn.role),
+          container: normalizeZoneOrRoleRef(constraint.postState.predicate.roleLocatedIn.container),
+        },
+      });
     }
   }
   return lowered;
@@ -217,6 +229,22 @@ function isReachablePayload(
 
 function isAdjacentPayload(value: unknown): value is { readonly a: string; readonly b: string } {
   return isRecord(value) && typeof value.a === 'string' && typeof value.b === 'string';
+}
+
+function isPostStatePayload(
+  value: unknown,
+): value is {
+  readonly step: string;
+  readonly role: string;
+  readonly maxSteps: number;
+  readonly predicate: { readonly roleLocatedIn: { readonly role: string; readonly container: string } };
+} {
+  return isRecord(value)
+    && typeof value.step === 'string'
+    && typeof value.role === 'string'
+    && typeof value.maxSteps === 'number'
+    && isRecord(value.predicate)
+    && isLocatedInPayload(value.predicate.roleLocatedIn);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,6 +1,6 @@
 # 197DOCGATPLA-004: Cross-profile architectural-invariant tests + golden trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test-only
@@ -64,7 +64,21 @@ Confirm the new tests run as part of `pnpm -F @ludoforge/engine test:e2e` and / 
 
 - `packages/engine/test/architecture/doctrine-gating-eligibility.test.ts` (new — cross-profile property assertions)
 - `packages/engine/test/determinism/plan-trace-doctrine-gating-golden.test.ts` (new — pinned trace shape)
-- `packages/engine/test/fixtures/plan-trace-doctrine-gating-golden.json` (new — pinned fixture)
+- `packages/engine/test/fixtures/trace/plan-trace-doctrine-gating.golden.json` (new — pinned fixture)
+
+## Implementation Outcome (2026-05-26)
+
+- Added a shared synthesized-profile fixture helper for doctrine-gating proposal tests.
+- Added the architectural-invariant corpus for enables-only, suppress-only, suppression-over-enable, empty eligibility, and non-empty `gatedBy` provenance.
+- Added a golden trace test plus pinned fixture for the richest doctrine-gating trace shape, covering both `suppressed` and `notEnabled` filtered-template reasons.
+- Kept the proof engine-agnostic: these tests assert generic proposal semantics and deterministic trace serialization; FITL profile-quality behavior remains owned by 003.
+
+Source-size ledger:
+
+- `packages/engine/test/helpers/doctrine-gating-fixtures.ts`: 193 lines.
+- `packages/engine/test/architecture/doctrine-gating-eligibility.test.ts`: 86 lines.
+- `packages/engine/test/determinism/plan-trace-doctrine-gating-golden.test.ts`: 30 lines.
+- `packages/engine/test/fixtures/trace/plan-trace-doctrine-gating.golden.json`: 52 lines.
 
 ## Out of Scope
 
@@ -97,11 +111,24 @@ Confirm the new tests run as part of `pnpm -F @ludoforge/engine test:e2e` and / 
 
 1. `packages/engine/test/architecture/doctrine-gating-eligibility.test.ts` (new) — covers acceptance 1-4. Test class: `architectural-invariant`.
 2. `packages/engine/test/determinism/plan-trace-doctrine-gating-golden.test.ts` (new) — covers acceptance 5. Test class: `golden-trace`.
-3. `packages/engine/test/fixtures/plan-trace-doctrine-gating-golden.json` (new) — pinned fixture consumed by the golden test.
+3. `packages/engine/test/fixtures/trace/plan-trace-doctrine-gating.golden.json` (new) — pinned fixture consumed by the golden test.
 
 ### Commands
 
-1. `pnpm turbo build && pnpm -F @ludoforge/engine test:unit dist/test/architecture/doctrine-gating-eligibility.test.js`
-2. `pnpm -F @ludoforge/engine test:unit dist/test/determinism/plan-trace-doctrine-gating-golden.test.js`
+1. `pnpm turbo build && node --test packages/engine/dist/test/architecture/doctrine-gating-eligibility.test.js`
+2. `node --test packages/engine/dist/test/determinism/plan-trace-doctrine-gating-golden.test.js`
 3. `pnpm -F @ludoforge/engine test:e2e` (confirm determinism lane includes new golden trace)
 4. `pnpm turbo lint typecheck test`
+
+### Verification Run
+
+Passed:
+
+1. `pnpm turbo build`
+2. `node --test packages/engine/dist/test/architecture/doctrine-gating-eligibility.test.js`
+3. `node --test packages/engine/dist/test/determinism/plan-trace-doctrine-gating-golden.test.js`
+4. `pnpm -F @ludoforge/engine test:e2e` (6/6 files passed)
+5. `pnpm -F @ludoforge/engine test` (172/172 files passed)
+6. `pnpm turbo lint typecheck test` (9/9 tasks passed)
+7. `pnpm run check:ticket-deps`
+8. `git diff --check`

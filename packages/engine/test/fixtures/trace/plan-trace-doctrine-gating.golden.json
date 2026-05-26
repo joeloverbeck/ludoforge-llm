@@ -1,0 +1,52 @@
+{
+  "status": "selected",
+  "capClass": "standard256",
+  "capLimit": 256,
+  "selectedTemplate": "alpha",
+  "selectedIntent": "alpha",
+  "selectedRootStableMoveKey": "branch|{}|false|unclassified",
+  "activeDoctrines": [
+    "doctrine.enable",
+    "doctrine.suppress"
+  ],
+  "rejectedDoctrines": [],
+  "filteredOutTemplates": [
+    {
+      "templateId": "beta",
+      "gatedBy": [
+        "doctrine.suppress"
+      ],
+      "reason": "suppressed"
+    },
+    {
+      "templateId": "gamma",
+      "gatedBy": [
+        "doctrine.enable"
+      ],
+      "reason": "notEnabled"
+    }
+  ],
+  "roleBindings": [
+    {
+      "role": "actor",
+      "selectedId": "1",
+      "quality": 0,
+      "rank": 0,
+      "components": {}
+    }
+  ],
+  "alternatives": [
+    {
+      "templateId": "alpha",
+      "rootStableMoveKey": "branch|{}|false|unclassified",
+      "score": 1,
+      "priorityTier": 1,
+      "stableKey": "1:alpha:branch|{}|false|unclassified"
+    }
+  ],
+  "posture": {
+    "status": "notConfigured",
+    "mustViolations": [],
+    "preferContributions": []
+  }
+}

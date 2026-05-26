@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — FITL profile data file edits + author FITL `routeGraph` dataAsset + new architectural-invariant + convergence-witness tests
-**Deps**: `tickets/196ROLECONROUTE-003.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-003.md`
 
 ## Problem
 

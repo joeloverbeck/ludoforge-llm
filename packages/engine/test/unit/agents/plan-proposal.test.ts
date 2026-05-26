@@ -411,38 +411,7 @@ describe('plan proposal', () => {
     );
   });
 
-  it('fails closed if a registered but unimplemented role constraint reaches runtime evaluation', () => {
-    const template = planTemplate({
-      roles: {
-        trainSpace: planTemplate().roles.trainSpace!,
-        governSpace: {
-          ...planTemplate().roles.trainSpace!,
-          constraints: [{ kind: 'locatedIn', role: 'trainSpace', container: 'trainSpace' }],
-        },
-      },
-    });
-    const def = {
-      ...createDef(),
-      agents: createCatalog({ template, selector: roleSelector(2) }),
-    };
-    const state = initialState(def, 186, 2).state;
-    const profile = def.agents!.profiles.baseline!;
-
-    assert.throws(
-      () => proposeAdvisoryTurnPlan({
-        def,
-        state,
-        seatId: 'alpha',
-        playerId: asPlayerId(0),
-        profile,
-        catalog: def.agents!,
-        actionDecisions: [actionDecision('branch')],
-      }),
-      /Plan role constraint kind "locatedIn" reached runtime evaluation before runtime support landed/u,
-    );
-  });
-
-  it('scores plan role selector items with the current selector item key', () => {
+  it('scores plan role selector items with the current selector item key and supported constraints', () => {
     const selectorItemKey = {
       kind: 'ref' as const,
       ref: { kind: 'selectorItemIntrinsic' as const, intrinsic: 'key' as const },
@@ -467,6 +436,11 @@ describe('plan proposal', () => {
             ...planTemplate().roles.trainSpace!.selector,
             ...selector,
           },
+        },
+        governSpace: {
+          ...planTemplate().roles.trainSpace!,
+          selector: { ...planTemplate().roles.trainSpace!.selector, ...selector },
+          constraints: [{ kind: 'locatedIn', role: 'trainSpace', container: 'trainSpace' }],
         },
       },
     });
@@ -493,6 +467,7 @@ describe('plan proposal', () => {
 
     assert.equal(result.status, 'selected');
     assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, 'high:none');
+    assert.equal(result.selected?.roleBindings.governSpace?.selectedId, 'high:none');
     assert.equal(result.selected?.roleBindings.trainSpace?.components.population, 4);
   });
 

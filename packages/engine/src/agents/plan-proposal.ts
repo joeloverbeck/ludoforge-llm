@@ -15,7 +15,6 @@ import type {
 } from '../kernel/types.js';
 import type { PlayerId } from '../kernel/branded.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import { isSupportedPlanRoleConstraintKind } from '../kernel/plan-role-constraints.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import {
   commitPlanExecutionState,
@@ -28,6 +27,7 @@ import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from './polic
 import { evaluatePostureEvaluator } from './policy-posture-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
+import { constraintsSatisfied, routeGraphProviderForDef } from './plan-role-constraint-eval.js';
 
 export const PLAN_CAP_CLASS_BUDGETS = {
   standard256: 256,
@@ -277,7 +277,7 @@ function bindPlanRoles(
             return Array.isArray(value) ? undefined : value;
           },
         }).selected;
-    const binding = selectRoleBinding(roleName, role, selectedItems, input.state, bindings);
+    const binding = selectRoleBinding(roleName, role, selectedItems, input, bindings);
     if (binding === null) {
       if (role.required) {
         return null;
@@ -334,12 +334,13 @@ function selectRoleBinding(
   roleName: string,
   role: CompiledPlanTemplate['roles'][string],
   selectedItems: readonly SelectedItem[] | undefined,
-  state: GameState,
+  input: ProposeAdvisoryTurnPlanInput,
   existing: Readonly<Record<string, PlanRoleBinding>>,
 ): PlanRoleBinding | null {
   const candidates = selectedItems === undefined
-    ? fallbackRoleSelections(role, state)
+    ? fallbackRoleSelections(role, input.state)
     : selectedItems;
+  const routeGraph = routeGraphProviderForDef(input.def);
   for (const selected of candidates) {
     const binding: PlanRoleBinding = {
       role: roleName,
@@ -348,7 +349,7 @@ function selectRoleBinding(
       rank: selected.rank,
       components: Object.fromEntries(selected.components ?? []),
     };
-    if (constraintsSatisfied(binding, role.constraints, existing)) {
+    if (constraintsSatisfied(binding, role.constraints, existing, input.state, routeGraph)) {
       return binding;
     }
   }
@@ -439,26 +440,6 @@ function firstCollectionKey(
     case 'authoredFinite':
       return null;
   }
-}
-
-function constraintsSatisfied(
-  binding: PlanRoleBinding,
-  constraints: CompiledPlanTemplate['roles'][string]['constraints'],
-  existing: Readonly<Record<string, PlanRoleBinding>>,
-): boolean {
-  return constraints.every((constraint) => {
-    if (constraint.kind === 'notEqual') {
-      const other = existing[constraint.role];
-      if (other === undefined) {
-        return true;
-      }
-      return binding.selectedId !== other.selectedId;
-    }
-    if (isSupportedPlanRoleConstraintKind(constraint.kind)) {
-      throw new Error(`Plan role constraint kind "${constraint.kind}" reached runtime evaluation before runtime support landed.`);
-    }
-    throw new Error(`Unsupported plan role constraint kind "${constraint.kind}" reached runtime evaluation.`);
-  });
 }
 
 function activeDoctrineIds(input: ProposeAdvisoryTurnPlanInput): readonly string[] {

@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-003: P3 — Runtime constraint evaluation and constraintsSatisfied contract restructure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/plan-proposal.ts` fail-closed registered-kind branches replaced with per-kind runtime branches for `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`
@@ -152,3 +152,44 @@ Existing plan-proposal tests continue to pass.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/plan-role-constraint-runtime.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js` — regression for existing plan-proposal tests
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Implemented scope:
+
+- Extracted runtime role-constraint evaluation from `packages/engine/src/agents/plan-proposal.ts` into `packages/engine/src/agents/plan-role-constraint-eval.ts` to keep proposer growth below the file-size cap.
+- Implemented `locatedIn`, `distinctOriginDestination`, `reachable`, and `adjacent` runtime branches while preserving `notEqual` behavior and unsupported-kind fail-closed behavior.
+- Threaded `GameDef` into role binding selection so runtime evaluation can compile and cache the first `routeGraph` data asset into a `RouteGraphProvider`.
+- Added zone derivation for zone-bound roles and token-bound roles, including constraints that reference the role currently being selected.
+- Added architectural-invariant runtime tests for every supported constraint branch, routeGraph-required throws, and `notEqual` regression coverage.
+- Updated the existing plan-proposal regression so a supported role constraint is evaluated during normal plan selection instead of expecting the old registered-kind fail-closed throw.
+
+Deviations:
+
+- The `RouteGraphProvider` is compiled lazily from `GameDef.runtimeDataAssets` and cached per `GameDef`, rather than being pre-threaded as a separate proposer input. This matches the current ticket 002 implementation surface and keeps the proposal API narrow.
+- `constraintsSatisfied` now resolves the current candidate binding as well as `existing` bindings. This was necessary because authored constraints commonly refer to the role being selected; relying only on `existing` would reject valid current-role constraints.
+- `plan-proposal.test.ts` was already above the 800-line guideline. This change removes the obsolete fail-closed registered-kind test and folds integration coverage into an existing zone-selector test, reducing that file from 827 to 802 lines while putting the full matrix in a new focused test file.
+
+Source-size ledger:
+
+| path | before lines | after lines | active growth | crossed cap? | ledger status |
+| --- | ---: | ---: | ---: | --- | --- |
+| `packages/engine/src/agents/plan-proposal.ts` | 759 | 740 | -19 | no | extracted evaluator into focused sibling module |
+| `packages/engine/src/agents/plan-role-constraint-eval.ts` | 0 | 168 | +168 | no | new focused runtime evaluator module |
+| `packages/engine/test/unit/agents/plan-role-constraint-runtime.test.ts` | 0 | 185 | +185 | no | new focused architectural-invariant test |
+| `packages/engine/test/unit/agents/plan-proposal.test.ts` | 827 | 802 | -25 | preexisting oversize, reduced | obsolete fail-closed registered-kind test removed; integration coverage folded into an existing test |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/plan-role-constraint-runtime.test.js` — passed.
+- `node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js` — passed.
+- `pnpm -F @ludoforge/engine test` — passed on the final code shape (`171/171 files passed`).
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed before the final over-cap test cleanup (`5 successful, 5 total`; engine lane `171/171 files passed`); the final code-shape delta after that root run was limited to shrinking `plan-proposal.test.ts`, reverified by focused tests and the engine lane above.
+- `pnpm turbo lint` — passed on the final code shape.
+- `pnpm turbo typecheck` — passed on the final code shape.
+- `pnpm turbo schema:artifacts` — passed.
+- `pnpm run check:ticket-deps` — passed before archive.

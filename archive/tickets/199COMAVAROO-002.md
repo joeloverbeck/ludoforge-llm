@@ -114,7 +114,7 @@ Deliverable notes and deviations:
 - `plan-trace.ts` was touched even though the file list only named proposer and trace type files, because the existing trace builder is the actual serialization owner for `PolicyPlanTraceAlternative` entries.
 - The new helper module was added to keep `plan-proposal.ts` below the repository source-size cap while avoiding duplicate cap/probe/ranking helpers.
 - No ticket-003 tests were added; P3 coverage remains intentionally owned by `archive/tickets/199COMAVAROO-003.md`.
-- No compile-time grant vocabulary changes were made; P4 remains owned by `tickets/199COMAVAROO-004.md`.
+- Outcome amended: 2026-05-26 — no compile-time grant vocabulary changes were made here; P4 was completed and archived at `archive/tickets/199COMAVAROO-004.md`.
 - No controller fallback behavior changed.
 
 Source-size ledger:

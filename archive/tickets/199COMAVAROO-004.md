@@ -1,6 +1,6 @@
 # 199COMAVAROO-004: P4 — Compile-time grant-vocabulary check
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl (compiler validation)
@@ -84,3 +84,22 @@ Add a focused test under `packages/engine/test/unit/cnl/` (mirroring existing `v
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/validate-agent-plan-templates*.test.js`
 2. `pnpm turbo schema:artifacts`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Implemented the compile-time compound special-tag vocabulary check in `packages/engine/src/cnl/validate-agent-plan-templates.ts`. The validator now derives the recognized special-activity tag vocabulary from existing compound witnesses and emits one `CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE` diagnostic per authored `root.compound.specialTags` token that no `accompanyingOps`-grantable special action exposes.
+
+Extended `packages/engine/test/unit/cnl/agent-plan-template-validate.test.ts` with coverage for aligned tags, unknown tags, absent compound metadata, and multiple unknown tags. The public diagnostic path is normalized by the compiler diagnostic codec to `.0` / `.1` segments even though the validator emits bracket-index source paths.
+
+Deviation from the literal focused command: from the repository root, `node --test dist/test/unit/cnl/agent-plan-template-validate.test.js` is a stale path. The valid compiled test path is `packages/engine/dist/test/unit/cnl/agent-plan-template-validate.test.js`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/agent-plan-template-validate.test.js` — build passed; literal root `dist/...` test path failed because the compiled artifact lives under `packages/engine/dist/...`.
+2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/agent-plan-template-validate.test.js` — passed, 12 tests.
+3. `pnpm turbo schema:artifacts` — passed; no schema artifact diff remained.
+4. `pnpm -F @ludoforge/engine test` — passed, 178/178 files.
+
+Source-size ledger: `packages/engine/src/cnl/validate-agent-plan-templates.ts` is 689 lines after the change and remains under the 800-line cap; `packages/engine/test/unit/cnl/agent-plan-template-validate.test.ts` is 276 lines.

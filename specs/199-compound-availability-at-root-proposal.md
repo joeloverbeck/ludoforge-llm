@@ -164,4 +164,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/199COMAVAROO-001.md`](../archive/tickets/199COMAVAROO-001.md) — P1 — Bounded compound-availability probe primitive (covers §4.1) — COMPLETED 2026-05-26
 - [`archive/tickets/199COMAVAROO-002.md`](../archive/tickets/199COMAVAROO-002.md) — P2 — Proposer integration + trace fields (covers §4.2 + §4.3) — COMPLETED 2026-05-26
 - [`archive/tickets/199COMAVAROO-003.md`](../archive/tickets/199COMAVAROO-003.md) — P3 — Architectural invariants + correspondence + FITL witness (covers §7 P3 + §8) — COMPLETED 2026-05-26
-- [`tickets/199COMAVAROO-004.md`](../tickets/199COMAVAROO-004.md) — P4 — Compile-time grant-vocabulary check (covers §4.4)
+- [`archive/tickets/199COMAVAROO-004.md`](../archive/tickets/199COMAVAROO-004.md) — P4 — Compile-time grant-vocabulary check (covers §4.4) — COMPLETED 2026-05-26

@@ -1,17 +1,15 @@
 {
   "originating_spec": "specs/199-compound-availability-at-root-proposal.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/199COMAVAROO-003.md",
+  "last_ticket": "archive/tickets/199COMAVAROO-004.md",
   "last_result": "completed_archived",
-  "last_work_commit": "fa3543db59cac56ddc9f4eb7a7cca41a910e7fd1",
+  "last_work_commit": "e0867da8e34949e007b73c447999eef3372400d5",
   "last_state_commit": "self",
-  "next_target": "tickets/199COMAVAROO-004.md",
-  "queue": [
-    "tickets/199COMAVAROO-004.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "final_spec_archive",
+  "queue": [],
+  "phase": "ready_for_final_spec_archive",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "199COMAVAROO-003 implemented and archived in fa3543db59cac56ddc9f4eb7a7cca41a910e7fd1; next target is 199COMAVAROO-004. Only unrelated .claude skill edits remain outside harness ownership.",
+  "owned_dirty_summary": "199COMAVAROO-004 implemented and archived in e0867da8e34949e007b73c447999eef3372400d5. Next target is final Spec 199 archive. Unrelated .claude skill edits remain outside harness ownership.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "unrelated_dirty: .claude/skills/fix-pr-ci/SKILL.md, .claude/skills/skill-audit/SKILL.md",

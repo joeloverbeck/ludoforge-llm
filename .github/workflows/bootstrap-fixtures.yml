@@ -1,0 +1,58 @@
+name: Bootstrap Fixtures
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/**'
+      - 'packages/engine/schemas/**'
+      - 'packages/engine/package.json'
+      - 'packages/engine/tsconfig*.json'
+      - 'packages/runner/src/bootstrap/**'
+      - 'packages/runner/scripts/bootstrap-fixtures.mjs'
+      - 'packages/runner/package.json'
+      - 'data/games/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/bootstrap-fixtures.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/src/**'
+      - 'packages/engine/schemas/**'
+      - 'packages/engine/package.json'
+      - 'packages/engine/tsconfig*.json'
+      - 'packages/runner/src/bootstrap/**'
+      - 'packages/runner/scripts/bootstrap-fixtures.mjs'
+      - 'packages/runner/package.json'
+      - 'data/games/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/bootstrap-fixtures.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: bootstrap-fixtures-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - name: Verify bootstrap fixtures match source spec
+        run: pnpm -F @ludoforge/runner bootstrap:fixtures:check

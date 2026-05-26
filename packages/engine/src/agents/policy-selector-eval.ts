@@ -76,6 +76,10 @@ interface SelectorSourceItem {
   readonly microturnOption?: SelectorEvalMicroturnOption;
 }
 
+interface ObserverVisibleState {
+  readonly visibleTokenIds: ReadonlySet<string> | undefined;
+}
+
 export function evaluateSelector(
   selector: CompiledPolicySelector,
   context: SelectorEvalContext,
@@ -182,9 +186,9 @@ function materializeSource(
       return materializeSubsets(base, source.min, source.max, source.beamWidth);
     }
     case 'candidateParams':
-      return materializeCandidateParam(source.param, context.candidate);
+      return materializeCandidateParam(context, source.param, context.candidate);
     case 'microturnOptions':
-      return (context.microturnOptions ?? []).map((entry) => ({ key: entry.key, microturnOption: entry }));
+      return materializeMicroturnOptions(context);
   }
 }
 
@@ -246,6 +250,7 @@ function materializeCollection(
   collection: CollectionRef,
   context: SelectorEvalContext,
 ): readonly SelectorSourceItem[] {
+  const visible = observerVisibleState(context);
   switch (collection.kind) {
     case 'zones':
       return Object.keys(context.state.zones).sort().map((key) => ({ key }));
@@ -254,6 +259,7 @@ function materializeCollection(
         .sort(([left], [right]) => left.localeCompare(right))
         .flatMap(([, tokens]) => tokens
           .filter((token) => collection.tokenType === undefined || token.type === collection.tokenType)
+          .filter((token) => visible.visibleTokenIds === undefined || visible.visibleTokenIds.has(String(token.id)))
           .map((token) => ({ key: String(token.id) })))
         .sort((left, right) => left.key.localeCompare(right.key));
     case 'players':
@@ -293,6 +299,7 @@ function zoneBaseId(zoneId: string): string {
 }
 
 function materializeCandidateParam(
+  context: SelectorEvalContext,
   param: string,
   candidate: SelectorEvalCandidate | undefined,
 ): readonly SelectorSourceItem[] {
@@ -300,11 +307,51 @@ function materializeCandidateParam(
   if (value === undefined || value === null) {
     return [];
   }
+  const visible = observerVisibleState(context);
   const values = Array.isArray(value) ? value : [value];
-  return values.map((entry) => ({
-    key: String(entry),
-    ...(candidate === undefined ? {} : { candidate }),
-  }));
+  return values
+    .map((entry) => String(entry))
+    .filter((key) => visible.visibleTokenIds === undefined || !isKnownHiddenTokenKey(key, visible.visibleTokenIds, context))
+    .map((key) => ({
+      key,
+      ...(candidate === undefined ? {} : { candidate }),
+    }));
+}
+
+function materializeMicroturnOptions(context: SelectorEvalContext): readonly SelectorSourceItem[] {
+  const visible = observerVisibleState(context);
+  return (context.microturnOptions ?? [])
+    .filter((entry) => !isKnownHiddenTokenKey(entry.key, visible.visibleTokenIds, context))
+    .map((entry) => ({ key: entry.key, microturnOption: entry }));
+}
+
+function observerVisibleState(context: SelectorEvalContext): ObserverVisibleState {
+  if (context.observerPlayerId === undefined) {
+    return { visibleTokenIds: undefined };
+  }
+  const observation = derivePlayerObservation(
+    context.def,
+    context.state,
+    context.observerPlayerId,
+    context.observerProfile,
+  );
+  return {
+    visibleTokenIds: new Set(Object.values(observation.visibleTokenIdsByZone).flat()),
+  };
+}
+
+function isKnownHiddenTokenKey(
+  key: string,
+  visibleTokenIds: ReadonlySet<string> | undefined,
+  context: SelectorEvalContext,
+): boolean {
+  if (visibleTokenIds === undefined) {
+    return false;
+  }
+  if (visibleTokenIds.has(key)) {
+    return false;
+  }
+  return Object.values(context.state.zones).some((tokens) => tokens.some((token) => String(token.id) === key));
 }
 
 function scoreItem(

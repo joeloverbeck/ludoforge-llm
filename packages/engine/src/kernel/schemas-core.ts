@@ -1415,6 +1415,8 @@ const StrategyModuleSchema = z.object({
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+  enablesPlanTemplates: z.array(StringSchema),
+  suppressesPlanTemplates: z.array(StringSchema),
 }).strict();
 
 const CompiledAgentStrategyModuleSchema = z.object({
@@ -1429,6 +1431,8 @@ const CompiledAgentStrategyModuleSchema = z.object({
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+  enablesPlanTemplates: z.array(StringSchema),
+  suppressesPlanTemplates: z.array(StringSchema),
 }).strict();
 
 const CompiledPlanRoleConstraintSchema = z.union([

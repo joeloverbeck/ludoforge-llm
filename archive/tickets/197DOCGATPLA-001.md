@@ -1,6 +1,6 @@
 # 197DOCGATPLA-001: Strategy-module gating fields + compiler validation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `cnl/game-spec-doc.ts`, `kernel/types-core.ts`, `cnl/compile-agent-strategy-modules.ts`, `schemas/GameDef.schema.json`
@@ -115,3 +115,40 @@ Run `pnpm turbo schema:artifacts` so `packages/engine/schemas/GameDef.schema.jso
 1. `pnpm turbo build && pnpm -F @ludoforge/engine test:unit dist/test/unit/cnl/strategy-module-gating-validation.test.js`
 2. `pnpm turbo schema:artifacts` (verify clean regen; run twice and `diff` the output)
 3. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completion date: 2026-05-26
+
+What landed:
+- Added optional authored `GameSpecStrategyModuleDef.enablesPlanTemplates` and `suppressesPlanTemplates` fields and normalized compiled `StrategyModuleDef` / `CompiledAgentStrategyModule` fields to non-null `PlanTemplateId[]`.
+- Added the missing `PlanTemplateId` brand in `types-core.ts`; the ticket's branded-id requirement was otherwise not representable in the live codebase.
+- Added compile-time validation for unknown plan-template ids, same-module enables/suppresses contradictions, and degenerate empty-effect declarations, with module-named diagnostics.
+- Regenerated `packages/engine/schemas/GameDef.schema.json`.
+- Added `packages/engine/test/unit/cnl/strategy-module-gating-validation.test.ts` covering the error corpus, populated positive case, and default-empty normalization.
+
+Additional touched-file scope:
+- Fixture and serialized-library mirrors required empty `enablesPlanTemplates` / `suppressesPlanTemplates` arrays because the compiled IR fields are now mandatory: `packages/engine/test/determinism/plan-trace-replay.test.ts`, `packages/engine/test/helpers/spec-190-plan-root-fixture.ts`, `packages/engine/test/unit/agents/plan-proposal-strategy-module-isolation.test.ts`, `packages/engine/test/unit/agents/plan-proposal.test.ts`, and `packages/engine/test/unit/agents/strategy-module-test-fixtures.ts`.
+
+Verification:
+- `pnpm turbo build` — passed after fixture fallout migration.
+- `node --test dist/test/unit/cnl/strategy-module-gating-validation.test.js` from `packages/engine` — passed, 3/3 tests.
+- `pnpm turbo schema:artifacts` — passed twice; second run produced no additional tracked drift beyond the regenerated schema artifacts.
+- `pnpm -F @ludoforge/engine test` — passed, including `schema:artifacts:check` and default lane summary `171/171 files passed`.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — passed; all 5 Turbo tasks successful, including engine default lane summary `171/171 files passed`.
+
+Command substitution:
+- `pnpm -F @ludoforge/engine test:unit dist/test/unit/cnl/strategy-module-gating-validation.test.js` expanded through the package script to broad unit/architecture globs and became unsuitable as a focused proof lane. User approved interrupting/replacing it with direct `node --test dist/test/unit/cnl/strategy-module-gating-validation.test.js`; no matching `node --test` process remained before replacement.
+
+Source-size ledger:
+- `packages/engine/src/cnl/compile-agents.ts` | before 5960 | after 5961 | crossed cap? no, preexisting oversize | active growth +1 | user-approved deferral option 2: canonical compiler hub, extraction would widen this ticket | successor none
+- `packages/engine/src/cnl/game-spec-doc.ts` | before 1107 | after 1109 | crossed cap? no, preexisting oversize | active growth +2 | user-approved deferral option 2: canonical schema/type hub, extraction would widen this ticket | successor none
+- `packages/engine/src/kernel/schemas-core.ts` | before 3305 | after 3309 | crossed cap? no, preexisting oversize | active growth +4 | user-approved deferral option 2: canonical generated-schema source hub, extraction would widen this ticket | successor none
+- `packages/engine/src/kernel/types-core.ts` | before 2966 | after 2971 | crossed cap? no, preexisting oversize | active growth +5 | user-approved deferral option 2: canonical kernel type hub, extraction would widen this ticket | successor none
+
+Deferred scope:
+- Plan-proposer filtering and trace provenance remain owned by `tickets/197DOCGATPLA-002.md`.
+- FITL `buildPoliticalEngine` migration remains owned by `tickets/197DOCGATPLA-003.md`.
+- Cross-profile invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.

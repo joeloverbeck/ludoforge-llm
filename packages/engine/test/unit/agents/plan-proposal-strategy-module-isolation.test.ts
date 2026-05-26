@@ -64,6 +64,8 @@ const module = (
   fallback: { ifInactive: 'noContribution', ifSelectorEmpty: 'noContribution' },
   costClass: 'state',
   dependencies: emptyDependencies,
+  enablesPlanTemplates: [],
+  suppressesPlanTemplates: [],
 });
 
 const profile = (strategyModules: readonly string[]): CompiledAgentProfile => ({
@@ -121,6 +123,8 @@ const createCatalog = (
         fallback: entry.fallback,
         costClass: entry.costClass,
         dependencies: entry.dependencies,
+        enablesPlanTemplates: entry.enablesPlanTemplates,
+        suppressesPlanTemplates: entry.suppressesPlanTemplates,
       },
     ])),
     planTemplates: { train: template() },

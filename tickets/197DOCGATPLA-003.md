@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — data + test only
-**Deps**: `tickets/197DOCGATPLA-001.md`, `tickets/197DOCGATPLA-002.md`
+**Deps**: `archive/tickets/197DOCGATPLA-001.md`, `tickets/197DOCGATPLA-002.md`
 
 ## Problem
 

@@ -780,6 +780,8 @@ export interface GameSpecStrategyModuleDef {
     readonly ifSelectorEmpty?: string;
     readonly selectorEmptyPenalty?: number;
   };
+  readonly enablesPlanTemplates?: readonly string[];
+  readonly suppressesPlanTemplates?: readonly string[];
 }
 
 export type GameSpecPlanRootTiming = 'before' | 'during' | 'after';

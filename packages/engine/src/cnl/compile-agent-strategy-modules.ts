@@ -8,6 +8,7 @@ import type {
   CompiledAgentPolicyRef,
   CompiledAgentDependencyRefs,
   ModuleCostClass,
+  PlanTemplateId,
   StrategyModuleDef,
 } from '../kernel/types.js';
 import type { GameSpecStrategyModuleDef } from './game-spec-doc.js';
@@ -31,13 +32,23 @@ export interface StrategyModuleCompileOptions {
   readonly diagnostics: Diagnostic[];
   readonly compileSelector: (selectorId: string) => { readonly costClass: ModuleCostClass } | null;
   readonly compileGuardrail: (guardrailId: string) => { readonly costClass: ModuleCostClass } | null;
+  readonly planTemplateIds: readonly string[];
   readonly reportModuleRefUnknown: (refPath: string, path: string) => void;
 }
 
 export function compileStrategyModuleDefinition(
   options: StrategyModuleCompileOptions,
 ): AgentStrategyModuleWithExpr | null {
-  const { moduleId, def, context, diagnostics, compileSelector, compileGuardrail, reportModuleRefUnknown } = options;
+  const {
+    moduleId,
+    def,
+    context,
+    diagnostics,
+    compileSelector,
+    compileGuardrail,
+    planTemplateIds,
+    reportModuleRefUnknown,
+  } = options;
   const basePath = `doc.agents.library.strategyModules.${moduleId}`;
   const when = analyzePolicyExpr(def.when ?? true, context, diagnostics, `${basePath}.when`);
   const applies = lowerModuleApplies(def.applies, `${basePath}.applies`, diagnostics, reportModuleRefUnknown);
@@ -46,6 +57,14 @@ export function compileStrategyModuleDefinition(
   const scoreGroups = lowerModuleScoreGroups(def.scoreGroups, `${basePath}.scoreGroups`, context, diagnostics, reportModuleRefUnknown);
   const guardrailIds = lowerModuleGuardrailIds(def.guardrailIds, `${basePath}.guardrailIds`, compileGuardrail, diagnostics, reportModuleRefUnknown);
   const fallback = lowerModuleFallback(def.fallback, `${basePath}.fallback`, diagnostics, reportModuleRefUnknown);
+  const planTemplateGating = lowerModulePlanTemplateGating(
+    def,
+    moduleId,
+    `${basePath}`,
+    planTemplateIds,
+    diagnostics,
+    reportModuleRefUnknown,
+  );
 
   if (
     when === null
@@ -56,6 +75,7 @@ export function compileStrategyModuleDefinition(
     || scoreGroups === null
     || guardrailIds === null
     || fallback === null
+    || planTemplateGating === null
   ) {
     if (when !== null && when.valueType !== 'boolean') {
       diagnostics.push({
@@ -75,6 +95,13 @@ export function compileStrategyModuleDefinition(
     ...scoreGroups.flatMap((group) => group.terms.map((term) => term.analysis.dependencies)),
     ...selectors.map((binding) => ({ ...emptyDependencies(), selectors: [binding.selectorId] })),
     ...guardrailIds.map((guardrailId) => ({ ...emptyDependencies(), guardrails: [guardrailId] })),
+    {
+      ...emptyDependencies(),
+      planTemplates: uniqueSorted([
+        ...planTemplateGating.enablesPlanTemplates,
+        ...planTemplateGating.suppressesPlanTemplates,
+      ]),
+    },
   ]);
   const costClass = deriveModuleCostClass([
     when.costClass,
@@ -110,6 +137,8 @@ export function compileStrategyModuleDefinition(
     fallback,
     costClass,
     dependencies,
+    enablesPlanTemplates: planTemplateGating.enablesPlanTemplates.map((id) => id as PlanTemplateId),
+    suppressesPlanTemplates: planTemplateGating.suppressesPlanTemplates.map((id) => id as PlanTemplateId),
   };
 }
 
@@ -385,6 +414,94 @@ function lowerModuleFallback(
     ifSelectorEmpty,
     ...(fallback?.selectorEmptyPenalty === undefined ? {} : { selectorEmptyPenalty: fallback.selectorEmptyPenalty }),
   };
+}
+
+function lowerModulePlanTemplateGating(
+  def: GameSpecStrategyModuleDef,
+  moduleId: string,
+  path: string,
+  planTemplateIds: readonly string[],
+  diagnostics: Diagnostic[],
+  reportModuleRefUnknown: (refPath: string, path: string) => void,
+): {
+  readonly enablesPlanTemplates: readonly string[];
+  readonly suppressesPlanTemplates: readonly string[];
+} | null {
+  const enables = lowerModulePlanTemplateIdList(
+    def.enablesPlanTemplates,
+    moduleId,
+    'enablesPlanTemplates',
+    `${path}.enablesPlanTemplates`,
+    planTemplateIds,
+    diagnostics,
+    reportModuleRefUnknown,
+  );
+  const suppresses = lowerModulePlanTemplateIdList(
+    def.suppressesPlanTemplates,
+    moduleId,
+    'suppressesPlanTemplates',
+    `${path}.suppressesPlanTemplates`,
+    planTemplateIds,
+    diagnostics,
+    reportModuleRefUnknown,
+  );
+  if (enables === null || suppresses === null) return null;
+
+  let valid = true;
+  const suppressed = new Set(suppresses);
+  const contradicted = enables.filter((templateId) => suppressed.has(templateId));
+  if (contradicted.length > 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Strategy module "${moduleId}" declares plan template "${contradicted[0]}" in both enablesPlanTemplates and suppressesPlanTemplates.`,
+      suggestion: 'Remove the template id from one of the strategy module gating lists.',
+    });
+    valid = false;
+  }
+  if (enables.length > 0 && contradicted.length === enables.length) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
+      path,
+      severity: 'error',
+      message: `Strategy module "${moduleId}" plan-template gating has a degenerate empty effect: every enabled template is also suppressed.`,
+      suggestion: 'Leave at least one enabled template unsuppressed or remove the contradictory gating fields.',
+    });
+    valid = false;
+  }
+
+  return valid ? { enablesPlanTemplates: enables, suppressesPlanTemplates: suppresses } : null;
+}
+
+function lowerModulePlanTemplateIdList(
+  value: readonly string[] | undefined,
+  moduleId: string,
+  fieldName: 'enablesPlanTemplates' | 'suppressesPlanTemplates',
+  path: string,
+  planTemplateIds: readonly string[],
+  diagnostics: Diagnostic[],
+  reportModuleRefUnknown: (refPath: string, path: string) => void,
+): readonly string[] | null {
+  if (value === undefined) return [];
+  if (!isStringArray(value)) {
+    reportModuleRefUnknown('planTemplate', path);
+    return null;
+  }
+  const knownTemplates = new Set(planTemplateIds);
+  for (const [index, templateId] of value.entries()) {
+    if (!knownTemplates.has(templateId)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_MODULE_REF_UNKNOWN,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `Strategy module "${moduleId}" ${fieldName} references unknown plan template "${templateId}".`,
+        suggestion: 'List only plan-template ids declared in agents.library.planTemplates.',
+      });
+      return null;
+    }
+  }
+  return value;
 }
 
 function duplicateSelectorRole(

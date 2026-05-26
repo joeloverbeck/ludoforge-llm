@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/plan-proposal.ts`, `agents/types-plan-trace.ts`, `agents/plan-trace.ts`
-**Deps**: `tickets/197DOCGATPLA-001.md`
+**Deps**: `archive/tickets/197DOCGATPLA-001.md`
 
 ## Problem
 

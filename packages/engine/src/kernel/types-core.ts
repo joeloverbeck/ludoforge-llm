@@ -380,6 +380,7 @@ export type GuardrailSeverity = 'prune' | 'demote' | 'warn' | 'auditOnly';
 export type GuardrailOnUnavailable = 'warnUnknown' | 'noFire' | 'fire';
 export type SelectorId = string & { readonly __brand: 'SelectorId' };
 export type ModuleId = string & { readonly __brand: 'ModuleId' };
+export type PlanTemplateId = string & { readonly __brand: 'PlanTemplateId' };
 export type GuardrailId = string & { readonly __brand: 'GuardrailId' };
 export type TurnShapeEvaluatorId = string & { readonly __brand: 'TurnShapeEvaluatorId' };
 export type ObjectiveId = string & { readonly __brand: 'ObjectiveId' };
@@ -837,6 +838,8 @@ export interface StrategyModuleDef {
   readonly fallback: ModuleFallbackSpec;
   readonly costClass: ModuleCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly enablesPlanTemplates: readonly PlanTemplateId[];
+  readonly suppressesPlanTemplates: readonly PlanTemplateId[];
 }
 
 export interface PassFallbackSpec {
@@ -1285,6 +1288,8 @@ export interface CompiledAgentStrategyModule {
   readonly fallback: ModuleFallbackSpec;
   readonly costClass: ModuleCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly enablesPlanTemplates: readonly PlanTemplateId[];
+  readonly suppressesPlanTemplates: readonly PlanTemplateId[];
 }
 
 export interface CompiledAgentGuardrail {

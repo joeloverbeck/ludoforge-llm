@@ -4,7 +4,7 @@
   "last_ticket": "archive/tickets/198GAMECONFCORP-001.md",
   "last_result": "completed_archived",
   "last_work_commit": "7bfad576fe0de68c423ac9551c29a4ef69a783cd",
-  "last_state_commit": "none",
+  "last_state_commit": "self",
   "next_target": "tickets/198GAMECONFCORP-002.md",
   "queue": [
     "tickets/198GAMECONFCORP-002.md",

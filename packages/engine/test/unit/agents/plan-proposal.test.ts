@@ -110,6 +110,8 @@ const strategyModule = (overrides: Partial<StrategyModuleDef> = {}): StrategyMod
   fallback: { ifInactive: 'noContribution', ifSelectorEmpty: 'noContribution' },
   costClass: 'state',
   dependencies: emptyDependencies,
+  enablesPlanTemplates: [],
+  suppressesPlanTemplates: [],
   ...overrides,
 });
 
@@ -215,6 +217,8 @@ const createCatalog = (options: {
           fallback: module.fallback,
           costClass: module.costClass,
           dependencies: module.dependencies,
+          enablesPlanTemplates: module.enablesPlanTemplates,
+          suppressesPlanTemplates: module.suppressesPlanTemplates,
         },
       },
       planTemplates: { trainGovern: template },

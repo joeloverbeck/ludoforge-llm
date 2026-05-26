@@ -147,6 +147,7 @@ const traceForState = (
     status: 'selected',
     activeDoctrines: [],
     rejectedDoctrines: [],
+    filteredOutTemplates: [],
     roleBindings: Object.values(state.roleBindings)
       .sort((left, right) => compareStable(left.role, right.role))
       .map((binding) => ({

@@ -739,7 +739,7 @@ Operationalized via `/brainstorm` on 2026-05-26 → four PROPOSED specs in `spec
 **Adopted in corrected scope:**
 
 - **Spec 196** — `specs/196-generic-role-constraints-and-authored-route-semantics.md` — proposal #4 (richer role constraints: `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`) and proposal #5 (authored route/map semantics via engine-generic `dataAssets` graph data; "LoC"/"Trail" remain authored labels per Foundation #1).
-- **Spec 197** — `specs/197-doctrine-gated-plan-template-eligibility.md` — proposal #1's *load-bearing core* (strategy modules gain optional `enablesPlanTemplates` / `enablesPlanTemplateTags` / `suppressesPlanTemplates` and the plan proposer filters candidates before scoring), without the strategy-module → "doctrine" type reframe.
+- **Spec 197** — `archive/specs/197-doctrine-gated-plan-template-eligibility.md` — proposal #1's *load-bearing core* (strategy modules gain optional `enablesPlanTemplates` / `suppressesPlanTemplates` and the plan proposer filters candidates before scoring), without the strategy-module → "doctrine" type reframe.
 - **Spec 198** — `specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md` — proposals #8 (observer-safety architectural-invariant proofs), #10 (cross-game conformance corpus per Foundation #16's literal mandate), and #11 (authoring-error negative tests; folded into Spec 198's P4 deliverable).
 - **Spec 199** — `specs/199-compound-availability-at-root-proposal.md` — proposal #7 (compound availability surfaced at root proposal time via a bounded probe; the controller fallback remains the runtime safety net per Foundation #18). Promoted from ticket-sized to standalone spec at user request.
 
@@ -763,4 +763,3 @@ Operationalized via `/brainstorm` on 2026-05-26 → four PROPOSED specs in `spec
 - The audit's framing that closure requires a "second major architectural iteration" is rejected; the closures are enforcement-level additions to a built architecture, not a new architecture.
 
 See `specs/IMPLEMENTATION-ORDER.md` §"Source proposal disposition reference" for the per-proposal disposition table covering all 11 DPRT-P proposals.
-

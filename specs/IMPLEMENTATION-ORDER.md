@@ -35,9 +35,9 @@ Each spec carries its own replay-identity and determinism proof obligations inde
    (`archive/specs/196-generic-role-constraints-and-authored-route-semantics.md`)
    Extends `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS` with `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`; introduces engine-generic authored `routeGraph` data-asset reader; migrates FITL ARVN Transport as the architectural exemplar. Closes the constraint-expressiveness gap Spec 191 §2 explicitly deferred until a concrete authoring need surfaced — that need is now supplied by the FITL competence requirements (ARVN Transport origin-control, NVA route logistics).
 
-2. **Spec 197 — Doctrine-Gated Plan-Template Eligibility**
-   (`specs/197-doctrine-gated-plan-template-eligibility.md`)
-   Extends `StrategyModuleDef` with optional `enablesPlanTemplates` / `enablesPlanTemplateTags` / `suppressesPlanTemplates`; adds an eligibility-filter pass in the plan proposer before scoring. Closes the verified decoupling gap (strategy modules adjust scoring tier but do not gate plan-template candidacy) without retyping strategy modules into a new "doctrine" concept (Spec 186 §11 / Spec 191 §11 settled that this is Foundation #14 churn).
+2. **Spec 197 — Doctrine-Gated Plan-Template Eligibility** (COMPLETED 2026-05-26)
+   (`archive/specs/197-doctrine-gated-plan-template-eligibility.md`)
+   Extends `StrategyModuleDef` with optional `enablesPlanTemplates` / `suppressesPlanTemplates`; adds an eligibility-filter pass in the plan proposer before scoring. Closes the verified decoupling gap (strategy modules adjust scoring tier but do not gate plan-template candidacy) without retyping strategy modules into a new "doctrine" concept (Spec 186 §11 / Spec 191 §11 settled that this is Foundation #14 churn).
 
 3. **Spec 198 — Cross-Game Conformance Corpus and Observer-Safety Proofs**
    (`specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`)

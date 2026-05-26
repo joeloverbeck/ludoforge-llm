@@ -48,6 +48,8 @@ export function createStrategyModuleDef(overrides: Partial<StrategyModuleDef> = 
     fallback: { ifInactive: 'noContribution', ifSelectorEmpty: 'noContribution' },
     costClass: 'state',
     dependencies: emptyDependencies,
+    enablesPlanTemplates: [],
+    suppressesPlanTemplates: [],
     ...overrides,
   };
 }
@@ -130,6 +132,8 @@ export function createStrategyModuleGameDef(module: StrategyModuleDef = createSt
           fallback: module.fallback,
           costClass: module.costClass,
           dependencies: module.dependencies,
+          enablesPlanTemplates: module.enablesPlanTemplates,
+          suppressesPlanTemplates: module.suppressesPlanTemplates,
         },
       },
       guardrails: {

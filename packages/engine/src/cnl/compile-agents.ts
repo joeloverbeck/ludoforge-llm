@@ -2757,6 +2757,7 @@ class AgentLibraryCompiler {
       diagnostics: this.diagnostics,
       compileSelector: (selectorId) => this.compileSelector(selectorId),
       compileGuardrail: (guardrailId) => this.compileGuardrail(guardrailId),
+      planTemplateIds: Object.keys(this.authoredLibrary.planTemplates ?? {}),
       reportModuleRefUnknown: (refPath, path) => this.reportModuleRefUnknown(refPath, path),
     });
     this.strategyModuleStack.pop();

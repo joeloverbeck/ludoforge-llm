@@ -1490,6 +1490,11 @@ agents:
         fallback:
           ifInactive: noContribution
           ifSelectorEmpty: noContribution
+        enablesPlanTemplates:
+          - arvn.trainGovern
+          - arvn.patrolGovern
+        suppressesPlanTemplates:
+          - arvn.assaultRaid
       arvn.blockImmediateWin:
         traceLabel: "ARVN block immediate win"
         when: true

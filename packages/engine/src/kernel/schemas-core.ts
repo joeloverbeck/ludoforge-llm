@@ -1415,6 +1415,8 @@ const StrategyModuleSchema = z.object({
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+  enablesPlanTemplates: z.array(StringSchema),
+  suppressesPlanTemplates: z.array(StringSchema),
 }).strict();
 
 const CompiledAgentStrategyModuleSchema = z.object({
@@ -1429,6 +1431,8 @@ const CompiledAgentStrategyModuleSchema = z.object({
   fallback: ModuleFallbackSpecSchema,
   costClass: ModuleCostClassSchema,
   dependencies: CompiledAgentDependencyRefsSchema,
+  enablesPlanTemplates: z.array(StringSchema),
+  suppressesPlanTemplates: z.array(StringSchema),
 }).strict();
 
 const CompiledPlanRoleConstraintSchema = z.union([
@@ -1518,7 +1522,7 @@ const PolicyPlanMicroturnTraceSchema = z.object({
 }).strict();
 
 const PolicyPlanTraceSchema = z.object({
-  status: z.enum(['selected', 'noTemplate', 'noRootMatch', 'noRoleBinding']),
+  status: z.enum(['selected', 'noTemplate', 'noEligibleTemplate', 'noRootMatch', 'noRoleBinding']),
   capClass: StringSchema.optional(),
   capLimit: IntegerSchema.nonnegative().optional(),
   selectedTemplate: StringSchema.optional(),
@@ -1528,6 +1532,11 @@ const PolicyPlanTraceSchema = z.object({
   rejectedDoctrines: z.array(z.object({
     doctrineId: StringSchema,
     reason: z.enum(['inactive', 'noRootMatch']),
+  }).strict()),
+  filteredOutTemplates: z.array(z.object({
+    templateId: StringSchema,
+    gatedBy: z.array(StringSchema),
+    reason: z.enum(['notEnabled', 'suppressed']),
   }).strict()),
   roleBindings: z.array(z.object({
     role: StringSchema,

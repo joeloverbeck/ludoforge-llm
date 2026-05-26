@@ -14,6 +14,7 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
       }),
   activeDoctrines: result.activeDoctrines,
   rejectedDoctrines: result.rejectedDoctrines,
+  filteredOutTemplates: result.filteredOutTemplates,
   roleBindings: result.selected === undefined
     ? []
     : Object.values(result.selected.roleBindings)

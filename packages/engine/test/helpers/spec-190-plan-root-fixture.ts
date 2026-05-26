@@ -88,6 +88,8 @@ const strategyModule = (): StrategyModuleDef => ({
   fallback: { ifInactive: 'noContribution', ifSelectorEmpty: 'noContribution' },
   costClass: 'state',
   dependencies: emptyDependencies,
+  enablesPlanTemplates: [],
+  suppressesPlanTemplates: [],
 });
 
 const createCatalog = (): AgentPolicyCatalog => {
@@ -152,6 +154,8 @@ const createCatalog = (): AgentPolicyCatalog => {
           fallback: module.fallback,
           costClass: module.costClass,
           dependencies: module.dependencies,
+          enablesPlanTemplates: module.enablesPlanTemplates,
+          suppressesPlanTemplates: module.suppressesPlanTemplates,
         },
       },
       planTemplates: { trainGovern: template },

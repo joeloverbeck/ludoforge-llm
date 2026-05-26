@@ -67,7 +67,7 @@ export interface PolicyPlanMicroturnTrace {
 }
 
 export interface PolicyPlanTrace {
-  readonly status: 'selected' | 'noTemplate' | 'noRootMatch' | 'noRoleBinding';
+  readonly status: 'selected' | 'noTemplate' | 'noEligibleTemplate' | 'noRootMatch' | 'noRoleBinding';
   readonly capClass?: string;
   readonly capLimit?: number;
   readonly selectedTemplate?: string;
@@ -77,6 +77,11 @@ export interface PolicyPlanTrace {
   readonly rejectedDoctrines: readonly {
     readonly doctrineId: string;
     readonly reason: 'inactive' | 'noRootMatch';
+  }[];
+  readonly filteredOutTemplates: readonly {
+    readonly templateId: string;
+    readonly gatedBy: readonly string[];
+    readonly reason: 'notEnabled' | 'suppressed';
   }[];
   readonly roleBindings: readonly PolicyPlanTraceRoleBinding[];
   readonly alternatives: readonly PolicyPlanTraceAlternative[];

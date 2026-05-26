@@ -75,6 +75,8 @@ export function stripAgentLibraryExpressions(library: AgentPolicyLibraryWithExpr
       fallback: module.fallback,
       costClass: module.costClass,
       dependencies: module.dependencies,
+      enablesPlanTemplates: module.enablesPlanTemplates,
+      suppressesPlanTemplates: module.suppressesPlanTemplates,
     };
   }
   for (const [id, template] of Object.entries(library.planTemplates ?? {})) {

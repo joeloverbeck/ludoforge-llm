@@ -1998,6 +1998,18 @@
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
+                  },
+                  "enablesPlanTemplates": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "suppressesPlanTemplates": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
                   }
                 },
                 "required": [
@@ -2008,7 +2020,9 @@
                   "guardrailIds",
                   "fallback",
                   "costClass",
-                  "dependencies"
+                  "dependencies",
+                  "enablesPlanTemplates",
+                  "suppressesPlanTemplates"
                 ],
                 "additionalProperties": false
               }
@@ -3149,6 +3163,18 @@
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
+                  },
+                  "enablesPlanTemplates": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
+                  },
+                  "suppressesPlanTemplates": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    }
                   }
                 },
                 "required": [
@@ -3162,7 +3188,9 @@
                   "guardrailIds",
                   "fallback",
                   "costClass",
-                  "dependencies"
+                  "dependencies",
+                  "enablesPlanTemplates",
+                  "suppressesPlanTemplates"
                 ],
                 "additionalProperties": false
               }

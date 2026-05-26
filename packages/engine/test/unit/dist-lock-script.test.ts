@@ -156,7 +156,7 @@ describe('run-with-dist-lock script', () => {
 
     const holderCommand = 'node -e "setTimeout(() => process.exit(0), 400);"';
     const holder = runWithLock(holderCommand, lockName);
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+    await waitForFile(lockPath);
 
     const waitingResult = await runWithLockResult('node -e "process.exit(0)"', lockName, {
       ENGINE_DIST_LOCK_MAX_WAIT_MS: '100',

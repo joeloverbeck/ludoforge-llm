@@ -1,6 +1,6 @@
 # Spec 197 — Doctrine-Gated Plan-Template Eligibility
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — the verified architectural gap is that strategy modules (the "doctrine" carriers per Spec 186 §11) influence the *scoring tier* of plan-template candidates via `highestDoctrineTier`, but they do not *filter* the candidate set. Plan templates and strategy modules are independent arrays in the agent profile; their connection is purely semantic. The second-iteration audit's claim "doctrine is still scalar bias" is overstated (~69% of FITL modules are condition-bearing per verification — 42 of ~61), but its underlying observation — that doctrine does not gate plan-family availability — is correct and architecturally meaningful.
 **Complexity**: M — extends `StrategyModuleDef` schema with optional gating fields, adds an eligibility-filter pass to `plan-proposal.ts`, and migrates a representative slice of the FITL ARVN profile to demonstrate doctrine-driven plan-family activation. No new selector sources, no constraint changes, no controller changes. The new fields are additive and optional — existing FITL profile and test fixtures need no migration.
 **Date**: 2026-05-26
@@ -12,7 +12,7 @@
 **Trigger report**:
 - `reports/ai-agent-policy-overhaul-second-iteration.md` (ChatGPT-Pro second iteration, 2026-05-26). This spec adopts the audit's *load-bearing core* of proposal #1 (doctrine should constrain plan families) and rejects the broader reframe (promote `strategyModules` to a separate "doctrine" type), preserving Spec 191 §11's Foundation #14 churn rejection. The work is targeted decoupling-fix, not architectural replacement.
 
-**Ticket namespace**: `197DOCPLANELIG` (proposed)
+**Ticket namespace**: `197DOCGATPLA`
 
 ---
 
@@ -250,4 +250,32 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/197DOCGATPLA-001.md`](../archive/tickets/197DOCGATPLA-001.md) — Strategy-module gating fields + compiler validation (covers §4.1 + §4.3)
 - [`archive/tickets/197DOCGATPLA-002.md`](../archive/tickets/197DOCGATPLA-002.md) — Plan-proposer eligibility filter + trace provenance (covers §4.2 + §6 status)
 - [`archive/tickets/197DOCGATPLA-003.md`](../archive/tickets/197DOCGATPLA-003.md) — FITL ARVN `buildPoliticalEngine` migration + convergence witness (covers §4.4)
-- [`tickets/197DOCGATPLA-004.md`](../tickets/197DOCGATPLA-004.md) — Cross-profile architectural-invariant tests + golden trace (covers §7 P4 + §8)
+- [`archive/tickets/197DOCGATPLA-004.md`](../archive/tickets/197DOCGATPLA-004.md) — Cross-profile architectural-invariant tests + golden trace (covers §7 P4 + §8)
+
+## Outcome
+
+Completed: 2026-05-26
+
+Implemented doctrine-gated plan-template eligibility across the compiler, plan proposer, FITL ARVN exemplar, and cross-profile proof corpus:
+
+- Added optional `enablesPlanTemplates` and `suppressesPlanTemplates` strategy-module fields with compiler validation and schema artifact coverage.
+- Added the generic proposer eligibility filter plus `filteredOutTemplates` trace provenance.
+- Migrated the FITL `buildPoliticalEngine` slice to enable political-engine plan families and suppress `arvn.assaultRaid` when active.
+- Added unit, architecture, determinism, FITL witness, and golden-trace coverage for the complete feature.
+
+Deviations from original plan:
+
+- Ticket 003 first exposed a generic activation prerequisite for compiled strategic-condition/state-feature refs; the implementation fixed that root cause before claiming the FITL witness.
+- The ticket namespace used by `/spec-to-tickets` is `197DOCGATPLA`, not the initial proposed namespace string.
+- The golden fixture landed at `packages/engine/test/fixtures/trace/plan-trace-doctrine-gating.golden.json`, matching the existing trace fixture layout.
+
+Verification:
+
+- `pnpm turbo build`
+- `node --test packages/engine/dist/test/architecture/doctrine-gating-eligibility.test.js`
+- `node --test packages/engine/dist/test/determinism/plan-trace-doctrine-gating-golden.test.js`
+- `pnpm -F @ludoforge/engine test:e2e`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint typecheck test`
+- `pnpm run check:ticket-deps`
+- `git diff --check`

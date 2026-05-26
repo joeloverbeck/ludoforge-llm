@@ -203,4 +203,4 @@ Source-size ledger:
 
 Deferred scope:
 - FITL `buildPoliticalEngine` migration landed in `archive/tickets/197DOCGATPLA-003.md`.
-- Cross-profile architectural-invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.
+- Cross-profile architectural-invariant and golden trace coverage are archived at `archive/tickets/197DOCGATPLA-004.md`.

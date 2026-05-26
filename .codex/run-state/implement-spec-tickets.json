@@ -1,21 +1,20 @@
 {
   "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/196ROLECONROUTE-001.md",
+  "last_ticket": "archive/tickets/196ROLECONROUTE-002.md",
   "last_result": "implemented_archived",
-  "last_work_commit": "179623446a1903b0ca8a86d29a07188a8247c009",
+  "last_work_commit": "51942c26058d36927a81b589b9cd64445909a3c3",
   "last_state_commit": "self",
-  "next_target": "tickets/196ROLECONROUTE-002.md",
+  "next_target": "tickets/196ROLECONROUTE-003.md",
   "queue": [
-    "tickets/196ROLECONROUTE-002.md",
     "tickets/196ROLECONROUTE-003.md",
     "tickets/196ROLECONROUTE-004.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 196 ticket 001 implemented and archived in work commit 179623446a1903b0ca8a86d29a07188a8247c009. Queue advances to ticket 002. Only unrelated perf-baseline byproducts from engine proof remain untracked.",
+  "owned_dirty_summary": "Spec 196 ticket 002 implemented and archived in work commit 51942c26058d36927a81b589b9cd64445909a3c3. Queue advances to ticket 003. Only unrelated perf-baseline byproducts from engine/root proof remain untracked.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-26"
 }

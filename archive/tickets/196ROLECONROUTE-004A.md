@@ -71,7 +71,7 @@ Do not modify FITL data in this ticket. Keep the proof focused on the generic va
 
 - FITL `routeGraph` authoring and ARVN Transport template migration — owned by `196ROLECONROUTE-004`.
 - Generic bounded post-state role-constraint substrate — owned by `archive/tickets/196ROLECONROUTE-005A.md`.
-- Generic control-preservation semantics and FITL migration — owned by `tickets/196ROLECONROUTE-005.md`.
+- Generic control-preservation semantics and FITL migration — owned by `archive/tickets/196ROLECONROUTE-005.md`.
 - Loosening role precedence for references to later roles.
 - Any selector-source changes, `routePairs` restructuring, or composite target identity migration.
 

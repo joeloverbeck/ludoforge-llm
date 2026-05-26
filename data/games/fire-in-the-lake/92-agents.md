@@ -1051,6 +1051,36 @@ agents:
               - { reachable: { from: role.transportOrigin, to: role.transportDestination, via: routeClass.land } }
               - { distinctOriginDestination: { origin: role.transportOrigin, destination: role.transportDestination } }
               - { notEqual: role.trainSpace }
+              - postState:
+                  step: transport-destination
+                  role: role.transportDestination
+                  maxSteps: 8
+                  predicate:
+                    condition:
+                      bindings:
+                        origin: role.transportOrigin
+                      when:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: origin } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: origin } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
         steps:
           - { label: train-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
           - { label: transport-destination, role: transportDestination, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
@@ -1883,7 +1913,7 @@ agents:
       arvn.doNotLoseOriginControlByTransport:
         traceLabel: "ARVN do not lose origin control by Transport"
         scopes: [move]
-        # Origin-control admissibility is deferred to 196ROLECONROUTE-005; this remains posture scoring.
+        # Origin-control admissibility is enforced by arvn.trainTransport postState constraints; this remains posture scoring.
         when:
           and:
             - { ref: candidate.tag.transport }

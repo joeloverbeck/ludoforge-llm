@@ -36,15 +36,18 @@ const ARVN_ACTION_WINDOW_FIXTURE_PATH = fileURLToPath(
   new URL('../../../test/fixtures/policy-profile-quality/fitl-arvn-action-distribution-windows.json', import.meta.url),
 );
 const TRAIN_TRANSPORT_WINDOW_STATE_HASH = '0x7934f5eeaa4514a';
+const TRAIN_TRANSPORT_CONTROL_LOSS_STATE_HASH = '0x5133c3d3a52a9965';
 
 interface ArvnWindowFixtureRow {
   readonly stateHash: string;
   readonly state: GameState;
 }
 
-const loadTrainTransportWindowState = (): GameState => {
+const loadTrainTransportWindowState = (
+  stateHash = TRAIN_TRANSPORT_WINDOW_STATE_HASH,
+): GameState => {
   const rows = JSON.parse(readFileSync(ARVN_ACTION_WINDOW_FIXTURE_PATH, 'utf8')) as readonly ArvnWindowFixtureRow[];
-  const row = rows.find((entry) => entry.stateHash === TRAIN_TRANSPORT_WINDOW_STATE_HASH);
+  const row = rows.find((entry) => entry.stateHash === stateHash);
   assert.ok(row, 'expected ARVN action-distribution fixture row with Train+Transport legal window');
   return row.state;
 };
@@ -90,6 +93,41 @@ describe('FITL ARVN Transport route constraint migration', () => {
       { kind: 'reachable', from: 'transportOrigin', to: 'transportDestination', via: 'land' },
       { kind: 'distinctOriginDestination', origin: 'transportOrigin', destination: 'transportDestination' },
       { kind: 'notEqual', role: 'trainSpace' },
+      {
+        kind: 'postState',
+        step: 'transport-destination',
+        role: 'transportDestination',
+        maxSteps: 8,
+        predicate: {
+          kind: 'condition',
+          bindings: { origin: 'transportOrigin' },
+          condition: {
+            op: '>',
+            left: {
+              _t: 5,
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: { zoneExpr: { _t: 2, ref: 'binding', name: 'origin' } },
+                  filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['US', 'ARVN'] }] },
+                },
+              },
+            },
+            right: {
+              _t: 5,
+              aggregate: {
+                op: 'count',
+                query: {
+                  query: 'tokensInZone',
+                  zone: { zoneExpr: { _t: 2, ref: 'binding', name: 'origin' } },
+                  filter: { op: 'and', args: [{ prop: 'faction', op: 'in', value: ['NVA', 'VC'] }] },
+                },
+              },
+            },
+          },
+        },
+      },
     ]);
   });
 
@@ -179,5 +217,57 @@ describe('FITL ARVN Transport route constraint migration', () => {
 
     assert.ok(postState, 'expected materialized Train+Transport probe to apply');
     assert.equal(Number(postState.globalVars.transportCount), Number(state.globalVars.transportCount) + 1);
+  });
+
+  it('rejects origin-control-losing Transport bindings at role-constraint admissibility', () => {
+    const def = compileFitlDef();
+    const state = loadTrainTransportWindowState(TRAIN_TRANSPORT_CONTROL_LOSS_STATE_HASH);
+    const template = def.agents?.library.planTemplates?.['arvn.trainTransport'];
+    assert.ok(template, 'expected arvn.trainTransport template');
+    const constraints = template.roles.transportDestination?.constraints;
+    assert.ok(constraints, 'expected transportDestination constraints');
+    const trainTransportMove = legalMoves(def, state)
+      .find((move) => move.actionId === asActionId('train') && move.actionClass === 'operationPlusSpecialActivity');
+    assert.ok(trainTransportMove, 'expected production legal move enumeration to publish Train+Transport');
+
+    const baseContext = {
+      def,
+      rootMove: trainTransportMove,
+      root: template.root,
+      steps: template.steps,
+      playerId: asPlayerId(1),
+    };
+
+    assert.equal(
+      constraintsSatisfied(
+        roleBinding('transportDestination', 'binh-dinh:none'),
+        constraints,
+        {
+          trainSpace: roleBinding('trainSpace', 'hue:none'),
+          transportOrigin: roleBinding('transportOrigin', 'hue:none'),
+        },
+        state,
+        routeGraphProviderForDef(def),
+        baseContext,
+      ),
+      false,
+      'moving all ARVN transport-eligible pieces out of Hue should fail origin-control admissibility',
+    );
+
+    assert.equal(
+      constraintsSatisfied(
+        roleBinding('transportDestination', 'binh-dinh:none'),
+        constraints,
+        {
+          trainSpace: roleBinding('trainSpace', 'da-nang:none'),
+          transportOrigin: roleBinding('transportOrigin', 'da-nang:none'),
+        },
+        state,
+        routeGraphProviderForDef(def),
+        baseContext,
+      ),
+      true,
+      'Da Nang keeps US pieces after Transport, so the post-state control predicate should admit it',
+    );
   });
 });

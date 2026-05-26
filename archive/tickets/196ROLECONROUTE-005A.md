@@ -65,7 +65,7 @@ Add focused tests proving:
 
 ## Out of Scope
 
-- FITL ARVN Transport data migration and policy witness updates; owned by `tickets/196ROLECONROUTE-005.md`.
+- FITL ARVN Transport data migration and policy witness updates; owned by `archive/tickets/196ROLECONROUTE-005.md`.
 - Choosing the final FITL control-preservation authored shape beyond the generic substrate needed to support it.
 - NVA route logistics and VC underground positioning migrations.
 - Game-specific engine/compiler branches or per-game schemas.
@@ -112,7 +112,7 @@ Regenerated `packages/engine/schemas/GameDef.schema.json` from the retained gene
 
 ### Deviations and Scope Notes
 
-No FITL, ARVN, Transport, control-preservation, or fake-zone compatibility branch was added. The concrete FITL control-preservation migration remains owned by `tickets/196ROLECONROUTE-005.md`.
+No FITL, ARVN, Transport, control-preservation, or fake-zone compatibility branch was added. The concrete FITL control-preservation migration remains owned by `archive/tickets/196ROLECONROUTE-005.md`.
 
 Source-size review found pre-existing oversized canonical schema/type surfaces (`types-core.ts`, `schemas-core.ts`, and `game-spec-doc.ts`) with small active growth from this ticket. The user approved the recommended option to keep this prerequisite focused and defer extraction rather than widen the ticket into schema/type decomposition. New shared runtime and compiler files touched by the implementation remain under the repository size cap.
 

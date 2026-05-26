@@ -8,7 +8,7 @@
 
 ## Problem
 
-`tickets/196ROLECONROUTE-005.md` needs FITL Train+Transport origin-control preservation to be enforced by role-constraint admissibility. A 2026-05-26 Foundations reassessment found that the generic `postState` substrate from `archive/tickets/196ROLECONROUTE-005A.md` can apply a simple role-bound decision, but it cannot yet materialize the full production move shape for an operation plus compound special activity when earlier steps include `chooseNStep` operation params and later steps include special-activity params.
+`archive/tickets/196ROLECONROUTE-005.md` needs FITL Train+Transport origin-control preservation to be enforced by role-constraint admissibility. A 2026-05-26 Foundations reassessment found that the generic `postState` substrate from `archive/tickets/196ROLECONROUTE-005A.md` can apply a simple role-bound decision, but it cannot yet materialize the full production move shape for an operation plus compound special activity when earlier steps include `chooseNStep` operation params and later steps include special-activity params.
 
 Without that generic probe materialization, a post-state predicate can reject origin-control-losing Transport candidates, but it cannot prove that preserving Train+Transport candidates remain admitted and executable. Importing test-helper normalization into production would be an architectural shortcut; this ticket adds the production substrate explicitly.
 
@@ -58,7 +58,7 @@ Add or extend runtime tests that prove:
 
 ## Out of Scope
 
-- Adding the concrete FITL origin-control-preservation predicate to `92-agents.md`; that remains with `tickets/196ROLECONROUTE-005.md`.
+- Adding the concrete FITL origin-control-preservation predicate to `92-agents.md`; that remains with `archive/tickets/196ROLECONROUTE-005.md`.
 - Adding FITL-specific control, ARVN, or Transport branches to engine/compiler code.
 - Changing routeGraph, routePairs identity, or weighted route costs.
 
@@ -101,7 +101,7 @@ Added a focused runtime test that proves a generic operation `chooseN` step plus
 ### Deviations and Scope Notes
 
 - No FITL, ARVN, Transport, or control-preservation branch was added to engine/compiler code.
-- `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts` now owns the concrete production-data witness for Train+Transport materialization. The concrete origin-control-preservation predicate remains owned by `tickets/196ROLECONROUTE-005.md`.
+- `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts` now owns the concrete production-data witness for Train+Transport materialization. The concrete origin-control-preservation predicate remains owned by `archive/tickets/196ROLECONROUTE-005.md`.
 - The new materializer deliberately fails closed when required role-bound steps are missing, the bounded continuation cannot complete, or the final `applyMove` rejects the materialized move.
 
 ### Source-Size Ledger
@@ -117,4 +117,4 @@ Added a focused runtime test that proves a generic operation `chooseN` step plus
 - `cd packages/engine && node --test dist/test/unit/agents/plan-role-constraint-runtime.test.js dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`
 - `pnpm -F @ludoforge/engine test` (`171/171 files passed`)
 
-Post-review completed on 2026-05-26. Archived after confirming the outcome is current, the FITL production-data witness satisfies the ticket's named Train+Transport proof boundary, and the remaining concrete origin-control predicate is owned by `tickets/196ROLECONROUTE-005.md`.
+Post-review completed on 2026-05-26. Archived after confirming the outcome is current, the FITL production-data witness satisfies the ticket's named Train+Transport proof boundary, and the remaining concrete origin-control predicate is owned by `archive/tickets/196ROLECONROUTE-005.md`.

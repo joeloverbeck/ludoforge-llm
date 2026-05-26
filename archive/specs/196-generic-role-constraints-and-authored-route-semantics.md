@@ -1,6 +1,6 @@
 # Spec 196 — Generic Role Constraints and Authored Route/Map Semantics
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — the only landed role constraint is `notEqual`, which is insufficient for the FITL competence report's ARVN Transport origin-control / NVA route logistics / VC underground positioning requirements. Spec 191 §2 explicitly deferred new constraint kinds "as a follow-up justified by a concrete authoring need"; the second-iteration audit and the FITL competence requirements together supply that need.
 **Complexity**: M–L — extends the compiler validator and runtime constraint evaluator, adds a generic authored-route/map data-asset reader, and migrates the FITL profile to use the new constraints where they replace existing guardrail/quality workarounds. No new selector sources, no game-specific engine kinds.
 **Date**: 2026-05-26
@@ -254,4 +254,14 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/196ROLECONROUTE-004.md`](../archive/tickets/196ROLECONROUTE-004.md) — P4A — FITL ARVN Transport route constraint migration and witness (covers §4.4 / §7 P4A)
 - [`archive/tickets/196ROLECONROUTE-005A.md`](../archive/tickets/196ROLECONROUTE-005A.md) — P4B prerequisite — Bounded post-state role-constraint evaluation contract (covers §4.4 / §7 P4B-prereq)
 - [`archive/tickets/196ROLECONROUTE-005B.md`](../archive/tickets/196ROLECONROUTE-005B.md) — P4B prerequisite 2 — Generic compound post-state role-constraint probe materialization (covers §4.4 / §7 P4B-prereq 2)
-- [`tickets/196ROLECONROUTE-005.md`](../tickets/196ROLECONROUTE-005.md) — P4B — Generic control-preservation constraint semantics for FITL ARVN Transport (covers §4.4 / §7 P4B)
+- [`archive/tickets/196ROLECONROUTE-005.md`](../archive/tickets/196ROLECONROUTE-005.md) — P4B — Generic control-preservation constraint semantics for FITL ARVN Transport (covers §4.4 / §7 P4B)
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Spec 196 landed the generic role-constraint expansion and FITL migration as an eight-ticket family: registry/compiler surface, authored `routeGraph`, runtime constraint evaluation, current-role validation alignment, ARVN Transport route admissibility, bounded post-state constraints, compound post-state probe materialization, and the final ARVN Transport origin-control preservation predicate. The final control-preservation shape uses generic `postState.predicate.condition` semantics over authored role bindings and token-count predicates; no FITL-specific engine branch or fake zone alias was added.
+
+The implementation deviated from the initial P4 shape by splitting origin-control preservation into two prerequisites before the concrete FITL migration. That split was required because live reassessment showed that current-state `locatedIn` could not express post-Transport control preservation truthfully, and the first post-state substrate could not yet materialize FITL Train+Transport compound probes.
+
+Verification completed for the final family slice with focused compiled tests, `pnpm -F @ludoforge/engine test` including schema artifact check and 171/171 default-lane files, `pnpm run check:ticket-deps`, whitespace diff check, and root `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck`.

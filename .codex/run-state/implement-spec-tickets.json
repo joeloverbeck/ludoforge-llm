@@ -1,19 +1,17 @@
 {
-  "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/196ROLECONROUTE-005B.md",
-  "last_result": "completed_archived",
-  "last_work_commit": "e8ca2b21efe9abaec5b1886926e3e3683a3b1172",
+  "originating_spec": "archive/specs/196-generic-role-constraints-and-authored-route-semantics.md",
+  "archived_spec": "archive/specs/196-generic-role-constraints-and-authored-route-semantics.md",
+  "last_ticket": "archive/tickets/196ROLECONROUTE-005.md",
+  "last_result": "final_spec_archived",
+  "last_work_commit": "none",
   "last_state_commit": "self",
-  "next_target": "tickets/196ROLECONROUTE-005.md",
-  "queue": [
-    "tickets/196ROLECONROUTE-005.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Implemented and archived generic compound post-state probe materialization in 005B. Ticket 005 is now active and pending as the next concrete FITL origin-control owner. Engine build, focused runtime/FITL tests, full engine default test lane, ticket-dependency check, and diff whitespace check passed.",
+  "owned_dirty_summary": "Implemented and archived 196ROLECONROUTE-005, then archived the originating Spec 196 because no active same-family tickets remain. Focused compiled tests, engine build/test, ticket dependency check, whitespace check, and root Turbo build/test/lint/typecheck passed.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/**",
+  "dirty_state": "owned_dirty: final Spec 196 implementation/archive files pending commit",
   "updated_at": "2026-05-26"
 }

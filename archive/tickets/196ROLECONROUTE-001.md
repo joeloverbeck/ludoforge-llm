@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `kernel/plan-role-constraints.ts` registry; `kernel/types-core.ts` `CompiledPlanRoleConstraint` union; `kernel/schemas-core.ts` zod schema; `cnl/game-spec-doc.ts` authored YAML union; `cnl/validate-agent-plan-templates.ts` parser + per-kind shape checks; `cnl/compile-agent-plan-templates.ts` lowering
-**Deps**: `specs/196-generic-role-constraints-and-authored-route-semantics.md`
+**Deps**: `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md`
 
 ## Problem
 

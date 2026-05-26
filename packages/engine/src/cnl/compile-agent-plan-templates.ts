@@ -5,6 +5,7 @@ import type {
   CompiledPlanTemplate,
   SelectorId,
 } from '../kernel/types.js';
+import { tagConditionValueExprs } from '../kernel/tag-value-exprs.js';
 import type { GameSpecPlanTemplateDef } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { compileRoleSelector } from './compile-agent-role-selectors.js';
@@ -206,7 +207,7 @@ function lowerPostStatePredicate(
   if ('condition' in predicate && isPostStateConditionPredicate(predicate.condition)) {
     return {
       kind: 'condition',
-      condition: predicate.condition.when,
+      condition: tagConditionValueExprs(predicate.condition.when),
       bindings: Object.fromEntries(
         Object.entries(predicate.condition.bindings).map(([name, ref]) => [name, normalizeRoleRef(ref)]),
       ),

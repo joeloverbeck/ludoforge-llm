@@ -31,8 +31,8 @@ Each spec carries its own replay-identity and determinism proof obligations inde
 
 ### Per-spec scope (one-line rationale)
 
-1. **Spec 196 — Generic Role Constraints and Authored Route/Map Semantics**
-   (`specs/196-generic-role-constraints-and-authored-route-semantics.md`)
+1. **Spec 196 — Generic Role Constraints and Authored Route/Map Semantics** (COMPLETED 2026-05-26)
+   (`archive/specs/196-generic-role-constraints-and-authored-route-semantics.md`)
    Extends `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS` with `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`; introduces engine-generic authored `routeGraph` data-asset reader; migrates FITL ARVN Transport as the architectural exemplar. Closes the constraint-expressiveness gap Spec 191 §2 explicitly deferred until a concrete authoring need surfaced — that need is now supplied by the FITL competence requirements (ARVN Transport origin-control, NVA route logistics).
 
 2. **Spec 197 — Doctrine-Gated Plan-Template Eligibility**

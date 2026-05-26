@@ -112,7 +112,7 @@ Completed: 2026-05-26
 
 What changed:
 - Added `packages/engine/src/kernel/microturn/compound-availability-probe.ts` with the exported `CompoundAvailability` union and `probeCompoundAvailability` primitive.
-- Exported the probe module from `packages/engine/src/kernel/index.ts` for downstream proposer integration in `tickets/199COMAVAROO-002.md`.
+- Exported the probe module from `packages/engine/src/kernel/index.ts` for downstream proposer integration in `archive/tickets/199COMAVAROO-002.md`.
 
 Deviations from original plan:
 - The runtime implementation does not import `canSpecialAccompanyOperation` from `packages/engine/src/cnl/validate-agent-plan-templates.ts` because that helper is compiler-private. The probe instead derives the same generic action/pipeline relationship from kernel-owned `GameDef.actions`, action tags/ids, and `ActionPipelineDef.accompanyingOps`.

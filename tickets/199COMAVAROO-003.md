@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test additions only
-**Deps**: `archive/tickets/199COMAVAROO-001.md`, `tickets/199COMAVAROO-002.md`
+**Deps**: `archive/tickets/199COMAVAROO-001.md`, `archive/tickets/199COMAVAROO-002.md`
 
 ## Problem
 

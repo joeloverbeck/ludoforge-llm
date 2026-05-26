@@ -29,13 +29,10 @@ import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
 import { constraintsSatisfied, routeGraphProviderForDef } from './plan-role-constraint-eval.js';
 import { eligiblePlanTemplates, type FilteredOutPlanTemplate } from './plan-template-eligibility.js';
+import { availabilityForPlanRoot, capLimitFor, compareCompoundAvailability, PLAN_CAP_CLASS_BUDGETS } from './plan-proposal-compound-availability.js';
+import type { CompoundAvailability } from '../kernel/microturn/compound-availability-probe.js';
 
-export const PLAN_CAP_CLASS_BUDGETS = {
-  standard256: 256,
-  deep1024: 1024,
-} as const;
-
-type PlanCapClass = keyof typeof PLAN_CAP_CLASS_BUDGETS;
+export { PLAN_CAP_CLASS_BUDGETS };
 
 interface PlanExprContext {
   readonly def?: GameDef;
@@ -56,6 +53,7 @@ export interface PlanProposalAlternative {
   readonly score: number;
   readonly priorityTier: number;
   readonly stableKey: string;
+  readonly compoundAvailability?: CompoundAvailability;
   readonly roleBindings: Readonly<Record<string, PlanRoleBinding>>;
   readonly posture: PolicyPlanTrace['posture'];
 }
@@ -152,6 +150,9 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
         score: priorityTier + roleScore + considerationScore + posture.scoreDelta,
         priorityTier,
         stableKey,
+        ...(template.root.compound === undefined
+          ? {}
+          : { compoundAvailability: availabilityForPlanRoot(input, root.decision, template.root.compound) }),
         roleBindings,
         posture: posture.trace,
       });
@@ -638,13 +639,10 @@ function unavailablePosture(reason: string): PolicyPlanTrace['posture'] {
   };
 }
 
-function capLimitFor(template: CompiledPlanTemplate): number {
-  return PLAN_CAP_CLASS_BUDGETS[template.caps.capClass as PlanCapClass] ?? PLAN_CAP_CLASS_BUDGETS.standard256;
-}
-
 function compareAlternatives(left: PlanProposalAlternative, right: PlanProposalAlternative): number {
   return right.priorityTier - left.priorityTier
     || right.score - left.score
+    || compareCompoundAvailability(left.compoundAvailability, right.compoundAvailability)
     || compareStable(left.stableKey, right.stableKey);
 }
 

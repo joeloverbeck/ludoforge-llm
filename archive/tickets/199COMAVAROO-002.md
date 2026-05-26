@@ -1,6 +1,6 @@
 # 199COMAVAROO-002: P2 — Proposer integration + trace fields
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents (plan proposer), kernel (plan-trace types)
@@ -97,3 +97,46 @@ All new tests authored in ticket 003 per the spec's P3 bundling. This ticket mod
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/plan-proposal*.test.js`
 2. `node --test dist/test/architecture/plan-controller-legality-frontier.test.js`
 3. `pnpm turbo typecheck && pnpm turbo build && pnpm turbo test`
+
+## Outcome (2026-05-26)
+
+Implemented the proposer-side compound availability integration. Plan alternatives now carry optional `compoundAvailability` when their root template has compound metadata, the proposer uses the ticketed `ready > provisional > unavailable > undefined` ordering between exact score and stable-key ordering, and emitted plan traces include the per-alternative field for selected and rejected alternatives.
+
+Implementation details:
+
+- Added `packages/engine/src/agents/plan-proposal-compound-availability.ts` to hold the cap-class helper, root probe adapter, and deterministic availability comparator.
+- Updated `packages/engine/src/agents/plan-proposal.ts` to invoke `probeCompoundAvailability` via the helper for compound roots, carry availability through `PlanProposalAlternative`, and rank by tier, score, availability, then stable key.
+- Updated `packages/engine/src/agents/plan-trace.ts` to serialize `compoundAvailability` only when present.
+- Updated `packages/engine/src/kernel/types-plan-trace.ts` to extend `PolicyPlanTraceAlternative` with optional `compoundAvailability?: CompoundAvailability`.
+
+Deliverable notes and deviations:
+
+- `plan-trace.ts` was touched even though the file list only named proposer and trace type files, because the existing trace builder is the actual serialization owner for `PolicyPlanTraceAlternative` entries.
+- The new helper module was added to keep `plan-proposal.ts` below the repository source-size cap while avoiding duplicate cap/probe/ranking helpers.
+- No ticket-003 tests were added; P3 coverage remains intentionally owned by `tickets/199COMAVAROO-003.md`.
+- No compile-time grant vocabulary changes were made; P4 remains owned by `tickets/199COMAVAROO-004.md`.
+- No controller fallback behavior changed.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/plan-proposal.ts`: 796 lines before, 794 lines after, active growth -2, crossed cap: no. Extraction rationale: moved cap-limit and availability comparator/probe adapter helpers out of the already-near-cap proposer.
+- `packages/engine/src/agents/plan-proposal-compound-availability.ts`: new 59-line helper, crossed cap: no.
+- `packages/engine/src/agents/plan-trace.ts`: 44 lines after, crossed cap: no.
+- `packages/engine/src/kernel/types-plan-trace.ts`: 93 lines after, crossed cap: no.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/unit/agents/plan-proposal*.test.js` from `packages/engine` — passed, 13 tests.
+- `node --test dist/test/architecture/plan-controller-legality-frontier.test.js` from `packages/engine` — passed, 3 tests.
+- `pnpm -F @ludoforge/engine test` — passed, 176/176 files.
+- `pnpm turbo typecheck` — passed, 3/3 tasks.
+- `pnpm turbo build` — passed, 3/3 tasks; runner build emitted existing chunk-size warnings only.
+- `pnpm turbo test` — passed, 5/5 tasks; engine default suite passed 176/176 files.
+
+Command substitutions:
+
+- Ticket command 1 was split into a serial build followed by the compiled Node test invocation so the Node test used fresh `dist/` output.
+- Ticket command 3 was run as separate serial commands (`pnpm turbo typecheck`, `pnpm turbo build`, `pnpm turbo test`) to isolate failures and preserve clear proof evidence.
+
+Generated artifact fallout: none committed. Build/test output stayed in ignored generated locations.

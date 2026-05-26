@@ -1,3 +1,5 @@
+import type { CompoundAvailability } from './microturn/compound-availability-probe.js';
+
 export interface PolicyPlanTraceRoleBinding {
   readonly role: string;
   readonly selectedId: string;
@@ -12,6 +14,7 @@ export interface PolicyPlanTraceAlternative {
   readonly score: number;
   readonly priorityTier: number;
   readonly stableKey: string;
+  readonly compoundAvailability?: CompoundAvailability;
 }
 
 export interface PolicyPlanTracePostureMustViolation {

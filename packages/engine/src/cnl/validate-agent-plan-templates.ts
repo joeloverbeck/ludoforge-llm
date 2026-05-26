@@ -6,6 +6,12 @@ import {
 } from '../kernel/plan-role-constraints.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import {
+  collectRouteGraphContext,
+  parsePlanRoleConstraint,
+  validateLocatedInObserverSafety,
+  validateRouteGraphConstraintRefs,
+} from './validate-agent-plan-route-constraints.js';
 import { isNonEmptyString, isRecord } from './validate-spec-shared.js';
 
 const PLAN_CAP_CLASS_BUDGETS = { standard256: 256, deep1024: 1024 } as const;
@@ -31,7 +37,7 @@ export function validatePlanTemplates(
       continue;
     }
     const templatePath = `doc.agents.library.planTemplates.${templateId}`;
-    validatePlanTemplateRoles(templateId, templateDef, templatePath, selectors, diagnostics);
+    validatePlanTemplateRoles(templateId, templateDef, templatePath, selectors, diagnostics, doc);
     validatePlanTemplateSteps(templateId, templateDef, templatePath, selectors, decisionSurfaces, diagnostics);
     validatePlanTemplateCompound(templateId, templateDef, templatePath, compoundWitnesses, diagnostics);
     validatePlanTemplateCaps(templateId, templateDef.caps, `${templatePath}.caps`, diagnostics);
@@ -50,10 +56,12 @@ function validatePlanTemplateRoles(
   templatePath: string,
   selectors: Record<string, unknown>,
   diagnostics: Diagnostic[],
+  doc?: GameSpecDoc,
 ): void {
   const roles = isRecord(templateDef.roles) ? templateDef.roles : {};
   const declaredRoles = new Set(Object.keys(roles));
   const boundRoles = new Set<string>();
+  const routeGraphContext = collectRouteGraphContext(doc);
 
   for (const [roleName, roleDef] of Object.entries(roles)) {
     const rolePath = `${templatePath}.roles.${roleName}`;
@@ -92,6 +100,8 @@ function validatePlanTemplateRoles(
       if (parsed === undefined) {
         continue;
       }
+      validateRouteGraphConstraintRefs(parsed, templateId, roleName, constraintPath, routeGraphContext, diagnostics);
+      validateLocatedInObserverSafety(parsed, templateId, roleName, constraintPath, roles, selectors, doc, diagnostics);
       for (const ref of parsed.refs) {
         const referencedRole = normalizeRoleRef(ref);
         if (!declaredRoles.has(referencedRole) || !boundRoles.has(referencedRole)) {
@@ -112,193 +122,6 @@ function validatePlanTemplateRoles(
 const SUPPORTED_PLAN_ROLE_CONSTRAINT_KIND_LABEL = SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS
   .map((kind) => `"${kind}"`)
   .join(', ');
-
-function parsePlanRoleConstraint(
-  constraint: Record<string, unknown>,
-  templateId: string,
-  roleName: string,
-  path: string,
-  diagnostics: Diagnostic[],
-): { readonly kind: string; readonly refs: readonly string[] } | undefined {
-  if (typeof constraint.notEqual === 'string') {
-    return { kind: 'notEqual', refs: [constraint.notEqual] };
-  }
-  if (constraint.locatedIn !== undefined) {
-    if (!isRecord(constraint.locatedIn)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        path,
-        templateId,
-        roleName,
-        'locatedIn requires an object payload with role and container references.',
-      );
-      return { kind: 'locatedIn', refs: [] };
-    }
-    const { role, container } = constraint.locatedIn;
-    if (!isRoleRef(role)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        `${path}.locatedIn.role`,
-        templateId,
-        roleName,
-        'locatedIn requires a role reference.',
-      );
-      return { kind: 'locatedIn', refs: [] };
-    }
-    if (!isZoneOrRoleRef(container)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        `${path}.locatedIn.container`,
-        templateId,
-        roleName,
-        'locatedIn requires a container reference to a zone.* or role.* value.',
-      );
-    }
-    return { kind: 'locatedIn', refs: [role, ...(isRoleRef(container) ? [container] : [])] };
-  }
-  if (constraint.distinctOriginDestination !== undefined) {
-    if (!isRecord(constraint.distinctOriginDestination)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        path,
-        templateId,
-        roleName,
-        'distinctOriginDestination requires an object payload with origin and destination role references.',
-      );
-      return { kind: 'distinctOriginDestination', refs: [] };
-    }
-    const { origin, destination } = constraint.distinctOriginDestination;
-    const refs = collectRequiredRoleRefs(
-      diagnostics,
-      `${path}.distinctOriginDestination`,
-      templateId,
-      roleName,
-      { origin, destination },
-      'distinctOriginDestination',
-    );
-    return { kind: 'distinctOriginDestination', refs };
-  }
-  if (constraint.reachable !== undefined) {
-    if (!isRecord(constraint.reachable)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        path,
-        templateId,
-        roleName,
-        'reachable requires an object payload with from and to role references.',
-      );
-      return { kind: 'reachable', refs: [] };
-    }
-    const { from, to, via, maxHops } = constraint.reachable;
-    const refs = collectRequiredRoleRefs(
-      diagnostics,
-      `${path}.reachable`,
-      templateId,
-      roleName,
-      { from, to },
-      'reachable',
-    );
-    if (via !== undefined && !isRouteClassRef(via)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        `${path}.reachable.via`,
-        templateId,
-        roleName,
-        'reachable via must be a routeClass.* reference when provided.',
-      );
-    }
-    if (maxHops !== undefined && (typeof maxHops !== 'number' || !Number.isInteger(maxHops) || maxHops <= 0)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        `${path}.reachable.maxHops`,
-        templateId,
-        roleName,
-        'reachable maxHops must be a positive integer.',
-      );
-    }
-    return { kind: 'reachable', refs };
-  }
-  if (constraint.adjacent !== undefined) {
-    if (!isRecord(constraint.adjacent)) {
-      pushInvalidPlanRoleConstraintDiagnostic(
-        diagnostics,
-        path,
-        templateId,
-        roleName,
-        'adjacent requires an object payload with a and b role references.',
-      );
-      return { kind: 'adjacent', refs: [] };
-    }
-    const { a, b } = constraint.adjacent;
-    const refs = collectRequiredRoleRefs(
-      diagnostics,
-      `${path}.adjacent`,
-      templateId,
-      roleName,
-      { a, b },
-      'adjacent',
-    );
-    return { kind: 'adjacent', refs };
-  }
-  const [kind] = Object.keys(constraint);
-  if (kind !== undefined) {
-    return { kind, refs: [] };
-  }
-  return undefined;
-}
-
-function collectRequiredRoleRefs(
-  diagnostics: Diagnostic[],
-  path: string,
-  templateId: string,
-  roleName: string,
-  refs: Readonly<Record<string, unknown>>,
-  kind: string,
-): readonly string[] {
-  const validRefs: string[] = [];
-  for (const [field, value] of Object.entries(refs)) {
-    if (isRoleRef(value)) {
-      validRefs.push(value);
-      continue;
-    }
-    pushInvalidPlanRoleConstraintDiagnostic(
-      diagnostics,
-      `${path}.${field}`,
-      templateId,
-      roleName,
-      `${kind} requires ${field} to be a role.* reference.`,
-    );
-  }
-  return validRefs;
-}
-
-function pushInvalidPlanRoleConstraintDiagnostic(
-  diagnostics: Diagnostic[],
-  path: string,
-  templateId: string,
-  roleName: string,
-  message: string,
-): void {
-  diagnostics.push({
-    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_INVALID,
-    path,
-    severity: 'error',
-    message: `Plan template "${templateId}" role "${roleName}" constraint is invalid: ${message}`,
-    suggestion: 'Use the documented role-constraint payload shape for this constraint kind.',
-  });
-}
-
-function isRoleRef(value: unknown): value is string {
-  return typeof value === 'string' && value.startsWith('role.');
-}
-
-function isZoneOrRoleRef(value: unknown): value is string {
-  return typeof value === 'string' && (value.startsWith('zone.') || value.startsWith('role.'));
-}
-
-function isRouteClassRef(value: unknown): value is string {
-  return typeof value === 'string' && value.startsWith('routeClass.');
-}
 
 function validatePlanRoleSelectorOrder(
   templateId: string,

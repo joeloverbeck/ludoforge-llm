@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-002: P2 — Authored routeGraph data asset and RouteGraphProvider
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `kernel/types-core.ts` `KNOWN_DATA_ASSET_KINDS` extension; `kernel/schemas-core.ts` routeGraph payload schema; new `kernel/route-graph-provider.ts` module; `cnl/validate-agent-plan-templates.ts` route-ref resolution validator (completes ticket 001's deferral); `cnl/game-spec-doc.ts` routeGraph dataAsset typing
@@ -166,3 +166,42 @@ All declare `// @test-class: architectural-invariant`.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/kernel/route-graph-provider.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-route-resolution.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-hidden-container.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Implemented scope:
+
+- Added `'routeGraph'` to `KNOWN_DATA_ASSET_KINDS` and introduced the generic `RouteGraphPayload` type in `packages/engine/src/kernel/types-core.ts`.
+- Added `RouteGraphPayloadSchema` in `packages/engine/src/kernel/schemas-gamespec.ts`, selected by the existing data-asset validation dispatcher when `kind === 'routeGraph'`.
+- Added `packages/engine/src/kernel/route-graph-provider.ts` with deterministic immutable adjacency indices, `adjacent`, `reachable`, `defaultMaxHops`, payload validation, and a serializable snapshot used by determinism tests.
+- Added focused plan-role constraint route validation in `packages/engine/src/cnl/validate-agent-plan-route-constraints.ts`, then wired `validate-agent-plan-templates.ts` to reject missing routeGraph assets, unresolved routeClass refs, and observer-restricted `locatedIn` container roles.
+- Added focused architectural-invariant tests for routeGraph provider behavior, route-ref diagnostics, hidden-container diagnostics, routeGraph payload rejection, and P1 lowering/validation compatibility.
+
+Deviations:
+
+- The schema entry landed in `schemas-gamespec.ts`, which is the existing source module exported through `kernel/schemas.js`; there was no separate routeGraph branch needed in `schemas-core.ts`.
+- `cnl/game-spec-doc.ts` required no edit because `GameSpecDataAsset.payload` is already the generic typed surface for data assets.
+- Hidden-container validation uses the current generic selector/zone visibility metadata to reject zone selectors that can expose hidden zones as role containers. Runtime hidden/partial route observability remains out of scope as the ticket states.
+
+Source-size ledger:
+
+| path | before lines | after lines | active growth | crossed cap? | ledger status |
+| --- | ---: | ---: | ---: | --- | --- |
+| `packages/engine/src/cnl/validate-agent-plan-templates.ts` | 845 | 668 | -177 | no | extracted route/constraint parsing helpers into `validate-agent-plan-route-constraints.ts` |
+| `packages/engine/src/cnl/validate-agent-plan-route-constraints.ts` | 0 | 308 | +308 | no | new focused module, below cap |
+| `packages/engine/src/kernel/types-core.ts` | 2936 | 2953 | +17 | preexisting oversize, still over | user-approved option 1 defers splitting the required registry/type addition because extracting the entire shared type surface would widen the ticket |
+| `packages/engine/src/kernel/route-graph-provider.ts` | 0 | 226 | +226 | no | new focused module, below cap |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after source-size extraction.
+- `node --test packages/engine/dist/test/unit/kernel/route-graph-provider.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-route-resolution.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-hidden-container.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-validation.test.js packages/engine/dist/test/unit/cnl/plan-role-constraint-lowering.test.js` — passed after source-size extraction.
+- `pnpm -F @ludoforge/engine test` — passed after source-size extraction (`171/171 files passed`).
+- `pnpm turbo build` — passed.
+- `pnpm turbo test` — passed (`5 successful, 5 total`; engine lane `171/171 files passed`).
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed before archive and after archive/reference repair.
+- `git diff --check` — passed before archive and after archive/reference repair.

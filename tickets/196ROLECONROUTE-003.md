@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/plan-proposal.ts` fail-closed registered-kind branches replaced with per-kind runtime branches for `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`
-**Deps**: `tickets/196ROLECONROUTE-002.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-002.md`
 
 ## Problem
 

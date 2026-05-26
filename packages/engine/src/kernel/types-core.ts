@@ -1540,9 +1540,26 @@ export interface GameDef {
   readonly verbalization?: VerbalizationDef;
 }
 
-export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog'] as const;
+export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog', 'routeGraph'] as const;
 export type KnownDataAssetKind = (typeof KNOWN_DATA_ASSET_KINDS)[number];
 export type DataAssetKind = string;
+
+export interface RouteGraphRouteClass {
+  readonly id: string;
+  readonly label?: string;
+}
+
+export interface RouteGraphEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly classes: readonly string[];
+}
+
+export interface RouteGraphPayload {
+  readonly routeClasses: readonly RouteGraphRouteClass[];
+  readonly edges: readonly RouteGraphEdge[];
+  readonly defaultMaxHops: number;
+}
 
 export type PieceStatusDimension = 'activity' | 'tunnel';
 

@@ -243,6 +243,6 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 Decomposed via `/spec-to-tickets` on 2026-05-26:
 
 - [`archive/tickets/196ROLECONROUTE-001.md`](../archive/tickets/196ROLECONROUTE-001.md) — P1 — Constraint registry extension and compile-time surface for new role-constraint kinds (covers §4.1 / §7 P1)
-- [`tickets/196ROLECONROUTE-002.md`](../tickets/196ROLECONROUTE-002.md) — P2 — Authored routeGraph data asset and RouteGraphProvider (covers §4.2 / §7 P2)
+- [`archive/tickets/196ROLECONROUTE-002.md`](../archive/tickets/196ROLECONROUTE-002.md) — P2 — Authored routeGraph data asset and RouteGraphProvider (covers §4.2 / §7 P2)
 - [`tickets/196ROLECONROUTE-003.md`](../tickets/196ROLECONROUTE-003.md) — P3 — Runtime constraint evaluation and constraintsSatisfied contract restructure (covers §4.3 / §7 P3)
 - [`tickets/196ROLECONROUTE-004.md`](../tickets/196ROLECONROUTE-004.md) — P4 — FITL ARVN Transport constraint migration and convergence witness (covers §4.4 / §7 P4)

@@ -10,7 +10,7 @@ import {
 } from '../../architecture/fixtures/agent-plan-compound-witness-fixture.js';
 
 function compileTemplate() {
-  return compileGameSpecToGameDef(createAgentPlanCompoundWitnessDoc({
+  const doc = createAgentPlanCompoundWitnessDoc({
     trainGovern: validCompoundPlanTemplate({
       roles: {
         trainSpace: { selector: 'trainSpace', required: true },
@@ -27,7 +27,22 @@ function compileTemplate() {
         },
       },
     }),
-  }, defaultCompoundWitnessSelectors()));
+  }, defaultCompoundWitnessSelectors());
+  return compileGameSpecToGameDef({
+    ...doc,
+    dataAssets: [
+      ...(doc.dataAssets ?? []),
+      {
+        id: 'test-route-graph',
+        kind: 'routeGraph',
+        payload: {
+          routeClasses: [{ id: 'land' }],
+          edges: [{ from: 'zone-a', to: 'zone-b', classes: ['land'] }],
+          defaultMaxHops: 2,
+        },
+      },
+    ],
+  });
 }
 
 describe('plan role constraint lowering', () => {

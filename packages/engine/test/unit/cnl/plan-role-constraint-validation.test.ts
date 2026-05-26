@@ -12,8 +12,30 @@ import {
 import type { CnlCompilerDiagnosticCode } from '../../../src/cnl/compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from '../../../src/cnl/game-spec-doc.js';
 
-function createDoc(planTemplates: Record<string, unknown>, selectors = defaultCompoundWitnessSelectors()): GameSpecDoc {
-  return createAgentPlanCompoundWitnessDoc(planTemplates, selectors);
+function createDoc(
+  planTemplates: Record<string, unknown>,
+  selectors = defaultCompoundWitnessSelectors(),
+  options: { readonly includeRouteGraph?: boolean } = {},
+): GameSpecDoc {
+  const doc = createAgentPlanCompoundWitnessDoc(planTemplates, selectors);
+  if (options.includeRouteGraph === true) {
+    return {
+      ...doc,
+      dataAssets: [
+      ...(doc.dataAssets ?? []),
+      {
+        id: 'test-route-graph',
+        kind: 'routeGraph',
+        payload: {
+          routeClasses: [{ id: 'land' }],
+          edges: [{ from: 'zone-a', to: 'zone-b', classes: ['land'] }],
+          defaultMaxHops: 2,
+        },
+      },
+      ],
+    };
+  }
+  return doc;
 }
 
 function templateWithRoles(roles: Record<string, unknown>): any {
@@ -59,7 +81,7 @@ describe('plan role constraint validation', () => {
           ],
         },
       }),
-    }));
+    }, defaultCompoundWitnessSelectors(), { includeRouteGraph: true }));
   });
 
   it('rejects unsupported constraint kinds through the registry diagnostic', () => {

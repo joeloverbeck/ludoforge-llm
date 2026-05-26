@@ -1,9 +1,9 @@
 # 199COMAVAROO-003: P3 — Architectural invariants + correspondence + FITL witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: None — test additions only
+**Engine Changes**: Yes — TDD bugfix in compound-availability probe classification
 **Deps**: `archive/tickets/199COMAVAROO-001.md`, `archive/tickets/199COMAVAROO-002.md`
 
 ## Problem
@@ -103,3 +103,28 @@ If keeping markers clean, place the witness in `plan-proposal-compound-availabil
 2. `node --test dist/test/architecture/plan-controller-compound-availability-correspondence.test.js`
 3. `node --test dist/test/architecture/plan-proposal-compound-availability-witness.test.js`
 4. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-05-26
+
+What changed:
+- Fixed `packages/engine/src/kernel/microturn/compound-availability-probe.ts` so compound-availability classification follows the compound special-activity decision chain it is probing. This was a TDD bugfix: the provisional/no-continuation public-seam tests failed red because the probe classified materialized compound moves with the default non-chained discovery path.
+- Added `packages/engine/test/unit/agents/plan-proposal-compound-availability.test.ts` with architectural-invariant coverage for plan-root compound availability purity, terminal-key availability ordering, and deterministic trace serialization.
+- Added `packages/engine/test/architecture/plan-controller-compound-availability-correspondence.test.ts` with a synthetic cross-component correspondence proof: `ready` availability exact-matches the next special-activity frontier, while an unavailable compound tag falls back through the controller.
+- Added `packages/engine/test/architecture/plan-proposal-compound-availability-witness.test.ts` as the Spec 199 convergence witness. It uses the production FITL ARVN profile at seed `199` and asserts `arvn.trainGovern` records `compoundAvailability: { kind: 'unavailable', reason: 'no-continuation' }` in the proposal trace instead of overstating compound coherence.
+
+Deviations:
+- The unit tiebreaker assertion targets the exported `compareCompoundAvailability` seam introduced by ticket 002 rather than private `compareAlternatives`; the proposer still consumes that comparator as the terminal tie key.
+- The convergence witness uses the production ARVN `Train+Govern` proposal trace directly. No FITL profile data was rewritten.
+- The ticket was originally scoped as test additions only, but the public-seam provisional/no-continuation tests exposed an implementation bug in the probe classification path. The source change is limited to routing the probe's continuation classifier through compound-special-activity discovery.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/unit/agents/plan-proposal-compound-availability.test.js dist/test/architecture/plan-controller-compound-availability-correspondence.test.js dist/test/architecture/plan-proposal-compound-availability-witness.test.js` — passed, 8 tests.
+- `pnpm -F @ludoforge/engine test` — passed; schema artifact check plus default lane, 178/178 files passed.
+- `pnpm turbo test` — passed; 5/5 tasks successful.
+
+Closeout notes:
+- Generated fallout: none checked in; `dist/` was regenerated only as the normal build/test consumer.
+- Source-size ledger: not triggered; touched source/test files remain below the repo cap.

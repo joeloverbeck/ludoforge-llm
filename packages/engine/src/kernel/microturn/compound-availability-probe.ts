@@ -1,6 +1,7 @@
 import { asActionId } from '../branded.js';
 import { getActionPipelinesForAction } from '../action-pipeline-lookup.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
+import { legalChoicesDiscover } from '../legal-choices.js';
 import { classifyDecisionContinuationForLegalMove } from './continuation.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from '../missing-binding-policy.js';
 import type { SeatId } from '../branded.js';
@@ -110,7 +111,20 @@ export function probeCompoundAvailability(
         state,
         candidateMove,
         MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
-        undefined,
+        {
+          discoverer: (move, discoverOptions) => legalChoicesDiscover(
+            def,
+            state,
+            move,
+            {
+              chainCompoundSA: true,
+              ...(discoverOptions?.onDeferredPredicatesEvaluated === undefined
+                ? {}
+                : { onDeferredPredicatesEvaluated: discoverOptions.onDeferredPredicatesEvaluated }),
+            },
+            resolvedRuntime,
+          ),
+        },
         resolvedRuntime,
       ).classification,
     );

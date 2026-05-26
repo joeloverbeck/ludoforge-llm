@@ -11,6 +11,7 @@ import {
   type AgentPolicyCatalog,
   type CompiledAgentProfile,
   type CompiledPlanTemplate,
+  type CompiledPolicyExpr,
   type Decision,
   type GameDef,
   type StrategyModuleDef,
@@ -28,6 +29,26 @@ const emptyDependencies = {
 };
 
 const literal = (value: string | number | boolean) => ({ kind: 'literal' as const, value });
+
+const op = (
+  operator: Extract<CompiledPolicyExpr, { readonly kind: 'op' }>['op'],
+  ...args: readonly CompiledPolicyExpr[]
+): CompiledPolicyExpr => ({ kind: 'op', op: operator, args });
+
+const libraryStateFeatureRef = (id: string): CompiledPolicyExpr => ({
+  kind: 'ref',
+  ref: { kind: 'library', refKind: 'stateFeature', id },
+});
+
+const turnCountRef = (): CompiledPolicyExpr => ({
+  kind: 'ref',
+  ref: { kind: 'turnIntrinsic', intrinsic: 'round' },
+});
+
+const strategicConditionRef = (conditionId: string): CompiledPolicyExpr => ({
+  kind: 'ref',
+  ref: { kind: 'strategicCondition', conditionId, field: 'satisfied' },
+});
 
 const planTemplate = (id: string): CompiledPlanTemplate => ({
   traceLabel: id,
@@ -84,9 +105,13 @@ const strategyModule = (overrides: Partial<StrategyModuleDef> = {}): StrategyMod
 function createCatalog(options: {
   readonly modules?: readonly StrategyModuleDef[];
   readonly planTemplates?: readonly string[];
+  readonly stateFeatureExprs?: Readonly<Record<string, CompiledPolicyExpr>>;
+  readonly strategicConditionTargets?: Readonly<Record<string, CompiledPolicyExpr>>;
 } = {}): AgentPolicyCatalog {
   const modules = options.modules ?? [strategyModule()];
   const planTemplates = options.planTemplates ?? ['alpha', 'beta', 'gamma'];
+  const stateFeatureExprs = options.stateFeatureExprs ?? {};
+  const strategicConditionTargets = options.strategicConditionTargets ?? {};
   const profile: CompiledAgentProfile = {
     fingerprint: 'plan-proposer-eligibility-filter',
     params: {},
@@ -123,7 +148,10 @@ function createCatalog(options: {
     parameterDefs: {},
     candidateParamDefs: {},
     library: {
-      stateFeatures: {},
+      stateFeatures: Object.fromEntries(Object.keys(stateFeatureExprs).map((id) => [
+        id,
+        { type: 'number', costClass: 'state', dependencies: emptyDependencies },
+      ])),
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
@@ -145,17 +173,23 @@ function createCatalog(options: {
       planTemplates: Object.fromEntries(planTemplates.map((id) => [id, planTemplate(id)])),
       considerations: {},
       tieBreakers: {},
-      strategicConditions: {},
+      strategicConditions: Object.fromEntries(Object.keys(strategicConditionTargets).map((id) => [id, {}])),
     },
     compiled: {
-      stateFeatures: {},
+      stateFeatures: Object.fromEntries(Object.entries(stateFeatureExprs).map(([id, expr]) => [
+        id,
+        { type: 'number', costClass: 'state', expr, dependencies: emptyDependencies },
+      ])),
       candidateFeatures: {},
       candidateAggregates: {},
       selectors: {},
       strategyModules,
       considerations: {},
       tieBreakers: {},
-      strategicConditions: {},
+      strategicConditions: Object.fromEntries(Object.entries(strategicConditionTargets).map(([id, target]) => [
+        id,
+        { target, dependencies: emptyDependencies },
+      ])),
     },
     profiles: { baseline: profile },
     bindingsBySeat: { alpha: 'baseline' },
@@ -209,6 +243,28 @@ describe('plan proposer doctrine-gated template eligibility', () => {
   it('restricts candidates to enabled templates and reports non-enabled templates', () => {
     const result = propose(createCatalog({
       modules: [strategyModule({ enablesPlanTemplates: ['beta' as never] })],
+    }));
+
+    assert.equal(result.status, 'selected');
+    assert.deepEqual(result.alternatives.map((alternative) => alternative.templateId), ['beta']);
+    assert.deepEqual(result.filteredOutTemplates, [
+      { templateId: 'alpha', gatedBy: ['doctrine.branch'], reason: 'notEnabled' },
+      { templateId: 'gamma', gatedBy: ['doctrine.branch'], reason: 'notEnabled' },
+    ]);
+  });
+
+  it('uses generic compiled strategic-condition and state-feature refs for module activation before eligibility filtering', () => {
+    const result = propose(createCatalog({
+      modules: [strategyModule({
+        when: strategicConditionRef('turnStarted'),
+        enablesPlanTemplates: ['beta' as never],
+      })],
+      stateFeatureExprs: {
+        turnNumber: turnCountRef(),
+      },
+      strategicConditionTargets: {
+        turnStarted: op('gte', libraryStateFeatureRef('turnNumber'), literal(0)),
+      },
     }));
 
     assert.equal(result.status, 'selected');

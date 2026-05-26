@@ -99,7 +99,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
   }
 
   const rootCandidates = rootCandidatesFor(input.def, input.actionDecisions);
-  const activeDoctrines = activeDoctrineIds(input);
+  const activeDoctrines = activeDoctrineIds(input, rootCandidates);
   const rejectedDoctrines = rejectedDoctrineIds(input, activeDoctrines, rootCandidates);
   const templateEligibility = eligiblePlanTemplates({
     profileStrategyModules: input.profile.plan.strategyModules ?? [],
@@ -477,13 +477,37 @@ function firstCollectionKey(
   }
 }
 
-function activeDoctrineIds(input: ProposeAdvisoryTurnPlanInput): readonly string[] {
-  return (input.profile.plan.strategyModules ?? [])
-    .filter((moduleId) => {
-      const module = input.catalog.compiled.strategyModules?.[moduleId];
-      return module !== undefined && evaluateBooleanExpr(module.when, input.state, planExprContextFor(input));
-    })
-    .sort(compareStable);
+function activeDoctrineIds(
+  input: ProposeAdvisoryTurnPlanInput,
+  rootCandidates: readonly PlanProposalRootCandidate[],
+): readonly string[] {
+  const evaluationCandidates = rootCandidates.map(evaluationCandidateFor);
+  const context = new PolicyEvaluationContext({
+    def: input.def,
+    state: input.state,
+    playerId: input.playerId,
+    seatId: String(input.seatId),
+    catalog: input.catalog,
+    parameterValues: input.profile.params,
+    trustedMoveIndex: new Map(),
+    cacheBinding: input.runtime === undefined ? { kind: 'isolated' } : { kind: 'runtime', runtime: input.runtime },
+  }, evaluationCandidates);
+  try {
+    return (input.profile.plan.strategyModules ?? [])
+      .filter((moduleId) => {
+        const module = input.catalog.compiled.strategyModules?.[moduleId];
+        if (module === undefined) {
+          return false;
+        }
+        if (evaluationCandidates.length === 0) {
+          return context.evaluateCompiledExpr(module.when, undefined) === true;
+        }
+        return evaluationCandidates.some((candidate) => context.evaluateCompiledExpr(module.when, candidate) === true);
+      })
+      .sort(compareStable);
+  } finally {
+    context.dispose();
+  }
 }
 
 function rejectedDoctrineIds(
@@ -643,11 +667,6 @@ function emptyProposal(
     filteredOutTemplates,
     posture,
   };
-}
-
-function evaluateBooleanExpr(expr: CompiledPolicyExpr | AgentPolicyExpr, state: GameState, context: PlanExprContext): boolean {
-  const value = evaluatePlanExpr(expr, state, undefined, undefined, context);
-  return value === true || value === 1;
 }
 
 function numericExpr(

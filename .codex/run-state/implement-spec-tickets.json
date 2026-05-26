@@ -1,17 +1,15 @@
 {
   "originating_spec": "specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/198GAMECONFCORP-003.md",
+  "last_ticket": "archive/tickets/198GAMECONFCORP-004.md",
   "last_result": "completed_archived",
-  "last_work_commit": "51b8667ffb4de7263bcc52a7cba8c3cc69b0ef90",
+  "last_work_commit": "2d032425d104531a20e928db16a99628a545689f",
   "last_state_commit": "self",
-  "next_target": "tickets/198GAMECONFCORP-004.md",
-  "queue": [
-    "tickets/198GAMECONFCORP-004.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "final_spec_archive",
+  "queue": [],
+  "phase": "ready_for_final_spec_archive",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Implemented and archived 198GAMECONFCORP-003; next active ticket is 198GAMECONFCORP-004.",
+  "owned_dirty_summary": "Implemented and archived 198GAMECONFCORP-004; all Spec 198 tickets archived; final spec archive remains.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

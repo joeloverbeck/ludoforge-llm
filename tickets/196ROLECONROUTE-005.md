@@ -3,8 +3,8 @@
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — compiler/runtime role-constraint semantics for generic authored set/predicate or post-state control preservation, plus FITL profile migration and witnesses
-**Deps**: `archive/tickets/196ROLECONROUTE-004.md`
+**Engine Changes**: Yes — concrete generic control-preservation constraint semantics on top of the post-state role-constraint substrate, plus FITL profile migration and witnesses
+**Deps**: `tickets/196ROLECONROUTE-005A.md`
 
 ## Problem
 
@@ -18,10 +18,11 @@ This ticket adds the missing generic constraint semantics needed to express orig
 2. `data/games/fire-in-the-lake/92-agents.md` has `arvn.transportOrigin`, `arvn.transportDestination`, and the `arvn.doNotLoseOriginControlByTransport` guardrail. The guardrail is policy scoring, not role-binding admissibility.
 3. FITL control preservation is state-dependent and may be post-move rather than a static membership test. The compiler must validate everything knowable from authored data, while the runtime evaluates the concrete state-dependent predicate (Foundation #12).
 4. No game-specific engine kind such as `arvnControlledPopulationCenter` may be added. FITL-specific labels can appear only as authored data/profile strings interpreted by generic engine semantics (Foundation #1).
+5. A 2026-05-26 Foundations reassessment found that current role constraints cannot observe post-Transport state: `constraintsSatisfied` receives only current state plus role bindings. The user approved splitting the generic bounded post-state role-constraint evaluation contract into prerequisite `tickets/196ROLECONROUTE-005A.md`; this ticket now depends on that substrate before adding the concrete control-preservation shape and FITL migration.
 
 ## Architecture Check
 
-1. **Generic semantic surface**: The new constraint must be phrased in generic terms such as authored zone-set membership, generic control owner comparison, or a bounded post-state predicate reference. It must not introduce ARVN/FITL-specific branches into compiler or runtime code.
+1. **Generic semantic surface**: The new constraint must be phrased in generic terms such as generic control owner comparison or a bounded post-state predicate reference using the substrate from `tickets/196ROLECONROUTE-005A.md`. It must not introduce ARVN/FITL-specific branches into compiler or runtime code.
 2. **Compiler/kernel boundary**: The compiler validates referenced roles, zone sets, route classes, predicate ids, payload shape, and boundedness. Runtime evaluates only concrete state-dependent truth that cannot be known statically.
 3. **No compatibility shim**: Do not keep the invalid `zone.arvnControlledPopulationCenter` shape as an alias. Either reject it fail-closed or replace it everywhere in the same change.
 4. **Single rules protocol**: The constraint must filter role bindings before scoring so rejected bindings never reach plan scoring as legal-but-demoted candidates.
@@ -30,9 +31,8 @@ This ticket adds the missing generic constraint semantics needed to express orig
 
 ### 1. Design the generic constraint shape
 
-Choose and implement one generic shape that can truthfully express FITL origin-control preservation. Acceptable directions include:
+Choose and implement one generic shape, on top of `tickets/196ROLECONROUTE-005A.md`, that can truthfully express FITL origin-control preservation. Acceptable directions include:
 
-- a generic authored zone-set/predicate constraint, if current-state membership is sufficient after reassessment;
 - a generic bounded post-state control-preservation constraint, if the invariant must be evaluated after applying the candidate Transport binding;
 - another Foundation-compliant generic shape that keeps FITL labels in authored data and keeps engine behavior game-agnostic.
 
@@ -40,7 +40,7 @@ Record the chosen shape in this ticket before source edits continue if live reas
 
 ### 2. Compiler and runtime support
 
-Extend the same surfaces used by tickets 001-003:
+Extend the same surfaces used by tickets 001-003 and the post-state substrate from `tickets/196ROLECONROUTE-005A.md`:
 
 - `packages/engine/src/kernel/plan-role-constraints.ts`
 - `packages/engine/src/kernel/types-core.ts`

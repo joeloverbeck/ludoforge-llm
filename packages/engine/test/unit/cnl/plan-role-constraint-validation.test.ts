@@ -135,6 +135,24 @@ describe('plan role constraint validation', () => {
     );
   });
 
+  it('accepts constraints that reference the current role candidate', () => {
+    assertNoCompileErrors(createDoc({
+      trainGovern: templateWithRoles({
+        trainSpace: { selector: 'trainSpace', required: true },
+        governSpace: {
+          selector: 'governSpace',
+          required: true,
+          constraints: [
+            { reachable: { from: 'role.trainSpace', to: 'role.governSpace', via: 'routeClass.land' } },
+            { distinctOriginDestination: { origin: 'role.trainSpace', destination: 'role.governSpace' } },
+            { locatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
+            { adjacent: { a: 'role.trainSpace', b: 'role.governSpace' } },
+          ],
+        },
+      }),
+    }, defaultCompoundWitnessSelectors(), { includeRouteGraph: true }));
+  });
+
   it('rejects role-precedence violations for every multi-role constraint kind', () => {
     for (const constraint of [
       { distinctOriginDestination: { origin: 'role.futureSpace', destination: 'role.trainSpace' } },
@@ -157,5 +175,22 @@ describe('plan role constraint validation', () => {
         /futureSpace.*not bound/u,
       );
     }
+  });
+
+  it('rejects constraints that reference undeclared roles', () => {
+    assertCode(
+      createDoc({
+        trainGovern: templateWithRoles({
+          trainSpace: { selector: 'trainSpace', required: true },
+          governSpace: {
+            selector: 'governSpace',
+            required: true,
+            constraints: [{ reachable: { from: 'role.trainSpace', to: 'role.missingSpace' } }],
+          },
+        }),
+      }, defaultCompoundWitnessSelectors(), { includeRouteGraph: true }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_ROLE_UNBOUND,
+      /missingSpace.*not bound/u,
+    );
   });
 });

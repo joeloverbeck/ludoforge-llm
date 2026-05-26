@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — FITL profile data file edits + author FITL `routeGraph` dataAsset + new architectural-invariant tests
-**Deps**: `tickets/196ROLECONROUTE-004A.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-004A.md`
 
 ## Problem
 
@@ -43,7 +43,7 @@ This ticket migrates the ARVN Transport plan template (`92-agents.md:1020-1025`)
 5. FITL zone adjacency exists at `ZoneDef.adjacentTo` (per `game-spec-doc.ts:75-80`) — the new `routeGraph` adds route-class-labeled edges on top of the same underlying zone topology. The implementation will likely cross-reference the existing FITL zone definitions to ensure `routeGraph.edges[].from` and `:to` zone ids align with existing `ZoneDef.id` values; mismatches must fail compile (covered by ticket 002's schema validation).
 6. Live reassessment on 2026-05-26 corrected the draft boundary: `locatedIn` compares a bound role to a literal zone id or another bound role's zone. It cannot express "origin is in the authored set of ARVN-controlled population centers" or "origin remains controlled after the Transport" without a new generic set/predicate/post-state constraint surface. Authoring `zone.arvnControlledPopulationCenter` would be a fake zone id and would violate Foundations #12, #14, and #15. The user approved narrowing this ticket to route/destination admissibility and moving origin-control admissibility to `tickets/196ROLECONROUTE-005.md`.
 7. Live reassessment also confirmed `arvn.transportOrigin` already exists in `92-agents.md`, but `arvn.transportDestination` currently uses `routePairs` and emits composite `origin|destination` selected ids. Because `reachable` and `distinctOriginDestination` evaluate zone-resolvable role bindings, this ticket must restructure the Transport plan role selectors so `transportOrigin` and `transportDestination` bind separate zone ids.
-8. A second live reassessment on 2026-05-26 found a compiler/runtime contract mismatch: the runtime constraint evaluator can resolve the current candidate role, but validator role-precedence logic rejects constraints that reference the constrained role itself. `tickets/196ROLECONROUTE-004A.md` owns that prerequisite so this ticket can remain the FITL routeGraph/template migration rather than mixing generic compiler validation changes into the data migration.
+8. A second live reassessment on 2026-05-26 found a compiler/runtime contract mismatch: the runtime constraint evaluator can resolve the current candidate role, but validator role-precedence logic rejects constraints that reference the constrained role itself. `archive/tickets/196ROLECONROUTE-004A.md` owns that prerequisite so this ticket can remain the FITL routeGraph/template migration rather than mixing generic compiler validation changes into the data migration.
 
 ## Architecture Check
 

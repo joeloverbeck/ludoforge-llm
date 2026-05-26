@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-004A: P4A prerequisite — allow current-role refs in multi-role constraint validation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — compiler validation alignment with already-landed runtime current-candidate constraint semantics
@@ -101,4 +101,33 @@ Do not modify FITL data in this ticket. Keep the proof focused on the generic va
 
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-validation.test.js`
+
+## Outcome
+
+Completed: 2026-05-26.
+Outcome amended: 2026-05-26.
+
+Implemented so far:
+
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts` now treats a constraint reference as valid when the referenced role is either already bound or is the currently constrained role. Undeclared roles and later-bound roles still emit `CNL_COMPILER_AGENT_PLAN_TEMPLATE_ROLE_UNBOUND`.
+- `packages/engine/test/unit/cnl/plan-role-constraint-validation.test.ts` now proves current-role references compile for `reachable`, `distinctOriginDestination`, `locatedIn`, and `adjacent`, while later-role and undeclared-role references still fail.
+
+Deferred/out of scope:
+
+- Runtime constraint semantics are unchanged.
+- FITL `routeGraph` authoring and ARVN Transport template migration remain owned by `tickets/196ROLECONROUTE-004.md`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after the test was added and after the validator change.
+- `node --test packages/engine/dist/test/unit/cnl/plan-role-constraint-validation.test.js` — passed, 7 tests.
+- `pnpm -F @ludoforge/engine test` — passed, `171/171 files passed`.
+- `pnpm run check:ticket-deps` — passed, 3 active tickets and 2518 archived tickets checked.
+- `git diff --check -- packages/engine/src/cnl/validate-agent-plan-templates.ts packages/engine/test/unit/cnl/plan-role-constraint-validation.test.ts tickets/196ROLECONROUTE-004A.md` — passed.
+- Post-archive `pnpm run check:ticket-deps` — passed, 2 active tickets and 2519 archived tickets checked.
+- Post-archive `git diff --check -- packages/engine/src/cnl/validate-agent-plan-templates.ts packages/engine/test/unit/cnl/plan-role-constraint-validation.test.ts archive/tickets/196ROLECONROUTE-004A.md tickets/196ROLECONROUTE-004.md specs/196-generic-role-constraints-and-authored-route-semantics.md` — passed.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/validate-agent-plan-templates.ts`: 668 lines after change; active growth 0 net lines; below the 800-line cap.
 3. `pnpm -F @ludoforge/engine test`

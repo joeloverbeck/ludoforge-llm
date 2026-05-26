@@ -104,7 +104,7 @@ function validatePlanTemplateRoles(
       validateLocatedInObserverSafety(parsed, templateId, roleName, constraintPath, roles, selectors, doc, diagnostics);
       for (const ref of parsed.refs) {
         const referencedRole = normalizeRoleRef(ref);
-        if (!declaredRoles.has(referencedRole) || !boundRoles.has(referencedRole)) {
+        if (!declaredRoles.has(referencedRole) || (!boundRoles.has(referencedRole) && referencedRole !== roleName)) {
           diagnostics.push({
             code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_ROLE_UNBOUND,
             path: `${rolePath}.constraints.${index}`,

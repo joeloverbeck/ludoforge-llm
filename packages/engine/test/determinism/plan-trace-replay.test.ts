@@ -179,5 +179,6 @@ describe('plan trace replay determinism', () => {
     const second = JSON.stringify(buildPlanProposalTrace(proposeAdvisoryTurnPlan(input)));
 
     assert.equal(second, first);
+    assert.deepEqual(JSON.parse(first).filteredOutTemplates, []);
   });
 });

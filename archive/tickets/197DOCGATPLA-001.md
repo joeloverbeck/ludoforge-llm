@@ -149,6 +149,6 @@ Source-size ledger:
 - `packages/engine/src/kernel/types-core.ts` | before 2966 | after 2971 | crossed cap? no, preexisting oversize | active growth +5 | user-approved deferral option 2: canonical kernel type hub, extraction would widen this ticket | successor none
 
 Deferred scope:
-- Plan-proposer filtering and trace provenance remain owned by `tickets/197DOCGATPLA-002.md`.
+- Plan-proposer filtering and trace provenance landed in `archive/tickets/197DOCGATPLA-002.md`.
 - FITL `buildPoliticalEngine` migration remains owned by `tickets/197DOCGATPLA-003.md`.
 - Cross-profile invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.

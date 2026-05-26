@@ -2709,6 +2709,7 @@
                     "enum": [
                       "selected",
                       "noTemplate",
+                      "noEligibleTemplate",
                       "noRootMatch",
                       "noRoleBinding"
                     ]
@@ -2773,6 +2774,36 @@
                       },
                       "required": [
                         "doctrineId",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "filteredOutTemplates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "templateId": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "gatedBy": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/definitions/anon_4682db72"
+                          }
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "notEnabled",
+                            "suppressed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "gatedBy",
                         "reason"
                       ],
                       "additionalProperties": false
@@ -3079,6 +3110,7 @@
                   "status",
                   "activeDoctrines",
                   "rejectedDoctrines",
+                  "filteredOutTemplates",
                   "roleBindings",
                   "alternatives",
                   "posture"

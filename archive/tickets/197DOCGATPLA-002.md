@@ -1,9 +1,9 @@
 # 197DOCGATPLA-002: Plan-proposer eligibility filter + trace provenance
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `agents/plan-proposal.ts`, `agents/types-plan-trace.ts`, `agents/plan-trace.ts`
+**Engine Changes**: Yes — `agents/plan-proposal.ts`, `kernel/types-plan-trace.ts`, `agents/plan-trace.ts`
 **Deps**: `archive/tickets/197DOCGATPLA-001.md`
 
 ## Problem
@@ -164,3 +164,43 @@ Default-permissive behavior — when no active module declares any `enablesPlanT
 1. `pnpm turbo build && pnpm -F @ludoforge/engine test:unit dist/test/unit/agents/plan-proposer-eligibility-filter.test.js`
 2. `pnpm -F @ludoforge/engine test:unit dist/test/determinism/plan-trace-replay.test.js`
 3. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completion date: 2026-05-26
+
+What landed:
+- Added the generic doctrine-gated plan-template eligibility filter in `packages/engine/src/agents/plan-template-eligibility.ts`.
+- `proposeAdvisoryTurnPlan` now filters templates before scoring, preserves default-permissive behavior when no active module declares enables/suppresses fields, and returns `noEligibleTemplate` when declared plan templates are all filtered out.
+- `PolicyPlanTrace` now carries additive `filteredOutTemplates` provenance with `{ templateId, gatedBy, reason }`, and the trace builder, plan-controller default trace, kernel type, and trace schema were updated.
+- Added `packages/engine/test/unit/agents/plan-proposer-eligibility-filter.test.ts` for default-permissive, suppress-only, enables-only, suppress-wins, empty-eligibility, and `noTemplate` preservation cases.
+- Extended `packages/engine/test/determinism/plan-trace-replay.test.ts` to assert the new default-permissive trace field remains present and empty.
+
+Path correction:
+- The ticket named `packages/engine/src/agents/types-plan-trace.ts`, but the live trace type is `packages/engine/src/kernel/types-plan-trace.ts`; implementation updated the live kernel trace type.
+
+Generated artifact provenance:
+- Artifact: `packages/engine/schemas/Trace.schema.json`.
+- Generation command: `pnpm -F @ludoforge/engine run schema:artifacts`.
+- Canonical source: `packages/engine/src/kernel/schemas-core.ts`.
+- Refresh reason: additive `PolicyPlanTrace.status = "noEligibleTemplate"` and `PolicyPlanTrace.filteredOutTemplates`.
+- Durability: retained existing generator `packages/engine/scripts/schema-artifacts.mjs`; `pnpm -F @ludoforge/engine test` reran the schema artifact check and passed.
+
+Command substitution:
+- The package commands `pnpm -F @ludoforge/engine test:unit dist/test/unit/agents/plan-proposer-eligibility-filter.test.js` and `pnpm -F @ludoforge/engine test:unit dist/test/determinism/plan-trace-replay.test.js` expanded through the package script to broad unit/architecture globs and were abandoned as unverified focused probes. User approved replacing them with direct compiled `node --test` lanes; no matching processes remained before replacement.
+
+Verification:
+- `pnpm turbo build` - passed.
+- `node --test dist/test/unit/agents/plan-proposer-eligibility-filter.test.js` from `packages/engine` - passed, 5/5 tests.
+- `node --test dist/test/determinism/plan-trace-replay.test.js` from `packages/engine` - passed, 1/1 test.
+- `pnpm -F @ludoforge/engine test` - passed, including `schema:artifacts:check` and default lane summary `171/171 files passed`.
+- `pnpm turbo lint typecheck test` - passed; 9/9 Turbo tasks successful, including engine default lane summary `171/171 files passed`.
+
+Source-size ledger:
+- `packages/engine/src/agents/plan-proposal.ts` | after 777 | crossed cap? no | active growth +24 net after extracting the filter helper | successor none.
+- `packages/engine/src/agents/plan-template-eligibility.ts` | after 75 | crossed cap? no | new focused helper | successor none.
+- `packages/engine/src/kernel/schemas-core.ts` | after 3314 | crossed cap? no, preexisting oversize | active growth +5 net | user-approved deferral option 2: canonical trace schema source, extraction would widen this ticket | successor none.
+
+Deferred scope:
+- FITL `buildPoliticalEngine` migration remains owned by `tickets/197DOCGATPLA-003.md`.
+- Cross-profile architectural-invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.

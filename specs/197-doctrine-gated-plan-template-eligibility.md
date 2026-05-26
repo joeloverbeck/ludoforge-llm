@@ -248,6 +248,6 @@ The choice of `buildPoliticalEngine` over alternative ARVN doctrines is implemen
 Decomposed via `/spec-to-tickets` on 2026-05-26:
 
 - [`archive/tickets/197DOCGATPLA-001.md`](../archive/tickets/197DOCGATPLA-001.md) — Strategy-module gating fields + compiler validation (covers §4.1 + §4.3)
-- [`tickets/197DOCGATPLA-002.md`](../tickets/197DOCGATPLA-002.md) — Plan-proposer eligibility filter + trace provenance (covers §4.2 + §6 status)
+- [`archive/tickets/197DOCGATPLA-002.md`](../archive/tickets/197DOCGATPLA-002.md) — Plan-proposer eligibility filter + trace provenance (covers §4.2 + §6 status)
 - [`tickets/197DOCGATPLA-003.md`](../tickets/197DOCGATPLA-003.md) — FITL ARVN `buildPoliticalEngine` migration + convergence witness (covers §4.4)
 - [`tickets/197DOCGATPLA-004.md`](../tickets/197DOCGATPLA-004.md) — Cross-profile architectural-invariant tests + golden trace (covers §7 P4 + §8)

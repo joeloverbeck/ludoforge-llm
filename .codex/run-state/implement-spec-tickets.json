@@ -3,7 +3,7 @@
   "archived_spec": "archive/specs/196-generic-role-constraints-and-authored-route-semantics.md",
   "last_ticket": "archive/tickets/196ROLECONROUTE-005.md",
   "last_result": "final_spec_archived",
-  "last_work_commit": "none",
+  "last_work_commit": "80b22d887d07b18f6f5daa65ccacae1266910e49",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
@@ -12,6 +12,6 @@
   "owned_dirty_summary": "Implemented and archived 196ROLECONROUTE-005, then archived the originating Spec 196 because no active same-family tickets remain. Focused compiled tests, engine build/test, ticket dependency check, whitespace check, and root Turbo build/test/lint/typecheck passed.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "owned_dirty: final Spec 196 implementation/archive files pending commit",
+  "dirty_state": "clean",
   "updated_at": "2026-05-26"
 }

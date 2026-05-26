@@ -8,7 +8,7 @@
 - `archive/specs/186-advisory-turn-plan-architecture-core.md` (COMPLETED — plan-template IR including `root.compound` metadata)
 - `archive/specs/190-plan-primary-root-selection.md` (COMPLETED — plan root authority; compound availability is meaningful at root-selection time)
 - `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED — P3 added compile-time compound witness validation that this spec extends to runtime)
-- `archive/specs/144-publication-probe-and-fallback-pass.md` (COMPLETED — Foundation #18 publication-probe pattern this spec reuses)
+- `archive/specs/144-probe-and-recover-microturn-publication.md` (COMPLETED — Foundation #18 publication-probe pattern this spec reuses)
 
 **Trigger report**:
 - `reports/ai-agent-policy-overhaul-second-iteration.md` §5 ("Plan root compound validation is good, but runtime root matching is still coarse … If the selected root later cannot realize the intended special activity in that state, the controller will legally fallback/deviate, but the proposal trace may still overstate intended coherence"). User-requested promotion from ticket-sized to standalone spec.
@@ -37,17 +37,17 @@ Surface compound special-activity grantability at plan-root proposal time so:
 ## 3. Context (verified against codebase, 2026-05-26)
 
 - **Compile-time compound validation (Spec 191 P3 outcome)** — `validate-agent-plan-templates.ts` validates that each authored `root.compound.{specialTags, timing, interruptAfterStage}` aligns with at least one continuation witness in the GameDef's action surface. The witness proves *some* state could grant the continuation, not that the *current* state will.
-- **Compound metadata in the IR** — `compile-agent-plan-templates.ts:93-100` copies `root.compound` verbatim into `CompiledPlanTemplate`. The runtime does not probe the metadata; the controller discovers continuation availability one microturn later by attempting to match.
-- **Plan-proposer root iteration** — `plan-proposal.ts:94-151` iterates plan-template root candidates and scores each via `priorityTier + roleScore + considerationScore + posture.scoreDelta`. The compound metadata is recorded on the candidate but does not influence ranking; an `compoundUnavailable` candidate competes equally with a `compoundReady` candidate.
-- **Controller fallback on compound miss** — `plan-controller.ts:28-76` handles the runtime case: if the next microturn's frontier does not match the expected step (e.g., because the compound continuation was not granted), the controller falls back through reselected → primitive → stable-legal. This is observable in plan-trace `deviations`. The fallback is correct safety-net behavior; the *trace overstatement* (proposal said "Train+Govern" but controller actually did "Train+stable-fallback") is the integrity gap.
+- **Compound metadata in the IR** — `compile-agent-plan-templates.ts:94-102` copies `root.compound` verbatim into `CompiledPlanRoot` (inline; there is no standalone `CompiledPlanCompound` type — compound metadata lives at `CompiledPlanRoot['compound']`, defined inline at `kernel/types-core.ts:1209`). The runtime does not probe the metadata; the controller discovers continuation availability one microturn later by attempting to match.
+- **Plan-proposer root iteration** — `plan-proposal.ts:122-162` iterates plan-template root candidates and assembles each candidate's `score: priorityTier + roleScore + considerationScore + posture.scoreDelta` (at line 152). The compound metadata is recorded on the candidate but does not influence ranking; a `compoundUnavailable` candidate competes equally with a `compoundReady` candidate.
+- **Controller fallback on compound miss** — `plan-controller.ts:28-76` handles the runtime case: if the next microturn's frontier does not match the expected step (e.g., because the compound continuation was not granted), the controller falls back through `exact → reselected → primitiveConsiderationPolicy → stableFrontierTieBreak` (trace-event labels). This is observable in plan-trace `deviations` and per-microturn `match` + `fallbackReason` fields. The fallback is correct safety-net behavior; the *trace overstatement* (proposal said "Train+Govern" but controller actually did "Train+stable-fallback") is the integrity gap.
 - **Foundation #18 publication-probe pattern** — Spec 144 introduced a bounded publication probe that verifies constructibility one microturn deep before publishing. The same probe-then-publish shape applies here: the proposer probes compound continuation grantability before *recommending* the root, in the same way the kernel probes microturn constructibility before *publishing* it.
-- **Preview signal integrity precedent** (Foundation #20) — `archive/specs/162` introduced explicit preview-ref status (`ready | unknown | hidden | stochastic | unresolved | failed | depth-capped | partial`). The compound-availability status field this spec adds is the same shape, scoped to compound continuation rather than per-candidate preview.
+- **Preview signal integrity precedent** (Foundation #20) — `archive/specs/162` introduced explicit preview-ref status; the implementing type is `PreviewOptionRefStatus` at `packages/engine/src/agents/policy-preview-inner.ts:50`, a 2-arm union (`'ready'` with value | `'unavailable'` with reason). The compound-availability status field this spec adds **extends** that pattern with a `'provisional'` arm for depth-capped / partial-grant outcomes that the binary ready/unavailable shape cannot express.
 
 ## 4. Architecture
 
 ### 4.1 Bounded compound-availability probe
 
-Add a kernel-side primitive (likely in `packages/engine/src/kernel/compound-availability-probe.ts`):
+Add a kernel-side primitive (likely under `packages/engine/src/kernel/microturn/`, colocated with existing decision-probe infrastructure such as `probeDecisionContinuationAdmissionResult` in `kernel/microturn/continuation.ts`):
 
 ```ts
 type CompoundAvailability =
@@ -58,43 +58,45 @@ type CompoundAvailability =
 function probeCompoundAvailability(
   def: GameDef,
   state: GameState,
-  observerScope: ObserverScope,
-  rootDecision: PublishedDecision,
-  compound: CompiledPlanCompound,
+  seatId: SeatId,
+  rootDecision: Extract<Decision, { readonly kind: 'actionSelection' }>,
+  compound: NonNullable<CompiledPlanRoot['compound']>,
 ): CompoundAvailability;
 ```
+
+The signature uses existing engine types — per Foundation #4, observer scope is encoded by `seatId` + state, so there is no first-class `ObserverScope` parameter; compound metadata is read inline off `CompiledPlanRoot['compound']` (no standalone `CompiledPlanCompound` type exists).
 
 Behavior:
 - **`ready`**: simulating the kernel's grant predicate against the post-root state confirms the next microturn's frontier will include a decision matching `compound.specialTags` + `compound.timing`.
 - **`provisional`**: the grant predicate depends on state branches the probe cannot evaluate at its bounded depth (e.g., RNG outcomes, opponent decisions not yet resolved). Marked depth-capped per Foundation #20.
 - **`unavailable`**: no grant predicate exists for this compound metadata in the current state; the controller will definitely fall back.
 
-The probe is observer-safe (consults only observer-scoped state) and bounded (one microturn deep per Foundation #10). It is pure over `(def, state, scope, root, compound)`; no side effects.
+The probe is observer-safe (consults only seat-visible state) and bounded (one microturn deep per Foundation #10). It is pure over `(def, state, seatId, rootDecision, compound)`; no side effects.
 
 ### 4.2 Proposer integration
 
 `plan-proposal.ts` extends the candidate-scoring path: after computing `priorityTier + roleScore + considerationScore + posture.scoreDelta`, for each candidate whose template has `root.compound` metadata, invoke `probeCompoundAvailability` and annotate the candidate.
 
-Ranking modification (`compareAlternatives` at `plan-proposal.ts:588-592`): after `priorityTier` and `score` comparisons, add a fourth lexicographic tiebreaker for candidates whose `score` is within an epsilon (or exactly equal, since scores are integer-derived per Foundation #8) — prefer `ready` > `provisional` > `unavailable`. This preserves the existing tier-then-score lex ordering and adds compound availability as a *terminal* tiebreaker, not a primary ranking key.
+Ranking modification (`compareAlternatives` at `plan-proposal.ts:645-649`): the existing function chains three comparisons (`priorityTier` → `score` → `stableKey`); insert compound availability between `score` and `stableKey` — prefer `ready` > `provisional` > `unavailable`. Scores are exact integers per Foundation #8, so equality is bitwise. The new key is a *terminal-class* tiebreaker (fires only when tier and score tie), not a primary ranking key; the existing `stableKey` remains the deterministic final fallback.
 
 When no candidate is `ready` but some are `provisional`, the proposer selects the highest-ranked `provisional` candidate (and the controller's fallback ladder handles unavailability at runtime per Foundation #18).
 
 ### 4.3 Trace provenance
 
-Plan-trace fields (`kernel/types-plan-trace.ts`) gain a per-candidate compound-availability status object mirroring preview-ref shape:
+Plan-trace fields gain a per-candidate compound-availability status on the existing `PolicyPlanTraceAlternative` type at `kernel/types-plan-trace.ts:9-15`. The new field extends `PreviewOptionRefStatus`'s 2-arm pattern with a `'provisional'` arm — the depth-capped / partial-grant outcome cannot be expressed by the binary ready/unavailable shape, so a third arm is justified:
 
 ```ts
-interface PlanRootCandidateTrace {
-  // ... existing fields ...
+interface PolicyPlanTraceAlternative {
+  // ... existing fields (templateId, rootStableMoveKey, score, priorityTier, stableKey) ...
   readonly compoundAvailability?: CompoundAvailability;
 }
 ```
 
-The selected candidate's status is also surfaced at the top-level proposal trace. Rejected alternatives' statuses are recorded in `rejectedAlternatives` so contrastive trace consumers see why a `compoundReady` candidate beat a higher-scored `compoundUnavailable` one (when the tiebreaker fired).
+The selected candidate's status is also surfaced at the top-level proposal trace (`PolicyPlanTrace`). Alternative statuses live on each `PolicyPlanTraceAlternative` entry in the existing `alternatives` array so contrastive trace consumers see why a `compoundReady` candidate beat a higher-scored `compoundUnavailable` one (when the tiebreaker fired).
 
-### 4.4 Compile-time witness extension (optional)
+### 4.4 Compile-time witness extension
 
-Spec 191 P3 validates a *static* continuation witness exists. This spec optionally extends validation to assert that the authored `root.compound.specialTags` align with the grant-predicate vocabulary the engine recognizes — catching authoring typos at compile time rather than at proposal-probe runtime. If the engine's grant-predicate vocabulary is not currently enumerable (i.e., predicates are arbitrary lambdas), this validation deferred as a follow-up.
+Spec 191 P3 validates a *static* continuation witness exists. This spec extends validation to assert that the authored `root.compound.specialTags` align with the grant-predicate vocabulary the engine recognizes — catching authoring typos at compile time rather than at proposal-probe runtime. The vocabulary is enumerable: special-activity grants resolve via action IDs in `accompanyingOps` lists on `ActionPipelineDef` (precedent: `validate-gamedef-extensions.ts` already validates `accompanyingOps` entries against known action IDs), so this validation is implementable rather than gated.
 
 ## 5. Determinism and replay (Foundations #8, #16)
 
@@ -118,13 +120,13 @@ Spec 191 P3 validates a *static* continuation witness exists. This spec optional
 | **P1** | Probe primitive (§4.1) | `compound-availability-probe.ts` implements bounded probe; pure-function tests cover `ready` / `provisional` / `unavailable` outcomes on synthesized fixtures; observer-safety preserved | M |
 | **P2** | Proposer integration + trace fields (§4.2 + §4.3) | `plan-proposal.ts` invokes probe for compound-bearing candidates; tiebreaker is the terminal lex key; trace exposes per-candidate + selected-candidate availability; replay byte-identical | M |
 | **P3** | Architectural-invariant + correspondence tests | Architectural-invariant: probe verdict predicts controller fallback (no false `ready` cases). Convergence witness: FITL scenario where a previously-overstated proposal trace now correctly records `compoundUnavailable` or `provisional`. Determinism: replay byte-identity preserved | M |
-| **P4** | Compile-time vocabulary extension (§4.4) | Optional; gated by engine grant-predicate enumerability. Land if feasible; otherwise document the deferral in §11 and close P4 as "deferred to follow-up" | S–M |
+| **P4** | Compile-time vocabulary extension (§4.4) | Validates each authored `root.compound.specialTags` token aligns with an action ID present in some `accompanyingOps` list in the GameDef's action surface; extends `validatePlanTemplateCompound` with a vocabulary check following the precedent of `validate-gamedef-extensions.ts` | S |
 
 ## 8. Test plan
 
-- **Probe purity** (architectural-invariant): synthesized `(def, state, scope, root, compound)` fixtures produce expected `CompoundAvailability` outcomes; same inputs deterministic.
-- **Predict-fallback correspondence** (architectural-invariant): for a corpus of FITL plan templates, probe `ready` verdict implies controller does not fall back at the next microturn; probe `unavailable` implies controller does fall back. No false `ready` cases.
-- **Tiebreaker behavior** (architectural-invariant): when two candidates have equal primary score and differ only in availability, the proposer picks the `ready` candidate.
+- **Probe purity** (architectural-invariant, `packages/engine/test/unit/agents/plan-proposal-compound-availability.test.ts`): synthesized `(def, state, seatId, rootDecision, compound)` fixtures produce expected `CompoundAvailability` outcomes; same inputs deterministic.
+- **Predict-fallback correspondence** (architectural-invariant, `packages/engine/test/architecture/plan-controller-compound-availability-correspondence.test.ts`): for a corpus of FITL plan templates, probe `ready` verdict implies controller does not fall back at the next microturn; probe `unavailable` implies controller does fall back. No false `ready` cases.
+- **Tiebreaker behavior** (architectural-invariant, `packages/engine/test/unit/agents/plan-proposal-compound-availability.test.ts`): when two candidates have equal primary score and differ only in availability, the proposer picks the `ready` candidate.
 - **Trace integrity** (golden trace): plan trace records availability for every compound-bearing candidate; replay byte-identical.
 - **FITL convergence witness**: a previously-known overstated-trace scenario (where the proposer claimed Train+Govern but the controller fell back to Train+stable) now produces `compoundProvisional` or `compoundUnavailable` in the trace.
 
@@ -139,11 +141,10 @@ Spec 191 P3 validates a *static* continuation witness exists. This spec optional
 
 **Corrected:**
 - The audit's framing that this is part of a broader "DPRT-P" reframe is rejected — this is a focused probe addition, not architectural replacement. The proposal-trace integrity gap is real and meaningful; the framing is not.
-- User-requested promotion from ticket-sized to standalone spec adopted: the scope is bounded (probe + proposer wiring + trace fields + optional compile-time vocabulary) but cross-cutting enough across kernel, agent, and trace surfaces that ticket-sized decomposition is awkward.
+- User-requested promotion from ticket-sized to standalone spec adopted: the scope is bounded (probe + proposer wiring + trace fields + compile-time vocabulary extension) but cross-cutting enough across kernel, agent, and trace surfaces that ticket-sized decomposition is awkward.
 
 **Deferred (named follow-ups, not in this spec):**
 - Probe budgets deeper than one microturn — uncommitted; controller fallback handles deeper unavailability adequately.
-- Compile-time vocabulary extension (§4.4) — gated on engine grant-predicate enumerability; deferred if infeasible at implementation.
 - Other proposals owned by sibling specs (constraints/route → Spec 196; doctrine gating → Spec 197; conformance/observer → Spec 198).
 
 **Rejected (with rationale):**
@@ -155,4 +156,12 @@ Spec 191 P3 validates a *static* continuation witness exists. This spec optional
 - **Spec 197** — doctrine-gated plan-template eligibility (mutually independent).
 - **Spec 198** — cross-game conformance corpus + observer-safety proofs (mutually independent).
 - Deeper-than-one-microturn compound probing.
-- Compile-time grant-predicate vocabulary extension (if §4.4 deferred).
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-26:
+
+- [`tickets/199COMAVAROO-001.md`](../tickets/199COMAVAROO-001.md) — P1 — Bounded compound-availability probe primitive (covers §4.1)
+- [`tickets/199COMAVAROO-002.md`](../tickets/199COMAVAROO-002.md) — P2 — Proposer integration + trace fields (covers §4.2 + §4.3)
+- [`tickets/199COMAVAROO-003.md`](../tickets/199COMAVAROO-003.md) — P3 — Architectural invariants + correspondence + FITL witness (covers §7 P3 + §8)
+- [`tickets/199COMAVAROO-004.md`](../tickets/199COMAVAROO-004.md) — P4 — Compile-time grant-vocabulary check (covers §4.4)

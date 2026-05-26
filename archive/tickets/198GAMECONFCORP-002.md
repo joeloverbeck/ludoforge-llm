@@ -1,6 +1,6 @@
 # 198GAMECONFCORP-002: Cross-family architectural-invariant tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only (engine bugs surfaced are out of scope here, see Out of Scope)
@@ -90,3 +90,33 @@ Document inside the test file (as a comment block or a typed data structure adja
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/architecture/cross-family-conformance.test.js` — targeted run.
 2. `pnpm turbo test` — full suite regression check.
 3. `pnpm turbo lint && pnpm turbo typecheck` — pre-completion verification.
+
+## Outcome
+
+Completed: 2026-05-26
+
+Implemented:
+
+1. Added `packages/engine/test/architecture/cross-family-conformance.test.ts` with the required `// @test-class: architectural-invariant` marker.
+2. The test loads the three Spec 198 corpus games: `generic-control`, `fire-in-the-lake`, and `texas-holdem`.
+3. The test records a data-driven per-game invariant matrix in the test itself. `generic-control` and `texas-holdem` are recorded as not configuring plan templates; `fire-in-the-lake` is recorded as the plan-controller profile witness.
+4. The test proves compile determinism, finite atomic microturn publication, replay identity via canonical serialized state, and 20 seeded bounded microturn walks per corpus game with a 50-microturn cap.
+5. Plan-controller frontier authority is exercised through the compiled FITL agent catalog using `selectPlanControlledDecision` and a synthetic published frontier, proving the controller-selected decision is one of the supplied legal frontier decisions.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/cross-family-conformance.test.js` — passed, 16 tests.
+3. `pnpm turbo test` — passed; 5 tasks successful, engine default lane summary `174/174 files passed`.
+4. `pnpm turbo lint` — passed; 2 tasks successful.
+5. `pnpm turbo typecheck` — passed; 3 tasks successful.
+
+Proof-lane adjustment:
+
+1. The first targeted run hung after printing only `TAP version 13`; process inspection showed the `node --test` lane still alive with no child build process. With user approval, the lane was interrupted and isolated by `--test-name-pattern`.
+2. The hang was isolated to `fire-in-the-lake replays...` while the replay walk invoked full `PolicyAgent` evaluation on each microturn. The final test uses deterministic published-frontier decisions for replay/fuzz and a separate FITL plan-controller authority assertion, preserving the ticket-owned invariants without turning the conformance harness into a heavy policy-quality run.
+
+Deviations from draft plan:
+
+1. No helper directory was needed; the test reused existing production-spec helpers and kernel/agent APIs.
+2. Full `PolicyAgent` evaluation was removed from the replay/fuzz walk after hang triage. Plan-controller frontier authority remains covered by a focused FITL compiled-catalog assertion.

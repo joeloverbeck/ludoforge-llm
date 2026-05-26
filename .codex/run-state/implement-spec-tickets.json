@@ -1,19 +1,18 @@
 {
   "originating_spec": "specs/197-doctrine-gated-plan-template-eligibility.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/197DOCGATPLA-001.md",
+  "last_ticket": "archive/tickets/197DOCGATPLA-002.md",
   "last_result": "completed_archived",
-  "last_work_commit": "3fe710494cef969b4814a931dbf5e2644ae575bf",
+  "last_work_commit": "c41f3ef1509d11395940e9f5da3624ca3e07e89a",
   "last_state_commit": "self",
-  "next_target": "tickets/197DOCGATPLA-002.md",
+  "next_target": "tickets/197DOCGATPLA-003.md",
   "queue": [
-    "tickets/197DOCGATPLA-002.md",
     "tickets/197DOCGATPLA-003.md",
     "tickets/197DOCGATPLA-004.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Implemented and archived 197DOCGATPLA-001; remaining Spec 197 queue starts at plan-proposer eligibility filter and trace provenance.",
+  "owned_dirty_summary": "Implemented and archived 197DOCGATPLA-002; remaining Spec 197 queue starts at FITL ARVN buildPoliticalEngine migration and convergence witness.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

@@ -40,6 +40,15 @@ Close the role-constraint expressiveness gap that Spec 191 deferred, while keepi
   export const SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS = ['notEqual'] as const;
   ```
   `constraintsSatisfied` in `plan-proposal.ts:426-444` switches on `constraint.kind === 'notEqual'` and otherwise throws via `isSupportedPlanRoleConstraintKind`. The registry is the single source of truth and the extension seam for this spec.
+- **Pre-authored `locatedIn` surface (Spec 191 P1 leftover)** — `packages/engine/src/kernel/types-core.ts:1216-1218` already carries the union variant:
+  ```ts
+  export type CompiledPlanRoleConstraint =
+    | { readonly kind: 'notEqual'; readonly role: string }
+    | { readonly kind: 'locatedIn'; readonly role: string };
+  ```
+  Mirrored by the schema (`schemas-core.ts:1436`), the YAML-side shape (`game-spec-doc.ts:799`: `{ readonly locatedIn: string }`), and the lowering (`compile-agent-plan-templates.ts:151`). Spec 191 P1 deliberately left this surface in place and used the registry to compile-reject it (`archive/specs/191-plan-role-semantic-integrity.md:135` and `:145`). Spec 196's work on `locatedIn` lifts the rejection and restructures the payload; it does not introduce a new union slot.
+- **YAML constraint parser shape** — `parsePlanRoleConstraint` at `validate-agent-plan-templates.ts:114-124` currently handles only single-string-valued keys (`{ notEqual: <ref> }`, `{ locatedIn: <ref> }`). Object-valued payloads (for `reachable`, `distinctOriginDestination`, `adjacent`, and the restructured `locatedIn`) require extending this parser, the GameSpecDoc YAML union at `game-spec-doc.ts:799`, and the lowering function below.
+- **Compiler lowering seam** — `lowerRoleConstraints` at `compile-agent-plan-templates.ts:144-153` is the spec→GameDef seam for constraints; each new kind needs a branch here alongside its validator and runtime evaluator. Current shape lowers to `{ kind, role: <normalized> }`; new kinds need per-shape lowering branches.
 - **Authored constraint usage in FITL** — `data/games/fire-in-the-lake/92-agents.md:1025` shows the ARVN Transport template:
   ```yaml
   constraints: [{ notEqual: role.trainSpace }]
@@ -77,14 +86,36 @@ export const SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS = [
 ] as const;
 ```
 
-Each new kind has a typed payload in `CompiledPlanRoleConstraint` (extending the existing union in `kernel/types-core.ts`):
+`locatedIn` is already a `CompiledPlanRoleConstraint` union variant from Spec 191 P1 (registry-rejected, runtime-unimplemented) with payload `{ role: string }`; this spec lifts the registry rejection AND restructures the payload to carry the container reference. The other three (`distinctOriginDestination`, `reachable`, `adjacent`) are net-new union variants.
 
-- `{ kind: 'locatedIn', role: RoleRef, container: ZoneRef | RoleRef }` — bound target is positioned within the named zone or within the zone bound to another role.
-- `{ kind: 'distinctOriginDestination', origin: RoleRef, destination: RoleRef }` — both roles bound, and `origin.zone ≠ destination.zone` (the common case for movement actions; cheaper-to-author than two `notEqual` permutations against composite role values).
-- `{ kind: 'reachable', from: RoleRef, to: RoleRef, via?: RouteClassRef, maxHops?: integer }` — destination is graph-reachable from origin under the authored route graph, optionally restricted to a route class and a hop budget. `maxHops` defaults to the route data's authored `defaultMaxHops`; absence of route data fails compilation.
-- `{ kind: 'adjacent', a: RoleRef, b: RoleRef }` — single-hop adjacency in the authored route graph (a degenerate `reachable` with `maxHops: 1`, surfaced as a separate kind for authoring clarity).
+Compiled payload shapes in `CompiledPlanRoleConstraint` (`kernel/types-core.ts`):
 
-The compiler validator (`validate-agent-plan-templates.ts`) gains per-kind shape checks (roles exist, container/route references resolve, `maxHops` is positive integer) and emits role/template-named diagnostics on mismatch (Foundation #12).
+- `{ kind: 'locatedIn', role, container }` — bound target is positioned within the named zone or within the zone bound to another role. **Restructured from existing `{ role: string }`**; the existing slot has no authored consumers in any game profile, so payload migration is type/schema/lowering-only (Foundation #14: no compat shim).
+- `{ kind: 'distinctOriginDestination', origin, destination }` — both roles bound, and `origin.zone ≠ destination.zone` (the common case for movement actions; cheaper-to-author than two `notEqual` permutations against composite role values).
+- `{ kind: 'reachable', from, to, via?, maxHops? }` — destination is graph-reachable from origin under the authored route graph, optionally restricted to a route class and a hop budget. `maxHops` defaults to the route data's authored `defaultMaxHops`; absence of route data fails compilation.
+- `{ kind: 'adjacent', a, b }` — single-hop adjacency in the authored route graph (a degenerate `reachable` with `maxHops: 1`, surfaced as a separate kind for authoring clarity).
+
+All compiled ref fields (`role`, `container`, `origin`, `destination`, `from`, `to`, `a`, `b`, `via`) are `string`-typed in the compiled artifact, consistent with the existing `CompiledPlanRoleConstraint.role: string` shape. The pseudo-types `RoleRef`, `ZoneRef`, and `RouteClassRef` used in payload prose are presentational labels documenting the authored namespace expected at each position — they are not branded types. Branded-type uplift (Foundation #17) for role/zone/route-class refs is uncommitted and out of scope; if needed later it travels across all role-binding refs uniformly, not constraint-by-constraint.
+
+**Authored YAML shape per kind** (handled by `parsePlanRoleConstraint` and `lowerRoleConstraints`):
+
+- `notEqual: role.X` — single string (existing, unchanged).
+- `locatedIn: { role: role.X, container: zone.Y | role.Z }` — object; the existing single-string `locatedIn: role.X` authoring shape is removed in the same change (no authored consumers exist).
+- `distinctOriginDestination: { origin: role.X, destination: role.Y }` — object.
+- `reachable: { from: role.X, to: role.Y, via?: routeClass.Z, maxHops?: <positive integer> }` — object.
+- `adjacent: { a: role.X, b: role.Y }` — object.
+
+The GameSpecDoc YAML union at `game-spec-doc.ts:799` is widened from the closed string-valued shape to admit the object-valued payloads above.
+
+**Extension sites** (per new/restructured kind):
+
+- `plan-role-constraints.ts` — registry entry in `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS`.
+- `kernel/types-core.ts` — union member with typed payload.
+- `kernel/schemas-core.ts` — zod schema for the union member.
+- `cnl/game-spec-doc.ts` — authored YAML union widening.
+- `cnl/validate-agent-plan-templates.ts` — `parsePlanRoleConstraint` extension, plus per-kind shape checks (roles exist, container/route references resolve, `maxHops` is positive integer) emitting role/template-named diagnostics (Foundation #12).
+- `cnl/compile-agent-plan-templates.ts` — `lowerRoleConstraints` per-kind branch.
+- `agents/plan-proposal.ts` — `constraintsSatisfied` per-kind branch (see §4.3 for the contract change).
 
 ### 4.2 Authored route/map data asset
 
@@ -109,9 +140,13 @@ The engine reads this payload through a new `RouteGraphProvider` interface that 
 
 Game authors label route classes ("trail", "highway", "LoC") as authored data; the engine does not know what a "trail" means.
 
+The kind name `routeGraph` is added to the typed `KNOWN_DATA_ASSET_KINDS` registry at `kernel/types-core.ts:1540` (currently `['map', 'scenario', 'pieceCatalog', 'seatCatalog']`) and to its corresponding schema entry in `kernel/schemas-core.ts`. Adding it to the typed registry preserves Foundation #17 for `DataAssetRef.kind` consumers (`types-core.ts:1715`).
+
 ### 4.3 Runtime constraint evaluation
 
-`constraintsSatisfied` in `plan-proposal.ts` gains per-kind evaluators that consult observer-safe state already available to the proposer:
+`constraintsSatisfied` (`plan-proposal.ts:426-444`) is restructured. The existing function entry-points with `const other = existing[constraint.role]; if (other === undefined) return true;` — this early-return and the single-field `constraint.role` access are `notEqual`-specific and are folded into the `notEqual` branch. Each new-kind branch resolves its own role refs from the constraint payload independently (e.g., `reachable` resolves `existing[from]` and `existing[to]`; `locatedIn` resolves `existing[role]` and dispatches on whether `container` names a zone literal or a role binding). The function signature stays `(binding, constraints, existing) -> boolean`; only its internal contract changes. Role-precedence (Spec 191 P1) already guarantees that every role referenced by a constraint is bound before evaluation; the new branches rely on that guarantee rather than re-implementing the vacuous-pass shortcut.
+
+Per-kind evaluators consult observer-safe state already available to the proposer:
 
 - `locatedIn` reads `state.tokenPositions[role.boundTarget]` (or the zone-containment for zone-typed targets) and compares against the bound container.
 - `distinctOriginDestination` is a one-line role-pair compare.
@@ -149,7 +184,7 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 - **Missing route graph asset** — a `reachable` or `adjacent` constraint with no authored `routeGraph` data asset fails compilation with a template/role-named diagnostic. The fallback "reachability via zone `adjacentTo` only" is deliberately not provided — implicit fallback would mask authoring omissions (Foundation #14: no shims).
 - **Cyclic route graphs** — supported; `reachable` BFS is hop-bounded so cycles do not unbound traversal (Foundation #10).
 - **Multiple route classes per edge** — supported; `via` filters; absence of `via` means any class.
-- **Hidden-information zones** — `locatedIn` against a hidden zone is observer-unsafe. The compiler rejects constraints that reference roles whose binding is observer-restricted at the agent's observer scope (Foundation #4 + #20).
+- **Hidden-information zones** — `locatedIn` against a hidden zone is observer-unsafe. The compiler rejects constraints that reference roles whose binding is observer-restricted at the agent's observer scope (Foundation #4 + #20). The check slots into `validate-agent-plan-templates.ts` alongside the existing role-precedence and unsupported-kind checks; observer-scope metadata is sourced from the agent declaration (consistent with Spec 191's existing `targetKind` validation site).
 - **Constraint references unbound role** — `reachable: { from: role.A, to: role.B }` where role A is bound after role B in role iteration: the validator enforces constraint role-precedence (Spec 191 P1 already validates this; the new constraints reuse the same precedence machinery).
 
 ## 7. Phases & acceptance criteria
@@ -171,7 +206,7 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 
 ## 9. Foundation alignment
 
-#1 (engine learns generic "route" and "adjacency", not "LoC" or "Trail") · #6 (no per-game schema; `routeGraph` is generic `dataAssets` kind) · #10 (`maxHops` bounded, BFS finite) · #12 (compiler validates everything knowable from spec — route refs, role refs, payload shape) · #14 (constraint registry is single source of truth; no compatibility fallback for missing route data) · #15 (root-cause: closes the constraint-expressiveness gap Spec 191 deferred) · #16 (witness-tested across compiler + runtime + FITL migration).
+#1 (engine learns generic "route" and "adjacency", not "LoC" or "Trail") · #2 (`routeGraph` payload is GameSpecDoc-resident and evolvable via the standard YAML mutation surface; route classes and edges are first-class evolution targets) · #6 (no per-game schema; `routeGraph` is generic `dataAssets` kind) · #10 (`maxHops` bounded, BFS finite) · #12 (compiler validates everything knowable from spec — route refs, role refs, payload shape) · #14 (constraint registry is single source of truth; no compatibility fallback for missing route data; `locatedIn` payload migration happens in the same change as the registry registration, no compat shim) · #15 (root-cause: closes the constraint-expressiveness gap Spec 191 deferred) · #16 (witness-tested across compiler + runtime + FITL migration) · #17 (compiled refs remain `string`-typed consistent with existing `CompiledPlanRoleConstraint.role`; `RoleRef`/`ZoneRef`/`RouteClassRef` in this spec are presentational, not branded-type uplift, which is out of scope).
 
 ## 10. Reassessment of source proposal (`reports/ai-agent-policy-overhaul-second-iteration.md`)
 
@@ -181,7 +216,7 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 - §3 (proposal #3: typed target-role schemas) — partially landed via Spec 191's `targetKind` validation; this spec extends per-constraint typing for new kinds in §4.1.
 
 **Corrected:**
-- The audit cites `locatedIn` as "parsed but rejected" — stale citation; Spec 191 already compile-rejected `locatedIn` (`archive/specs/191-plan-role-semantic-integrity.md:106`). This spec adds it back as a *supported* kind with runtime semantics, which is the work the Spec 191 deferral named.
+- The audit cites `locatedIn` as "parsed but rejected" — stale citation; Spec 191 P1 added `locatedIn` to the `CompiledPlanRoleConstraint` union (`types-core.ts:1216-1218`), schema (`schemas-core.ts:1436`), YAML shape (`game-spec-doc.ts:799`), and lowering (`compile-agent-plan-templates.ts:151`), then used the registry to compile-reject it (`archive/specs/191-plan-role-semantic-integrity.md:135` and `:145`). This spec lifts the registry rejection AND restructures the payload from `{ role: string }` to `{ role, container }` to carry the container reference — which is the work the Spec 191 deferral named.
 - The audit's framing that this work requires a "DPRT-P" reframe is rejected — these are constraint-expressiveness additions to the existing architecture, not architectural replacement.
 
 **Deferred (named follow-ups, not in this spec):**
@@ -202,3 +237,12 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 - **Spec 199** — compound availability at root proposal (mutually independent).
 - Multi-hop route cost (weighted shortest path) — uncommitted until a profile needs it.
 - Hidden/partial route observability per observer — uncommitted; current scope assumes route graph is public game data (zone connectivity in FITL is public).
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-26:
+
+- [`tickets/196ROLECONROUTE-001.md`](../tickets/196ROLECONROUTE-001.md) — P1 — Constraint registry extension and compile-time surface for new role-constraint kinds (covers §4.1 / §7 P1)
+- [`tickets/196ROLECONROUTE-002.md`](../tickets/196ROLECONROUTE-002.md) — P2 — Authored routeGraph data asset and RouteGraphProvider (covers §4.2 / §7 P2)
+- [`tickets/196ROLECONROUTE-003.md`](../tickets/196ROLECONROUTE-003.md) — P3 — Runtime constraint evaluation and constraintsSatisfied contract restructure (covers §4.3 / §7 P3)
+- [`tickets/196ROLECONROUTE-004.md`](../tickets/196ROLECONROUTE-004.md) — P4 — FITL ARVN Transport constraint migration and convergence witness (covers §4.4 / §7 P4)

@@ -6,6 +6,13 @@ import {
 } from '../kernel/plan-role-constraints.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
+import {
+  collectRouteGraphContext,
+  parsePlanRoleConstraint,
+  validateLocatedInObserverSafety,
+  validatePostStateConstraintRefs,
+  validateRouteGraphConstraintRefs,
+} from './validate-agent-plan-route-constraints.js';
 import { isNonEmptyString, isRecord } from './validate-spec-shared.js';
 
 const PLAN_CAP_CLASS_BUDGETS = { standard256: 256, deep1024: 1024 } as const;
@@ -31,7 +38,7 @@ export function validatePlanTemplates(
       continue;
     }
     const templatePath = `doc.agents.library.planTemplates.${templateId}`;
-    validatePlanTemplateRoles(templateId, templateDef, templatePath, selectors, diagnostics);
+    validatePlanTemplateRoles(templateId, templateDef, templatePath, selectors, diagnostics, doc);
     validatePlanTemplateSteps(templateId, templateDef, templatePath, selectors, decisionSurfaces, diagnostics);
     validatePlanTemplateCompound(templateId, templateDef, templatePath, compoundWitnesses, diagnostics);
     validatePlanTemplateCaps(templateId, templateDef.caps, `${templatePath}.caps`, diagnostics);
@@ -50,10 +57,18 @@ function validatePlanTemplateRoles(
   templatePath: string,
   selectors: Record<string, unknown>,
   diagnostics: Diagnostic[],
+  doc?: GameSpecDoc,
 ): void {
   const roles = isRecord(templateDef.roles) ? templateDef.roles : {};
   const declaredRoles = new Set(Object.keys(roles));
   const boundRoles = new Set<string>();
+  const routeGraphContext = collectRouteGraphContext(doc);
+  const stepLabels = new Set(
+    (Array.isArray(templateDef.steps) ? templateDef.steps : [])
+      .filter(isRecord)
+      .map((step) => step.label)
+      .filter(isNonEmptyString),
+  );
 
   for (const [roleName, roleDef] of Object.entries(roles)) {
     const rolePath = `${templatePath}.roles.${roleName}`;
@@ -78,7 +93,8 @@ function validatePlanTemplateRoles(
       if (!isRecord(constraint)) {
         continue;
       }
-      const parsed = parsePlanRoleConstraint(constraint);
+      const constraintPath = `${rolePath}.constraints.${index}`;
+      const parsed = parsePlanRoleConstraint(constraint, templateId, roleName, constraintPath, diagnostics);
       if (parsed !== undefined && !isSupportedPlanRoleConstraintKind(parsed.kind)) {
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_UNSUPPORTED,
@@ -88,19 +104,23 @@ function validatePlanTemplateRoles(
           suggestion: `Use one of ${SUPPORTED_PLAN_ROLE_CONSTRAINT_KIND_LABEL} or implement runtime support before authoring "${parsed.kind}".`,
         });
       }
-      const ref = parsed?.ref;
-      if (ref === undefined) {
+      if (parsed === undefined) {
         continue;
       }
-      const referencedRole = normalizeRoleRef(ref);
-      if (!declaredRoles.has(referencedRole) || !boundRoles.has(referencedRole)) {
-        diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_ROLE_UNBOUND,
-          path: `${rolePath}.constraints.${index}`,
-          severity: 'error',
-          message: `Plan template "${templateId}" role "${roleName}" constraint references role "${referencedRole}", but it is not bound before this constraint.`,
-          suggestion: `Bind role "${referencedRole}" earlier in roles or remove the constraint.`,
-        });
+      validateRouteGraphConstraintRefs(parsed, templateId, roleName, constraintPath, routeGraphContext, diagnostics);
+      validateLocatedInObserverSafety(parsed, templateId, roleName, constraintPath, roles, selectors, doc, diagnostics);
+      validatePostStateConstraintRefs(parsed, templateId, roleName, constraintPath, stepLabels, diagnostics);
+      for (const ref of parsed.refs) {
+        const referencedRole = normalizeRoleRef(ref);
+        if (!declaredRoles.has(referencedRole) || (!boundRoles.has(referencedRole) && referencedRole !== roleName)) {
+          diagnostics.push({
+            code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_ROLE_UNBOUND,
+            path: `${rolePath}.constraints.${index}`,
+            severity: 'error',
+            message: `Plan template "${templateId}" role "${roleName}" constraint references role "${referencedRole}", but it is not bound before this constraint.`,
+            suggestion: `Bind role "${referencedRole}" earlier in roles or remove the constraint.`,
+          });
+        }
       }
     }
     boundRoles.add(roleName);
@@ -110,18 +130,6 @@ function validatePlanTemplateRoles(
 const SUPPORTED_PLAN_ROLE_CONSTRAINT_KIND_LABEL = SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS
   .map((kind) => `"${kind}"`)
   .join(', ');
-
-function parsePlanRoleConstraint(
-  constraint: Record<string, unknown>,
-): { readonly kind: string; readonly ref: string } | undefined {
-  if (typeof constraint.notEqual === 'string') {
-    return { kind: 'notEqual', ref: constraint.notEqual };
-  }
-  if (typeof constraint.locatedIn === 'string') {
-    return { kind: 'locatedIn', ref: constraint.locatedIn };
-  }
-  return undefined;
-}
 
 function validatePlanRoleSelectorOrder(
   templateId: string,

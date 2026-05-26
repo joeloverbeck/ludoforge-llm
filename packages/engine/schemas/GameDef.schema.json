@@ -2119,11 +2119,170 @@
                                   },
                                   "role": {
                                     "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "container": {
+                                    "$ref": "#/definitions/anon_4682db72"
                                   }
                                 },
                                 "required": [
                                   "kind",
-                                  "role"
+                                  "role",
+                                  "container"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "distinctOriginDestination"
+                                  },
+                                  "origin": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "destination": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "origin",
+                                  "destination"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "reachable"
+                                  },
+                                  "from": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "to": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "via": {
+                                    "allOf": [
+                                      {
+                                        "$ref": "#/definitions/anon_4682db72"
+                                      }
+                                    ]
+                                  },
+                                  "maxHops": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "from",
+                                  "to"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "adjacent"
+                                  },
+                                  "a": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "b": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "a",
+                                  "b"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "postState"
+                                  },
+                                  "step": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "role": {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  },
+                                  "maxSteps": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "predicate": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "roleLocatedIn"
+                                          },
+                                          "role": {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          },
+                                          "container": {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "role",
+                                          "container"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "condition"
+                                          },
+                                          "condition": {
+                                            "$ref": "#/definitions/anon_6fe48213"
+                                          },
+                                          "bindings": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "$ref": "#/definitions/anon_4682db72"
+                                            },
+                                            "additionalProperties": {
+                                              "$ref": "#/definitions/anon_4682db72"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "condition",
+                                          "bindings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "step",
+                                  "role",
+                                  "maxSteps",
+                                  "predicate"
                                 ],
                                 "additionalProperties": false
                               }

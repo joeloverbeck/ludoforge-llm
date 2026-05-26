@@ -5,6 +5,7 @@ import type {
   CompiledPlanTemplate,
   SelectorId,
 } from '../kernel/types.js';
+import { tagConditionValueExprs } from '../kernel/tag-value-exprs.js';
 import type { GameSpecPlanTemplateDef } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { compileRoleSelector } from './compile-agent-role-selectors.js';
@@ -144,16 +145,146 @@ function lowerPlanCaps(
 function lowerRoleConstraints(
   constraints: readonly NonNullable<GameSpecPlanTemplateDef['roles'][string]['constraints']>[number][],
 ): readonly CompiledPlanRoleConstraint[] {
-  return constraints.map((constraint) => {
+  const lowered: CompiledPlanRoleConstraint[] = [];
+  for (const constraint of constraints) {
     if ('notEqual' in constraint) {
-      return { kind: 'notEqual', role: normalizeRoleRef(constraint.notEqual) };
+      lowered.push({ kind: 'notEqual', role: normalizeRoleRef(constraint.notEqual) });
+    } else if ('locatedIn' in constraint && isLocatedInPayload(constraint.locatedIn)) {
+      lowered.push({
+        kind: 'locatedIn',
+        role: normalizeRoleRef(constraint.locatedIn.role),
+        container: normalizeZoneOrRoleRef(constraint.locatedIn.container),
+      });
+    } else if (
+      'distinctOriginDestination' in constraint
+      && isDistinctOriginDestinationPayload(constraint.distinctOriginDestination)
+    ) {
+      lowered.push({
+        kind: 'distinctOriginDestination',
+        origin: normalizeRoleRef(constraint.distinctOriginDestination.origin),
+        destination: normalizeRoleRef(constraint.distinctOriginDestination.destination),
+      });
+    } else if ('reachable' in constraint && isReachablePayload(constraint.reachable)) {
+      lowered.push({
+        kind: 'reachable',
+        from: normalizeRoleRef(constraint.reachable.from),
+        to: normalizeRoleRef(constraint.reachable.to),
+        ...(constraint.reachable.via === undefined ? {} : { via: normalizeRouteClassRef(constraint.reachable.via) }),
+        ...(constraint.reachable.maxHops === undefined ? {} : { maxHops: constraint.reachable.maxHops }),
+      });
+    } else if ('adjacent' in constraint && isAdjacentPayload(constraint.adjacent)) {
+      lowered.push({
+        kind: 'adjacent',
+        a: normalizeRoleRef(constraint.adjacent.a),
+        b: normalizeRoleRef(constraint.adjacent.b),
+      });
+    } else if ('postState' in constraint && isPostStatePayload(constraint.postState)) {
+      lowered.push({
+        kind: 'postState',
+        step: constraint.postState.step,
+        role: normalizeRoleRef(constraint.postState.role),
+        maxSteps: constraint.postState.maxSteps,
+        predicate: lowerPostStatePredicate(constraint.postState.predicate),
+      });
     }
-    return { kind: 'locatedIn', role: normalizeRoleRef(constraint.locatedIn) };
-  });
+  }
+  return lowered;
+}
+
+function lowerPostStatePredicate(
+  predicate: NonNullable<Extract<
+    NonNullable<GameSpecPlanTemplateDef['roles'][string]['constraints']>[number],
+    { readonly postState: unknown }
+  >['postState']>['predicate'],
+): Extract<CompiledPlanRoleConstraint, { readonly kind: 'postState' }>['predicate'] {
+  if ('roleLocatedIn' in predicate && isLocatedInPayload(predicate.roleLocatedIn)) {
+    return {
+      kind: 'roleLocatedIn',
+      role: normalizeRoleRef(predicate.roleLocatedIn.role),
+      container: normalizeZoneOrRoleRef(predicate.roleLocatedIn.container),
+    };
+  }
+  if ('condition' in predicate && isPostStateConditionPredicate(predicate.condition)) {
+    return {
+      kind: 'condition',
+      condition: tagConditionValueExprs(predicate.condition.when),
+      bindings: Object.fromEntries(
+        Object.entries(predicate.condition.bindings).map(([name, ref]) => [name, normalizeRoleRef(ref)]),
+      ),
+    };
+  }
+  throw new Error('unreachable: validated postState predicate was not lowerable');
 }
 
 function normalizeRoleRef(ref: string): string {
   return ref.startsWith('role.') ? ref.slice('role.'.length) : ref;
+}
+
+function normalizeZoneOrRoleRef(ref: string): string {
+  if (ref.startsWith('zone.')) return ref.slice('zone.'.length);
+  return normalizeRoleRef(ref);
+}
+
+function normalizeRouteClassRef(ref: string): string {
+  return ref.startsWith('routeClass.') ? ref.slice('routeClass.'.length) : ref;
+}
+
+function isLocatedInPayload(value: unknown): value is { readonly role: string; readonly container: string } {
+  return isRecord(value) && typeof value.role === 'string' && typeof value.container === 'string';
+}
+
+function isDistinctOriginDestinationPayload(
+  value: unknown,
+): value is { readonly origin: string; readonly destination: string } {
+  return isRecord(value) && typeof value.origin === 'string' && typeof value.destination === 'string';
+}
+
+function isReachablePayload(
+  value: unknown,
+): value is { readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number } {
+  return isRecord(value)
+    && typeof value.from === 'string'
+    && typeof value.to === 'string'
+    && (value.via === undefined || typeof value.via === 'string')
+    && (value.maxHops === undefined || typeof value.maxHops === 'number');
+}
+
+function isAdjacentPayload(value: unknown): value is { readonly a: string; readonly b: string } {
+  return isRecord(value) && typeof value.a === 'string' && typeof value.b === 'string';
+}
+
+function isPostStatePayload(
+  value: unknown,
+): value is {
+  readonly step: string;
+  readonly role: string;
+  readonly maxSteps: number;
+  readonly predicate:
+    | { readonly roleLocatedIn: { readonly role: string; readonly container: string } }
+    | { readonly condition: { readonly when: import('../kernel/types.js').ConditionAST; readonly bindings: Readonly<Record<string, string>> } };
+} {
+  return isRecord(value)
+    && typeof value.step === 'string'
+    && typeof value.role === 'string'
+    && typeof value.maxSteps === 'number'
+    && isRecord(value.predicate)
+    && (
+      isLocatedInPayload(value.predicate.roleLocatedIn)
+      || isPostStateConditionPredicate(value.predicate.condition)
+    );
+}
+
+function isPostStateConditionPredicate(
+  value: unknown,
+): value is { readonly when: import('../kernel/types.js').ConditionAST; readonly bindings: Readonly<Record<string, string>> } {
+  return isRecord(value)
+    && value.when !== undefined
+    && isRecord(value.bindings)
+    && Object.values(value.bindings).every((entry) => typeof entry === 'string');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function mergePlanDependencies(

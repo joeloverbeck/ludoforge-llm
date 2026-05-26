@@ -453,6 +453,18 @@ agents:
           collection: { kind: zones }
         quality:
           components:
+            - id: authoredMapSpace
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - coalesce:
+                          - zoneProp:
+                              zone: { ref: selector.item.key }
+                              prop: category
+                          - none
+                      - none
+              weight: 5
             - id: overstackedSafeOrigin
               value: 1
               weight: 3
@@ -461,16 +473,25 @@ agents:
                 ref: feature.coinControlPop
               weight: 1
           order: qualityDesc
-        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+        result: { maxItems: 32, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       arvn.transportDestination:
         scopes: [move]
         source:
-          kind: routePairs
-          origin: arvn.transportOrigin
-          destination: arvn.assaultTargetSpace
-          maxPairs: 64
+          collection: { kind: zones }
         quality:
           components:
+            - id: authoredMapSpace
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - coalesce:
+                          - zoneProp:
+                              zone: { ref: selector.item.key }
+                              prop: category
+                          - none
+                      - none
+              weight: 5
             - id: threatenedReinforcementRoute
               value: 1
               weight: 0
@@ -479,7 +500,7 @@ agents:
                 ref: feature.projectedSelfMargin
               weight: 0
           order: qualityDesc
-        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+        result: { maxItems: 32, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       arvn.assaultTargetSpace:
         scopes: [move]
         source:
@@ -1022,10 +1043,47 @@ agents:
         postureHook: arvn.preserveAidAndMargin
         roles:
           trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
-          transportRoute: { selector: arvn.transportDestination, required: true, constraints: [{ notEqual: role.trainSpace }] }
+          transportOrigin: { selector: arvn.transportOrigin, required: true }
+          transportDestination:
+            selector: arvn.transportDestination
+            required: true
+            constraints:
+              - { reachable: { from: role.transportOrigin, to: role.transportDestination, via: routeClass.land } }
+              - { distinctOriginDestination: { origin: role.transportOrigin, destination: role.transportDestination } }
+              - { notEqual: role.trainSpace }
+              - postState:
+                  step: transport-destination
+                  role: role.transportDestination
+                  maxSteps: 8
+                  predicate:
+                    condition:
+                      bindings:
+                        origin: role.transportOrigin
+                      when:
+                        op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: origin } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                        right:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: { zoneExpr: { ref: binding, name: origin } }
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['NVA', 'VC'] }
         steps:
           - { label: train-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
-          - { label: transport-route, role: transportRoute, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
+          - { label: transport-destination, role: transportDestination, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: transportDestination, actionTag: transport } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       arvn.assaultTransportAssault:
@@ -1855,6 +1913,7 @@ agents:
       arvn.doNotLoseOriginControlByTransport:
         traceLabel: "ARVN do not lose origin control by Transport"
         scopes: [move]
+        # Origin-control admissibility is enforced by arvn.trainTransport postState constraints; this remains posture scoring.
         when:
           and:
             - { ref: candidate.tag.transport }

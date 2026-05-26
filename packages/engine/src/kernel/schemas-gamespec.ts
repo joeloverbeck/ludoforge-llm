@@ -98,6 +98,21 @@ export const SeatCatalogPayloadSchema = z
   })
   .strict();
 
+export const RouteGraphPayloadSchema = z
+  .object({
+    routeClasses: z.array(z.object({
+      id: StringSchema.min(1),
+      label: StringSchema.min(1).optional(),
+    }).strict()).min(1),
+    edges: z.array(z.object({
+      from: StringSchema.min(1),
+      to: StringSchema.min(1),
+      classes: z.array(StringSchema.min(1)).min(1),
+    }).strict()),
+    defaultMaxHops: IntegerSchema.positive(),
+  })
+  .strict();
+
 export const AttributeValueSchema = z.union([
   StringSchema,
   NumberSchema,

@@ -374,13 +374,20 @@ describe('plan proposal', () => {
   });
 
   it('fails closed if an unsupported role constraint reaches runtime evaluation', () => {
-    assert.deepEqual(SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS, ['notEqual']);
+    assert.deepEqual(SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS, [
+      'notEqual',
+      'locatedIn',
+      'distinctOriginDestination',
+      'reachable',
+      'adjacent',
+      'postState',
+    ]);
     const template = planTemplate({
       roles: {
         trainSpace: planTemplate().roles.trainSpace!,
         governSpace: {
           ...planTemplate().roles.trainSpace!,
-          constraints: [{ kind: 'locatedIn', role: 'trainSpace' }],
+          constraints: [{ kind: 'unknownConstraint', role: 'trainSpace' } as any],
         },
       },
     });
@@ -401,11 +408,11 @@ describe('plan proposal', () => {
         catalog: def.agents!,
         actionDecisions: [actionDecision('branch')],
       }),
-      /Unsupported plan role constraint kind "locatedIn"/u,
+      /Unsupported plan role constraint kind "unknownConstraint"/u,
     );
   });
 
-  it('scores plan role selector items with the current selector item key', () => {
+  it('scores plan role selector items with the current selector item key and supported constraints', () => {
     const selectorItemKey = {
       kind: 'ref' as const,
       ref: { kind: 'selectorItemIntrinsic' as const, intrinsic: 'key' as const },
@@ -430,6 +437,11 @@ describe('plan proposal', () => {
             ...planTemplate().roles.trainSpace!.selector,
             ...selector,
           },
+        },
+        governSpace: {
+          ...planTemplate().roles.trainSpace!,
+          selector: { ...planTemplate().roles.trainSpace!.selector, ...selector },
+          constraints: [{ kind: 'locatedIn', role: 'trainSpace', container: 'trainSpace' }],
         },
       },
     });
@@ -456,6 +468,7 @@ describe('plan proposal', () => {
 
     assert.equal(result.status, 'selected');
     assert.equal(result.selected?.roleBindings.trainSpace?.selectedId, 'high:none');
+    assert.equal(result.selected?.roleBindings.governSpace?.selectedId, 'high:none');
     assert.equal(result.selected?.roleBindings.trainSpace?.components.population, 4);
   });
 

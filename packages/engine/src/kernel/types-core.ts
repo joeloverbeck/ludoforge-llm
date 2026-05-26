@@ -1215,7 +1215,23 @@ export interface CompiledPlanRoot {
 
 export type CompiledPlanRoleConstraint =
   | { readonly kind: 'notEqual'; readonly role: string }
-  | { readonly kind: 'locatedIn'; readonly role: string };
+  | { readonly kind: 'locatedIn'; readonly role: string; readonly container: string }
+  | { readonly kind: 'distinctOriginDestination'; readonly origin: string; readonly destination: string }
+  | { readonly kind: 'reachable'; readonly from: string; readonly to: string; readonly via?: string; readonly maxHops?: number }
+  | { readonly kind: 'adjacent'; readonly a: string; readonly b: string }
+  | {
+    readonly kind: 'postState';
+    readonly step: string;
+    readonly role: string;
+    readonly maxSteps: number;
+    readonly predicate:
+      | { readonly kind: 'roleLocatedIn'; readonly role: string; readonly container: string }
+      | {
+        readonly kind: 'condition';
+        readonly condition: ConditionAST;
+        readonly bindings: Readonly<Record<string, string>>;
+      };
+  };
 
 export interface CompiledPlanRole {
   readonly selectorId: SelectorId;
@@ -1537,9 +1553,26 @@ export interface GameDef {
   readonly verbalization?: VerbalizationDef;
 }
 
-export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog'] as const;
+export const KNOWN_DATA_ASSET_KINDS = ['map', 'scenario', 'pieceCatalog', 'seatCatalog', 'routeGraph'] as const;
 export type KnownDataAssetKind = (typeof KNOWN_DATA_ASSET_KINDS)[number];
 export type DataAssetKind = string;
+
+export interface RouteGraphRouteClass {
+  readonly id: string;
+  readonly label?: string;
+}
+
+export interface RouteGraphEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly classes: readonly string[];
+}
+
+export interface RouteGraphPayload {
+  readonly routeClasses: readonly RouteGraphRouteClass[];
+  readonly edges: readonly RouteGraphEdge[];
+  readonly defaultMaxHops: number;
+}
 
 export type PieceStatusDimension = 'activity' | 'tunnel';
 

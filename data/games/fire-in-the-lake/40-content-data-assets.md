@@ -2349,6 +2349,158 @@ dataAssets:
           pieceTypeId: nva-guerrillas
           seat: nva
           count: 2
+  - id: fitl.routeGraph
+    kind: routeGraph
+    payload:
+      routeClasses:
+        - { id: land, label: Land routes }
+        - { id: trail, label: Trail }
+        - { id: highway, label: Highway }
+      defaultMaxHops: 3
+      edges:
+        - { from: hue:none, to: quang-tri-thua-thien:none, classes: [land] }
+        - { from: hue:none, to: loc-hue-khe-sanh:none, classes: [land, highway] }
+        - { from: hue:none, to: loc-hue-da-nang:none, classes: [land, highway] }
+        - { from: da-nang:none, to: quang-nam:none, classes: [land] }
+        - { from: da-nang:none, to: quang-tin-quang-ngai:none, classes: [land] }
+        - { from: da-nang:none, to: loc-hue-da-nang:none, classes: [land, highway] }
+        - { from: da-nang:none, to: loc-da-nang-qui-nhon:none, classes: [land, highway] }
+        - { from: da-nang:none, to: loc-da-nang-dak-to:none, classes: [land, highway] }
+        - { from: kontum:none, to: binh-dinh:none, classes: [land] }
+        - { from: kontum:none, to: pleiku-darlac:none, classes: [land] }
+        - { from: kontum:none, to: phu-bon-phu-yen:none, classes: [land] }
+        - { from: kontum:none, to: loc-kontum-dak-to:none, classes: [land, highway] }
+        - { from: kontum:none, to: loc-kontum-ban-me-thuot:none, classes: [land, highway] }
+        - { from: kontum:none, to: loc-kontum-qui-nhon:none, classes: [land, highway] }
+        - { from: qui-nhon:none, to: binh-dinh:none, classes: [land] }
+        - { from: qui-nhon:none, to: phu-bon-phu-yen:none, classes: [land] }
+        - { from: qui-nhon:none, to: loc-da-nang-qui-nhon:none, classes: [land, highway] }
+        - { from: qui-nhon:none, to: loc-kontum-qui-nhon:none, classes: [land, highway] }
+        - { from: qui-nhon:none, to: loc-qui-nhon-cam-ranh:none, classes: [land, highway] }
+        - { from: cam-ranh:none, to: khanh-hoa:none, classes: [land] }
+        - { from: cam-ranh:none, to: binh-tuy-binh-thuan:none, classes: [land] }
+        - { from: cam-ranh:none, to: loc-qui-nhon-cam-ranh:none, classes: [land, highway] }
+        - { from: cam-ranh:none, to: loc-saigon-cam-ranh:none, classes: [land, highway] }
+        - { from: cam-ranh:none, to: loc-cam-ranh-da-lat:none, classes: [land, highway] }
+        - { from: an-loc:none, to: phuoc-long:none, classes: [land] }
+        - { from: an-loc:none, to: tay-ninh:none, classes: [land] }
+        - { from: an-loc:none, to: the-fishhook:none, classes: [land] }
+        - { from: an-loc:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: saigon:none, to: binh-tuy-binh-thuan:none, classes: [land] }
+        - { from: saigon:none, to: quang-duc-long-khanh:none, classes: [land] }
+        - { from: saigon:none, to: tay-ninh:none, classes: [land] }
+        - { from: saigon:none, to: kien-phong:none, classes: [land] }
+        - { from: saigon:none, to: kien-hoa-vinh-binh:none, classes: [land] }
+        - { from: saigon:none, to: loc-saigon-cam-ranh:none, classes: [land, highway] }
+        - { from: saigon:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
+        - { from: saigon:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: saigon:none, to: loc-saigon-can-tho:none, classes: [land, highway] }
+        - { from: can-tho:none, to: kien-phong:none, classes: [land] }
+        - { from: can-tho:none, to: kien-hoa-vinh-binh:none, classes: [land] }
+        - { from: can-tho:none, to: ba-xuyen:none, classes: [land] }
+        - { from: can-tho:none, to: kien-giang-an-xuyen:none, classes: [land] }
+        - { from: can-tho:none, to: loc-saigon-can-tho:none, classes: [land, highway] }
+        - { from: can-tho:none, to: loc-can-tho-chau-doc:none, classes: [land, highway] }
+        - { from: can-tho:none, to: loc-can-tho-bac-lieu:none, classes: [land, highway] }
+        - { from: can-tho:none, to: loc-can-tho-long-phu:none, classes: [land, highway] }
+        - { from: central-laos:none, to: north-vietnam:none, classes: [land, trail] }
+        - { from: central-laos:none, to: quang-tri-thua-thien:none, classes: [land, trail] }
+        - { from: central-laos:none, to: quang-nam:none, classes: [land, trail] }
+        - { from: central-laos:none, to: southern-laos:none, classes: [land, trail] }
+        - { from: central-laos:none, to: loc-hue-khe-sanh:none, classes: [land, highway, trail] }
+        - { from: southern-laos:none, to: quang-nam:none, classes: [land, trail] }
+        - { from: southern-laos:none, to: quang-tin-quang-ngai:none, classes: [land, trail] }
+        - { from: southern-laos:none, to: binh-dinh:none, classes: [land, trail] }
+        - { from: southern-laos:none, to: pleiku-darlac:none, classes: [land, trail] }
+        - { from: southern-laos:none, to: northeast-cambodia:none, classes: [land, trail] }
+        - { from: southern-laos:none, to: loc-da-nang-dak-to:none, classes: [land, highway, trail] }
+        - { from: southern-laos:none, to: loc-kontum-dak-to:none, classes: [land, highway, trail] }
+        - { from: northeast-cambodia:none, to: the-fishhook:none, classes: [land] }
+        - { from: northeast-cambodia:none, to: pleiku-darlac:none, classes: [land] }
+        - { from: the-fishhook:none, to: the-parrots-beak:none, classes: [land] }
+        - { from: the-fishhook:none, to: pleiku-darlac:none, classes: [land] }
+        - { from: the-fishhook:none, to: quang-duc-long-khanh:none, classes: [land] }
+        - { from: the-fishhook:none, to: phuoc-long:none, classes: [land] }
+        - { from: the-fishhook:none, to: tay-ninh:none, classes: [land] }
+        - { from: the-fishhook:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: the-parrots-beak:none, to: sihanoukville:none, classes: [land] }
+        - { from: the-parrots-beak:none, to: tay-ninh:none, classes: [land] }
+        - { from: the-parrots-beak:none, to: kien-phong:none, classes: [land] }
+        - { from: the-parrots-beak:none, to: kien-giang-an-xuyen:none, classes: [land] }
+        - { from: the-parrots-beak:none, to: loc-can-tho-chau-doc:none, classes: [land, highway] }
+        - { from: sihanoukville:none, to: kien-giang-an-xuyen:none, classes: [land] }
+        - { from: north-vietnam:none, to: quang-tri-thua-thien:none, classes: [land, trail] }
+        - { from: north-vietnam:none, to: loc-hue-khe-sanh:none, classes: [land, highway, trail] }
+        - { from: quang-tri-thua-thien:none, to: quang-nam:none, classes: [land] }
+        - { from: quang-tri-thua-thien:none, to: loc-hue-khe-sanh:none, classes: [land, highway] }
+        - { from: quang-tri-thua-thien:none, to: loc-hue-da-nang:none, classes: [land, highway] }
+        - { from: quang-nam:none, to: quang-tin-quang-ngai:none, classes: [land] }
+        - { from: quang-nam:none, to: loc-hue-da-nang:none, classes: [land, highway] }
+        - { from: quang-nam:none, to: loc-da-nang-dak-to:none, classes: [land, highway] }
+        - { from: quang-tin-quang-ngai:none, to: binh-dinh:none, classes: [land] }
+        - { from: quang-tin-quang-ngai:none, to: loc-da-nang-dak-to:none, classes: [land, highway] }
+        - { from: quang-tin-quang-ngai:none, to: loc-da-nang-qui-nhon:none, classes: [land, highway] }
+        - { from: binh-dinh:none, to: phu-bon-phu-yen:none, classes: [land] }
+        - { from: binh-dinh:none, to: pleiku-darlac:none, classes: [land] }
+        - { from: binh-dinh:none, to: loc-da-nang-dak-to:none, classes: [land, highway] }
+        - { from: binh-dinh:none, to: loc-da-nang-qui-nhon:none, classes: [land, highway] }
+        - { from: binh-dinh:none, to: loc-kontum-dak-to:none, classes: [land, highway] }
+        - { from: binh-dinh:none, to: loc-kontum-qui-nhon:none, classes: [land, highway] }
+        - { from: pleiku-darlac:none, to: phu-bon-phu-yen:none, classes: [land] }
+        - { from: pleiku-darlac:none, to: khanh-hoa:none, classes: [land] }
+        - { from: pleiku-darlac:none, to: quang-duc-long-khanh:none, classes: [land] }
+        - { from: pleiku-darlac:none, to: loc-kontum-dak-to:none, classes: [land, highway] }
+        - { from: pleiku-darlac:none, to: loc-kontum-ban-me-thuot:none, classes: [land, highway] }
+        - { from: pleiku-darlac:none, to: loc-da-nang-dak-to:none, classes: [land, highway] }
+        - { from: pleiku-darlac:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: pleiku-darlac:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: phu-bon-phu-yen:none, to: khanh-hoa:none, classes: [land] }
+        - { from: phu-bon-phu-yen:none, to: loc-kontum-qui-nhon:none, classes: [land, highway] }
+        - { from: phu-bon-phu-yen:none, to: loc-qui-nhon-cam-ranh:none, classes: [land, highway] }
+        - { from: phu-bon-phu-yen:none, to: loc-kontum-ban-me-thuot:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: binh-tuy-binh-thuan:none, classes: [land] }
+        - { from: khanh-hoa:none, to: quang-duc-long-khanh:none, classes: [land] }
+        - { from: khanh-hoa:none, to: loc-qui-nhon-cam-ranh:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: loc-cam-ranh-da-lat:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: loc-kontum-ban-me-thuot:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
+        - { from: khanh-hoa:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: phuoc-long:none, to: quang-duc-long-khanh:none, classes: [land] }
+        - { from: phuoc-long:none, to: tay-ninh:none, classes: [land] }
+        - { from: phuoc-long:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: quang-duc-long-khanh:none, to: binh-tuy-binh-thuan:none, classes: [land] }
+        - { from: quang-duc-long-khanh:none, to: tay-ninh:none, classes: [land] }
+        - { from: quang-duc-long-khanh:none, to: loc-kontum-ban-me-thuot:none, classes: [land, highway] }
+        - { from: quang-duc-long-khanh:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: quang-duc-long-khanh:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: quang-duc-long-khanh:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
+        - { from: quang-duc-long-khanh:none, to: loc-cam-ranh-da-lat:none, classes: [land, highway] }
+        - { from: binh-tuy-binh-thuan:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: binh-tuy-binh-thuan:none, to: loc-cam-ranh-da-lat:none, classes: [land, highway] }
+        - { from: binh-tuy-binh-thuan:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
+        - { from: binh-tuy-binh-thuan:none, to: loc-saigon-cam-ranh:none, classes: [land, highway] }
+        - { from: tay-ninh:none, to: kien-phong:none, classes: [land] }
+        - { from: tay-ninh:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: kien-phong:none, to: kien-hoa-vinh-binh:none, classes: [land] }
+        - { from: kien-phong:none, to: kien-giang-an-xuyen:none, classes: [land] }
+        - { from: kien-phong:none, to: loc-can-tho-chau-doc:none, classes: [land, highway] }
+        - { from: kien-phong:none, to: loc-saigon-can-tho:none, classes: [land, highway] }
+        - { from: kien-hoa-vinh-binh:none, to: ba-xuyen:none, classes: [land] }
+        - { from: kien-hoa-vinh-binh:none, to: loc-saigon-can-tho:none, classes: [land, highway] }
+        - { from: kien-hoa-vinh-binh:none, to: loc-can-tho-long-phu:none, classes: [land, highway] }
+        - { from: ba-xuyen:none, to: kien-giang-an-xuyen:none, classes: [land] }
+        - { from: ba-xuyen:none, to: loc-can-tho-bac-lieu:none, classes: [land, highway] }
+        - { from: ba-xuyen:none, to: loc-can-tho-long-phu:none, classes: [land, highway] }
+        - { from: kien-giang-an-xuyen:none, to: loc-can-tho-chau-doc:none, classes: [land, highway] }
+        - { from: kien-giang-an-xuyen:none, to: loc-can-tho-bac-lieu:none, classes: [land, highway] }
+        - { from: loc-da-nang-dak-to:none, to: loc-kontum-dak-to:none, classes: [land, highway] }
+        - { from: loc-kontum-ban-me-thuot:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: loc-kontum-ban-me-thuot:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: loc-cam-ranh-da-lat:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
+        - { from: loc-cam-ranh-da-lat:none, to: loc-ban-me-thuot-da-lat:none, classes: [land, highway] }
+        - { from: loc-ban-me-thuot-da-lat:none, to: loc-saigon-an-loc-ban-me-thuot:none, classes: [land, highway] }
+        - { from: loc-ban-me-thuot-da-lat:none, to: loc-saigon-da-lat:none, classes: [land, highway] }
 ```
 
 ```yaml

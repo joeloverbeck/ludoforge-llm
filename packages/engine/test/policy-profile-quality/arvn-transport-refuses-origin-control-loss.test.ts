@@ -24,7 +24,7 @@ describe('Spec 188 ARVN Transport origin-control-loss witness', () => {
     const guardrails = fixture.profile.use.guardrails ?? [];
     const passed = guardrails.includes('arvn.doNotLoseOriginControlByTransport')
       && selected.score > trainTransport.score
-      && trainTransport.roleBindings.transportRoute !== undefined;
+      && trainTransport.roleBindings.transportDestination !== undefined;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -37,6 +37,6 @@ describe('Spec 188 ARVN Transport origin-control-loss witness', () => {
 
     assert.ok(guardrails.includes('arvn.doNotLoseOriginControlByTransport'));
     assert.ok(selected.score > trainTransport.score);
-    assert.ok(trainTransport.roleBindings.transportRoute);
+    assert.ok(trainTransport.roleBindings.transportDestination);
   });
 });

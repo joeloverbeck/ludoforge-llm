@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
-  "archived_spec": "archive/specs/195-policy-evaluation-context-allocation-reduction.md",
-  "last_ticket": "archive/tickets/195POLEVACON-003.md",
-  "last_result": "implemented_archived",
-  "last_work_commit": "fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9",
+  "originating_spec": "archive/specs/196-generic-role-constraints-and-authored-route-semantics.md",
+  "archived_spec": "archive/specs/196-generic-role-constraints-and-authored-route-semantics.md",
+  "last_ticket": "archive/tickets/196ROLECONROUTE-005.md",
+  "last_result": "final_spec_archived",
+  "last_work_commit": "80b22d887d07b18f6f5daa65ccacae1266910e49",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 195 ticket family completed and archived, final spec archived, report updated, and five post-195 perf JSON summaries produced in work commit fd3910d88ebd44522ad42a1c264c9a15cc7d2ef9. Perf profiler byproducts and obsolete smoke JSONs were removed after the state-only commit; no dirty paths remain.",
+  "owned_dirty_summary": "Implemented and archived 196ROLECONROUTE-005, then archived the originating Spec 196 because no active same-family tickets remain. Focused compiled tests, engine build/test, ticket dependency check, whitespace check, and root Turbo build/test/lint/typecheck passed.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-25"
+  "updated_at": "2026-05-26"
 }

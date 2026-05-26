@@ -1,6 +1,7 @@
 import type { Diagnostic } from './diagnostics.js';
 import { validateMapPayload } from './map-model.js';
 import { validatePieceCatalogPayload } from './piece-catalog.js';
+import { validateRouteGraphPayload } from './route-graph-provider.js';
 import { validateSeatCatalogPayload } from './seat-catalog.js';
 import { DataAssetEnvelopeSchema } from './schemas.js';
 import type { DataAssetEnvelope } from './types.js';
@@ -86,6 +87,16 @@ export function validateDataAssetEnvelope(
     );
   }
 
+  if (envelope.kind === 'routeGraph') {
+    diagnostics.push(
+      ...validateRouteGraphPayload(envelope.payload, {
+        pathPrefix: `${pathPrefix}.payload`,
+        ...(options.assetPath === undefined ? {} : { assetPath: options.assetPath }),
+        entityId: envelope.id,
+      }),
+    );
+  }
+
   if (diagnostics.length > 0) {
     return {
       asset: null,
@@ -107,4 +118,3 @@ function readEntityId(value: unknown): string | undefined {
   const id = (value as Record<string, unknown>).id;
   return typeof id === 'string' && id.trim() !== '' ? id : undefined;
 }
-

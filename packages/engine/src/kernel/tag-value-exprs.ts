@@ -11,7 +11,7 @@
  * aggregate, if, or arithmetic op).
  */
 
-import type { ConditionAST, ValueExpr, NumericValueExpr } from './types-ast.js';
+import type { ConditionAST, ValueExpr, NumericValueExpr, OptionsQuery, ZoneRef } from './types-ast.js';
 import type { SpaceMarkerConstraintDef, SpaceMarkerLatticeDef } from './types-core.js';
 import { VALUE_EXPR_TAG } from './types-ast.js';
 
@@ -56,7 +56,7 @@ export function tagValueExpr(expr: ValueExpr): ValueExpr {
     } as ValueExpr;
   }
   if ('aggregate' in expr) {
-    return { _t: VALUE_EXPR_TAG.AGGREGATE, ...(expr as Record<string, unknown>) } as unknown as ValueExpr;
+    return tagAggregateValueExpr({ _t: VALUE_EXPR_TAG.AGGREGATE, ...(expr as Record<string, unknown>) } as unknown as Extract<ValueExpr, { readonly _t: 5 }>);
   }
   if ('op' in expr && ARITHMETIC_OPS.has((expr as { readonly op: string }).op) && 'left' in expr && 'right' in expr) {
     const opExpr = expr as unknown as { readonly op: string; readonly left: ValueExpr; readonly right: ValueExpr };
@@ -94,6 +94,8 @@ function tagValueExprChildren(expr: ValueExpr): ValueExpr {
         },
       } as ValueExpr;
     }
+    case VALUE_EXPR_TAG.AGGREGATE:
+      return tagAggregateValueExpr(expr as Extract<ValueExpr, { readonly _t: 5 }>);
     case VALUE_EXPR_TAG.OP: {
       const opExpr = expr as Extract<ValueExpr, { readonly _t: 6 }>;
       return {
@@ -106,6 +108,41 @@ function tagValueExprChildren(expr: ValueExpr): ValueExpr {
     default:
       return expr;
   }
+}
+
+function tagAggregateValueExpr(expr: Extract<ValueExpr, { readonly _t: 5 }>): ValueExpr {
+  return {
+    ...expr,
+    aggregate: {
+      ...expr.aggregate,
+      query: tagOptionsQueryValueExprs(expr.aggregate.query),
+      ...('valueExpr' in expr.aggregate ? { valueExpr: tagValueExpr(expr.aggregate.valueExpr) } : {}),
+    },
+  } as ValueExpr;
+}
+
+function tagOptionsQueryValueExprs(query: OptionsQuery): OptionsQuery {
+  switch (query.query) {
+    case 'tokensInZone':
+    case 'tokensInAdjacentZones':
+    case 'adjacentZones':
+    case 'connectedZones': {
+      return {
+        ...query,
+        zone: tagZoneRefValueExprs(query.zone),
+        ...('via' in query && query.via !== undefined ? { via: tagConditionValueExprs(query.via) } : {}),
+      } as OptionsQuery;
+    }
+    default:
+      return query;
+  }
+}
+
+function tagZoneRefValueExprs(zone: ZoneRef): ZoneRef {
+  if (isRecord(zone) && 'zoneExpr' in zone) {
+    return { zoneExpr: tagValueExpr(zone.zoneExpr as ValueExpr) };
+  }
+  return zone;
 }
 
 /**

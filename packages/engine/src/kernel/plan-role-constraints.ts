@@ -1,4 +1,11 @@
-export const SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS = ['notEqual'] as const;
+export const SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS = [
+  'notEqual',
+  'locatedIn',
+  'distinctOriginDestination',
+  'reachable',
+  'adjacent',
+  'postState',
+] as const;
 
 export type SupportedPlanRoleConstraintKind = typeof SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS[number];
 

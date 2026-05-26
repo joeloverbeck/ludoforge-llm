@@ -358,6 +358,7 @@ function selectRoleBinding(
     if (constraintsSatisfied(binding, role.constraints, existing, input.state, routeGraph, {
       def: input.def,
       rootMove: root.move,
+      root: template.root,
       steps: template.steps,
       playerId: input.playerId,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),

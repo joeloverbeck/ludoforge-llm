@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-005B: Prerequisite — Generic compound post-state role-constraint probe materialization
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — generic production post-state probe materialization for compound action and chooseN decision params
@@ -89,3 +89,32 @@ Add or extend runtime tests that prove:
 
 1. `pnpm -F @ludoforge/engine build && node --test <focused dist test paths>`
 2. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Implemented generic post-state probe move materialization in `packages/engine/src/agents/plan-role-constraint-eval.ts`. The probe now receives compiled plan root metadata from `plan-proposal.ts`, builds the compound special-activity payload from authored root metadata, uses the kernel continuation resolver to materialize compiled operation decision keys, binds role-owned `chooseNStep` values as bounded selected arrays, binds role-owned `chooseOne` values, deterministically completes unrelated intermediate decisions with the existing kernel choice policy, and then validates the resulting move through `applyMove`.
+
+Added a focused runtime test that proves a generic operation `chooseN` step plus compound special-activity `chooseOne` step can be materialized without importing test-only decision-param helpers, and that missing earlier role bindings fail closed. Added a production FITL integration witness using an existing ARVN action-distribution fixture that publishes Train as `operationPlusSpecialActivity`; the witness probes a Train+Transport preserving candidate through the generic post-state materializer and verifies the materialized move executes through `applyMove`.
+
+### Deviations and Scope Notes
+
+- No FITL, ARVN, Transport, or control-preservation branch was added to engine/compiler code.
+- `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts` now owns the concrete production-data witness for Train+Transport materialization. The concrete origin-control-preservation predicate remains owned by `tickets/196ROLECONROUTE-005.md`.
+- The new materializer deliberately fails closed when required role-bound steps are missing, the bounded continuation cannot complete, or the final `applyMove` rejects the materialized move.
+
+### Source-Size Ledger
+
+| Path | Before/after lines | Active growth | Crossed cap? | Resolution |
+|---|---:|---:|---|---|
+| `packages/engine/src/agents/plan-role-constraint-eval.ts` | 291 -> 543 | +252 | No hard cap; above 400 typical, under 600/800 | Growth is localized to generic probe materialization and decision-key recovery helpers; no extraction yet because helper coupling is evaluator-local. |
+| `packages/engine/src/agents/plan-proposal.ts` | 752 -> 753 | +1 | No | Pre-existing near-cap file; active growth is one context field passed to the evaluator. |
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build`
+- `cd packages/engine && node --test dist/test/unit/agents/plan-role-constraint-runtime.test.js dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`
+- `pnpm -F @ludoforge/engine test` (`171/171 files passed`)
+
+Post-review completed on 2026-05-26. Archived after confirming the outcome is current, the FITL production-data witness satisfies the ticket's named Train+Transport proof boundary, and the remaining concrete origin-control predicate is owned by `tickets/196ROLECONROUTE-005.md`.

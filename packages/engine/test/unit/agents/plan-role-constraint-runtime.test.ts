@@ -4,18 +4,25 @@ import { describe, it } from 'node:test';
 
 import {
   constraintsSatisfied,
+  probeRoleBoundPostState,
   routeGraphProviderForDef,
 } from '../../../src/agents/plan-role-constraint-eval.js';
 import type { PlanRoleBinding } from '../../../src/agents/plan-execution.js';
 import {
   asActionId,
+  asPhaseId,
   asPlayerId,
   asTokenId,
+  assertValidatedGameDef,
+  type ActionDef,
+  type ActionPipelineDef,
   type ConditionAST,
+  type CompiledPlanTemplate,
   type GameDef,
   type GameState,
   initialState,
 } from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 import { createSyntheticDecisionDef } from '../../helpers/synthetic-decision-fixture.js';
 
 const roleBinding = (role: string, selectedId: string): PlanRoleBinding => ({
@@ -50,6 +57,66 @@ const routeGraphDef = (): GameDef => ({
       defaultMaxHops: 3,
     },
   }],
+});
+
+const compoundProbeDef = (): GameDef => assertValidatedGameDef({
+  metadata: { id: 'compound-post-state-probe', players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: asPhaseId('main') }] },
+  actions: [
+    { id: asActionId('operate'), actor: 'active', executor: 'actor', phase: [asPhaseId('main')], params: [], pre: null, cost: [], effects: [], limits: [] },
+    { id: asActionId('sa'), actor: 'active', executor: 'actor', phase: [asPhaseId('main')], params: [], pre: null, cost: [], effects: [], limits: [] },
+  ] satisfies ActionDef[],
+  actionPipelines: [
+    {
+      id: 'operate-profile',
+      actionId: asActionId('operate'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{
+        effects: [
+          eff({
+            chooseN: {
+              internalDecisionId: 'decision:$targetSpaces',
+              bind: '$targetSpaces',
+              options: { query: 'enums', values: ['op-a', 'op-b'] },
+              n: 1,
+            },
+          }) as ActionPipelineDef['stages'][number]['effects'][number],
+        ],
+      }],
+      atomicity: 'atomic',
+    },
+    {
+      id: 'sa-profile',
+      actionId: asActionId('sa'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [{
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$destination',
+              bind: '$destination',
+              options: { query: 'enums', values: ['sa-a', 'sa-b'] },
+            },
+          }) as ActionPipelineDef['stages'][number]['effects'][number],
+        ],
+      }],
+      atomicity: 'atomic',
+    },
+  ],
+  triggers: [],
+  terminal: { conditions: [] },
 });
 
 describe('plan role constraint runtime evaluation', () => {
@@ -196,6 +263,7 @@ describe('plan role constraint runtime evaluation', () => {
     const context = {
       def,
       rootMove: { actionId: asActionId('branch'), params: {} },
+      root: { actionTags: ['branch'], actionIds: [] },
       steps: [{
         label: 'choose-side',
         role: 'side',
@@ -245,6 +313,7 @@ describe('plan role constraint runtime evaluation', () => {
     const context = {
       def,
       rootMove: { actionId: asActionId('branch'), params: {} },
+      root: { actionTags: ['branch'], actionIds: [] },
       steps: [{
         label: 'choose-side',
         role: 'side',
@@ -280,5 +349,69 @@ describe('plan role constraint runtime evaluation', () => {
       null,
       context,
     ), false);
+  });
+
+  it('materializes operation chooseN and compound special-activity params for postState probes', () => {
+    const def = compoundProbeDef();
+    const baseState = initialState(def, 196_005, 2).state;
+    const steps: CompiledPlanTemplate['steps'] = [
+      {
+        label: 'operation-target',
+        role: 'operationTarget',
+        match: { decisionKind: 'chooseNStep', targetKind: 'zone', decisionPath: '$targetSpaces', actionTag: 'operate' },
+      },
+      {
+        label: 'sa-destination',
+        role: 'saDestination',
+        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: '$destination', actionTag: 'sa' },
+      },
+    ];
+    const constraint = {
+      kind: 'postState' as const,
+      step: 'sa-destination',
+      role: 'saDestination',
+      maxSteps: 4,
+      predicate: { kind: 'roleLocatedIn' as const, role: 'saDestination', container: 'sa-b' },
+    };
+    const postState = probeRoleBoundPostState(
+      roleBinding('saDestination', 'sa-b'),
+      constraint,
+      { operationTarget: roleBinding('operationTarget', 'op-a') },
+      {
+        def,
+        rootMove: { actionId: asActionId('operate'), params: {} },
+        root: {
+          actionTags: ['operate'],
+          actionIds: [],
+          compound: { specialTags: ['sa'], timing: 'after' },
+        },
+        steps,
+        playerId: asPlayerId(1),
+      },
+      baseState,
+    );
+
+    assert.notEqual(postState, null);
+    assert.equal(
+      probeRoleBoundPostState(
+        roleBinding('saDestination', 'sa-b'),
+        constraint,
+        {},
+        {
+          def,
+          rootMove: { actionId: asActionId('operate'), params: {} },
+          root: {
+            actionTags: ['operate'],
+            actionIds: [],
+            compound: { specialTags: ['sa'], timing: 'after' },
+          },
+          steps,
+          playerId: asPlayerId(1),
+        },
+        baseState,
+      ),
+      null,
+      'missing earlier role bindings should fail closed',
+    );
   });
 });

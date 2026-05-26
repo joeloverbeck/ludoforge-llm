@@ -1,11 +1,14 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { buildPlanProposalTrace } from '../../src/agents/plan-trace.js';
 import { proposeAdvisoryTurnPlan } from '../../src/agents/plan-proposal.js';
 import {
   constraintsSatisfied,
+  probeRoleBoundPostState,
   routeGraphProviderForDef,
 } from '../../src/agents/plan-role-constraint-eval.js';
 import type { PlanRoleBinding } from '../../src/agents/plan-execution.js';
@@ -13,6 +16,7 @@ import {
   asActionId,
   asPlayerId,
   initialState,
+  legalMoves,
   type Decision,
   type GameDef,
   type GameState,
@@ -27,6 +31,23 @@ const roleBinding = (role: string, selectedId: string): PlanRoleBinding => ({
   rank: 0,
   components: {},
 });
+
+const ARVN_ACTION_WINDOW_FIXTURE_PATH = fileURLToPath(
+  new URL('../../../test/fixtures/policy-profile-quality/fitl-arvn-action-distribution-windows.json', import.meta.url),
+);
+const TRAIN_TRANSPORT_WINDOW_STATE_HASH = '0x7934f5eeaa4514a';
+
+interface ArvnWindowFixtureRow {
+  readonly stateHash: string;
+  readonly state: GameState;
+}
+
+const loadTrainTransportWindowState = (): GameState => {
+  const rows = JSON.parse(readFileSync(ARVN_ACTION_WINDOW_FIXTURE_PATH, 'utf8')) as readonly ArvnWindowFixtureRow[];
+  const row = rows.find((entry) => entry.stateHash === TRAIN_TRANSPORT_WINDOW_STATE_HASH);
+  assert.ok(row, 'expected ARVN action-distribution fixture row with Train+Transport legal window');
+  return row.state;
+};
 
 const compileFitlDef = (): GameDef => {
   const { parsed, compiled } = compileProductionSpec();
@@ -122,5 +143,41 @@ describe('FITL ARVN Transport route constraint migration', () => {
     const firstTrace = JSON.stringify(buildPlanProposalTrace(proposeAdvisoryTurnPlan(input)));
     const secondTrace = JSON.stringify(buildPlanProposalTrace(proposeAdvisoryTurnPlan(input)));
     assert.equal(secondTrace, firstTrace);
+  });
+
+  it('probes a production Train+Transport preserving candidate through generic compound postState materialization', () => {
+    const def = compileFitlDef();
+    const state = loadTrainTransportWindowState();
+    const template = def.agents?.library.planTemplates?.['arvn.trainTransport'];
+    assert.ok(template, 'expected arvn.trainTransport template');
+    const trainTransportMove = legalMoves(def, state)
+      .find((move) => move.actionId === asActionId('train') && move.actionClass === 'operationPlusSpecialActivity');
+    assert.ok(trainTransportMove, 'expected production legal move enumeration to publish Train+Transport');
+
+    const postState = probeRoleBoundPostState(
+      roleBinding('transportDestination', 'binh-dinh:none'),
+      {
+        kind: 'postState',
+        step: 'transport-destination',
+        role: 'transportDestination',
+        maxSteps: 8,
+        predicate: { kind: 'roleLocatedIn', role: 'transportDestination', container: 'binh-dinh:none' },
+      },
+      {
+        trainSpace: roleBinding('trainSpace', 'an-loc:none'),
+        transportOrigin: roleBinding('transportOrigin', 'an-loc:none'),
+      },
+      {
+        def,
+        rootMove: trainTransportMove,
+        root: template.root,
+        steps: template.steps,
+        playerId: asPlayerId(1),
+      },
+      state,
+    );
+
+    assert.ok(postState, 'expected materialized Train+Transport probe to apply');
+    assert.equal(Number(postState.globalVars.transportCount), Number(state.globalVars.transportCount) + 1);
   });
 });

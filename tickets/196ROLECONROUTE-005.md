@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler/runtime role-constraint semantics for generic authored set/predicate or post-state control preservation, plus FITL profile migration and witnesses
-**Deps**: `tickets/196ROLECONROUTE-004.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-004.md`
 
 ## Problem
 

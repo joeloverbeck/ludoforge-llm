@@ -115,7 +115,7 @@ Implemented so far:
 Deferred/out of scope:
 
 - Runtime constraint semantics are unchanged.
-- FITL `routeGraph` authoring and ARVN Transport template migration remain owned by `tickets/196ROLECONROUTE-004.md`.
+- FITL `routeGraph` authoring and ARVN Transport template migration are completed in `archive/tickets/196ROLECONROUTE-004.md`.
 
 Verification:
 

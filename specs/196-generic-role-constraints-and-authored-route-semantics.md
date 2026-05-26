@@ -247,5 +247,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/196ROLECONROUTE-002.md`](../archive/tickets/196ROLECONROUTE-002.md) — P2 — Authored routeGraph data asset and RouteGraphProvider (covers §4.2 / §7 P2)
 - [`archive/tickets/196ROLECONROUTE-003.md`](../archive/tickets/196ROLECONROUTE-003.md) — P3 — Runtime constraint evaluation and constraintsSatisfied contract restructure (covers §4.3 / §7 P3)
 - [`archive/tickets/196ROLECONROUTE-004A.md`](../archive/tickets/196ROLECONROUTE-004A.md) — P4A prerequisite — Current-role validation alignment for multi-role constraints (covers §4.3 / §7 P4A-prereq)
-- [`tickets/196ROLECONROUTE-004.md`](../tickets/196ROLECONROUTE-004.md) — P4A — FITL ARVN Transport route constraint migration and witness (covers §4.4 / §7 P4A)
+- [`archive/tickets/196ROLECONROUTE-004.md`](../archive/tickets/196ROLECONROUTE-004.md) — P4A — FITL ARVN Transport route constraint migration and witness (covers §4.4 / §7 P4A)
 - [`tickets/196ROLECONROUTE-005.md`](../tickets/196ROLECONROUTE-005.md) — P4B — Generic control-preservation constraint semantics for FITL ARVN Transport (covers §4.4 / §7 P4B)

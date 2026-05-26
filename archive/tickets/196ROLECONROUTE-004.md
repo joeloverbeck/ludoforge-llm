@@ -1,6 +1,6 @@
 # 196ROLECONROUTE-004: P4A — FITL ARVN Transport route constraint migration and witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — FITL profile data file edits + author FITL `routeGraph` dataAsset + new architectural-invariant tests
@@ -161,3 +161,55 @@ Leave `arvn.doNotLoseOriginControlByTransport` behavior intact as the current pr
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
 3. Determinism spot check: `pnpm turbo build` twice; `diff` the FITL GameDef JSON output — must be byte-identical
+
+## Outcome (2026-05-26)
+
+Implemented.
+
+- Added FITL `fitl.routeGraph` as a `routeGraph` data asset in `40-content-data-assets.md`, with authored `land`, `trail`, and `highway` route classes and a deterministic edge list derived from the existing FITL zone adjacency topology.
+- Migrated `arvn.trainTransport` to bind `transportOrigin` and `transportDestination` as separate zone roles. `transportDestination` now rejects invalid bindings through role constraints: `reachable` over `routeClass.land`, `distinctOriginDestination`, and the preserved `notEqual` against `trainSpace`.
+- Reworked `arvn.transportDestination` away from composite `routePairs` ids to authored zone ids so the generic constraint evaluator can reason about origin and destination independently.
+- Added low-weight `authoredMapSpace` selector quality to origin/destination candidates and raised their candidate caps to keep real map spaces in the role-search set without regressing the existing ARVN origin-control-loss policy-quality witness.
+- Left `arvn.doNotLoseOriginControlByTransport` behavior intact and documented that origin-control admissibility remains deferred to `196ROLECONROUTE-005`.
+- Added `fitl-arvn-transport-constraint-migration.test.ts` covering template shape, direct constraint admissibility for legal/unreachable/same-origin/trained-space bindings, routeGraph serialization determinism, and repeated proposal-trace determinism.
+- Updated the existing ARVN origin-control-loss witness to assert the new `transportDestination` role binding.
+- Fixed the FITL production data scaffold test's brittle exact `dataAssets.length` assertion by checking the authored asset-kind set, including the new `routeGraph`.
+
+Deviations and substitutions:
+
+- The routeGraph edge list uses FITL-authored route classes mechanically layered over the existing adjacency topology: all edges are `land`; LOC edges are also `highway`; North Vietnam/Laos/Cambodia infiltration connections are labeled `trail` where visible in the existing topology. No engine identifiers or game-specific logic were added.
+- The literal "run `pnpm turbo build` twice and diff FITL GameDef JSON output" acceptance item was covered by focused routeGraph serialization determinism, repeated proposal-trace determinism, and the broader compiled-policy/engine determinism witnesses in the full engine suite. No checked-in generated GameDef artifact exists for a stable file diff in this repo.
+- Running the full engine suite produced untracked `reports/perf-baseline/**` byproducts. They are harness output and were intentionally left unstaged.
+
+Acceptance-to-command map:
+
+- Route constraint witness and migration regression: `node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`.
+- Plan-trace replay and routeGraph byte identity: `node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`.
+- Existing ARVN/FITL policy-quality witness: `node --test packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js`.
+- Existing engine suite: `pnpm -F @ludoforge/engine test`.
+
+Source-size ledger:
+
+- `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts`: 126 lines.
+- `packages/engine/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.ts`: 42 lines after the binding-name update.
+- `packages/engine/test/integration/fitl-production-data-scaffold.test.ts`: 48 lines after the invariant update.
+- No source-size trigger was hit; the large routeGraph addition is authored data, not a new TypeScript module.
+
+Generated artifact provenance:
+
+- No generated artifacts were checked in.
+- Perf-baseline byproducts under `reports/perf-baseline/**` are command output and remain untracked.
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js` passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js` passed after the selector migration fix.
+- `node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js` passed.
+- `node --test packages/engine/dist/test/integration/fitl-production-data-scaffold.test.js` passed after replacing the brittle exact count assertion.
+- `pnpm -F @ludoforge/engine test` passed: 171/171 files.
+- `pnpm turbo build` passed.
+- `pnpm turbo test` passed: 5/5 tasks, engine default suite 171/171 files.
+- `pnpm turbo lint` passed.
+- `pnpm turbo typecheck` passed.
+- `pnpm turbo schema:artifacts` passed with no schema file diff.

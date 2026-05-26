@@ -1,17 +1,21 @@
 {
-  "originating_spec": "archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md",
-  "archived_spec": "archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md",
-  "last_ticket": "archive/tickets/198GAMECONFCORP-004.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "28720c154ae0466914dc4d9089ea0bbeb15786f6",
+  "originating_spec": "specs/199-compound-availability-at-root-proposal.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/199COMAVAROO-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "dcb44c66bedafd412b70b1d37c79abf4888bd8f2",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/199COMAVAROO-002.md",
+  "queue": [
+    "tickets/199COMAVAROO-002.md",
+    "tickets/199COMAVAROO-003.md",
+    "tickets/199COMAVAROO-004.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "All Spec 198 tickets and originating spec archived.",
+  "owned_dirty_summary": "199COMAVAROO-001 implemented and archived in dcb44c66bedafd412b70b1d37c79abf4888bd8f2; next target is 199COMAVAROO-002. Only unrelated .claude skill edits remain outside harness ownership.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "unrelated_dirty: .claude/skills/fix-pr-ci/SKILL.md, .claude/skills/skill-audit/SKILL.md",
   "updated_at": "2026-05-26"
 }

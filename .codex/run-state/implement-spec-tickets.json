@@ -1,19 +1,20 @@
 {
   "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/196ROLECONROUTE-005A.md",
-  "last_result": "completed_archived",
+  "last_ticket": "tickets/196ROLECONROUTE-005.md",
+  "last_result": "blocked_by_prerequisite",
   "last_work_commit": "bb6290f8c38c325dfa27a5f9f07e830aaf1e0b60",
   "last_state_commit": "self",
-  "next_target": "tickets/196ROLECONROUTE-005.md",
+  "next_target": "tickets/196ROLECONROUTE-005B.md",
   "queue": [
+    "tickets/196ROLECONROUTE-005B.md",
     "tickets/196ROLECONROUTE-005.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Implemented and archived the bounded post-state role-constraint prerequisite in bb6290f8c38c325dfa27a5f9f07e830aaf1e0b60. Unrelated perf-baseline byproducts remain untracked.",
+  "owned_dirty_summary": "Retained generic postState condition-predicate slice and split missing compound chooseN/special-activity probe materialization into tickets/196ROLECONROUTE-005B.md. Ticket 005 remains active and blocked by that prerequisite; next target is 005B. Engine build, schema artifact check, focused tests, and full engine default test lane passed.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-380f39ebb8-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/parity-drive-a863022b40-smoke.json, reports/perf-baseline/parity-drive-cb3f665535-smoke.json, reports/perf-baseline/parity-drive-ff24d46a34-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "mixed_dirty: owned=.codex/run-state/implement-spec-tickets.json, packages/engine/schemas/GameDef.schema.json, packages/engine/src/agents/plan-proposal.ts, packages/engine/src/agents/plan-role-constraint-eval.ts, packages/engine/src/cnl/compile-agent-plan-templates.ts, packages/engine/src/cnl/game-spec-doc.ts, packages/engine/src/cnl/validate-agent-plan-route-constraints.ts, packages/engine/src/kernel/schemas-core.ts, packages/engine/src/kernel/types-core.ts, packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts, packages/engine/test/unit/agents/plan-role-constraint-runtime.test.ts, packages/engine/test/unit/cnl/plan-role-constraint-lowering.test.ts, packages/engine/test/unit/cnl/plan-role-constraint-validation.test.ts, specs/196-generic-role-constraints-and-authored-route-semantics.md, tickets/196ROLECONROUTE-005.md, tickets/196ROLECONROUTE-005B.md; unrelated=reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-380f39ebb8-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/parity-drive-a863022b40-smoke.json, reports/perf-baseline/parity-drive-cb3f665535-smoke.json, reports/perf-baseline/parity-drive-ff24d46a34-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-26"
 }

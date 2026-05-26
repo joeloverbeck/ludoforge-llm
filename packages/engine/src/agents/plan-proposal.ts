@@ -327,7 +327,9 @@ function constraintRoleRefs(constraint: CompiledPlanTemplate['roles'][string]['c
     case 'adjacent':
       return [constraint.a, constraint.b];
     case 'postState':
-      return [constraint.role, constraint.predicate.role, constraint.predicate.container];
+      return constraint.predicate.kind === 'roleLocatedIn'
+        ? [constraint.role, constraint.predicate.role, constraint.predicate.container]
+        : [constraint.role, ...Object.values(constraint.predicate.bindings)];
   }
   return [];
 }
@@ -357,6 +359,7 @@ function selectRoleBinding(
       def: input.def,
       rootMove: root.move,
       steps: template.steps,
+      playerId: input.playerId,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     })) {
       return binding;

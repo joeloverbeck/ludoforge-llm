@@ -805,9 +805,14 @@ export type GameSpecPlanRoleConstraint =
       readonly step: string;
       readonly role: string;
       readonly maxSteps: number;
-      readonly predicate: {
-        readonly roleLocatedIn: { readonly role: string; readonly container: string };
-      };
+      readonly predicate:
+        | { readonly roleLocatedIn: { readonly role: string; readonly container: string } }
+        | {
+          readonly condition: {
+            readonly when: ConditionAST;
+            readonly bindings: Readonly<Record<string, string>>;
+          };
+        };
     };
   };
 

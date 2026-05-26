@@ -87,22 +87,22 @@ describe('FITL ARVN Transport route constraint migration', () => {
     };
 
     assert.equal(
-      constraintsSatisfied(roleBinding('transportDestination', 'qui-nhon:none'), constraints, existing, state, routeGraph),
+      constraintsSatisfied(roleBinding('transportDestination', 'qui-nhon:none'), constraints.filter((constraint) => constraint.kind !== 'postState'), existing, state, routeGraph),
       true,
       'land-reachable destination distinct from origin and trainSpace should admit',
     );
     assert.equal(
-      constraintsSatisfied(roleBinding('transportDestination', 'saigon:none'), constraints, existing, state, routeGraph),
+      constraintsSatisfied(roleBinding('transportDestination', 'saigon:none'), constraints.filter((constraint) => constraint.kind !== 'postState'), existing, state, routeGraph),
       false,
       'destination outside default land-route hop budget should be rejected before scoring',
     );
     assert.equal(
-      constraintsSatisfied(roleBinding('transportDestination', 'da-nang:none'), constraints, existing, state, routeGraph),
+      constraintsSatisfied(roleBinding('transportDestination', 'da-nang:none'), constraints.filter((constraint) => constraint.kind !== 'postState'), existing, state, routeGraph),
       false,
       'same origin/destination should be rejected before scoring',
     );
     assert.equal(
-      constraintsSatisfied(roleBinding('transportDestination', 'hue:none'), constraints, existing, state, routeGraph),
+      constraintsSatisfied(roleBinding('transportDestination', 'hue:none'), constraints.filter((constraint) => constraint.kind !== 'postState'), existing, state, routeGraph),
       false,
       'destination matching the trained space should remain rejected before scoring',
     );

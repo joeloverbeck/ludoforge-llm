@@ -185,15 +185,15 @@ export function parsePlanRoleConstraint(
         'postState maxSteps must be a positive integer.',
       );
     }
-    if (!isRecord(predicate) || !isRecord(predicate.roleLocatedIn)) {
+    if (!isRecord(predicate)) {
       pushInvalidPlanRoleConstraintDiagnostic(
         diagnostics,
         `${path}.postState.predicate`,
         templateId,
         roleName,
-        'postState predicate requires roleLocatedIn with role and container references.',
+        'postState predicate requires roleLocatedIn or condition.',
       );
-    } else {
+    } else if (isRecord(predicate.roleLocatedIn)) {
       const { role: predicateRole, container } = predicate.roleLocatedIn;
       if (!isRoleRef(predicateRole)) {
         pushInvalidPlanRoleConstraintDiagnostic(
@@ -217,6 +217,48 @@ export function parsePlanRoleConstraint(
       } else if (isRoleRef(container)) {
         refs.push(container);
       }
+    } else if (isRecord(predicate.condition)) {
+      const { when, bindings } = predicate.condition;
+      if (when === undefined) {
+        pushInvalidPlanRoleConstraintDiagnostic(
+          diagnostics,
+          `${path}.postState.predicate.condition.when`,
+          templateId,
+          roleName,
+          'postState condition predicate requires a condition expression.',
+        );
+      }
+      if (!isRecord(bindings)) {
+        pushInvalidPlanRoleConstraintDiagnostic(
+          diagnostics,
+          `${path}.postState.predicate.condition.bindings`,
+          templateId,
+          roleName,
+          'postState condition predicate requires bindings from condition parameter names to role references.',
+        );
+      } else {
+        for (const [bindingName, bindingRole] of Object.entries(bindings)) {
+          if (!isRoleRef(bindingRole)) {
+            pushInvalidPlanRoleConstraintDiagnostic(
+              diagnostics,
+              `${path}.postState.predicate.condition.bindings.${bindingName}`,
+              templateId,
+              roleName,
+              `postState condition predicate binding "${bindingName}" must reference a role.`,
+            );
+          } else {
+            refs.push(bindingRole);
+          }
+        }
+      }
+    } else {
+      pushInvalidPlanRoleConstraintDiagnostic(
+        diagnostics,
+        `${path}.postState.predicate`,
+        templateId,
+        roleName,
+        'postState predicate requires roleLocatedIn with role/container refs or condition with when/bindings.',
+      );
     }
     return {
       kind: 'postState',

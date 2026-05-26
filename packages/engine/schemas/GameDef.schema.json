@@ -2225,25 +2225,56 @@
                                     "maximum": 9007199254740991
                                   },
                                   "predicate": {
-                                    "type": "object",
-                                    "properties": {
-                                      "kind": {
-                                        "type": "string",
-                                        "const": "roleLocatedIn"
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "roleLocatedIn"
+                                          },
+                                          "role": {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          },
+                                          "container": {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "role",
+                                          "container"
+                                        ],
+                                        "additionalProperties": false
                                       },
-                                      "role": {
-                                        "$ref": "#/definitions/anon_4682db72"
-                                      },
-                                      "container": {
-                                        "$ref": "#/definitions/anon_4682db72"
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "condition"
+                                          },
+                                          "condition": {
+                                            "$ref": "#/definitions/anon_6fe48213"
+                                          },
+                                          "bindings": {
+                                            "type": "object",
+                                            "propertyNames": {
+                                              "$ref": "#/definitions/anon_4682db72"
+                                            },
+                                            "additionalProperties": {
+                                              "$ref": "#/definitions/anon_4682db72"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "condition",
+                                          "bindings"
+                                        ],
+                                        "additionalProperties": false
                                       }
-                                    },
-                                    "required": [
-                                      "kind",
-                                      "role",
-                                      "container"
-                                    ],
-                                    "additionalProperties": false
+                                    ]
                                   }
                                 },
                                 "required": [

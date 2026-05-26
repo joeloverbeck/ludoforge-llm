@@ -1,10 +1,10 @@
 # 196ROLECONROUTE-005: P4B — Generic control-preservation constraint semantics for FITL ARVN Transport
 
-**Status**: PENDING
+**Status**: BLOCKED by prerequisite
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — concrete generic control-preservation constraint semantics on top of the post-state role-constraint substrate, plus FITL profile migration and witnesses
-**Deps**: `archive/tickets/196ROLECONROUTE-005A.md`
+**Deps**: `archive/tickets/196ROLECONROUTE-005A.md`, `tickets/196ROLECONROUTE-005B.md`
 
 ## Problem
 
@@ -19,6 +19,7 @@ This ticket adds the missing generic constraint semantics needed to express orig
 3. FITL control preservation is state-dependent and may be post-move rather than a static membership test. The compiler must validate everything knowable from authored data, while the runtime evaluates the concrete state-dependent predicate (Foundation #12).
 4. No game-specific engine kind such as `arvnControlledPopulationCenter` may be added. FITL-specific labels can appear only as authored data/profile strings interpreted by generic engine semantics (Foundation #1).
 5. A 2026-05-26 Foundations reassessment found that current role constraints cannot observe post-Transport state: `constraintsSatisfied` receives only current state plus role bindings. The user approved splitting the generic bounded post-state role-constraint evaluation contract into prerequisite `archive/tickets/196ROLECONROUTE-005A.md`; this ticket now depends on that substrate before adding the concrete control-preservation shape and FITL migration.
+6. A later 2026-05-26 Foundations reassessment found a second prerequisite gap: the generic `postState` substrate can evaluate simple role-bound moves, but it cannot yet materialize operation `chooseNStep` params plus compound special-activity params for FITL Train+Transport. The user approved option 2: create `tickets/196ROLECONROUTE-005B.md` for that generic probe-materialization substrate, keep the generic condition-predicate work as the retained partial slice here, and leave FITL migration blocked until `005B` lands.
 
 ## Architecture Check
 
@@ -54,7 +55,7 @@ Add focused unit tests for valid lowering, invalid shape/reference diagnostics, 
 
 ### 3. FITL ARVN Transport migration
 
-Update `data/games/fire-in-the-lake/92-agents.md` so ARVN Transport origin-control preservation is expressed through the new generic constraint. Keep `arvn.doNotLoseOriginControlByTransport` only as projected-margin posture scoring after admissibility owns the legality predicate.
+After `tickets/196ROLECONROUTE-005B.md` lands, update `data/games/fire-in-the-lake/92-agents.md` so ARVN Transport origin-control preservation is expressed through the new generic constraint. Keep `arvn.doNotLoseOriginControlByTransport` only as projected-margin posture scoring after admissibility owns the legality predicate.
 
 ### 4. Witness tests
 
@@ -116,3 +117,19 @@ Add or extend FITL integration/policy witnesses to prove:
 1. `pnpm -F @ludoforge/engine build && node --test <focused dist test paths>`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+**Blocked checkpoint: 2026-05-26**
+
+- **Landed scope**: Generic `postState.predicate.condition` contract support is partially implemented across compiled/runtime types, schema mirror, CNL authored shape/lowering/validation, and focused CNL/runtime tests. The condition predicate evaluates an authored condition AST against the bounded post-state using role-zone bindings.
+- **Missing prerequisite**: Production post-state role-constraint probing cannot yet materialize all generic params needed for an operation plus compound special activity, specifically FITL Train `chooseNStep` params together with Transport special-activity params. That substrate is now owned by `tickets/196ROLECONROUTE-005B.md`.
+- **Successor / continuation owner**: `tickets/196ROLECONROUTE-005B.md` must land before this ticket can finish the concrete FITL ARVN Transport origin-control migration.
+- **Dependency/spec rewrites**: This ticket now depends on `tickets/196ROLECONROUTE-005B.md`; the originating spec ticket list names the new prerequisite before this ticket.
+- **Verification**: `pnpm -F @ludoforge/engine build` passed after the generic condition-predicate slice. Focused CNL/runtime tests for condition-predicate validation/lowering/evaluation passed. `pnpm -F @ludoforge/engine run schema:artifacts:check` passed after regenerating `packages/engine/schemas/GameDef.schema.json`. `pnpm -F @ludoforge/engine test` passed (171/171 files). FITL positive admissibility remained red before the split because compound probe materialization is missing.
+- **Acceptance-to-command map**: Generic condition-predicate validation/lowering/runtime slice is covered by `dist/test/unit/cnl/plan-role-constraint-validation.test.js`, `dist/test/unit/cnl/plan-role-constraint-lowering.test.js`, and `dist/test/unit/agents/plan-role-constraint-runtime.test.js`; schema artifact sync is covered by `pnpm -F @ludoforge/engine run schema:artifacts:check`; package regression is covered by `pnpm -F @ludoforge/engine test`. The concrete FITL origin-control admissibility acceptance is intentionally not satisfied and is blocked by `tickets/196ROLECONROUTE-005B.md`.
+- **Schema/generated fallout**: Runtime/source schema mirrors were updated and `packages/engine/schemas/GameDef.schema.json` was regenerated by `pnpm -F @ludoforge/engine run schema:artifacts`; `Trace.schema.json` and `EvalReport.schema.json` were rewritten byte-equivalent and have no persisted diff.
+- **Source-size ledger**: Deltas/line counts for touched source files: `plan-proposal.ts` +4/-1, 752 lines; `plan-role-constraint-eval.ts` +51/-8, 291 lines; `compile-agent-plan-templates.ts` +42/-7, 315 lines; `game-spec-doc.ts` +8/-3, 1107 lines; `validate-agent-plan-route-constraints.ts` +45/-3, 457 lines; `schemas-core.ts` +12/-5, 3305 lines; `types-core.ts` +7/-1, 2966 lines. Oversized files are preexisting canonical type/schema/doc hubs; this blocked slice did not add a new extraction because it changes their public contract directly.
+- **Abandoned-probe cleanup**: Exploratory FITL `postState` migration and compound-probe code were removed from the durable diff. Residue sweep for `transportOriginZone`, `Origin-control admissibility is enforced`, and `transport-origin` across FITL data/tests and `plan-role-constraint-eval.ts` found no matches.
+- **Archive status**: Not archive-ready; this ticket remains active and blocked by `tickets/196ROLECONROUTE-005B.md`.
+- **Next workflow**: `$implement-ticket tickets/196ROLECONROUTE-005B.md . Rely on specs/196-generic-role-constraints-and-authored-route-semantics.md`, then resume this ticket.

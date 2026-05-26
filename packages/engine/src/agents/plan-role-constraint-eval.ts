@@ -1,6 +1,10 @@
 import type { RouteGraphProvider } from '../kernel/route-graph-provider.js';
 import { compileRouteGraphProvider } from '../kernel/route-graph-provider.js';
 import { applyMove } from '../kernel/apply-move.js';
+import { evaluateConditionWithCache } from '../kernel/compiled-condition-expr-cache.js';
+import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
+import { buildAdjacencyGraph } from '../kernel/spatial.js';
+import type { PlayerId } from '../kernel/branded.js';
 import type {
   CompiledPlanTemplate,
   GameDef,
@@ -20,6 +24,7 @@ export interface PostStateConstraintContext {
   readonly def: GameDef;
   readonly rootMove: Move;
   readonly steps: readonly CompiledPlanTemplate['steps'][number][];
+  readonly playerId?: PlayerId;
   readonly runtime?: GameDefRuntime;
 }
 
@@ -99,7 +104,41 @@ function evaluatePostState(
       const { role, container } = constraint.predicate;
       return evaluateLocatedIn(binding, { kind: 'locatedIn', role, container }, existing, postState);
     }
+    case 'condition':
+      return evaluatePostStateCondition(binding, constraint.predicate, existing, postState, context);
   }
+}
+
+function evaluatePostStateCondition(
+  binding: PlanRoleBinding,
+  predicate: Extract<PostStateConstraint['predicate'], { readonly kind: 'condition' }>,
+  existing: Readonly<Record<string, PlanRoleBinding>>,
+  postState: GameState,
+  context: PostStateConstraintContext,
+): boolean {
+  const bindings: Record<string, string> = {};
+  for (const [name, role] of Object.entries(predicate.bindings)) {
+    const zone = zoneForRole(role, binding, existing, postState);
+    if (zone === null) {
+      return false;
+    }
+    bindings[name] = zone;
+  }
+  const playerId = context.playerId ?? postState.activePlayer;
+  const resources = createEvalRuntimeResources({
+    ...(context.runtime?.tokenStateIndexCache === undefined ? {} : { tokenStateIndexCache: context.runtime.tokenStateIndexCache }),
+    ...(context.runtime?.compiledQueryPlanCache === undefined ? {} : { compiledQueryPlanCache: context.runtime.compiledQueryPlanCache }),
+  });
+  return evaluateConditionWithCache(predicate.condition, createEvalContext({
+    def: context.def,
+    adjacencyGraph: context.runtime?.adjacencyGraph ?? buildAdjacencyGraph(context.def.zones),
+    state: postState,
+    activePlayer: playerId,
+    actorPlayer: playerId,
+    bindings,
+    resources,
+    ...(context.runtime?.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: context.runtime.runtimeTableIndex }),
+  }));
 }
 
 export function probeRoleBoundPostState(
@@ -116,14 +155,18 @@ export function probeRoleBoundPostState(
   if (move === null) {
     return null;
   }
-  const result = applyMove(
-    context.def,
-    state,
-    move,
-    { advanceToDecisionPoint: true, maxPhaseTransitionsPerMove: constraint.maxSteps },
-    context.runtime,
-  );
-  return result.state;
+  try {
+    const result = applyMove(
+      context.def,
+      state,
+      move,
+      { advanceToDecisionPoint: true, maxPhaseTransitionsPerMove: constraint.maxSteps },
+      context.runtime,
+    );
+    return result.state;
+  } catch {
+    return null;
+  }
 }
 
 function bindStepTarget(

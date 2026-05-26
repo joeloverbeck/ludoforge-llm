@@ -1452,11 +1452,18 @@ const CompiledPlanRoleConstraintSchema = z.union([
     step: StringSchema,
     role: StringSchema,
     maxSteps: z.number().int().positive(),
-    predicate: z.object({
-      kind: z.literal('roleLocatedIn'),
-      role: StringSchema,
-      container: StringSchema,
-    }).strict(),
+    predicate: z.union([
+      z.object({
+        kind: z.literal('roleLocatedIn'),
+        role: StringSchema,
+        container: StringSchema,
+      }).strict(),
+      z.object({
+        kind: z.literal('condition'),
+        condition: ConditionASTSchema,
+        bindings: z.record(StringSchema, StringSchema),
+      }).strict(),
+    ]),
   }).strict(),
 ]);
 

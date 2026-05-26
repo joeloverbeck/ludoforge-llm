@@ -86,6 +86,19 @@ describe('plan role constraint validation', () => {
                 predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
               },
             },
+            {
+              postState: {
+                step: 'select-govern-space',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: {
+                  condition: {
+                    when: { op: '==', left: { param: 'postStateZone' }, right: 'zone-b' },
+                    bindings: { postStateZone: 'role.governSpace' },
+                  },
+                },
+              },
+            },
           ],
         },
       }),
@@ -186,6 +199,32 @@ describe('plan role constraint validation', () => {
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_REF_UNKNOWN,
       /unknown step "missing-step"/u,
     );
+    assertCode(
+      createDoc({
+        trainGovern: templateWithRoles({
+          trainSpace: { selector: 'trainSpace', required: true },
+          governSpace: {
+            selector: 'governSpace',
+            required: true,
+            constraints: [{
+              postState: {
+                step: 'select-govern-space',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: {
+                  condition: {
+                    when: true,
+                    bindings: { postStateZone: 'zone.zone-b' },
+                  },
+                },
+              },
+            }],
+          },
+        }),
+      }),
+      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_CONSTRAINT_INVALID,
+      /postState condition predicate binding "postStateZone" must reference a role/u,
+    );
   });
 
   it('accepts constraints that reference the current role candidate', () => {
@@ -216,7 +255,12 @@ describe('plan role constraint validation', () => {
           step: 'select-govern-space',
           role: 'role.governSpace',
           maxSteps: 2,
-          predicate: { roleLocatedIn: { role: 'role.futureSpace', container: 'zone.zone-b' } },
+          predicate: {
+            condition: {
+              when: true,
+              bindings: { future: 'role.futureSpace' },
+            },
+          },
         },
       },
     ]) {

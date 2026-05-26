@@ -31,6 +31,19 @@ function compileTemplate() {
                 predicate: { roleLocatedIn: { role: 'role.governSpace', container: 'zone.zone-b' } },
               },
             },
+            {
+              postState: {
+                step: 'select-govern-space',
+                role: 'role.governSpace',
+                maxSteps: 2,
+                predicate: {
+                  condition: {
+                    when: { op: '==', left: { param: 'postStateZone' }, right: 'zone-b' },
+                    bindings: { postStateZone: 'role.governSpace' },
+                  },
+                },
+              },
+            },
           ],
         },
       },
@@ -74,6 +87,17 @@ describe('plan role constraint lowering', () => {
         role: 'governSpace',
         maxSteps: 2,
         predicate: { kind: 'roleLocatedIn', role: 'governSpace', container: 'zone-b' },
+      },
+      {
+        kind: 'postState',
+        step: 'select-govern-space',
+        role: 'governSpace',
+        maxSteps: 2,
+        predicate: {
+          kind: 'condition',
+          condition: { op: '==', left: { param: 'postStateZone' }, right: 'zone-b' },
+          bindings: { postStateZone: 'governSpace' },
+        },
       },
     ]);
   });

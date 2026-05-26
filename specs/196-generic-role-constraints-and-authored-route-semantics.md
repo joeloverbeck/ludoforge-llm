@@ -195,6 +195,7 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 | **P4A-prereq** | Current-role validation alignment (§4.3) | Compiler accepts a constraint reference to the role currently being bound when runtime evaluates the current candidate binding; undeclared and later-bound role refs still fail with role/template-named diagnostics | S |
 | **P4A** | FITL ARVN Transport route migration (§4.4) | ARVN Transport template uses `reachable` + `distinctOriginDestination`; FITL routeGraph is authored; witness tests prove unreachable and same-origin/destination bindings are rejected by constraint admissibility, not relegated to scoring | M |
 | **P4B-prereq** | Bounded post-state role-constraint evaluation contract (§4.4) | Role constraints can request a generic bounded post-state probe during role binding; compiler validates static shape/refs/bounds; runtime evaluates candidate-specific state deterministically without game-specific branches | M |
+| **P4B-prereq 2** | Generic compound post-state probe materialization (§4.4) | Role-constraint post-state probes can materialize generic operation `chooseN` params plus compound special-activity params before evaluating predicates; FITL Train+Transport preserving candidates can be probed without test-only helpers | M |
 | **P4B** | Generic control-preservation constraint semantics (§4.4) | A Foundation-compliant generic constraint shape expresses FITL origin-control preservation without fake zone ids or game-specific engine branches; `arvn.doNotLoseOriginControlByTransport` becomes projected-margin-only complement; witness test proves origin-control-losing bindings are rejected by constraint admissibility | M |
 
 ## 8. Test plan
@@ -205,6 +206,7 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 - **FITL route witness**: ARVN Transport scenarios with unreachable or same-origin/destination choices fail constraint admissibility (rather than being scored as legal choices).
 - **Post-state role-constraint substrate witness**: owned by `196ROLECONROUTE-005A`; repeated identical role-binding inputs with a bounded post-state constraint produce deterministic admit/reject decisions and proposal traces.
 - **FITL control-preservation witness**: owned by `196ROLECONROUTE-005`; ARVN Transport scenarios where origin-control would be lost by the destination choice fail constraint admissibility rather than being demoted by guardrail.
+- **Compound post-state probe witness**: owned by `196ROLECONROUTE-005B`; operation plus compound special-activity role bindings materialize a bounded post-state probe without test-only helpers.
 - **Determinism**: `pnpm turbo build` twice byte-identical; plan-trace golden replay preserved.
 
 ## 9. Foundation alignment
@@ -251,4 +253,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/196ROLECONROUTE-004A.md`](../archive/tickets/196ROLECONROUTE-004A.md) — P4A prerequisite — Current-role validation alignment for multi-role constraints (covers §4.3 / §7 P4A-prereq)
 - [`archive/tickets/196ROLECONROUTE-004.md`](../archive/tickets/196ROLECONROUTE-004.md) — P4A — FITL ARVN Transport route constraint migration and witness (covers §4.4 / §7 P4A)
 - [`archive/tickets/196ROLECONROUTE-005A.md`](../archive/tickets/196ROLECONROUTE-005A.md) — P4B prerequisite — Bounded post-state role-constraint evaluation contract (covers §4.4 / §7 P4B-prereq)
+- [`tickets/196ROLECONROUTE-005B.md`](../tickets/196ROLECONROUTE-005B.md) — P4B prerequisite 2 — Generic compound post-state role-constraint probe materialization (covers §4.4 / §7 P4B-prereq 2)
 - [`tickets/196ROLECONROUTE-005.md`](../tickets/196ROLECONROUTE-005.md) — P4B — Generic control-preservation constraint semantics for FITL ARVN Transport (covers §4.4 / §7 P4B)

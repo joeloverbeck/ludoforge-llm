@@ -183,15 +183,36 @@ function lowerRoleConstraints(
         step: constraint.postState.step,
         role: normalizeRoleRef(constraint.postState.role),
         maxSteps: constraint.postState.maxSteps,
-        predicate: {
-          kind: 'roleLocatedIn',
-          role: normalizeRoleRef(constraint.postState.predicate.roleLocatedIn.role),
-          container: normalizeZoneOrRoleRef(constraint.postState.predicate.roleLocatedIn.container),
-        },
+        predicate: lowerPostStatePredicate(constraint.postState.predicate),
       });
     }
   }
   return lowered;
+}
+
+function lowerPostStatePredicate(
+  predicate: NonNullable<Extract<
+    NonNullable<GameSpecPlanTemplateDef['roles'][string]['constraints']>[number],
+    { readonly postState: unknown }
+  >['postState']>['predicate'],
+): Extract<CompiledPlanRoleConstraint, { readonly kind: 'postState' }>['predicate'] {
+  if ('roleLocatedIn' in predicate && isLocatedInPayload(predicate.roleLocatedIn)) {
+    return {
+      kind: 'roleLocatedIn',
+      role: normalizeRoleRef(predicate.roleLocatedIn.role),
+      container: normalizeZoneOrRoleRef(predicate.roleLocatedIn.container),
+    };
+  }
+  if ('condition' in predicate && isPostStateConditionPredicate(predicate.condition)) {
+    return {
+      kind: 'condition',
+      condition: predicate.condition.when,
+      bindings: Object.fromEntries(
+        Object.entries(predicate.condition.bindings).map(([name, ref]) => [name, normalizeRoleRef(ref)]),
+      ),
+    };
+  }
+  throw new Error('unreachable: validated postState predicate was not lowerable');
 }
 
 function normalizeRoleRef(ref: string): string {
@@ -237,14 +258,28 @@ function isPostStatePayload(
   readonly step: string;
   readonly role: string;
   readonly maxSteps: number;
-  readonly predicate: { readonly roleLocatedIn: { readonly role: string; readonly container: string } };
+  readonly predicate:
+    | { readonly roleLocatedIn: { readonly role: string; readonly container: string } }
+    | { readonly condition: { readonly when: import('../kernel/types.js').ConditionAST; readonly bindings: Readonly<Record<string, string>> } };
 } {
   return isRecord(value)
     && typeof value.step === 'string'
     && typeof value.role === 'string'
     && typeof value.maxSteps === 'number'
     && isRecord(value.predicate)
-    && isLocatedInPayload(value.predicate.roleLocatedIn);
+    && (
+      isLocatedInPayload(value.predicate.roleLocatedIn)
+      || isPostStateConditionPredicate(value.predicate.condition)
+    );
+}
+
+function isPostStateConditionPredicate(
+  value: unknown,
+): value is { readonly when: import('../kernel/types.js').ConditionAST; readonly bindings: Readonly<Record<string, string>> } {
+  return isRecord(value)
+    && value.when !== undefined
+    && isRecord(value.bindings)
+    && Object.values(value.bindings).every((entry) => typeof entry === 'string');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

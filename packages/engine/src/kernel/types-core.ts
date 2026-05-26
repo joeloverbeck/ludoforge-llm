@@ -1224,7 +1224,13 @@ export type CompiledPlanRoleConstraint =
     readonly step: string;
     readonly role: string;
     readonly maxSteps: number;
-    readonly predicate: { readonly kind: 'roleLocatedIn'; readonly role: string; readonly container: string };
+    readonly predicate:
+      | { readonly kind: 'roleLocatedIn'; readonly role: string; readonly container: string }
+      | {
+        readonly kind: 'condition';
+        readonly condition: ConditionAST;
+        readonly bindings: Readonly<Record<string, string>>;
+      };
   };
 
 export interface CompiledPlanRole {

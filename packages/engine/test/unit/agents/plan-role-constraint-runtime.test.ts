@@ -9,7 +9,9 @@ import {
 import type { PlanRoleBinding } from '../../../src/agents/plan-execution.js';
 import {
   asActionId,
+  asPlayerId,
   asTokenId,
+  type ConditionAST,
   type GameDef,
   type GameState,
   initialState,
@@ -232,5 +234,51 @@ describe('plan role constraint runtime evaluation', () => {
       null,
       context,
     )), JSON.stringify(true));
+  });
+
+  it('evaluates bounded postState condition predicates with role-zone bindings', () => {
+    const def = routeGraphDef();
+    const baseState = {
+      ...initialState(def, 7, 2).state,
+      zones: { left: [], right: [] },
+    } as unknown as GameState;
+    const context = {
+      def,
+      rootMove: { actionId: asActionId('branch'), params: {} },
+      steps: [{
+        label: 'choose-side',
+        role: 'side',
+        match: { decisionKind: 'chooseOne', targetKind: 'zone', decisionPath: '$pick' },
+      }],
+      playerId: asPlayerId(1),
+    };
+    const constraint = {
+      kind: 'postState' as const,
+      step: 'choose-side',
+      role: 'side',
+      maxSteps: 2,
+      predicate: {
+        kind: 'condition' as const,
+        condition: { op: '==', left: { _t: 2, ref: 'binding', name: 'chosenZone' }, right: 'left' } satisfies ConditionAST,
+        bindings: { chosenZone: 'side' },
+      },
+    };
+
+    assert.equal(constraintsSatisfied(
+      roleBinding('side', 'left'),
+      [constraint],
+      {},
+      baseState,
+      null,
+      context,
+    ), true);
+    assert.equal(constraintsSatisfied(
+      roleBinding('side', 'right'),
+      [constraint],
+      {},
+      baseState,
+      null,
+      context,
+    ), false);
   });
 });

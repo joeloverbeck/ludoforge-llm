@@ -1,6 +1,6 @@
 # 198GAMECONFCORP-003: Observer-safety invariant proofs
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Possibly — if the harness surfaces engine bugs whose fix is small and local, fix in scope. Larger engine gaps (new primitives) are deferred per spec §6/§11.
@@ -102,3 +102,23 @@ Document which witnesses are addressed in scope vs. deferred in the ticket Outco
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/architecture/observer-safety-invariants.test.js` — targeted run.
 2. `pnpm turbo test` — full suite regression.
 3. `pnpm turbo lint && pnpm turbo typecheck` — pre-completion verification.
+
+## Outcome (2026-05-26)
+
+Implemented the observer-safety invariant proof surface in `packages/engine/test/architecture/observer-safety-invariants.test.ts` with positive and negative invariant checks over a synthesized hidden-info fixture plus a Texas Hold'em production witness. The test exercises all six selector source kinds (`collection`, `product`, `routePairs`, `subset`, `candidateParams`, `microturnOptions`), preview-ref provenance, posture fallback behavior, and plan-proposal trace evidence at an observer scope.
+
+The witness surfaced one small local engine bug in selector materialization: generic `tokens` collections, `candidateParams`, and `microturnOptions` could expose hidden token identifiers when evaluated with an observer. Fixed in scope in `packages/engine/src/agents/policy-selector-eval.ts` by reusing the existing observer projection to filter hidden token IDs. No new engine primitive, Texas Hold'em re-authoring, or follow-up spec was required.
+
+Deviation from the original file-layout expectation: the synthesized hidden-info fixture and helpers live inside the new architectural test file rather than a separate `observer-safety/` helper directory. The fixture is test-local and not reused elsewhere, so a separate helper surface would add indirection without reducing duplication.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test dist/test/architecture/observer-safety-invariants.test.js` from `packages/engine` — passed, 7 tests / 3 suites.
+3. `pnpm turbo lint` — passed.
+4. `pnpm turbo typecheck` — passed.
+5. `pnpm turbo test` — passed, 5 turbo tasks successful; engine runner reported 175/175 files passed.
+
+Source-size ledger: `packages/engine/src/agents/policy-selector-eval.ts` is 428 lines after a +53/-6 tracked diff; `packages/engine/test/architecture/observer-safety-invariants.test.ts` is 351 lines. No file-size cap crossing.
+
+Generated artifact provenance: no generated artifacts are checked in. Build output under `dist/` was produced only for proof commands.

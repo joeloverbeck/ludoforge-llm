@@ -1,20 +1,19 @@
 {
   "originating_spec": "specs/196-generic-role-constraints-and-authored-route-semantics.md",
   "archived_spec": null,
-  "last_ticket": "tickets/196ROLECONROUTE-005.md",
-  "last_result": "retargeted_to_prerequisite",
-  "last_work_commit": "99b49c79cbaca4bd7002907dbe7157bed71fe201",
+  "last_ticket": "archive/tickets/196ROLECONROUTE-005A.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "bb6290f8c38c325dfa27a5f9f07e830aaf1e0b60",
   "last_state_commit": "self",
-  "next_target": "tickets/196ROLECONROUTE-005A.md",
+  "next_target": "tickets/196ROLECONROUTE-005.md",
   "queue": [
-    "tickets/196ROLECONROUTE-005A.md",
     "tickets/196ROLECONROUTE-005.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Approved Foundations reassessment split the bounded post-state role-constraint evaluation contract into prerequisite tickets/196ROLECONROUTE-005A.md before returning to tickets/196ROLECONROUTE-005.md. No source/test/schema implementation probe was retained; unrelated perf-baseline byproducts remain untracked.",
+  "owned_dirty_summary": "Implemented and archived the bounded post-state role-constraint prerequisite in bb6290f8c38c325dfa27a5f9f07e830aaf1e0b60. Unrelated perf-baseline byproducts remain untracked.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-380f39ebb8-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/parity-drive-cb3f665535-smoke.json, reports/perf-baseline/parity-drive-ff24d46a34-smoke.json, reports/perf-baseline/per-decision/",
+  "dirty_state": "unrelated_untracked: reports/perf-baseline/alloc-prof/, reports/perf-baseline/cpu-prof/, reports/perf-baseline/parity-drive-03a02e8ddd-smoke.json, reports/perf-baseline/parity-drive-380f39ebb8-smoke.json, reports/perf-baseline/parity-drive-4b1c0c5e4d-smoke.json, reports/perf-baseline/parity-drive-a863022b40-smoke.json, reports/perf-baseline/parity-drive-cb3f665535-smoke.json, reports/perf-baseline/parity-drive-ff24d46a34-smoke.json, reports/perf-baseline/per-decision/",
   "updated_at": "2026-05-26"
 }

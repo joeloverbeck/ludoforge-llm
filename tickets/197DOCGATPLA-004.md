@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/197DOCGATPLA-001.md`, `archive/tickets/197DOCGATPLA-002.md`
+**Deps**: `archive/tickets/197DOCGATPLA-001.md`, `archive/tickets/197DOCGATPLA-002.md`, `archive/tickets/197DOCGATPLA-003.md`
 
 ## Problem
 

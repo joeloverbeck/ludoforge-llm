@@ -202,5 +202,5 @@ Source-size ledger:
 - `packages/engine/src/kernel/schemas-core.ts` | after 3314 | crossed cap? no, preexisting oversize | active growth +5 net | user-approved deferral option 2: canonical trace schema source, extraction would widen this ticket | successor none.
 
 Deferred scope:
-- FITL `buildPoliticalEngine` migration remains owned by `tickets/197DOCGATPLA-003.md`.
+- FITL `buildPoliticalEngine` migration landed in `archive/tickets/197DOCGATPLA-003.md`.
 - Cross-profile architectural-invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.

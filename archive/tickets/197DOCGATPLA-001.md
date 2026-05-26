@@ -150,5 +150,5 @@ Source-size ledger:
 
 Deferred scope:
 - Plan-proposer filtering and trace provenance landed in `archive/tickets/197DOCGATPLA-002.md`.
-- FITL `buildPoliticalEngine` migration remains owned by `tickets/197DOCGATPLA-003.md`.
+- FITL `buildPoliticalEngine` migration landed in `archive/tickets/197DOCGATPLA-003.md`.
 - Cross-profile invariant and golden trace coverage remain owned by `tickets/197DOCGATPLA-004.md`.

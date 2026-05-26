@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl (compiler validation)
-**Deps**: `specs/199-compound-availability-at-root-proposal.md`
+**Deps**: `archive/specs/199-compound-availability-at-root-proposal.md`
 
 ## Problem
 

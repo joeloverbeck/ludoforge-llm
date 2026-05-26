@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel (new microturn probe primitive)
-**Deps**: `specs/199-compound-availability-at-root-proposal.md`
+**Deps**: `archive/specs/199-compound-availability-at-root-proposal.md`
 
 ## Problem
 

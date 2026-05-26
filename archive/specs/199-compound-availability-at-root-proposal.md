@@ -1,6 +1,6 @@
 # Spec 199 — Compound Availability at Root Proposal
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium — Spec 191 P3 validated authored `root.compound` metadata against at least one *static* continuation witness at compile time, but the plan proposer at runtime does not probe whether the compound special-activity continuation is *currently grantable* in the published frontier. Today, the controller discovers unavailability one microturn later via the fallback ladder; the proposal trace records intended coherence the runtime cannot honor. This is the second-iteration audit's proposal #7 — a real proposal-trace integrity gap, but smaller in scope than the audit framed it. The user explicitly requested promoting it from ticket-sized to a separate spec.
 **Complexity**: M — adds a bounded compound-availability probe at the kernel-publication seam, wires it into the proposer, and surfaces availability status as a trace field with provenance. Similar shape to Foundation #18's constructibility-publication probe (Spec 144) but scoped to compound continuations, not microturn legality.
 **Date**: 2026-05-26
@@ -165,3 +165,23 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/199COMAVAROO-002.md`](../archive/tickets/199COMAVAROO-002.md) — P2 — Proposer integration + trace fields (covers §4.2 + §4.3) — COMPLETED 2026-05-26
 - [`archive/tickets/199COMAVAROO-003.md`](../archive/tickets/199COMAVAROO-003.md) — P3 — Architectural invariants + correspondence + FITL witness (covers §7 P3 + §8) — COMPLETED 2026-05-26
 - [`archive/tickets/199COMAVAROO-004.md`](../archive/tickets/199COMAVAROO-004.md) — P4 — Compile-time grant-vocabulary check (covers §4.4) — COMPLETED 2026-05-26
+
+## Outcome
+
+Completed on 2026-05-26.
+
+Spec 199 landed across four archived tickets:
+
+1. `archive/tickets/199COMAVAROO-001.md` added the bounded compound-availability probe primitive.
+2. `archive/tickets/199COMAVAROO-002.md` integrated compound availability into plan proposal ranking and trace alternatives.
+3. `archive/tickets/199COMAVAROO-003.md` added architectural invariant, correspondence, and FITL convergence witness coverage.
+4. `archive/tickets/199COMAVAROO-004.md` added compile-time grant-vocabulary validation for authored `root.compound.specialTags`.
+
+The final implementation preserves the controller fallback ladder and keeps compound availability advisory/provenance-bearing at proposal time. No FITL profile rewrite or deeper-than-one-microturn compound probing was added.
+
+Final verification:
+
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/agent-plan-template-validate.test.js` — passed, 12 tests.
+2. `pnpm turbo schema:artifacts` — passed.
+3. `pnpm -F @ludoforge/engine test` — passed, 178/178 files.
+4. `pnpm run check:ticket-deps` — passed after final ticket archive/reference repair.

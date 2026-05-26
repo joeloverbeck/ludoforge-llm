@@ -39,8 +39,8 @@ Each spec carries its own replay-identity and determinism proof obligations inde
    (`archive/specs/197-doctrine-gated-plan-template-eligibility.md`)
    Extends `StrategyModuleDef` with optional `enablesPlanTemplates` / `suppressesPlanTemplates`; adds an eligibility-filter pass in the plan proposer before scoring. Closes the verified decoupling gap (strategy modules adjust scoring tier but do not gate plan-template candidacy) without retyping strategy modules into a new "doctrine" concept (Spec 186 §11 / Spec 191 §11 settled that this is Foundation #14 churn).
 
-3. **Spec 198 — Cross-Game Conformance Corpus and Observer-Safety Proofs**
-   (`specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`)
+3. **Spec 198 — Cross-Game Conformance Corpus and Observer-Safety Proofs** (COMPLETED 2026-05-26)
+   (`archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`)
    Authors one minimal perfect-information board game spec; builds the cross-family architectural-invariant test surface across FITL / Texas Hold'em / new game; promotes observer-safety from informal expectation to enforced architectural invariant; adds authoring-error negative-test infrastructure. Operationalizes Foundation #16's literal corpus mandate.
 
 4. **Spec 199 — Compound Availability at Root Proposal**

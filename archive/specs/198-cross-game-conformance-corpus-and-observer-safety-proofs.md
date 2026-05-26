@@ -1,6 +1,6 @@
 # Spec 198 — Cross-Game Conformance Corpus and Observer-Safety Proofs
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — Foundation #16 literally mandates "a conformance corpus spanning materially different game families: at minimum one perfect-information board game, one hidden-information card game, one stochastic game, and one asymmetric or phase-heavy game." The repo today has FITL (asymmetric phase-heavy) and Texas Hold'em (hidden + stochastic). The perfect-information board game is missing, and no architectural-invariant tests exercise the agent layer across game families. This spec closes that gap and, as a downstream benefit, becomes the vehicle for the second-iteration audit's observer-safety proofs (proposal #8) and authoring-error negative tests (proposal #11) — neither of which has a productive home until the corpus exists.
 **Complexity**: M–L — authoring one new minimal perfect-info board game data spec, building a cross-family architectural-invariant test surface, and adding authoring-error negative-test infrastructure. No engine changes for the corpus itself; observer-safety proofs may surface engine bugs that are then fixed in scope.
 **Date**: 2026-05-26
@@ -177,3 +177,11 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/198GAMECONFCORP-002.md`](../archive/tickets/198GAMECONFCORP-002.md) — Cross-family architectural-invariant tests (COMPLETED 2026-05-26; covers §4.2 / P2)
 - [`archive/tickets/198GAMECONFCORP-003.md`](../archive/tickets/198GAMECONFCORP-003.md) — Observer-safety invariant proofs (COMPLETED 2026-05-26; covers §4.3 / P3)
 - [`archive/tickets/198GAMECONFCORP-004.md`](../archive/tickets/198GAMECONFCORP-004.md) — Authoring-error negative-test infrastructure (COMPLETED 2026-05-26; covers §4.4 / P4)
+
+## Outcome
+
+Completed: 2026-05-26
+
+Spec 198 is complete. The implementation added the `generic-control` perfect-information corpus game, cross-family architectural-invariant coverage over `generic-control`, FITL, and Texas Hold'em, observer-safety invariant proofs, and the authoring-error negative-test harness for the Spec 191/196/197 validation surfaces.
+
+Verification completed across the ticket queue included targeted engine builds/tests, the full `pnpm turbo test` lane, `pnpm turbo lint`, `pnpm turbo typecheck`, and ticket dependency integrity checks. All owned tickets are archived under `archive/tickets/198GAMECONFCORP-*.md`.

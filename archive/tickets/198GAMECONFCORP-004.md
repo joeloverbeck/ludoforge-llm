@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only (the validation surfaces being negative-tested are already in the engine, delivered by Specs 191/196/197)
-**Deps**: `specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`
+**Deps**: `archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`
 
 ## Problem
 

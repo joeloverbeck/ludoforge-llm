@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data-asset authoring only
-**Deps**: `specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`
+**Deps**: `archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`
 
 ## Problem
 

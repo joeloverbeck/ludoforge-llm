@@ -23,7 +23,7 @@ Close the role-constraint expressiveness gap that Spec 191 deferred, while keepi
 1. **Extend the supported role-constraint kinds** beyond `notEqual` with: `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`. Each is a generic, observer-safe constraint over already-bound roles and authored map/graph data; none names a game-specific concept.
 2. **Introduce an engine-generic authored-route/map data-asset** that game authors populate to express adjacency, route classes, and movement reachability. The engine reads the data; the kernel does not know what "LoC" or "Trail" mean — those remain authored labels on the generic graph.
 3. **Wire the new constraints into the runtime evaluator and compiler validator** so a constraint like `{ reachable: { from: role.transportOrigin, to: role.transportDestination, via: routeClass.land } }` is compile-validated against the authored route data and runtime-enforced.
-4. **Migrate the FITL ARVN Transport templates** to use `reachable` + `distinctOriginDestination` instead of the current guardrail-penalty workaround (`agents.md:1855-1866`), demonstrating the architecture on the concrete authoring need.
+4. **Migrate the FITL ARVN Transport templates** in two steps: first use `reachable` + `distinctOriginDestination` for route/destination admissibility, then add the generic control/predicate constraint semantics required before origin-control preservation can move out of the current guardrail-penalty workaround (`agents.md:1855-1866`). The split keeps the architecture honest: current generic constraints can prove route admissibility, while origin-control preservation needs a further generic state-dependent constraint surface.
 
 ## 2. Non-Goals
 
@@ -152,18 +152,16 @@ Per-kind evaluators consult observer-safe state already available to the propose
 - `distinctOriginDestination` is a one-line role-pair compare.
 - `reachable` and `adjacent` invoke `RouteGraphProvider` against the GameDef-compiled graph indices, with `maxHops` bounded per Foundation #10.
 
-All evaluators are pure functions of `(state, roleBindings, constraint)`; no side effects, no hidden-state reads.
+All evaluators are pure functions of `(state, roleBindings, constraint)`; no side effects, no hidden-state reads. Runtime evaluation receives the current candidate binding separately from prior role bindings, so refs to the constrained role itself are valid while refs to later roles remain invalid. The compiler validator must mirror that contract: accept current-role refs, accept earlier-role refs, and continue rejecting undeclared or later-bound role refs.
 
 ### 4.4 FITL ARVN Transport migration
 
-Migrate the ARVN Transport template in `92-agents.md` to express origin-control and reachability as constraints, demoting the existing `arvn.doNotLoseOriginControlByTransport` guardrail to a complement (still useful for the projected-margin posture, but no longer the only enforcement of "preserve origin control"):
+Migrate the ARVN Transport template in `92-agents.md` to express reachability and origin/destination distinctness as constraints. A 2026-05-26 Foundations reassessment split the original origin-control example out of P4A because the current `locatedIn` semantics cannot truthfully express "ARVN-controlled population center" as a fake zone id or post-Transport control preservation. `196ROLECONROUTE-005` owns the generic control/predicate constraint semantics needed before the existing `arvn.doNotLoseOriginControlByTransport` guardrail can be demoted to a pure posture complement.
 
 ```yaml
 roles:
   - id: transportOrigin
     selectorId: arvn.transportOrigin
-    constraints:
-      - { locatedIn: zone.arvnControlledPopulationCenter }   # generic — "controlled" is authored zone metadata
   - id: transportDestination
     selectorId: arvn.transportDestination
     constraints:
@@ -194,14 +192,17 @@ The `routeClass.land` reference is an authored label on the route graph, not a g
 | **P1** | Constraint registry extension (§4.1) | `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS` extended; per-kind payload typed in `kernel/types-core.ts`; compiler validates shape (role refs resolve, `maxHops` positive); a fixture template with each new kind compiles; an unsupported kind fails compile; determinism preserved | S–M |
 | **P2** | Authored route/map dataAsset (§4.2) | `routeGraph` `dataAssets` kind defined; schema validated at compile time; `RouteGraphProvider` interface + immutable graph index; deterministic compilation byte-identical across two runs; fixture FITL `routeGraph` authored; queries (`adjacent`, `reachable(maxHops)`) tested with golden traversal results | M |
 | **P3** | Runtime constraint evaluation (§4.3) | `constraintsSatisfied` evaluates each new kind purely; FITL fixture exercises each constraint; observer-safe state-read contract preserved; plan-trace replay byte-identical | M |
-| **P4** | FITL ARVN Transport migration (§4.4) | ARVN Transport template uses `reachable` + `distinctOriginDestination` + `locatedIn` constraints; the existing `arvn.doNotLoseOriginControlByTransport` guardrail is reduced to projected-margin-only complement (not removed entirely, since margin signal is independent); witness test proves illegal-transport bindings are rejected by constraint, not relegated to guardrail penalty | M |
+| **P4A-prereq** | Current-role validation alignment (§4.3) | Compiler accepts a constraint reference to the role currently being bound when runtime evaluates the current candidate binding; undeclared and later-bound role refs still fail with role/template-named diagnostics | S |
+| **P4A** | FITL ARVN Transport route migration (§4.4) | ARVN Transport template uses `reachable` + `distinctOriginDestination`; FITL routeGraph is authored; witness tests prove unreachable and same-origin/destination bindings are rejected by constraint admissibility, not relegated to scoring | M |
+| **P4B** | Generic control-preservation constraint semantics (§4.4) | A Foundation-compliant generic constraint shape expresses FITL origin-control preservation without fake zone ids or game-specific engine branches; `arvn.doNotLoseOriginControlByTransport` becomes projected-margin-only complement; witness test proves origin-control-losing bindings are rejected by constraint admissibility | M |
 
 ## 8. Test plan
 
 - **Compiler error corpus** (architectural-invariant): unsupported constraint kind; missing route graph for `reachable`; `locatedIn` with hidden-info container at agent scope; `maxHops` non-positive; role precedence violation. Each fails with template/role-named diagnostic that replays byte-identically.
 - **Route graph determinism** (architectural-invariant): same authored `routeGraph` payload compiled twice produces byte-identical graph indices; `reachable(a, b, maxHops)` returns the same hop-sorted result deterministically.
 - **Runtime architectural-invariant**: each new constraint kind, when violated, removes the candidate from the role-binding result set; when satisfied, includes it.
-- **FITL convergence witness**: ARVN Transport scenarios where origin-control would be lost by the destination choice fail constraint admissibility (rather than being demoted by guardrail). Use existing FITL convergence-witness machinery.
+- **FITL route witness**: ARVN Transport scenarios with unreachable or same-origin/destination choices fail constraint admissibility (rather than being scored as legal choices).
+- **FITL control-preservation witness**: owned by `196ROLECONROUTE-005`; ARVN Transport scenarios where origin-control would be lost by the destination choice fail constraint admissibility rather than being demoted by guardrail.
 - **Determinism**: `pnpm turbo build` twice byte-identical; plan-trace golden replay preserved.
 
 ## 9. Foundation alignment
@@ -245,4 +246,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-26:
 - [`archive/tickets/196ROLECONROUTE-001.md`](../archive/tickets/196ROLECONROUTE-001.md) — P1 — Constraint registry extension and compile-time surface for new role-constraint kinds (covers §4.1 / §7 P1)
 - [`archive/tickets/196ROLECONROUTE-002.md`](../archive/tickets/196ROLECONROUTE-002.md) — P2 — Authored routeGraph data asset and RouteGraphProvider (covers §4.2 / §7 P2)
 - [`archive/tickets/196ROLECONROUTE-003.md`](../archive/tickets/196ROLECONROUTE-003.md) — P3 — Runtime constraint evaluation and constraintsSatisfied contract restructure (covers §4.3 / §7 P3)
-- [`tickets/196ROLECONROUTE-004.md`](../tickets/196ROLECONROUTE-004.md) — P4 — FITL ARVN Transport constraint migration and convergence witness (covers §4.4 / §7 P4)
+- [`tickets/196ROLECONROUTE-004A.md`](../tickets/196ROLECONROUTE-004A.md) — P4A prerequisite — Current-role validation alignment for multi-role constraints (covers §4.3 / §7 P4A-prereq)
+- [`tickets/196ROLECONROUTE-004.md`](../tickets/196ROLECONROUTE-004.md) — P4A — FITL ARVN Transport route constraint migration and witness (covers §4.4 / §7 P4A)
+- [`tickets/196ROLECONROUTE-005.md`](../tickets/196ROLECONROUTE-005.md) — P4B — Generic control-preservation constraint semantics for FITL ARVN Transport (covers §4.4 / §7 P4B)

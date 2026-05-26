@@ -64,7 +64,7 @@ Add a focused test under `packages/engine/test/unit/cnl/` (mirroring existing `v
 1. New vocabulary-check test passes (path verified during implementation).
 2. Existing `validate-agent-plan-templates` suite passes: `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/validate-agent-plan-templates*.test.js`.
 3. Compile reproducibility preserved: `pnpm turbo schema:artifacts` (or the project's canonical compile-byte-identity check).
-4. Full engine suite: `pnpm turbo test --filter=engine`.
+4. Full engine suite: `pnpm -F @ludoforge/engine test`.
 
 ### Invariants
 
@@ -83,4 +83,4 @@ Add a focused test under `packages/engine/test/unit/cnl/` (mirroring existing `v
 
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/validate-agent-plan-templates*.test.js`
 2. `pnpm turbo schema:artifacts`
-3. `pnpm turbo test --filter=engine`
+3. `pnpm -F @ludoforge/engine test`

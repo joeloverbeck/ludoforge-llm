@@ -166,6 +166,7 @@ export * from './tooltip-blocker-extractor.js';
 export * from './decision-scope.js';
 export * from './microturn/types.js';
 export * from './microturn/constants.js';
+export * from './microturn/compound-availability-probe.js';
 export * from './microturn/publish.js';
 export * from './microturn/probe.js';
 export * from './microturn/apply.js';

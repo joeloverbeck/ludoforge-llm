@@ -1,6 +1,6 @@
 # 199COMAVAROO-001: P1 — Bounded compound-availability probe primitive
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel (new microturn probe primitive)
@@ -105,3 +105,24 @@ The probe-purity test lives in ticket 003 per the spec's P3 bundling of all arch
 1. `pnpm -F @ludoforge/engine typecheck` — confirm new type is correctly exported.
 2. `pnpm -F @ludoforge/engine build` — ensure compile succeeds.
 3. `pnpm turbo test --filter=engine` — full engine suite (no behavioral changes expected from this ticket alone).
+
+## Outcome
+
+Completed: 2026-05-26
+
+What changed:
+- Added `packages/engine/src/kernel/microturn/compound-availability-probe.ts` with the exported `CompoundAvailability` union and `probeCompoundAvailability` primitive.
+- Exported the probe module from `packages/engine/src/kernel/index.ts` for downstream proposer integration in `tickets/199COMAVAROO-002.md`.
+
+Deviations from original plan:
+- The runtime implementation does not import `canSpecialAccompanyOperation` from `packages/engine/src/cnl/validate-agent-plan-templates.ts` because that helper is compiler-private. The probe instead derives the same generic action/pipeline relationship from kernel-owned `GameDef.actions`, action tags/ids, and `ActionPipelineDef.accompanyingOps`.
+- The literal command `pnpm turbo test --filter=engine` is stale for this workspace (`turbo` reports no package named `engine`). The proof used the repo-local package lane `pnpm -F @ludoforge/engine test`, which includes schema artifact checks and the engine default test lane.
+
+Verification:
+- `pnpm -F @ludoforge/engine typecheck` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm turbo test --filter=engine` — failed as stale command before running tests (`No package found with name 'engine'`); replaced by the package-local lane below.
+- `pnpm -F @ludoforge/engine test` — passed; final summary `176/176 files passed`.
+
+Source-size ledger:
+- `packages/engine/src/kernel/microturn/compound-availability-probe.ts` is 125 lines; no source-size cap trigger.

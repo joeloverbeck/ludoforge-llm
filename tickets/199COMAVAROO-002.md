@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents (plan proposer), kernel (plan-trace types)
-**Deps**: `tickets/199COMAVAROO-001.md`
+**Deps**: `archive/tickets/199COMAVAROO-001.md`
 
 ## Problem
 
@@ -76,7 +76,7 @@ Pipe each candidate's `compoundAvailability` through the alternatives serializat
 
 1. Existing plan-proposal tests pass: `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/plan-proposal*.test.js`.
 2. Existing plan-controller architectural invariants pass: `node --test dist/test/architecture/plan-controller-legality-frontier.test.js`.
-3. Existing replay / determinism suite byte-identity preserved: `pnpm turbo test --filter=engine`.
+3. Existing replay / determinism suite byte-identity preserved: `pnpm -F @ludoforge/engine test`.
 4. Full suite: `pnpm turbo test`.
 
 ### Invariants

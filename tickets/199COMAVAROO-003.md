@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test additions only
-**Deps**: `tickets/199COMAVAROO-001.md`, `tickets/199COMAVAROO-002.md`
+**Deps**: `archive/tickets/199COMAVAROO-001.md`, `tickets/199COMAVAROO-002.md`
 
 ## Problem
 
@@ -78,7 +78,7 @@ If keeping markers clean, place the witness in `plan-proposal-compound-availabil
 
 1. New tests pass:
    `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/plan-proposal-compound-availability.test.js && node --test dist/test/architecture/plan-controller-compound-availability-correspondence.test.js && node --test dist/test/architecture/plan-proposal-compound-availability-witness.test.js`
-2. Existing replay / determinism suite byte-identical: `pnpm turbo test --filter=engine`.
+2. Existing replay / determinism suite byte-identical: `pnpm -F @ludoforge/engine test`.
 3. Full suite: `pnpm turbo test`.
 
 ### Invariants

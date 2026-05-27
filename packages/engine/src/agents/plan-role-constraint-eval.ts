@@ -18,11 +18,28 @@ import type {
   RuntimeDataAsset,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import type { RoleConstraintRejection } from '../kernel/types-plan-trace.js';
 import { isSupportedPlanRoleConstraintKind } from '../kernel/plan-role-constraints.js';
 import type { PlanRoleBinding } from './plan-execution.js';
 
 type PlanRoleConstraint = CompiledPlanTemplate['roles'][string]['constraints'][number];
 type PostStateConstraint = Extract<PlanRoleConstraint, { readonly kind: 'postState' }>;
+type PostStateProbeUnavailableReason = 'postStateProbeExhausted' | 'postStatePredicateFailed' | 'postStateObserverInsufficient';
+
+export type PostStateProbeResult =
+  | { readonly kind: 'ready'; readonly postState: GameState }
+  | {
+    readonly kind: 'unavailable';
+    readonly reason: PostStateProbeUnavailableReason;
+  };
+
+export type RoleConstraintResult =
+  | { readonly kind: 'pass' }
+  | { readonly kind: 'reject'; readonly rejection: RoleConstraintRejection };
+
+type MaterializedPostStateProbeMoveResult =
+  | { readonly kind: 'ready'; readonly move: Move }
+  | { readonly kind: 'unavailable'; readonly reason: PostStateProbeUnavailableReason };
 
 export interface PostStateConstraintContext {
   readonly def: GameDef;
@@ -54,19 +71,52 @@ export function constraintsSatisfied(
   routeGraph: RouteGraphProvider | null,
   postStateContext?: PostStateConstraintContext,
 ): boolean {
-  return constraints.every((constraint) => {
+  return evaluateRoleConstraints(binding, constraints, existing, state, routeGraph, postStateContext).kind === 'pass';
+}
+
+export function evaluateRoleConstraints(
+  binding: PlanRoleBinding,
+  constraints: CompiledPlanTemplate['roles'][string]['constraints'],
+  existing: Readonly<Record<string, PlanRoleBinding>>,
+  state: GameState,
+  routeGraph: RouteGraphProvider | null,
+  postStateContext?: PostStateConstraintContext,
+): RoleConstraintResult {
+  for (const constraint of constraints) {
+    const result = evaluateRoleConstraint(binding, constraint, existing, state, routeGraph, postStateContext);
+    if (result.kind === 'reject') {
+      return result;
+    }
+  }
+  return { kind: 'pass' };
+}
+
+function evaluateRoleConstraint(
+  binding: PlanRoleBinding,
+  constraint: PlanRoleConstraint,
+  existing: Readonly<Record<string, PlanRoleBinding>>,
+  state: GameState,
+  routeGraph: RouteGraphProvider | null,
+  postStateContext?: PostStateConstraintContext,
+): RoleConstraintResult {
     switch (constraint.kind) {
       case 'notEqual': {
         const other = existing[constraint.role];
         if (other === undefined) {
-          return true;
+          return { kind: 'pass' };
         }
-        return binding.selectedId !== other.selectedId;
+        return binding.selectedId !== other.selectedId
+          ? { kind: 'pass' }
+          : { kind: 'reject', rejection: { kind: 'notEqual', reason: 'rolesEqual' } };
       }
       case 'locatedIn':
-        return evaluateLocatedIn(binding, constraint, existing, state);
+        return evaluateLocatedIn(binding, constraint, existing, state)
+          ? { kind: 'pass' }
+          : { kind: 'reject', rejection: { kind: 'locatedIn', reason: 'tokenNotInContainer' } };
       case 'distinctOriginDestination':
-        return evaluateDistinctOriginDestination(binding, constraint, existing, state);
+        return evaluateDistinctOriginDestination(binding, constraint, existing, state)
+          ? { kind: 'pass' }
+          : { kind: 'reject', rejection: { kind: 'distinctOriginDestination', reason: 'originEqualsDestination' } };
       case 'reachable':
         if (routeGraph === null) {
           throw new Error('reachable constraint reached runtime evaluation without a compiled RouteGraphProvider.');
@@ -90,7 +140,6 @@ export function constraintsSatisfied(
         return exhaustive;
       }
     }
-  });
 }
 
 function evaluatePostState(
@@ -99,18 +148,22 @@ function evaluatePostState(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   state: GameState,
   context: PostStateConstraintContext,
-): boolean {
-  const postState = probeRoleBoundPostState(binding, constraint, existing, context, state);
-  if (postState === null) {
-    return false;
+): RoleConstraintResult {
+  const result = probeRoleBoundPostState(binding, constraint, existing, context, state);
+  if (result.kind === 'unavailable') {
+    return { kind: 'reject', rejection: { kind: 'postState', reason: result.reason } };
   }
   switch (constraint.predicate.kind) {
     case 'roleLocatedIn': {
       const { role, container } = constraint.predicate;
-      return evaluateLocatedIn(binding, { kind: 'locatedIn', role, container }, existing, postState);
+      return evaluateLocatedIn(binding, { kind: 'locatedIn', role, container }, existing, result.postState)
+        ? { kind: 'pass' }
+        : { kind: 'reject', rejection: { kind: 'postState', reason: 'postStatePredicateFailed' } };
     }
     case 'condition':
-      return evaluatePostStateCondition(binding, constraint.predicate, existing, postState, context);
+      return evaluatePostStateCondition(binding, constraint.predicate, existing, result.postState, context)
+        ? { kind: 'pass' }
+        : { kind: 'reject', rejection: { kind: 'postState', reason: 'postStatePredicateFailed' } };
   }
 }
 
@@ -152,26 +205,26 @@ export function probeRoleBoundPostState(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   context: PostStateConstraintContext,
   state: GameState,
-): GameState | null {
+): PostStateProbeResult {
   const step = context.steps.find((entry) => entry.label === constraint.step);
   if (step === undefined || step.role !== constraint.role) {
-    return null;
+    return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
   }
-  const move = materializePostStateProbeMove(binding, constraint, existing, context, state);
-  if (move === null) {
-    return null;
+  const materialized = materializePostStateProbeMove(binding, constraint, existing, context, state);
+  if (materialized.kind === 'unavailable') {
+    return materialized;
   }
   try {
     const result = applyMove(
       context.def,
       state,
-      move,
+      materialized.move,
       { advanceToDecisionPoint: true, maxPhaseTransitionsPerMove: constraint.maxSteps },
       context.runtime,
     );
-    return result.state;
+    return { kind: 'ready', postState: result.state };
   } catch {
-    return null;
+    return { kind: 'unavailable', reason: 'postStatePredicateFailed' };
   }
 }
 
@@ -181,15 +234,15 @@ function materializePostStateProbeMove(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   context: PostStateConstraintContext,
   state: GameState,
-): Move | null {
+): MaterializedPostStateProbeMoveResult {
   const constrainedIndex = context.steps.findIndex((entry) => entry.label === constraint.step);
   if (constrainedIndex === -1) {
-    return null;
+    return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
   }
   const steps = context.steps.slice(0, constrainedIndex + 1);
   const bindings = { ...existing, [binding.role]: binding };
   if (steps.some((step) => bindings[step.role] === undefined)) {
-    return null;
+    return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
   }
   const consumed = new Set<string>();
   const result = (() => {
@@ -218,8 +271,11 @@ function materializePostStateProbeMove(
       return null;
     }
   })();
-  if (result === null || !result.complete) {
-    return null;
+  if (result === null) {
+    return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
+  }
+  if (!result.complete) {
+    return { kind: 'unavailable', reason: 'postStateProbeExhausted' };
   }
   let move = result.move;
   for (const step of steps) {
@@ -228,11 +284,11 @@ function materializePostStateProbeMove(
     }
     const stepBinding = bindings[step.role];
     if (stepBinding === undefined) {
-      return null;
+      return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
     }
     const next = bindStepTargetDirectly(move, context, step, stepBinding.selectedId);
     if (next === null) {
-      return null;
+      return { kind: 'unavailable', reason: 'postStateObserverInsufficient' };
     }
     consumed.add(step.label);
     move = next;
@@ -243,7 +299,7 @@ function materializePostStateProbeMove(
     }
     move = bindRoleTargetDirectly(move, context, roleBinding.role, roleBinding.selectedId) ?? move;
   }
-  return move;
+  return { kind: 'ready', move };
 }
 
 function materializeCompoundRootMove(context: PostStateConstraintContext): Move {
@@ -469,10 +525,23 @@ function evaluateReachable(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   state: GameState,
   routeGraph: RouteGraphProvider,
-): boolean {
+): RoleConstraintResult {
   const from = zoneForRole(constraint.from, binding, existing, state);
   const to = zoneForRole(constraint.to, binding, existing, state);
-  return from !== null && to !== null && routeGraph.reachable(from, to, constraint.via, constraint.maxHops);
+  if (from !== null && to !== null && routeGraph.reachable(from, to, constraint.via, constraint.maxHops)) {
+    return { kind: 'pass' };
+  }
+  return {
+    kind: 'reject',
+    rejection: {
+      kind: 'reachable',
+      reason: 'unreachable',
+      ...(constraint.via === undefined ? {} : { via: constraint.via }),
+      ...(constraint.maxHops === undefined ? {} : { maxHops: constraint.maxHops }),
+      ...(from === null ? {} : { from }),
+      ...(to === null ? {} : { to }),
+    },
+  };
 }
 
 function evaluateAdjacent(
@@ -481,10 +550,21 @@ function evaluateAdjacent(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   state: GameState,
   routeGraph: RouteGraphProvider,
-): boolean {
+): RoleConstraintResult {
   const a = zoneForRole(constraint.a, binding, existing, state);
   const b = zoneForRole(constraint.b, binding, existing, state);
-  return a !== null && b !== null && routeGraph.adjacent(a, b);
+  if (a !== null && b !== null && routeGraph.adjacent(a, b)) {
+    return { kind: 'pass' };
+  }
+  return {
+    kind: 'reject',
+    rejection: {
+      kind: 'adjacent',
+      reason: 'nonAdjacent',
+      ...(a === null ? {} : { from: a }),
+      ...(b === null ? {} : { to: b }),
+    },
+  };
 }
 
 function zoneForRoleOrLiteral(

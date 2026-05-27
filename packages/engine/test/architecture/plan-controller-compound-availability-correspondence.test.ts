@@ -248,6 +248,8 @@ describe('compound availability and controller fallback correspondence', () => {
     const result = agent.chooseDecision(inputFor(agent, { def: gameDef, legalSpecialValues: ['left'] }));
 
     assert.equal(result.agentDecision?.plan?.microturns?.[0]?.match, 'fallback');
-    assert.equal(result.agentDecision?.plan?.microturns?.[0]?.fallbackReason, 'stableFrontierTieBreak');
+    assert.deepEqual(result.agentDecision?.plan?.microturns?.[0]?.fallbackReason, {
+      kind: 'stableFrontierTieBreakFallback',
+    });
   });
 });

@@ -16,7 +16,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
-import type { PolicyPlanMicroturnTrace } from '../../src/kernel/types-plan-trace.js';
+import type { PlanMicroturnFallbackReason, PolicyPlanMicroturnTrace } from '../../src/kernel/types-plan-trace.js';
 import { readFixtureJson } from '../helpers/fixture-reader.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
@@ -48,7 +48,7 @@ interface SemanticCorrespondenceGolden {
     readonly stepLabel: string;
     readonly mismatch: string;
     readonly observedMatch: PolicyPlanMicroturnTrace['match'];
-    readonly fallbackReason?: string;
+    readonly fallbackReason?: PlanMicroturnFallbackReason;
   }[];
 }
 

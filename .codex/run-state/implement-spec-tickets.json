@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
-  "archived_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
-  "last_ticket": "archive/tickets/199COMAVAROO-004.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "7ae694157bd6b56434ed98866543a35bf66fb5dc",
+  "originating_spec": "archive/specs/200-plan-proposal-trace-completeness.md",
+  "archived_spec": "archive/specs/200-plan-proposal-trace-completeness.md",
+  "last_ticket": "archive/tickets/200PLNPRPTRC-004.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "150780ddbab0e2f0000d2c9a6839f337f2f7f856",
   "last_state_commit": "self",
-  "next_target": null,
+  "next_target": "final_spec_archive",
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 199 archived in 7ae694157bd6b56434ed98866543a35bf66fb5dc. Unrelated .claude skill edits remain outside harness ownership.",
+  "owned_dirty_summary": "Completed and archived Spec 200 and all owned tickets.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_dirty: .claude/skills/fix-pr-ci/SKILL.md, .claude/skills/skill-audit/SKILL.md",
-  "updated_at": "2026-05-26"
+  "dirty_state": "clean",
+  "updated_at": "2026-05-27"
 }

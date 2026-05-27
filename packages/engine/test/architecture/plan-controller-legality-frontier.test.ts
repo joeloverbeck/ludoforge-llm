@@ -183,7 +183,9 @@ describe('plan execution controller frontier legality', () => {
     assert.equal(result.decision.value, 'left');
     assert.ok(input.microturn.legalActions.some((decision) => JSON.stringify(decision) === JSON.stringify(result.decision)));
     assert.equal(result.agentDecision?.plan?.microturns?.[0]?.match, 'fallback');
-    assert.equal(result.agentDecision?.plan?.microturns?.[0]?.fallbackReason, 'stableFrontierTieBreak');
+    assert.deepEqual(result.agentDecision?.plan?.microturns?.[0]?.fallbackReason, {
+      kind: 'stableFrontierTieBreakFallback',
+    });
   });
 
   it('does not exact-match a planned value from the wrong decision path, target kind, or stage', () => {

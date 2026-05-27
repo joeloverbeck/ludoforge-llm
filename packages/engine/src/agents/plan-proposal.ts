@@ -6,15 +6,15 @@ import type {
   CompiledAgentProfile,
   CompiledPlanTemplate,
   CompiledPolicyExpr,
+  DecisionSurfaceMatch,
   GameDef,
   GameState,
-  Move,
   PolicyPlanTrace,
+  PolicyPlanTraceRoleBindingStatusEntry,
+  RoleConstraintRejectionRecord,
   StrategyModuleDef,
-  CollectionRef,
 } from '../kernel/types.js';
 import type { PlayerId } from '../kernel/branded.js';
-import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import {
   commitPlanExecutionState,
@@ -23,28 +23,29 @@ import {
   type PlanRoleBinding,
 } from './plan-execution.js';
 import { buildPlanProposalTrace } from './plan-trace.js';
-import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from './policy-evaluation-core.js';
+import { PolicyEvaluationContext } from './policy-evaluation-core.js';
 import { evaluatePostureEvaluator } from './policy-posture-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
-import { constraintsSatisfied, routeGraphProviderForDef } from './plan-role-constraint-eval.js';
+import { evaluateRoleConstraints, routeGraphProviderForDef } from './plan-role-constraint-eval.js';
 import { eligiblePlanTemplates, type FilteredOutPlanTemplate } from './plan-template-eligibility.js';
 import { availabilityForPlanRoot, capLimitFor, compareCompoundAvailability, PLAN_CAP_CLASS_BUDGETS } from './plan-proposal-compound-availability.js';
 import type { CompoundAvailability } from '../kernel/microturn/compound-availability-probe.js';
+import {
+  decisionSurfaceMatchFor,
+  evaluationCandidateFor,
+  rootCandidatesFor,
+  rootMatchesTemplate,
+  selectorCandidateFor,
+  type PlanProposalRootCandidate,
+} from './plan-proposal-candidates.js';
+import { fallbackRoleSelections } from './plan-proposal-role-fallbacks.js';
 
 export { PLAN_CAP_CLASS_BUDGETS };
 
 interface PlanExprContext {
   readonly def?: GameDef;
   readonly seatId: string;
-}
-
-export interface PlanProposalRootCandidate {
-  readonly decision: Extract<Decision, { readonly kind: 'actionSelection' }>;
-  readonly move: Move;
-  readonly stableMoveKey: string;
-  readonly actionId: string;
-  readonly actionTags: readonly string[];
 }
 
 export interface PlanProposalAlternative {
@@ -54,7 +55,11 @@ export interface PlanProposalAlternative {
   readonly priorityTier: number;
   readonly stableKey: string;
   readonly compoundAvailability?: CompoundAvailability;
+  readonly decisionSurfaceMatch?: DecisionSurfaceMatch;
+  readonly rejectedByConstraint?: readonly RoleConstraintRejectionRecord[];
+  readonly rejectedByConstraintTruncatedCount?: number;
   readonly roleBindings: Readonly<Record<string, PlanRoleBinding>>;
+  readonly roleBindingStatuses: readonly PolicyPlanTraceRoleBindingStatusEntry[];
   readonly posture: PolicyPlanTrace['posture'];
 }
 
@@ -68,6 +73,7 @@ export interface PlanProposalResult {
   readonly capClass?: string;
   readonly capLimit?: number;
   readonly selected?: SelectedPlanProposal;
+  readonly roleBindingStatuses: readonly PolicyPlanTraceRoleBindingStatusEntry[];
   readonly alternatives: readonly PlanProposalAlternative[];
   readonly activeDoctrines: readonly string[];
   readonly rejectedDoctrines: readonly {
@@ -120,6 +126,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
   const alternatives: PlanProposalAlternative[] = [];
   let capClass: string | undefined;
   let capLimit: number | undefined;
+  let failedRoleBindingStatuses: readonly PolicyPlanTraceRoleBindingStatusEntry[] = [];
   const compoundAvailabilityMemo = new Map<string, CompoundAvailability>();
 
   for (const templateId of eligibleTemplateIds) {
@@ -133,10 +140,13 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       .filter((candidate) => rootMatchesTemplate(candidate, template))
       .slice(0, capLimitFor(template));
     for (const root of matchingRoots) {
-      const roleBindings = bindPlanRoles(template, input, root);
-      if (roleBindings === null) {
+      const roleBindingResult = bindPlanRoles(template, input, root);
+      if (roleBindingResult.kind === 'unavailable') {
+        failedRoleBindingStatuses = roleBindingResult.statuses;
         continue;
       }
+      const { bindings: roleBindings, statuses: roleBindingStatuses } = roleBindingResult;
+      const rejectionTrace = boundedRejectionTrace(roleBindingResult.rejectedByConstraint, capLimitFor(template));
       const priorityTier = highestDoctrineTier(input, activeDoctrines, root);
       const roleScore = Object.values(roleBindings).reduce((total, binding) => total + binding.quality, 0);
       const considerationScore = scorePlanLeafConsiderations(input, root);
@@ -145,6 +155,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
         continue;
       }
       const stableKey = `${priorityTier}:${templateId}:${root.stableMoveKey}`;
+      const decisionSurfaceMatch = decisionSurfaceMatchFor(template, root);
       alternatives.push({
         templateId,
         rootStableMoveKey: root.stableMoveKey,
@@ -154,7 +165,11 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
         ...(template.root.compound === undefined
           ? {}
           : { compoundAvailability: memoizedCompoundAvailability(input, root, template.root.compound, compoundAvailabilityMemo) }),
+        ...(decisionSurfaceMatch === undefined ? {} : { decisionSurfaceMatch }),
+        ...(rejectionTrace.records.length === 0 ? {} : { rejectedByConstraint: rejectionTrace.records }),
+        ...(rejectionTrace.truncatedCount === 0 ? {} : { rejectedByConstraintTruncatedCount: rejectionTrace.truncatedCount }),
         roleBindings,
+        roleBindingStatuses,
         posture: posture.trace,
       });
       if (alternatives.length >= capLimitFor(template)) {
@@ -176,6 +191,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       capClass,
       capLimit,
       templateEligibility.filteredOut,
+      hasAnyRootMatch ? failedRoleBindingStatuses : [],
     );
   }
 
@@ -191,6 +207,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       nextStepIndex: 0,
     },
     alternatives: ranked,
+    roleBindingStatuses: selected.roleBindingStatuses,
     activeDoctrines,
     rejectedDoctrines,
     filteredOutTemplates: templateEligibility.filteredOut,
@@ -270,44 +287,36 @@ function planExecutionStateFromProposal(
   };
 }
 
-function rootCandidatesFor(
-  def: GameDef,
-  actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[],
-): readonly PlanProposalRootCandidate[] {
-  return actionDecisions
-    .map((decision) => {
-      const move = decision.move;
-      if (move === undefined) {
-        return null;
-      }
-      const actionId = String(move.actionId);
-      return {
-        decision,
-        move,
-        stableMoveKey: toMoveIdentityKey(def, move),
-        actionId,
-        actionTags: def.actionTagIndex?.byAction[actionId] ?? [],
-      };
-    })
-    .filter((candidate): candidate is PlanProposalRootCandidate => candidate !== null)
-    .sort((left, right) => compareStable(left.stableMoveKey, right.stableMoveKey));
-}
+type RoleBindingUnavailableReason = PolicyPlanTraceRoleBindingStatusEntry['status'] extends infer Status
+  ? Status extends { readonly kind: 'unavailable'; readonly reason: infer Reason } ? Reason : never
+  : never;
 
-function rootMatchesTemplate(candidate: PlanProposalRootCandidate, template: CompiledPlanTemplate): boolean {
-  const ids = new Set(template.root.actionIds.map(String));
-  const tags = new Set(template.root.actionTags.map(String));
-  return ids.has(candidate.actionId) || candidate.actionTags.some((tag) => tags.has(String(tag)));
-}
+type RoleBindingResult =
+  | {
+    readonly kind: 'ready';
+    readonly bindings: Readonly<Record<string, PlanRoleBinding>>;
+    readonly statuses: readonly PolicyPlanTraceRoleBindingStatusEntry[];
+    readonly rejectedByConstraint: readonly RoleConstraintRejectionRecord[];
+  }
+  | {
+    readonly kind: 'unavailable';
+    readonly statuses: readonly PolicyPlanTraceRoleBindingStatusEntry[];
+    readonly rejectedByConstraint: readonly RoleConstraintRejectionRecord[];
+  };
 
 function bindPlanRoles(
   template: CompiledPlanTemplate,
   input: ProposeAdvisoryTurnPlanInput,
   root: PlanProposalRootCandidate,
-): Readonly<Record<string, PlanRoleBinding>> | null {
+): RoleBindingResult {
   const bindings: Record<string, PlanRoleBinding> = {};
+  const statuses: PolicyPlanTraceRoleBindingStatusEntry[] = [];
+  const rejectedByConstraint: RoleConstraintRejectionRecord[] = [];
   const selectorCandidates = selectorCandidatesFor(input.def, input.actionDecisions);
   const rootCandidate = selectorCandidateFor(input.def, root);
-  for (const [roleName, role] of orderedPlanRoles(template)) {
+  const roles = orderedPlanRoles(template);
+  for (let index = 0; index < roles.length; index += 1) {
+    const [roleName, role] = roles[index]!;
     const selector = input.catalog.compiled.selectors?.[String(role.selectorId)];
     const selectedItems = selector === undefined
       ? undefined
@@ -323,15 +332,25 @@ function bindPlanRoles(
           },
         }).selected;
     const binding = selectRoleBinding(roleName, role, selectedItems, input, bindings, template, root);
-    if (binding === null) {
+    rejectedByConstraint.push(...binding.rejectedByConstraint);
+    if (binding.kind === 'unavailable') {
+      statuses.push(unavailableRoleStatus(roleName, binding.reason));
       if (role.required) {
-        return null;
+        return {
+          kind: 'unavailable',
+          statuses: [
+            ...statuses,
+              ...roles.slice(index + 1).map(([remainingRoleName]) => unavailableRoleStatus(remainingRoleName, 'noSelectorMatch')),
+          ],
+          rejectedByConstraint,
+        };
       }
       continue;
     }
-    bindings[roleName] = binding;
+    bindings[roleName] = binding.binding;
+    statuses.push({ role: roleName, status: { kind: 'ready', binding: binding.binding } });
   }
-  return bindings;
+  return { kind: 'ready', bindings, statuses, rejectedByConstraint };
 }
 
 function orderedPlanRoles(
@@ -387,11 +406,18 @@ function selectRoleBinding(
   existing: Readonly<Record<string, PlanRoleBinding>>,
   template: CompiledPlanTemplate,
   root: PlanProposalRootCandidate,
-): PlanRoleBinding | null {
+): (
+  | { readonly kind: 'ready'; readonly binding: PlanRoleBinding }
+  | { readonly kind: 'unavailable'; readonly reason: RoleBindingUnavailableReason }
+) & { readonly rejectedByConstraint: readonly RoleConstraintRejectionRecord[] } {
   const candidates = selectedItems === undefined
-    ? fallbackRoleSelections(role, input.state)
+    ? fallbackRoleSelections(role.selector.source, input.state)
     : selectedItems;
+  if (candidates.length === 0) {
+    return { kind: 'unavailable', reason: 'noSelectorMatch', rejectedByConstraint: [] };
+  }
   const routeGraph = routeGraphProviderForDef(input.def);
+  const rejectedByConstraint: RoleConstraintRejectionRecord[] = [];
   for (const selected of candidates) {
     const binding: PlanRoleBinding = {
       role: roleName,
@@ -400,28 +426,44 @@ function selectRoleBinding(
       rank: selected.rank,
       components: Object.fromEntries(selected.components ?? []),
     };
-    if (constraintsSatisfied(binding, role.constraints, existing, input.state, routeGraph, {
+    const constraintResult = evaluateRoleConstraints(binding, role.constraints, existing, input.state, routeGraph, {
       def: input.def,
       rootMove: root.move,
       root: template.root,
       steps: template.steps,
       playerId: input.playerId,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-    })) {
-      return binding;
+    });
+    if (constraintResult.kind === 'pass') {
+      return { kind: 'ready', binding, rejectedByConstraint };
     }
+    rejectedByConstraint.push({
+      role: roleName,
+      candidateId: binding.selectedId,
+      rejection: constraintResult.rejection,
+    });
   }
-  return null;
+  return { kind: 'unavailable', reason: 'allConstraintsFailed', rejectedByConstraint };
 }
 
-function fallbackRoleSelections(
-  role: CompiledPlanTemplate['roles'][string],
-  state: GameState,
-): readonly SelectedItem[] {
-  const selectedId = firstRoleSelection(role.selector.source, state);
-  return selectedId === null
-    ? []
-    : [{ key: selectedId, quality: 0, rank: 0, components: new Map() }];
+function boundedRejectionTrace(
+  records: readonly RoleConstraintRejectionRecord[],
+  limit: number,
+): { readonly records: readonly RoleConstraintRejectionRecord[]; readonly truncatedCount: number } {
+  if (records.length <= limit) {
+    return { records, truncatedCount: 0 };
+  }
+  return {
+    records: records.slice(0, limit),
+    truncatedCount: records.length - limit,
+  };
+}
+
+function unavailableRoleStatus(
+  role: string,
+  reason: RoleBindingUnavailableReason,
+): PolicyPlanTraceRoleBindingStatusEntry {
+  return { role, status: { kind: 'unavailable', reason } };
 }
 
 function scorePlanLeafConsiderations(
@@ -448,56 +490,6 @@ function selectorCandidatesFor(
   actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[],
 ): readonly SelectorEvalCandidate[] {
   return rootCandidatesFor(def, actionDecisions).map((candidate) => selectorCandidateFor(def, candidate));
-}
-
-function selectorCandidateFor(def: GameDef, root: PlanProposalRootCandidate): SelectorEvalCandidate {
-  return {
-    stableMoveKey: root.stableMoveKey,
-    move: root.move,
-    actionId: root.actionId,
-  };
-}
-
-function firstRoleSelection(
-  source: CompiledPlanTemplate['roles'][string]['selector']['source'],
-  state: GameState,
-): string | null {
-  switch (source.kind) {
-    case 'collection':
-      return firstCollectionKey(source.collection, state);
-    case 'product': {
-      const left = firstCollectionKey(source.left, state);
-      const right = firstCollectionKey(source.right, state);
-      return left === null || right === null ? null : `${left}|${right}`;
-    }
-    case 'routePairs':
-    case 'subset':
-    case 'candidateParams':
-    case 'microturnOptions':
-      return null;
-  }
-}
-
-function firstCollectionKey(
-  collection: CollectionRef,
-  state: GameState,
-): string | null {
-  switch (collection.kind) {
-    case 'zones':
-      return Object.keys(state.zones).sort(compareStable)[0] ?? null;
-    case 'players':
-      return state.playerCount > 0 ? '1' : null;
-    case 'tokens':
-      return Object.entries(state.zones)
-        .sort(([left], [right]) => compareStable(left, right))
-        .flatMap(([, tokens]) => tokens
-          .filter((token) => collection.tokenType === undefined || token.type === collection.tokenType)
-          .map((token) => String(token.id)))
-        .sort(compareStable)[0] ?? null;
-    case 'cards':
-    case 'authoredFinite':
-      return null;
-  }
 }
 
 function activeDoctrineIds(
@@ -620,18 +612,6 @@ function evaluatePlanPosture(
   }
 }
 
-function evaluationCandidateFor(root: PlanProposalRootCandidate): PolicyEvaluationCandidate {
-  return {
-    move: root.move,
-    stableMoveKey: root.stableMoveKey,
-    actionId: root.actionId,
-    previewRefIds: new Set(),
-    unknownPreviewRefs: new Map(),
-    unknownLookupRefs: new Map(),
-    unknownCandidateParamRefs: new Map(),
-  };
-}
-
 function postureForTemplates(
   input: ProposeAdvisoryTurnPlanInput,
   templateIds: readonly string[],
@@ -676,11 +656,13 @@ function emptyProposal(
   capClass?: string,
   capLimit?: number,
   filteredOutTemplates: PlanProposalResult['filteredOutTemplates'] = [],
+  roleBindingStatuses: readonly PolicyPlanTraceRoleBindingStatusEntry[] = [],
 ): PlanProposalResult {
   return {
     status,
     ...(capClass === undefined ? {} : { capClass }),
     ...(capLimit === undefined ? {} : { capLimit }),
+    roleBindingStatuses,
     alternatives: [],
     activeDoctrines,
     rejectedDoctrines,

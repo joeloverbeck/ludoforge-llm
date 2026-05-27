@@ -195,21 +195,27 @@
       "stepLabel": "train-space",
       "mismatch": "decisionPath",
       "observedMatch": "fallback",
-      "fallbackReason": "stableFrontierTieBreak"
+      "fallbackReason": {
+        "kind": "stableFrontierTieBreakFallback"
+      }
     },
     {
       "templateId": "arvn.trainGovern",
       "stepLabel": "govern-space",
       "mismatch": "targetKind",
       "observedMatch": "fallback",
-      "fallbackReason": "stableFrontierTieBreak"
+      "fallbackReason": {
+        "kind": "stableFrontierTieBreakFallback"
+      }
     },
     {
       "templateId": "arvn.assaultTransportAssault",
       "stepLabel": "first-assault-space",
       "mismatch": "stageIndex",
       "observedMatch": "fallback",
-      "fallbackReason": "stableFrontierTieBreak"
+      "fallbackReason": {
+        "kind": "stableFrontierTieBreakFallback"
+      }
     }
   ]
 }

@@ -501,7 +501,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
   - `totalSupport`: **available with adjustment** — use `metric.auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport`, not the draft `metric.auto:victory:totalSupport` id.
   - `totalOpposition`: **available with adjustment** — use `metric.auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition`, not the draft `metric.auto:victory:totalOpposition` id.
   - `nvaBaseCount`: **available** via `globalTokenAgg` filtering on `runtimeProps.faction: NVA` and `runtimeProps.type: base`.
-  - `availableUsTroops` / `availableUsBases`: **available with adjustment** if authored with `globalTokenAgg` plus `zoneFilter.zoneIds: [available-US:none]`; token props alone distinguish US troop/base type but not Available-pool location.
+  - `availableUsTroops` / `availableUsBases`: **available with adjustment after prerequisite** if authored with `globalTokenAgg` plus `zoneFilter.zoneIds: [available-US:none]`; token props alone distinguish US troop/base type but not Available-pool location. User-approved reassessment on 2026-05-27 found the live engine lacks `zoneFilter.zoneIds`, so ticket `201FITLSHADOC-001C` adds that generic filter before ticket 002 authors these features.
   - `sabotagedEcon`: **unavailable — defer** until a faction spec proves the need and authors a concrete derived metric or state feature.
   - `terrorMarkerCount`: **unavailable — defer**; the current global var is `terrorSabotageMarkersPlaced`, not a separate terror-marker-count derived metric.
 - **`preview.relationship.nominalAlly.gainValueDelta` ref**: answered by `reports/201-fitl-metric-availability-survey.md` (ticket `201FITLSHADOC-001`) as **unavailable in the pre-prerequisite engine**. The current compiler/runtime relationship surface exposes current-state `relationship.<role>.seat` and `relationship.<role>.gainValue`; preview relationship deltas are not a supported ref family. User-approved reassessment on 2026-05-27 chose the Foundation-aligned engine prerequisite path: ticket `201FITLSHADOC-001B` adds generic preview relationship refs before ticket 002 authors `projectedAllyMarginDelta`.
@@ -513,6 +513,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per u
 
 - [`archive/tickets/201FITLSHADOC-001.md`](../archive/tickets/201FITLSHADOC-001.md) — Metric availability survey + preview ref probe (covers §4.1 / §4.2 P0 survey) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-001B.md`](../archive/tickets/201FITLSHADOC-001B.md) — Generic preview relationship refs and candidate-feature fallback (Foundation #20 prerequisite for §4.2 / §4.3) — COMPLETED
+- [`tickets/201FITLSHADOC-001C.md`](../tickets/201FITLSHADOC-001C.md) — Exact zone-id filters for policy token aggregates (Foundation #2/#15 prerequisite for Available-pool features) — PENDING
 - [`tickets/201FITLSHADOC-002.md`](../tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features)
 - [`tickets/201FITLSHADOC-003.md`](../tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1)
 - [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)

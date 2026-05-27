@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
-**Deps**: `archive/tickets/201FITLSHADOC-001B.md`
+**Deps**: `tickets/201FITLSHADOC-001C.md`
 
 ## Problem
 
@@ -18,13 +18,14 @@ Without these features, the strategic conditions in ticket 003 cannot resolve th
 2. Ticket 001's metric-availability survey has run and updated Spec 201 §11 — this ticket adopts only the features marked "available" or "available with adjustment", and skips deferred ones with a YAML comment referencing the survey.
 3. `var.global.aid` and `var.global.trail` exist as game variables (declared in `40-content-data-assets.md:776,786`); analogous to the existing `var.global.patronage` ref at `92-agents.md:86`.
 4. `activeCard.hasTag.<tag>` is the correct syntax (verified during Spec 201 reassessment: `packages/engine/src/agents/policy-surface.ts`; cookbook line 588).
-5. Ticket `201FITLSHADOC-001B` lands the required generic engine support for candidate-feature `previewFallback` and `preview.relationship.<role>.*` refs before this YAML authoring begins.
+5. Ticket `201FITLSHADOC-001B` landed the required generic engine support for candidate-feature `previewFallback` and `preview.relationship.<role>.*` refs.
+6. User-approved reassessment on 2026-05-27 found a second generic engine prerequisite: exact Available-pool US troop/base counts require `globalTokenAgg.zoneFilter.zoneIds`, because the live compiler supports `category`, `attribute`, and `variable` filters but not exact zone-id filters. Ticket `201FITLSHADOC-001C` owns that generic prerequisite before this YAML authoring begins.
 
 ## Architecture Check
 
 1. Foundation #2 (Evolution-First): all new features are pure GameSpecDoc YAML data primitives consumed by evolution; the runtime treats them as additional library entries.
 2. Foundation #20 (Preview Signal Integrity): every preview-derived candidate feature MUST declare explicit `previewFallback.onUnavailable: noContribution`. The new candidate features in §4.2 all include this clause; ticket `201FITLSHADOC-001B` makes that clause a real compiled contract instead of raw ignored YAML.
-3. This ticket itself has no engine changes and introduces no backwards-compatibility shims; the required generic engine prerequisite is isolated in `201FITLSHADOC-001B`.
+3. This ticket itself has no engine changes and introduces no backwards-compatibility shims; the required generic engine prerequisites are isolated in `201FITLSHADOC-001B` and `201FITLSHADOC-001C`.
 
 ## What to Change
 

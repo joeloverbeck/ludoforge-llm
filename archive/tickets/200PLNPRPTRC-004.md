@@ -1,6 +1,6 @@
 # 200PLNPRPTRC-004: Phase 4 — Extend cross-game conformance corpus with new trace field coverage and observer-safety vocabulary
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test-suite extension only (touches `packages/engine/test/conformance/` family and the observer-safety architectural-invariant)
@@ -116,3 +116,27 @@ Confirm that the new per-family tests are discoverable by the existing conforman
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/conformance/texas-plan-trace-completeness-golden.test.js`
 3. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/observer-safety-invariants.test.js`
 4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-27)
+
+Implemented Phase 4 as a test-suite extension only. The live Spec 198 corpus is under `packages/engine/test/architecture/`, so the new cross-family golden trace lives at `packages/engine/test/architecture/plan-trace-completeness-cross-family-golden.test.ts` rather than a new `test/conformance/` directory.
+
+The cross-family test compiles the real three families (`generic-control`, `fire-in-the-lake`, and `texas-holdem`) and overlays a minimal test-only plan catalog per family. This avoids production profile YAML changes while proving the new trace vocabulary is engine-agnostic across the same game families: each family records `roleBindingStatuses`, `decisionSurfaceMatch`, and structured microturn `fallbackReason`.
+
+`packages/engine/test/architecture/observer-safety-invariants.test.ts` now covers the new categorical vocabulary: `hiddenScope` role-binding status plus `partialObserverScope` and `depthCapped` microturn fallback reasons are asserted not to leak hidden token or zone ids.
+
+Boundary note: production Texas Hold'em and generic-control do not currently ship plan-template profiles, and FITL's live topology does not make the synthetic cross-family `locatedIn` rejection witness portable without profile/rule changes. `rejectedByConstraint` remains covered by the dedicated boundedness architectural test (`plan-trace-rejected-by-constraint-bounded.test.ts`), which was included in the Phase 4 proof lane.
+
+Source-size ledger: the new cross-family golden trace test is 311 lines, and the extended observer-safety file is 397 lines. No extraction was required.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/architecture/plan-trace-completeness-cross-family-golden.test.js`
+3. `node --test packages/engine/dist/test/architecture/observer-safety-invariants.test.js`
+4. `node --test packages/engine/dist/test/architecture/plan-trace-rejected-by-constraint-bounded.test.js`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm turbo build`
+7. `pnpm turbo typecheck`
+8. `pnpm turbo lint`
+9. `pnpm turbo test`

@@ -1,6 +1,6 @@
 # Spec 200 — Plan-Proposal Trace Completeness
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium — Spec 199 added `compoundAvailability` to per-alternative plan traces with the canonical Foundation-#20 status shape (`ready | provisional | unavailable`). The remaining proposal-trace surface still records role binding, microturn execution, and role-constraint verdicts as success-or-silent — there is no contrastive trace evidence when a candidate fails a `locatedIn` / `distinctOriginDestination` / `reachable` / `adjacent` / `postState` constraint, when a role target is unbindable, or when a controller microturn falls back due to hidden / partial / depth-capped observer state. This is the second-iteration audit's only codebase-verified gap that survives critical reassessment; the audit's broader DIPT-C reframe is rejected (see §10).
 **Complexity**: M — extends existing trace type unions with optional status fields; adds emission sites at five existing evaluator/controller seams. No new authority, no kernel primitives, no profile rewrite.
 **Date**: 2026-05-27
@@ -276,4 +276,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-27:
 - [`archive/tickets/200PLNPRPTRC-001.md`](../archive/tickets/200PLNPRPTRC-001.md) — Phase 1 — Add `roleBindingStatuses` and `decisionSurfaceMatch` trace fields; remove `roleBindings` (covers §4.1 + §4.2 + §7 P1)
 - [`archive/tickets/200PLNPRPTRC-002.md`](../archive/tickets/200PLNPRPTRC-002.md) — Phase 2 — Add `rejectedByConstraint` trace field; re-split `probeRoleBoundPostState` into three explicit failure reasons (covers §4.3 + §4.4 + §7 P2)
 - [`archive/tickets/200PLNPRPTRC-003.md`](../archive/tickets/200PLNPRPTRC-003.md) — Phase 3 — Promote `PolicyPlanMicroturnTrace.fallbackReason` to discriminated union; re-bless three golden traces (covers §4.5 + §7 P3)
-- [`tickets/200PLNPRPTRC-004.md`](../tickets/200PLNPRPTRC-004.md) — Phase 4 — Extend cross-game conformance corpus with new trace field coverage and observer-safety vocabulary (covers §7 P4 + §8)
+- [`archive/tickets/200PLNPRPTRC-004.md`](../archive/tickets/200PLNPRPTRC-004.md) — Phase 4 — Extend cross-game conformance corpus with new trace field coverage and observer-safety vocabulary (covers §7 P4 + §8)

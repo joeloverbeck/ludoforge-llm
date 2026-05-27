@@ -346,6 +346,45 @@ describe('observer-safety posture and trace invariants', () => {
     assertTraceHasNoHiddenTokenEvidence(trace);
     assertInvariantFailsClosed('synthetic unsafe trace role binding', [hiddenTokenId]);
   });
+
+  it('keeps new trace vocabulary categorical rather than leaking hidden ids', () => {
+    const trace: PolicyPlanTrace = {
+      status: 'selected',
+      activeDoctrines: [],
+      rejectedDoctrines: [],
+      filteredOutTemplates: [],
+      roleBindingStatuses: [{
+        role: 'hiddenCandidate',
+        status: { kind: 'unavailable', reason: 'hiddenScope' },
+      }],
+      alternatives: [{
+        templateId: 'hidden-template',
+        rootStableMoveKey: 'visible-root',
+        score: 0,
+        priorityTier: 0,
+        stableKey: 'visible-root',
+      }],
+      posture: { status: 'notConfigured', mustViolations: [], preferContributions: [] },
+      microturns: [{
+        expectedStep: 'hidden-step',
+        matchedRole: 'hiddenCandidate',
+        selectedLegalOption: 'visible-root',
+        match: 'fallback',
+        fallbackReason: { kind: 'partialObserverScope' },
+      }, {
+        expectedStep: 'depth-step',
+        matchedRole: 'hiddenCandidate',
+        selectedLegalOption: 'visible-root',
+        match: 'fallback',
+        fallbackReason: { kind: 'depthCapped' },
+      }],
+    };
+
+    assertTraceHasNoHiddenTokenEvidence(trace);
+    assert.equal(JSON.stringify(trace).includes(hiddenTokenId), false);
+    assert.equal(JSON.stringify(trace).includes(hiddenZoneId), false);
+    assertInvariantFailsClosed('synthetic unsafe new trace vocabulary', [hiddenTokenId]);
+  });
 });
 
 function assertTraceHasNoHiddenTokenEvidence(trace: PolicyPlanTrace): void {

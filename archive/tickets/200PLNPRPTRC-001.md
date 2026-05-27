@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (trace type shapes); `packages/engine/src/kernel/schemas-core.ts` / `packages/engine/src/kernel/schemas-plan-trace.ts` (trace schema mirror); `packages/engine/src/agents/plan-trace.ts` (trace construction); `packages/engine/src/agents/plan-proposal.ts` / `packages/engine/src/agents/plan-proposal-candidates.ts` (decision-surface match emission and candidate helpers)
-**Deps**: `specs/200-plan-proposal-trace-completeness.md`
+**Deps**: `archive/specs/200-plan-proposal-trace-completeness.md`
 
 ## Problem
 

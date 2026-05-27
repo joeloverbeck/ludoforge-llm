@@ -184,6 +184,7 @@ describe('agent plan-template validation diagnostics', () => {
 
   it('does not run compound vocabulary validation when compound metadata is absent', () => {
     const { compound: _compound, ...rootWithoutCompound } = validTemplate().root;
+    void _compound;
 
     assert.deepEqual(compoundDiagnostics(createDoc({
       trainGovern: validTemplate({ root: rootWithoutCompound }),

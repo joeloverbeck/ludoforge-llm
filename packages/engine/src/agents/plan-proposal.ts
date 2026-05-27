@@ -120,6 +120,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
   const alternatives: PlanProposalAlternative[] = [];
   let capClass: string | undefined;
   let capLimit: number | undefined;
+  const compoundAvailabilityMemo = new Map<string, CompoundAvailability>();
 
   for (const templateId of eligibleTemplateIds) {
     const template = input.catalog.library.planTemplates?.[templateId];
@@ -152,7 +153,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
         stableKey,
         ...(template.root.compound === undefined
           ? {}
-          : { compoundAvailability: availabilityForPlanRoot(input, root.decision, template.root.compound) }),
+          : { compoundAvailability: memoizedCompoundAvailability(input, root, template.root.compound, compoundAvailabilityMemo) }),
         roleBindings,
         posture: posture.trace,
       });
@@ -196,6 +197,27 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
     posture: selected.posture,
   };
 };
+
+function compoundFingerprint(compound: NonNullable<CompiledPlanTemplate['root']['compound']>): string {
+  const interrupt = compound.interruptAfterStage === undefined ? '' : `:i${compound.interruptAfterStage}`;
+  return `${compound.timing}:${compound.specialTags.join(',')}${interrupt}`;
+}
+
+function memoizedCompoundAvailability(
+  input: ProposeAdvisoryTurnPlanInput,
+  root: PlanProposalRootCandidate,
+  compound: NonNullable<CompiledPlanTemplate['root']['compound']>,
+  memo: Map<string, CompoundAvailability>,
+): CompoundAvailability {
+  const key = `${root.stableMoveKey}|${compoundFingerprint(compound)}`;
+  const cached = memo.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const computed = availabilityForPlanRoot(input, root.decision, compound);
+  memo.set(key, computed);
+  return computed;
+}
 
 export const proposeAndCommitAdvisoryTurnPlan = (
   input: AgentMicroturnDecisionInput,

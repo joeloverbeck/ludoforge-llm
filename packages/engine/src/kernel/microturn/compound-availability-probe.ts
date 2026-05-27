@@ -16,6 +16,26 @@ export type CompoundAvailability =
 
 type RootActionSelectionDecision = Extract<Decision, { readonly kind: 'actionSelection' }>;
 
+/**
+ * Tight analyzer budgets for the proposal-time compound-availability probe.
+ *
+ * Per spec 199 §2 and Foundation #10, the probe is "one microturn deep" —
+ * an advisory ranking hint, not a full continuation enumerator. The default
+ * MoveEnumerationBudgets (128 decision-probe steps) is sized for legality
+ * enumeration in the kernel hot path; reusing it from the proposer hot path
+ * caused multi-GB allocation pressure (the probe was running for every
+ * eligible (plan-template × root) pair on each proposer call, hundreds of
+ * times per simulated turn). Capping to a small constant keeps the probe
+ * proportional to the spec's "one microturn deep" budget. Continuations
+ * that exhaust this budget classify as 'unknown' → 'provisional/partial-grant',
+ * which the spec already treats as a valid middle-tier outcome.
+ */
+const PROBE_BUDGETS = {
+  maxDecisionProbeSteps: 4,
+  maxParamExpansions: 64,
+  maxDeferredPredicates: 16,
+} as const;
+
 const actionMatchesSpecialTags = (
   action: GameDef['actions'][number],
   specialTags: readonly string[],
@@ -68,7 +88,7 @@ const materializeCompoundMove = (
 });
 
 const availabilityFromClassification = (
-  classification: ReturnType<typeof classifyDecisionContinuationForLegalMove>['classification'],
+  classification: 'satisfiable' | 'explicitStochastic' | 'unsatisfiable' | 'unknown',
 ): CompoundAvailability => {
   switch (classification) {
     case 'satisfiable':
@@ -112,6 +132,7 @@ export function probeCompoundAvailability(
         candidateMove,
         MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
         {
+          budgets: PROBE_BUDGETS,
           discoverer: (move, discoverOptions) => legalChoicesDiscover(
             def,
             state,

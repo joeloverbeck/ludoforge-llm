@@ -15,8 +15,6 @@ import {
   initialState,
   type ActionDef,
   type ActionPipelineDef,
-  type AgentPolicyCatalog,
-  type CompiledAgentProfile,
   type CompiledPlanTemplate,
   type Decision,
   type GameDef,
@@ -24,16 +22,6 @@ import {
 import type { CompoundAvailability } from '../../../src/kernel/microturn/compound-availability-probe.js';
 import { createSyntheticDecisionDef } from '../../helpers/synthetic-decision-fixture.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
-
-const emptyDependencies = {
-  parameters: [],
-  stateFeatures: [],
-  candidateFeatures: [],
-  aggregates: [],
-  selectors: [],
-  strategyModules: [],
-  strategicConditions: [],
-};
 
 const branchDecision = (): Extract<Decision, { readonly kind: 'actionSelection' }> => ({
   kind: 'actionSelection',

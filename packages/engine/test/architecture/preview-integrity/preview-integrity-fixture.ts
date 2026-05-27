@@ -49,11 +49,17 @@ function microturnConsiderations(
 }
 
 type PreviewFallbackMode = 'noContribution' | 'constantZero';
+type PreviewFallbackSurface = 'consideration' | 'candidateFeature';
 
-function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackMode): CompiledAgentProfile {
+function createProfile(
+  previewAvailable: boolean,
+  fallbackMode: PreviewFallbackMode,
+  fallbackSurface: PreviewFallbackSurface = 'consideration',
+): CompiledAgentProfile {
   const considerations = ['preferProjectedMargin'];
+  const candidateFeatures = fallbackSurface === 'candidateFeature' ? ['projectedMargin'] : [];
   return {
-    fingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}`,
+    fingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}-${fallbackSurface}`,
     params: {},
     preview: {
       mode: 'exactWorld',
@@ -76,15 +82,22 @@ function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackM
     },
     plan: {
       stateFeatures: [],
-      candidateFeatures: [],
+      candidateFeatures,
       candidateAggregates: [],
       considerations,
     },
   };
 }
 
-function createCatalog(previewAvailable: boolean, fallbackMode: PreviewFallbackMode): AgentPolicyCatalog {
-  const profile = createProfile(previewAvailable, fallbackMode);
+function createCatalog(
+  previewAvailable: boolean,
+  fallbackMode: PreviewFallbackMode,
+  fallbackSurface: PreviewFallbackSurface = 'consideration',
+): AgentPolicyCatalog {
+  const profile = createProfile(previewAvailable, fallbackMode, fallbackSurface);
+  const previewFallback = fallbackMode === 'constantZero'
+    ? { onUnavailable: { kind: 'constant' as const, value: 0 } }
+    : { onUnavailable: 'noContribution' as const };
   return withCompiledPolicyCatalog({
     schemaVersion: 3,
     catalogFingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}`,
@@ -112,21 +125,57 @@ function createCatalog(previewAvailable: boolean, fallbackMode: PreviewFallbackM
     candidateParamDefs: {},
     library: {
       stateFeatures: {},
-      candidateFeatures: {},
+      candidateFeatures: fallbackSurface === 'candidateFeature'
+        ? {
+            projectedMargin: {
+              type: 'number',
+              costClass: 'preview',
+              expr: refExpr({
+                kind: 'previewSurface',
+                family: 'victoryCurrentMargin',
+                id: 'currentMargin',
+                selector: { kind: 'role', seatToken: 'self' },
+              }),
+              previewFallback,
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+          }
+        : {},
       candidateAggregates: {},
       guardrails: {},
-      considerations: microturnConsiderations({
-        preferProjectedMargin: {
+      considerations: fallbackSurface === 'candidateFeature'
+        ? {
+            preferProjectedMargin: {
+              scopes: ['move'],
+              costClass: 'preview',
+              when: literal(true),
+              weight: literal(1),
+              value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: ['projectedMargin'],
+                aggregates: [],
+                strategicConditions: [],
+              },
+            },
+          }
+        : microturnConsiderations({
+            preferProjectedMargin: {
           costClass: 'preview',
           when: literal(true),
           weight: literal(1),
           value: refExpr(previewDeltaRef),
-          previewFallback: fallbackMode === 'constantZero'
-            ? { onUnavailable: { kind: 'constant', value: 0 } }
-            : { onUnavailable: 'noContribution' },
-          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
-        },
-      }),
+          previewFallback,
+          dependencies: {
+            parameters: [],
+            stateFeatures: [],
+            candidateFeatures: [],
+            aggregates: [],
+            strategicConditions: [],
+          },
+            },
+          }),
       tieBreakers: {},
       strategicConditions: {},
     },
@@ -235,6 +284,24 @@ export function createPreviewIntegrityFixture(previewAvailable: boolean, fallbac
     catalog,
     def,
     chooseNStepInput: createInput(def, afterAction, microturn) as AgentMicroturnDecisionInput & {
+      readonly microturn: ChooseNStepMicroturn;
+    },
+  };
+}
+
+export function createCandidateFeaturePreviewIntegrityFixture(previewAvailable: boolean, fallbackMode: PreviewFallbackMode = 'noContribution'): {
+  readonly catalog: AgentPolicyCatalog;
+  readonly def: GameDef;
+  readonly chooseNStepInput: AgentMicroturnDecisionInput & { readonly microturn: ChooseNStepMicroturn };
+} {
+  const catalog = createCatalog(previewAvailable, fallbackMode, 'candidateFeature');
+  const def = createDef(catalog);
+  const initial = initialState(def, 162, 2);
+  const microturn = publishMicroturn(def, initial.state);
+  return {
+    catalog,
+    def,
+    chooseNStepInput: createInput(def, initial.state, microturn) as AgentMicroturnDecisionInput & {
       readonly microturn: ChooseNStepMicroturn;
     },
   };

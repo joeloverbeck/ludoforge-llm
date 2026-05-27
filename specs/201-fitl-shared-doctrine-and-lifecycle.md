@@ -512,7 +512,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per user invocation; the spec's `Ticket namespace` metadata field lists `201FITLSHADOCLIF`, but the user argument is authoritative):
 
 - [`archive/tickets/201FITLSHADOC-001.md`](../archive/tickets/201FITLSHADOC-001.md) — Metric availability survey + preview ref probe (covers §4.1 / §4.2 P0 survey) — COMPLETED
-- [`tickets/201FITLSHADOC-001B.md`](../tickets/201FITLSHADOC-001B.md) — Generic preview relationship refs and candidate-feature fallback (Foundation #20 prerequisite for §4.2 / §4.3) — PENDING
+- [`archive/tickets/201FITLSHADOC-001B.md`](../archive/tickets/201FITLSHADOC-001B.md) — Generic preview relationship refs and candidate-feature fallback (Foundation #20 prerequisite for §4.2 / §4.3) — COMPLETED
 - [`tickets/201FITLSHADOC-002.md`](../tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features)
 - [`tickets/201FITLSHADOC-003.md`](../tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1)
 - [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)

@@ -614,6 +614,11 @@ export type CompiledAgentPolicyRef =
       readonly field: 'seat' | 'gainValue';
     }
   | {
+      readonly kind: 'previewRelationship';
+      readonly role: AgentPolicyRelationshipRole;
+      readonly field: 'victoryMargin' | 'gainValueDelta';
+    }
+  | {
       readonly kind: 'candidateTag';
       readonly tagName: string;
     }
@@ -779,6 +784,7 @@ export interface CompiledPolicyCandidateFeature {
   readonly costClass: AgentPolicyCostClass;
   readonly expr: CompiledPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly previewFallback?: AgentPreviewFallback;
 }
 
 export interface CompiledPolicyAggregate {
@@ -1125,6 +1131,7 @@ export interface CompiledAgentCandidateFeature {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly previewFallback?: AgentPreviewFallback;
 }
 
 export interface CompiledAgentAggregate {

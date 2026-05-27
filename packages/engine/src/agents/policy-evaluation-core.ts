@@ -57,7 +57,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
-import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
+import { buildPolicyVictorySurface, resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
 import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, UNSUPPORTED_FEATURE, type VMContext } from './policy-vm/index.js';
@@ -791,9 +791,13 @@ export class PolicyEvaluationContext {
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate feature "${featureId}".`, { featureId });
     }
+    const unknownPreviewCountBefore = candidate.unknownPreviewRefs.size;
     const value = this.evaluateCompiledExpr(feature.expr, candidate);
-    candidateCache.set(featureId, value);
-    return value;
+    const finalValue = feature.previewFallback === undefined
+      ? value
+      : this.applyCandidateFeaturePreviewFallback(featureId, feature.previewFallback, value, candidate, unknownPreviewCountBefore);
+    candidateCache.set(featureId, finalValue);
+    return finalValue;
   }
 
   setCandidateFeatureValue(candidate: PolicyEvaluationCandidate, featureId: string, value: PolicyValue): void {
@@ -2019,6 +2023,8 @@ export class PolicyEvaluationContext {
         return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
       case 'relationship':
         return this.resolveRelationshipRef(ref.role, ref.field);
+      case 'previewRelationship':
+        return this.resolvePreviewRelationshipRef(ref.role, ref.field, candidate);
       case 'strategyModule':
         return this.resolveStrategyModuleRef(ref, candidate);
       case 'guardrail':
@@ -2279,6 +2285,53 @@ export class PolicyEvaluationContext {
     return value;
   }
 
+  private resolvePreviewRelationshipRef(
+    role: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewRelationship' }>['role'],
+    field: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewRelationship' }>['field'],
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (candidate === undefined) {
+      return undefined;
+    }
+    const refId = `preview.relationship.${role}.${field}`;
+    candidate.previewRefIds.add(refId);
+    this.syncPreviewMetadata(candidate);
+    const previewOutcome = candidate.previewOutcome;
+    if (previewOutcome !== 'ready' && previewOutcome !== 'stochastic') {
+      if (previewOutcome !== undefined) {
+        this.recordUnknownPreviewRef(candidate, refId, previewOutcome);
+      }
+      return undefined;
+    }
+    const previewState = this.runtimeProviders.previewSurface.getPreviewState(candidate);
+    if (previewState === undefined) {
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
+      if (candidate.previewOutcome === undefined) {
+        candidate.previewOutcome = 'failed';
+      }
+      return undefined;
+    }
+    const previewValue = this.withEvaluationState(previewState, () => {
+      if (field === 'victoryMargin') {
+        const seat = resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, 'seat');
+        if (typeof seat !== 'string') {
+          return undefined;
+        }
+        return buildPolicyVictorySurface(this.input.def, previewState, this.runtime).marginBySeat.get(seat);
+      }
+      return resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, 'gainValue');
+    });
+    if (typeof previewValue !== 'number') {
+      this.recordUnknownPreviewRef(candidate, refId, 'unresolved');
+      return undefined;
+    }
+    const value = field === 'gainValueDelta'
+      ? previewValue - Number(this.resolveRelationshipRef(role, 'gainValue') ?? 0)
+      : previewValue;
+    this.recordResolvedPreviewRefValue(candidate, refId, value);
+    return value;
+  }
+
   private relationshipEvalOptions(): Parameters<typeof activePolicyRelationshipRoles>[0] {
     return {
       def: this.input.def, state: this.activeState, seatId: this.input.seatId,
@@ -2286,6 +2339,29 @@ export class PolicyEvaluationContext {
       resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied') === true,
       evaluateExpr: (expr) => this.evaluateCompiledExpr(expr, undefined),
     };
+  }
+
+  private applyCandidateFeaturePreviewFallback(
+    featureId: string,
+    fallback: NonNullable<import('../kernel/types.js').CompiledPolicyCandidateFeature['previewFallback']>,
+    value: PolicyValue,
+    candidate: PolicyEvaluationCandidate,
+    unknownPreviewCountBefore: number,
+  ): PolicyValue {
+    const previewUnavailable = value === undefined || candidate.unknownPreviewRefs.size > unknownPreviewCountBefore;
+    if (!previewUnavailable) {
+      return value;
+    }
+    if (fallback.onUnavailable === 'noContribution') {
+      this.recordPreviewFallbackFired(candidate, { termId: `feature.${featureId}`, kind: 'noContribution' });
+      return undefined;
+    }
+    this.recordPreviewFallbackFired(candidate, {
+      termId: `feature.${featureId}`,
+      kind: 'constant',
+      value: fallback.onUnavailable.value,
+    });
+    return fallback.onUnavailable.value;
   }
 
   private resolvePreviewOptionRef(

@@ -152,30 +152,40 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedNvaMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.nva }
             - { ref: feature.nvaMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedVcMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.vc }
             - { ref: feature.vcMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedUsMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.us }
             - { ref: feature.usMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedArvnMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.arvn }
             - { ref: feature.arvnMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedSelfMarginDelta:
         type: number
         expr:
@@ -198,12 +208,16 @@ agents:
                     - { ref: feature.vcFriendlyCapCount }
                 - { ref: feature.vcFriendlyCapCount }
             - 0
+        previewFallback:
+          onUnavailable: noContribution
       projectedSelfRank:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentRank.self }
             - { ref: feature.selfRank }
+        previewFallback:
+          onUnavailable: noContribution
       projectedCurrentLeaderMargin:
         type: number
         expr:
@@ -212,6 +226,8 @@ agents:
             expr: { ref: preview.victory.currentMargin.$seat }
             aggOp: sum
             availability: selfAndTargetReady
+        previewFallback:
+          onUnavailable: noContribution
       projectedNearestThreatMargin:
         type: number
         expr:
@@ -220,6 +236,8 @@ agents:
             expr: { ref: preview.victory.currentMargin.$seat }
             aggOp: sum
             availability: selfAndTargetReady
+        previewFallback:
+          onUnavailable: noContribution
 
     candidateAggregates:
       hasNonPassAlternative:

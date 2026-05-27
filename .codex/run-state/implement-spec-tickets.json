@@ -1,17 +1,21 @@
 {
-  "originating_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
-  "archived_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
-  "last_ticket": "archive/tickets/199COMAVAROO-004.md",
-  "last_result": "final_spec_archived",
-  "last_work_commit": "7ae694157bd6b56434ed98866543a35bf66fb5dc",
-  "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "originating_spec": "specs/200-plan-proposal-trace-completeness.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/200PLNPRPTRC-001.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "9c280f902760de0663e82fe6cfa7bf21874eb519",
+  "last_state_commit": "none",
+  "next_target": "tickets/200PLNPRPTRC-002.md",
+  "queue": [
+    "tickets/200PLNPRPTRC-002.md",
+    "tickets/200PLNPRPTRC-003.md",
+    "tickets/200PLNPRPTRC-004.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 199 archived in 7ae694157bd6b56434ed98866543a35bf66fb5dc. Unrelated .claude skill edits remain outside harness ownership.",
+  "owned_dirty_summary": "Completed and archived 200PLNPRPTRC-001; next target is Phase 2.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "unrelated_dirty: .claude/skills/fix-pr-ci/SKILL.md, .claude/skills/skill-audit/SKILL.md",
-  "updated_at": "2026-05-26"
+  "dirty_state": "clean",
+  "updated_at": "2026-05-27"
 }

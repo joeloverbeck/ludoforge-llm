@@ -148,14 +148,20 @@ const traceForState = (
     activeDoctrines: [],
     rejectedDoctrines: [],
     filteredOutTemplates: [],
-    roleBindings: Object.values(state.roleBindings)
+    roleBindingStatuses: Object.values(state.roleBindings)
       .sort((left, right) => compareStable(left.role, right.role))
       .map((binding) => ({
         role: binding.role,
-        selectedId: binding.selectedId,
-        quality: binding.quality,
-        rank: binding.rank,
-        components: binding.components,
+        status: {
+          kind: 'ready',
+          binding: {
+            role: binding.role,
+            selectedId: binding.selectedId,
+            quality: binding.quality,
+            rank: binding.rank,
+            components: binding.components,
+          },
+        },
     })),
     alternatives: [],
     posture: {

@@ -62,6 +62,7 @@ import {
   SpaceMarkerValueSchema,
   StackingConstraintSchema,
 } from './schemas-gamespec.js';
+import { PolicyPlanTraceSchema } from './schemas-plan-trace.js';
 
 export const IntVariableDefSchema = z
   .object({
@@ -1510,50 +1511,6 @@ const CompiledPlanTemplateSchema = z.object({
     ifPreviewUnavailable: StringSchema.optional(),
   }).strict(),
   dependencies: CompiledAgentDependencyRefsSchema,
-}).strict();
-
-const PolicyPlanMicroturnTraceSchema = z.object({
-  expectedStep: StringSchema.nullable(),
-  matchedRole: StringSchema.nullable(),
-  selectedLegalOption: StringSchema,
-  match: z.enum(['exact', 'reselected', 'fallback']),
-  deviation: StringSchema.optional(),
-  fallbackReason: StringSchema.optional(),
-}).strict();
-
-const PolicyPlanTraceSchema = z.object({
-  status: z.enum(['selected', 'noTemplate', 'noEligibleTemplate', 'noRootMatch', 'noRoleBinding']),
-  capClass: StringSchema.optional(),
-  capLimit: IntegerSchema.nonnegative().optional(),
-  selectedTemplate: StringSchema.optional(),
-  selectedIntent: StringSchema.optional(),
-  selectedRootStableMoveKey: StringSchema.optional(),
-  activeDoctrines: z.array(StringSchema),
-  rejectedDoctrines: z.array(z.object({
-    doctrineId: StringSchema,
-    reason: z.enum(['inactive', 'noRootMatch']),
-  }).strict()),
-  filteredOutTemplates: z.array(z.object({
-    templateId: StringSchema,
-    gatedBy: z.array(StringSchema),
-    reason: z.enum(['notEnabled', 'suppressed']),
-  }).strict()),
-  roleBindings: z.array(z.object({
-    role: StringSchema,
-    selectedId: StringSchema,
-    quality: NumberSchema,
-    rank: IntegerSchema.nonnegative(),
-    components: z.record(StringSchema, NumberSchema),
-  }).strict()),
-  alternatives: z.array(z.object({
-    templateId: StringSchema,
-    rootStableMoveKey: StringSchema,
-    score: NumberSchema,
-    priorityTier: NumberSchema,
-    stableKey: StringSchema,
-  }).strict()),
-  posture: z.object({ status: StringSchema, mustViolations: z.array(z.object({ id: StringSchema, action: z.enum(['demote', 'veto']), penalty: NumberSchema.optional() }).strict()), preferContributions: z.array(z.object({ id: StringSchema, status: StringSchema, value: NumberSchema.optional(), weight: NumberSchema.optional(), contribution: NumberSchema, fallbackReason: StringSchema.optional() }).strict()), allyWeightContext: z.object({ activeRoles: z.array(z.object({ relationshipId: StringSchema, role: StringSchema, seat: StringSchema, priority: IntegerSchema, gainValue: NumberSchema.optional() }).strict()), flips: z.array(z.object({ contributionId: StringSchema, allyRole: StringSchema, thresholdRole: StringSchema, seat: StringSchema, fired: z.boolean() }).strict()) }).strict().optional() }).strict(),
-  microturns: z.array(PolicyPlanMicroturnTraceSchema).optional(),
 }).strict();
 
 const PassFallbackSpecSchema = z.object({

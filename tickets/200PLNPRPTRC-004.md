@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test-suite extension only (touches `packages/engine/test/conformance/` family and the observer-safety architectural-invariant)
-**Deps**: `tickets/200PLNPRPTRC-001.md`, `tickets/200PLNPRPTRC-002.md`, `tickets/200PLNPRPTRC-003.md`
+**Deps**: `archive/tickets/200PLNPRPTRC-001.md`, `tickets/200PLNPRPTRC-002.md`, `tickets/200PLNPRPTRC-003.md`
 
 ## Problem
 

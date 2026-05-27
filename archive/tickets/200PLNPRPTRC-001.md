@@ -1,9 +1,9 @@
 # 200PLNPRPTRC-001: Phase 1 — Add `roleBindingStatuses` and `decisionSurfaceMatch` trace fields; remove `roleBindings`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (trace type shapes); `packages/engine/src/agents/plan-trace.ts` (trace construction); `packages/engine/src/agents/plan-proposal.ts` (decision-surface match emission)
+**Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (trace type shapes); `packages/engine/src/kernel/schemas-core.ts` / `packages/engine/src/kernel/schemas-plan-trace.ts` (trace schema mirror); `packages/engine/src/agents/plan-trace.ts` (trace construction); `packages/engine/src/agents/plan-proposal.ts` / `packages/engine/src/agents/plan-proposal-candidates.ts` (decision-surface match emission and candidate helpers)
 **Deps**: `specs/200-plan-proposal-trace-completeness.md`
 
 ## Problem
@@ -22,6 +22,7 @@ This ticket closes the role-target availability gap by introducing `PolicyPlanTr
    - `packages/engine/test/architecture/observer-safety-invariants.test.ts:349` (asserts `trace.roleBindings.map((binding) => binding.selectedId)` for hidden-token absence). Verified via grep.
 5. The 17+ `policy-profile-quality/*.test.ts` files reading `selected.roleBindings.<role>` access `PlanProposalAlternative.roleBindings` (a `Record<string, PlanRoleBinding>` on the alternative, not `PolicyPlanTrace.roleBindings` on the trace). They are unaffected by this ticket. Verified via grep.
 6. The candidate-iteration loop in `plan-proposal.ts` opens at line 125 (`for (const templateId of eligibleTemplateIds)`), inner root loop at 135, candidates pushed through line 162 (post-commit `3936e434a`). The §1.2 `decisionSurfaceMatch` emission lands inside this loop where `rootMatchesTemplate` and step expectations are computed.
+7. Boundary correction (2026-05-27): `packages/engine/src/kernel/schemas-core.ts` also mirrors the serialized `PolicyPlanTrace` shape and still declares `roleBindings`. Because AGENTS.md requires schema/type changes to stay synchronized across kernel schemas and tests, this ticket owns the schema mirror update and `schema:artifacts:check` verification in the same change.
 
 ## Architecture Check
 
@@ -107,8 +108,11 @@ Mark with `// @test-class: architectural-invariant`.
 ## Files to Touch
 
 - `packages/engine/src/kernel/types-plan-trace.ts` (modify)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — keep serialized trace schema synchronized with the type removal/addition)
+- `packages/engine/src/kernel/schemas-plan-trace.ts` (new — extracted trace schema mirror to avoid growing the oversized central schema file)
 - `packages/engine/src/agents/plan-trace.ts` (modify)
 - `packages/engine/src/agents/plan-proposal.ts` (modify — `bindPlanRoles` refactor if needed + `decisionSurfaceMatch` emission)
+- `packages/engine/src/agents/plan-proposal-candidates.ts` (new — extracted candidate helper logic to avoid growing the oversized proposal module)
 - `packages/engine/test/architecture/observer-safety-invariants.test.ts` (modify — line 349 migration)
 - `packages/engine/test/architecture/plan-trace-role-binding-status-coverage.test.ts` (new — architectural-invariant)
 
@@ -148,3 +152,26 @@ Mark with `// @test-class: architectural-invariant`.
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/plan-trace-role-binding-status-coverage.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/observer-safety-invariants.test.js`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-27)
+
+- Completion date: 2026-05-27
+- Implemented `PolicyPlanTrace.roleBindingStatuses` and removed the successful-only `PolicyPlanTrace.roleBindings` surface. Runtime trace construction now records ready and unavailable role-binding statuses, including `noSelectorMatch` and `allConstraintsFailed` classification from proposal-time binding.
+- Added `PolicyPlanTraceAlternative.decisionSurfaceMatch` and proposal-time annotation of matched or mismatched decision surfaces without changing selection authority.
+- Migrated observer-safety assertions to inspect only ready binding statuses, updated trace fixtures/golden data, and synchronized `Trace.schema.json`.
+- Boundary corrections: `schemas-core.ts` was an owned serialized-trace mirror and needed synchronization; `plan-proposal-candidates.ts` and `schemas-plan-trace.ts` were extracted so this implementation did not actively grow preexisting oversized source files.
+- Generated artifact provenance: `packages/engine/schemas/Trace.schema.json` was regenerated with the retained package generator via `pnpm -F @ludoforge/engine run schema:artifacts`; the canonical source is the Zod schema mirror under `packages/engine/src/kernel/`; `pnpm -F @ludoforge/engine run schema:artifacts:check` passed after generation.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build` — passed.
+  - `node --test packages/engine/dist/test/architecture/plan-trace-role-binding-status-coverage.test.js` — passed.
+  - `node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js` — passed.
+  - `node --test packages/engine/dist/test/architecture/observer-safety-invariants.test.js` — passed.
+  - `node --test packages/engine/dist/test/determinism/plan-trace-doctrine-gating-golden.test.js` — passed.
+  - `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+  - `pnpm -F @ludoforge/engine test` — passed, 179/179 files.
+  - `pnpm turbo build` — passed.
+  - `pnpm turbo lint` — passed.
+  - `pnpm turbo typecheck` — passed.
+  - `pnpm turbo test` — passed, 5/5 Turbo tasks; engine 179/179 files.
+  - `git diff --check` — passed.
+  - `pnpm run check:ticket-deps` — passed.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (rejection-record types); `packages/engine/src/agents/plan-role-constraint-eval.ts` (probe return type + rejection emission); `packages/engine/src/agents/plan-proposal.ts` (per-alternative aggregation)
-**Deps**: `tickets/200PLNPRPTRC-001.md`
+**Deps**: `archive/tickets/200PLNPRPTRC-001.md`
 
 ## Problem
 

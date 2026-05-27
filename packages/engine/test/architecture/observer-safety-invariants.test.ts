@@ -14,6 +14,7 @@ import type {
   Move,
   PolicyPlanTrace,
   PolicyPlanTraceRoleBinding,
+  PolicyPlanTraceRoleBindingStatusEntry,
 } from '../../src/kernel/index.js';
 import { asActionId, asPhaseId, asPlayerId, asTokenId, asZoneId, initialState } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -333,7 +334,9 @@ describe('observer-safety posture and trace invariants', () => {
         intent: 'visible-template',
         rootStableMoveKey: 'claim',
         roleBindings: { visiblePiece: visibleBinding },
+        roleBindingStatuses: [{ role: 'visiblePiece', status: { kind: 'ready', binding: visibleBinding } }],
       },
+      roleBindingStatuses: [{ role: 'visiblePiece', status: { kind: 'ready', binding: visibleBinding } }],
       activeDoctrines: [],
       rejectedDoctrines: [],
       filteredOutTemplates: [],
@@ -346,6 +349,10 @@ describe('observer-safety posture and trace invariants', () => {
 });
 
 function assertTraceHasNoHiddenTokenEvidence(trace: PolicyPlanTrace): void {
-  assertHiddenTokenAbsent('plan trace role bindings', trace.roleBindings.map((binding) => binding.selectedId));
+  const readyBindingIds = trace.roleBindingStatuses
+    .filter((entry): entry is PolicyPlanTraceRoleBindingStatusEntry & { status: { kind: 'ready'; binding: PolicyPlanTraceRoleBinding } } =>
+      entry.status.kind === 'ready')
+    .map((entry) => entry.status.binding.selectedId);
+  assertHiddenTokenAbsent('plan trace role bindings', readyBindingIds);
   assertHiddenTokenAbsent('plan trace alternatives', trace.alternatives.map((alternative) => alternative.stableKey));
 }

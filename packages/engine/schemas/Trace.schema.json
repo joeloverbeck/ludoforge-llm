@@ -2809,7 +2809,7 @@
                       "additionalProperties": false
                     }
                   },
-                  "roleBindings": {
+                  "roleBindingStatuses": {
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -2817,36 +2817,89 @@
                         "role": {
                           "$ref": "#/definitions/anon_4682db72"
                         },
-                        "selectedId": {
-                          "$ref": "#/definitions/anon_4682db72"
-                        },
-                        "quality": {
-                          "$ref": "#/definitions/anon_c0e4ebfe"
-                        },
-                        "rank": {
-                          "minimum": 0,
-                          "allOf": [
+                        "status": {
+                          "oneOf": [
                             {
-                              "$ref": "#/definitions/anon_e7c99bd4"
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "ready"
+                                },
+                                "binding": {
+                                  "type": "object",
+                                  "properties": {
+                                    "role": {
+                                      "$ref": "#/definitions/anon_4682db72"
+                                    },
+                                    "selectedId": {
+                                      "$ref": "#/definitions/anon_4682db72"
+                                    },
+                                    "quality": {
+                                      "$ref": "#/definitions/anon_c0e4ebfe"
+                                    },
+                                    "rank": {
+                                      "minimum": 0,
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/definitions/anon_e7c99bd4"
+                                        }
+                                      ]
+                                    },
+                                    "components": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "$ref": "#/definitions/anon_4682db72"
+                                      },
+                                      "additionalProperties": {
+                                        "$ref": "#/definitions/anon_c0e4ebfe"
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "role",
+                                    "selectedId",
+                                    "quality",
+                                    "rank",
+                                    "components"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "binding"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "unavailable"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "noSelectorMatch",
+                                    "allConstraintsFailed",
+                                    "hiddenScope"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "reason"
+                              ],
+                              "additionalProperties": false
                             }
                           ]
-                        },
-                        "components": {
-                          "type": "object",
-                          "propertyNames": {
-                            "$ref": "#/definitions/anon_4682db72"
-                          },
-                          "additionalProperties": {
-                            "$ref": "#/definitions/anon_c0e4ebfe"
-                          }
                         }
                       },
                       "required": [
                         "role",
-                        "selectedId",
-                        "quality",
-                        "rank",
-                        "components"
+                        "status"
                       ],
                       "additionalProperties": false
                     }
@@ -2870,6 +2923,103 @@
                         },
                         "stableKey": {
                           "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "compoundAvailability": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "ready"
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "provisional"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "depth-capped",
+                                    "partial-grant"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "unavailable"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "no-continuation",
+                                    "no-grant-predicate"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "decisionSurfaceMatch": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "matched"
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "mismatched"
+                                },
+                                "expected": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "observed": {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "expected",
+                                "observed"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -3111,7 +3261,7 @@
                   "activeDoctrines",
                   "rejectedDoctrines",
                   "filteredOutTemplates",
-                  "roleBindings",
+                  "roleBindingStatuses",
                   "alternatives",
                   "posture"
                 ],

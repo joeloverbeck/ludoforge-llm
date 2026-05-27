@@ -15,17 +15,7 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
   activeDoctrines: result.activeDoctrines,
   rejectedDoctrines: result.rejectedDoctrines,
   filteredOutTemplates: result.filteredOutTemplates,
-  roleBindings: result.selected === undefined
-    ? []
-    : Object.values(result.selected.roleBindings)
-      .sort((left, right) => compareStable(left.role, right.role))
-      .map((binding) => ({
-        role: binding.role,
-        selectedId: binding.selectedId,
-        quality: binding.quality,
-        rank: binding.rank,
-        components: binding.components,
-      })),
+  roleBindingStatuses: result.roleBindingStatuses,
   alternatives: result.alternatives.map((alternative) => ({
     templateId: alternative.templateId,
     rootStableMoveKey: alternative.rootStableMoveKey,
@@ -35,10 +25,9 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
     ...(alternative.compoundAvailability === undefined
       ? {}
       : { compoundAvailability: alternative.compoundAvailability }),
+    ...(alternative.decisionSurfaceMatch === undefined
+      ? {}
+      : { decisionSurfaceMatch: alternative.decisionSurfaceMatch }),
   })),
   posture: result.posture,
 });
-
-function compareStable(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}

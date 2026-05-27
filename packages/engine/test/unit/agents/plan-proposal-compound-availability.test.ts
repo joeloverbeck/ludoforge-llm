@@ -191,10 +191,12 @@ describe('compound availability trace integrity', () => {
         stableKey: '0:ready-template:branch:{}',
         compoundAvailability: selectedAvailability,
         roleBindings: {},
+        roleBindingStatuses: [],
         posture: { status: 'notConfigured', mustViolations: [], preferContributions: [] },
         intent: 'ready-template',
         nextStepIndex: 0,
       },
+      roleBindingStatuses: [],
       alternatives: [
         {
           templateId: 'ready-template',
@@ -204,6 +206,7 @@ describe('compound availability trace integrity', () => {
           stableKey: '0:ready-template:branch:{}',
           compoundAvailability: selectedAvailability,
           roleBindings: {},
+          roleBindingStatuses: [],
           posture: { status: 'notConfigured', mustViolations: [], preferContributions: [] },
         },
         {
@@ -213,6 +216,7 @@ describe('compound availability trace integrity', () => {
           priorityTier: 0,
           stableKey: '0:plain-template:branch:{}',
           roleBindings: {},
+          roleBindingStatuses: [],
           posture: { status: 'notConfigured', mustViolations: [], preferContributions: [] },
         },
       ],

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (microturn trace type); `packages/engine/src/agents/plan-controller.ts` (emission migration)
-**Deps**: `tickets/200PLNPRPTRC-001.md`
+**Deps**: `archive/tickets/200PLNPRPTRC-001.md`
 
 ## Problem
 

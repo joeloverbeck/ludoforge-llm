@@ -26,13 +26,19 @@
       "reason": "notEnabled"
     }
   ],
-  "roleBindings": [
+  "roleBindingStatuses": [
     {
       "role": "actor",
-      "selectedId": "1",
-      "quality": 0,
-      "rank": 0,
-      "components": {}
+      "status": {
+        "kind": "ready",
+        "binding": {
+          "role": "actor",
+          "selectedId": "1",
+          "quality": 0,
+          "rank": 0,
+          "components": {}
+        }
+      }
     }
   ],
   "alternatives": [
@@ -41,7 +47,10 @@
       "rootStableMoveKey": "branch|{}|false|unclassified",
       "score": 1,
       "priorityTier": 1,
-      "stableKey": "1:alpha:branch|{}|false|unclassified"
+      "stableKey": "1:alpha:branch|{}|false|unclassified",
+      "decisionSurfaceMatch": {
+        "kind": "matched"
+      }
     }
   ],
   "posture": {

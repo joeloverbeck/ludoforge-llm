@@ -8,6 +8,19 @@ export interface PolicyPlanTraceRoleBinding {
   readonly components: Readonly<Record<string, number>>;
 }
 
+export type PolicyPlanTraceRoleBindingStatus =
+  | { readonly kind: 'ready'; readonly binding: PolicyPlanTraceRoleBinding }
+  | { readonly kind: 'unavailable'; readonly reason: 'noSelectorMatch' | 'allConstraintsFailed' | 'hiddenScope' };
+
+export interface PolicyPlanTraceRoleBindingStatusEntry {
+  readonly role: string;
+  readonly status: PolicyPlanTraceRoleBindingStatus;
+}
+
+export type DecisionSurfaceMatch =
+  | { readonly kind: 'matched' }
+  | { readonly kind: 'mismatched'; readonly expected: string; readonly observed: string };
+
 export interface PolicyPlanTraceAlternative {
   readonly templateId: string;
   readonly rootStableMoveKey: string;
@@ -15,6 +28,7 @@ export interface PolicyPlanTraceAlternative {
   readonly priorityTier: number;
   readonly stableKey: string;
   readonly compoundAvailability?: CompoundAvailability;
+  readonly decisionSurfaceMatch?: DecisionSurfaceMatch;
 }
 
 export interface PolicyPlanTracePostureMustViolation {
@@ -86,7 +100,7 @@ export interface PolicyPlanTrace {
     readonly gatedBy: readonly string[];
     readonly reason: 'notEnabled' | 'suppressed';
   }[];
-  readonly roleBindings: readonly PolicyPlanTraceRoleBinding[];
+  readonly roleBindingStatuses: readonly PolicyPlanTraceRoleBindingStatusEntry[];
   readonly alternatives: readonly PolicyPlanTraceAlternative[];
   readonly posture: PolicyPlanTracePosture;
   readonly microturns?: readonly PolicyPlanMicroturnTrace[];

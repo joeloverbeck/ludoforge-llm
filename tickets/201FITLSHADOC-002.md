@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
-**Deps**: `archive/tickets/201FITLSHADOC-001.md`
+**Deps**: `tickets/201FITLSHADOC-001B.md`
 
 ## Problem
 
@@ -18,12 +18,13 @@ Without these features, the strategic conditions in ticket 003 cannot resolve th
 2. Ticket 001's metric-availability survey has run and updated Spec 201 §11 — this ticket adopts only the features marked "available" or "available with adjustment", and skips deferred ones with a YAML comment referencing the survey.
 3. `var.global.aid` and `var.global.trail` exist as game variables (declared in `40-content-data-assets.md:776,786`); analogous to the existing `var.global.patronage` ref at `92-agents.md:86`.
 4. `activeCard.hasTag.<tag>` is the correct syntax (verified during Spec 201 reassessment: `packages/engine/src/agents/policy-surface.ts`; cookbook line 588).
+5. Ticket `201FITLSHADOC-001B` lands the required generic engine support for candidate-feature `previewFallback` and `preview.relationship.<role>.*` refs before this YAML authoring begins.
 
 ## Architecture Check
 
 1. Foundation #2 (Evolution-First): all new features are pure GameSpecDoc YAML data primitives consumed by evolution; the runtime treats them as additional library entries.
-2. Foundation #20 (Preview Signal Integrity): every preview-derived candidate feature MUST declare explicit `previewFallback.onUnavailable: noContribution`. The new candidate features in §4.2 all include this clause; Foundation #20 is preserved without silent coercion.
-3. No engine changes; no new schema fields; no backwards-compatibility shims.
+2. Foundation #20 (Preview Signal Integrity): every preview-derived candidate feature MUST declare explicit `previewFallback.onUnavailable: noContribution`. The new candidate features in §4.2 all include this clause; ticket `201FITLSHADOC-001B` makes that clause a real compiled contract instead of raw ignored YAML.
+3. This ticket itself has no engine changes and introduces no backwards-compatibility shims; the required generic engine prerequisite is isolated in `201FITLSHADOC-001B`.
 
 ## What to Change
 
@@ -44,7 +45,7 @@ For deferred metrics (per ticket 001 survey), record a one-line YAML comment in 
 Add the entries from Spec 201 §4.2 verbatim:
 
 - `projectedLeaderMarginDelta`
-- `projectedAllyMarginDelta` — if ticket 001 survey confirmed `preview.relationship.nominalAlly.gainValueDelta`, use it; otherwise use per-faction direct margin fallback per Spec 201 §4.2 note.
+- `projectedAllyMarginDelta` — use `preview.relationship.nominalAlly.gainValueDelta`, which is provided by prerequisite ticket `201FITLSHADOC-001B`.
 - `projectedAidDelta`
 - `projectedTrailDelta`
 - `projectedSupportDelta`
@@ -75,7 +76,7 @@ Each declares `previewFallback.onUnavailable: noContribution` exactly as written
 
 1. Every preview-derived candidate feature in §4.2 declares `previewFallback.onUnavailable: noContribution` (Foundation #20).
 2. Deferred features carry a YAML comment referencing the survey ticket (audit trail).
-3. No engine code modified.
+3. No engine code modified by this ticket; the prerequisite engine support is already landed before this ticket runs.
 
 ## Test Plan
 

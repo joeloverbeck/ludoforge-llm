@@ -21,7 +21,7 @@ Without these modules, the four-faction parity scaffolding has no doctrine layer
 ## Architecture Check
 
 1. Foundation #15 (Architectural Completeness): shared modules close the duplicated-doctrine gap (three `*.blockImmediateWin` modules will be replaced in ticket 005 by `shared.blockCurrentLeader`).
-2. Foundation #20 (Preview Signal Integrity): any `prefer` term sourcing a preview-derived candidate feature inherits that feature's `previewFallback.onUnavailable: noContribution` clause from ticket 002 — Foundation #20 integrity preserved.
+2. Foundation #20 (Preview Signal Integrity): any `prefer` term sourcing a preview-derived candidate feature inherits that feature's compiled `previewFallback.onUnavailable: noContribution` clause from ticket 002, enabled by prerequisite ticket `201FITLSHADOC-001B` — Foundation #20 integrity preserved.
 3. Priority tiers (90/80/70/65/60/50) are illustrative; ticket 005's P3 calibration may adjust them to preserve replay-identity against existing convergence canaries. This ticket records the initial tiers; calibration lives downstream.
 4. No engine changes; no schema additions.
 

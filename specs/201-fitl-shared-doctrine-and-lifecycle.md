@@ -2,7 +2,7 @@
 
 **Status**: PROPOSED
 **Priority**: High — foundational for four-faction parity. Today three FITL profiles reimplement `blockImmediateWin` (ARVN, US, NVA modules with that exact `id` exist as three independent copies in `data/games/fire-in-the-lake/92-agents.md`; VC handles immediate-win via `vc.denyNvaIfNearWin`, a faction-specific variant preserved per §2 Non-Goals), and lifecycle awareness is limited to a single ARVN guardrail (`arvn.doNotOvercommitTroopsPreCoupWithoutBase` referencing `schedule.distance.toBoundary.coupEntry.cards`). Events surface only as a binary `preferEvent` weight in `considerations`, not as first-class doctrine. The competence report (`reports/fitl-competent-agent-ai.md`) requires monsoon awareness, coup awareness, and event-as-first-class decision across all four factions — none of these has a shared module today, so per-faction completions (Specs 202–204) would repeat the same scaffolding four times if this spec did not land first.
-**Complexity**: M — YAML-only authoring inside `data/games/fire-in-the-lake/92-agents.md` plus new policy-profile-quality tests. No engine work. All DSL primitives (`activeCard.hasTag.<tag>`, schedule refs, strategic conditions, strategy modules with `enablesPlanTemplates`/`suppressesPlanTemplates`, relationships) are already supported by the post-Spec-197/199 engine surface.
+**Complexity**: M — one generic engine prerequisite for candidate-feature preview fallback and preview relationship refs, followed by YAML authoring inside `data/games/fire-in-the-lake/92-agents.md` plus new policy-profile-quality tests. The remaining DSL primitives (`activeCard.hasTag.<tag>`, schedule refs, strategic conditions, strategy modules with `enablesPlanTemplates`/`suppressesPlanTemplates`, relationships) are already supported by the post-Spec-197/199 engine surface.
 **Date**: 2026-05-27
 **Dependencies**:
 - `archive/specs/186-advisory-turn-plan-architecture-core.md` (COMPLETED) — plan-template IR, strategy module activation
@@ -13,7 +13,7 @@
 - `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates`
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — bounded compound probe
 
-**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration of FITL AI encoding, 2026-05-27). This spec adopts the proposal's §§4 (universal stack rows), 5 (lifecycle awareness paragraphs), 6.3–6.7 (shared features/conditions/modules/relationships slice) into a single shared-scaffolding deliverable that Specs 202–204 build on. Engine architecture concerns (§7 of the proposal) are confirmed out of scope — no engine work is warranted.
+**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration of FITL AI encoding, 2026-05-27). This spec adopts the proposal's §§4 (universal stack rows), 5 (lifecycle awareness paragraphs), 6.3–6.7 (shared features/conditions/modules/relationships slice) into a single shared-scaffolding deliverable that Specs 202–204 build on. Initial reassessment treated engine architecture concerns (§7 of the proposal) as out of scope; ticket 002 reassessment found one generic Foundation #20 prerequisite, now owned by `201FITLSHADOC-001B`.
 
 **Ticket namespace**: `201FITLSHADOCLIF`
 
@@ -46,7 +46,7 @@ Make four-faction competence completion possible by authoring the shared scaffol
 
 - **No per-faction plan templates.** Spec 202/203/204 own those; Spec 201 only defines the shared modules and the bindings that gate eligibility.
 - **No placeholder-selector replacement.** Spec 205 owns that hygiene work; this spec preserves the existing ARVN selectors as-is and lets 205 land independently.
-- **No engine changes.** All required DSL surfaces ship in the post-Spec-199 build.
+- **No FITL-specific engine changes.** Reassessment during ticket 002 found a real generic engine gap: candidate-feature-level `previewFallback` and `preview.relationship.<role>.*` refs are required for Foundation #20-compliant shared ally-rival doctrine. Ticket `201FITLSHADOC-001B` owns that generic prerequisite; the remaining Spec 201 tickets stay YAML/test focused.
 - **No new cap classes.** `grantFlow16` remains the FITL default; `grantFlow32` is not added until a witness proves a required plan family cannot differentiate within 16-deep grant-flow continuation.
 - **No removal of per-faction modules where the per-faction nuance is real.** Faction-specific doctrine modules (e.g., `arvn.harvestPatronage`, `vc.fundAndAmbushCarefully`) remain — `shared.*` modules are *additional* scaffolding, not replacements for everything.
 - **No new metric synthesis kinds.** Aggregate metrics (total Support, total Opposition, NVA base count) MUST be expressed via the existing `globalTokenAgg` and `metric.auto:*` synthesis surfaces (`packages/engine/src/cnl/synthesize-derived-metrics.ts`); if a needed metric cannot be expressed, the faction-spec that needs it surfaces it as an Open Question rather than this spec proposing a new synthesis kind.
@@ -58,7 +58,7 @@ Make four-faction competence completion possible by authoring the shared scaffol
 - **Event handling is binary.** `eventWeight` parameter (default 100) exists; `preferEvent` consideration (`92-agents.md:~2091`) gates on `candidate.tag.event-play` only; no `eventDirectSwing` module, no active-card-annotation routing.
 - **Relationships are fully defined.** All four ally/rival pairs exist with `nominalAlly` + `nearWin` (kingmaker) shapes (`92-agents.md:1379-1431`). The gap is that no module references relationship `gainValue` for module-side suppression — relationships are declared but not used in `shared.*` doctrine.
 - **DSL surface confirmed.** `activeCard.hasTag.<tag>` is supported (`packages/engine/src/agents/policy-surface.ts`, cookbook line 588); `schedule.distance.toBoundary.<id>.<unit>` and `schedule.distance.toPhase.<id>.<unit>` both supported (cookbook 594-596, 806-811); `enablesPlanTemplates`/`suppressesPlanTemplates` shipped in Spec 197; preview-fallback `onUnavailable: noContribution` shipped in Spec 162/180 (cookbook 1401-1406).
-- **Foundation #20 compliance is required.** Any preview-derived candidate feature must declare explicit `previewFallback.onUnavailable` (typically `noContribution` for delta features, `coalesce-to-current` for level features); silent coercion would violate the integrity contract.
+- **Foundation #20 compliance is required.** Any preview-derived candidate feature must declare explicit `previewFallback.onUnavailable` (typically `noContribution` for delta features, `coalesce-to-current` for level features); silent coercion would violate the integrity contract. Ticket `201FITLSHADOC-001B` makes this a compiled engine contract before the YAML feature authoring lands.
 
 ## 4. Architecture
 
@@ -210,7 +210,7 @@ projectedOppositionDelta:
     onUnavailable: noContribution
 ```
 
-The `preview.relationship.nominalAlly.gainValueDelta` ref surface is *contingent* — Spec 187 landed the relationship metadata surface, and the per-profile relationships already carry `gainValue`. The P0 deliverable verifies the preview ref binding works for `gainValue` deltas; if it does not, the spec falls back to per-faction direct margin deltas (e.g., `projectedUsMarginDelta` for ARVN's ally) and records the missing ref as an Open Question to be resolved before 202–204 consume it.
+The `preview.relationship.nominalAlly.gainValueDelta` ref surface is provided by prerequisite ticket `201FITLSHADOC-001B`. Spec 187 landed current-state relationship metadata, and ticket 001 proved preview relationship refs were missing. The prerequisite adds the generic preview relationship seam so shared ally-rival doctrine does not devolve into four per-profile fallback expressions.
 
 ### 4.3 New strategic conditions
 
@@ -391,21 +391,22 @@ The same pattern applies to the other three profiles (one-line stubs for the Spe
 
 ### 4.6 Determinism preservation
 
-All additions are pure data — no engine code paths change. The shared modules use existing DSL primitives (`when`/`applies`/`priority`/`scoreGroups`/relationships). `pnpm turbo build` must produce byte-identical GameDef across consecutive runs. `pnpm turbo schema:artifacts` regenerates cleanly with no diff outside the additive surface.
+After the generic prerequisite lands, the remaining additions are pure data. The shared modules use existing DSL primitives (`when`/`applies`/`priority`/`scoreGroups`/relationships). `pnpm turbo build` must produce byte-identical GameDef across consecutive runs. `pnpm turbo schema:artifacts` regenerates cleanly with no diff outside the additive surface.
 
 ## 5. Edge cases
 
 - **No nominal ally exists** — `shared.allyRivalThrottle` is profile-bound only when the profile declares a `nominalAlly` relationship; in profiles without one (none in FITL, but a forward-compatibility consideration), the module is omitted from `bindings.strategyModules` rather than referencing a missing relationship.
 - **Coup never reached in a curated seed** — `feature.distanceToCoup` falls back to `999` (`coalesce`); `coupImminent` evaluates false; the module is inactive. Existing FITL convergence witnesses must not regress.
 - **Active card has no Monsoon tag** — `feature.monsoonNow` evaluates false; modules gated on it inactive. The four existing `*-baseline` profiles must compile and run identically to today on seeds that never reach Monsoon.
-- **`preview.relationship.nominalAlly.gainValueDelta` unavailable** — `previewFallback.onUnavailable: noContribution` ensures no silent coercion; `tiebreakAfterPreviewNoSignal` selection is the fallback per Foundation #20.
+- **Preview relationship refs unavailable before prerequisite** — ticket `201FITLSHADOC-001B` must land before YAML authoring consumes `preview.relationship.nominalAlly.gainValueDelta` or `preview.relationship.nominalAlly.victoryMargin`; candidate-feature `previewFallback.onUnavailable: noContribution` then ensures no silent coercion.
 - **Existing per-faction `blockImmediateWin` modules removed** — convergence witnesses that reference them by id (verified absence: no FITL witness depends on `*.blockImmediateWin` by name; they reference `arvn.trainGovern`, `us.trainAdvise`, etc.) continue to pass. The P3 acceptance criterion is replay-identity preservation.
 
 ## 6. Phases & acceptance criteria
 
 | Phase | Deliverable | Acceptance | Effort |
 |---|---|---|---|
-| **P0** | State/candidate feature additions (§4.1, §4.2) and metric-availability survey | All new features compile; metric survey records which `metric.auto:*` ids materialize from current victory-standings vs. which need derived-metric authoring; Open Questions list any feature that cannot ship in this spec | S–M |
+| **P0a** | Generic engine prerequisite for candidate-feature preview fallback and preview relationship refs | Candidate-feature `previewFallback` is validated/compiled; `preview.relationship.<role>.victoryMargin` and `preview.relationship.<role>.gainValueDelta` compile and evaluate generically; no FITL-specific engine ids | M |
+| **P0b** | State/candidate feature additions (§4.1, §4.2) and metric-availability survey | All new features compile; metric survey records which `metric.auto:*` ids materialize from current victory-standings vs. which need derived-metric authoring; Open Questions list any feature that cannot ship in this spec | S–M |
 | **P1** | Strategic conditions (§4.3) | All six conditions compile; standalone witness asserts each condition evaluates correctly on a curated scenario | S |
 | **P2** | Shared strategy modules (§4.4) | Six `shared.*` modules compile; each carries explicit `when`/`applies`/`priority`/`scoreGroups`; no plan-template gating beyond what the module's doctrine requires | M |
 | **P3** | Per-profile bindings (§4.5) + removal of three `*.blockImmediateWin` duplicates (ARVN, US, NVA — VC has no such module) | All four `*-baseline` profiles compile and bind the new modules; existing convergence witnesses (ARVN seed 1000, FITL seed 2057, march dead-end, spec-143 boundedness, four-profile convergence, guardrail uniformity, preview opponent-margin, plan selected-root authority, compound availability correspondence) replay byte-identically; priority tiers calibrated to preserve replay identity | M |
@@ -442,7 +443,7 @@ All additions are pure data — no engine code paths change. The shared modules 
 
 | Foundation | How this spec respects it |
 |---|---|
-| #1 Engine Agnosticism | YAML-only changes; engine code untouched |
+| #1 Engine Agnosticism | The prerequisite engine change is generic agent policy infrastructure; FITL-specific behavior remains YAML data |
 | #2 Evolution-First | All new modules/features/conditions are GameSpecDoc YAML primitives; evolution may mutate them via existing tunable-parameter surfaces |
 | #5 One Rules Protocol | Plan-template gating uses the same eligibility filter shipped in Spec 197; no kernel changes |
 | #8 Determinism | All new content is pure data; replay byte-identical |
@@ -450,7 +451,7 @@ All additions are pure data — no engine code paths change. The shared modules 
 | #14 No Backwards Compatibility | The three `*.blockImmediateWin` modules are removed in P3 in the same change as their `shared.*` replacements bind into the four `*-baseline` profiles — no transitional period, no compatibility shim. |
 | #15 Architectural Completeness | Closes the four-faction-parity scaffolding gap before the per-faction completions (202–204) attempt to consume shared modules |
 | #16 Testing as Proof | 24 profile-quality witnesses + 2 architectural invariants + determinism re-attestation |
-| #20 Preview Signal Integrity | All new preview-derived features declare explicit `previewFallback`; no silent coercion |
+| #20 Preview Signal Integrity | All new preview-derived features declare explicit compiled `previewFallback`; no silent coercion |
 
 ## 9. Reassessment of source proposal (`reports/fitl-ai-encoding-first-iteration.md`)
 
@@ -503,7 +504,7 @@ All additions are pure data — no engine code paths change. The shared modules 
   - `availableUsTroops` / `availableUsBases`: **available with adjustment** if authored with `globalTokenAgg` plus `zoneFilter.zoneIds: [available-US:none]`; token props alone distinguish US troop/base type but not Available-pool location.
   - `sabotagedEcon`: **unavailable — defer** until a faction spec proves the need and authors a concrete derived metric or state feature.
   - `terrorMarkerCount`: **unavailable — defer**; the current global var is `terrorSabotageMarkersPlaced`, not a separate terror-marker-count derived metric.
-- **`preview.relationship.nominalAlly.gainValueDelta` ref**: answered by `reports/201-fitl-metric-availability-survey.md` (ticket `201FITLSHADOC-001`) as **unavailable**. The current compiler/runtime relationship surface exposes current-state `relationship.<role>.seat` and `relationship.<role>.gainValue`; preview relationship deltas are not a supported ref family. Ticket 002 must not author `projectedAllyMarginDelta` with `preview.relationship.nominalAlly.gainValueDelta`; downstream bindings should use direct per-seat projected margin delta refs or a later engine ticket that explicitly adds preview relationship refs.
+- **`preview.relationship.nominalAlly.gainValueDelta` ref**: answered by `reports/201-fitl-metric-availability-survey.md` (ticket `201FITLSHADOC-001`) as **unavailable in the pre-prerequisite engine**. The current compiler/runtime relationship surface exposes current-state `relationship.<role>.seat` and `relationship.<role>.gainValue`; preview relationship deltas are not a supported ref family. User-approved reassessment on 2026-05-27 chose the Foundation-aligned engine prerequisite path: ticket `201FITLSHADOC-001B` adds generic preview relationship refs before ticket 002 authors `projectedAllyMarginDelta`.
 - **Priority tier calibration**: do the illustrative tiers in §4.4 (90/80/70/65/60/50) preserve replay-identity for existing convergence canaries? Answered in P3 by iteration; the spec ships with whatever tiers preserve the canaries.
 
 ## Tickets
@@ -511,6 +512,7 @@ All additions are pure data — no engine code paths change. The shared modules 
 Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per user invocation; the spec's `Ticket namespace` metadata field lists `201FITLSHADOCLIF`, but the user argument is authoritative):
 
 - [`archive/tickets/201FITLSHADOC-001.md`](../archive/tickets/201FITLSHADOC-001.md) — Metric availability survey + preview ref probe (covers §4.1 / §4.2 P0 survey) — COMPLETED
+- [`tickets/201FITLSHADOC-001B.md`](../tickets/201FITLSHADOC-001B.md) — Generic preview relationship refs and candidate-feature fallback (Foundation #20 prerequisite for §4.2 / §4.3) — PENDING
 - [`tickets/201FITLSHADOC-002.md`](../tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features)
 - [`tickets/201FITLSHADOC-003.md`](../tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1)
 - [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)

@@ -23,9 +23,10 @@ This ticket is rated Large per the **Decomposer-grouped coherent unit exception*
 ## Assumption Reassessment (2026-05-27)
 
 1. Ticket 005 has landed: all four `*-baseline` profiles bind the six `shared.*` modules; three `*.blockImmediateWin` modules are removed. Replay-identity canaries pass under the calibrated priority tiers.
-2. Existing FITL profile-quality witness conventions: tests live under `packages/engine/test/policy-profile-quality/<test-name>.test.ts`; each carries a file-top class marker per `.claude/rules/testing.md` (e.g., `// @test-class: architectural-invariant` or `// @test-class: convergence-witness`).
-3. The architectural-invariant tests under `packages/engine/test/architecture/` are the appropriate location for the `shared-modules-bound-by-all-profiles` and `no-per-faction-block-immediate-win` cross-profile assertions (precedent: existing `plan-trace-completeness-cross-family-golden.test.ts`).
-4. The "test-bundled" approach matches Spec 201 §7's P4 description.
+2. Ticket `201FITLSHADOC-001B` has landed the generic candidate-feature fallback and preview relationship ref support that makes this ticket's Foundation #20 compiled-IR assertions meaningful.
+3. Existing FITL profile-quality witness conventions: tests live under `packages/engine/test/policy-profile-quality/<test-name>.test.ts`; each carries a file-top class marker per `.claude/rules/testing.md` (e.g., `// @test-class: architectural-invariant` or `// @test-class: convergence-witness`).
+4. The architectural-invariant tests under `packages/engine/test/architecture/` are the appropriate location for the `shared-modules-bound-by-all-profiles` and `no-per-faction-block-immediate-win` cross-profile assertions (precedent: existing `plan-trace-completeness-cross-family-golden.test.ts`).
+5. The "test-bundled" approach matches Spec 201 §7's P4 description.
 
 ## Architecture Check
 
@@ -78,7 +79,7 @@ For each profile in {us, arvn, nva, vc}:
 
 ### 9. Foundation #20 preview-integrity reattestation (1 file)
 
-- `shared-preview-integrity-fallback.test.ts` — for every preview-derived candidate feature (`projectedLeaderMarginDelta`, `projectedAllyMarginDelta`, `projectedAidDelta`, `projectedTrailDelta`, `projectedSupportDelta`, `projectedOppositionDelta`): assert `previewFallback.onUnavailable: noContribution` is set in the compiled IR; assert trace records `unavailable` outcomes without silent coercion (Foundation #20 contract).
+- `shared-preview-integrity-fallback.test.ts` — for every preview-derived candidate feature (`projectedLeaderMarginDelta`, `projectedAllyMarginDelta`, `projectedAidDelta`, `projectedTrailDelta`, `projectedSupportDelta`, `projectedOppositionDelta`): assert `previewFallback.onUnavailable: noContribution` is set in the compiled IR; assert trace records `unavailable` outcomes without silent coercion (Foundation #20 contract provided by `201FITLSHADOC-001B`).
 
 ## Files to Touch
 

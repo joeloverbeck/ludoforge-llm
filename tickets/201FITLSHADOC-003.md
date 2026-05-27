@@ -15,7 +15,7 @@ Without these conditions, the shared.* modules in ticket 004 cannot evaluate the
 ## Assumption Reassessment (2026-05-27)
 
 1. `data/games/fire-in-the-lake/92-agents.md` declares a `strategicConditions` block (existing entries: `selfPoliticalEngineBehind` @ 240, `usNearWin` @ 261, `arvnNearWin` @ 273, `nvaNearWin` @ 285, `vcNearWin` @ 297). New conditions are additive at the bottom of the block.
-2. The features referenced by the new conditions land in ticket 002 (predecessor). After 002 lands, `feature.projectedSelfMargin`, `feature.projectedCurrentLeaderMargin`, `feature.distanceToCoup`, `feature.monsoonNow`, `feature.selfResources`, and `preview.relationship.nominalAlly.victoryMargin` (or the survey-fallback equivalent) are all resolvable.
+2. The features referenced by the new conditions land in ticket 002 (predecessor), and prerequisite ticket `201FITLSHADOC-001B` lands the generic `preview.relationship.<role>.victoryMargin` ref. After 002 lands, `feature.projectedSelfMargin`, `feature.projectedCurrentLeaderMargin`, `feature.distanceToCoup`, `feature.monsoonNow`, `feature.selfResources`, and `preview.relationship.nominalAlly.victoryMargin` are all resolvable.
 3. The existing per-faction `*NearWin` conditions are NOT removed by this ticket; they remain alongside the new `currentLeaderNearWin` (which provides the generic shared-doctrine entry point per Spec 201 §4.3).
 
 ## Architecture Check
@@ -35,9 +35,9 @@ Add the six entries from Spec 201 §4.3 verbatim, each including a `description`
 - `coupImminent` — `target: { lte: [feature.distanceToCoup, 1] }`
 - `monsoonNow` — `target: { eq: [feature.monsoonNow, true] }`
 - `resourcesLow` — `target: { lt: [feature.selfResources, 2] }`
-- `allyNearWin` — `target: { gte: [preview.relationship.nominalAlly.victoryMargin (or survey fallback), -1] }`
+- `allyNearWin` — `target: { gte: [preview.relationship.nominalAlly.victoryMargin, -1] }`
 
-If ticket 001's survey records the relationship preview ref as unavailable, `allyNearWin` uses the per-faction direct margin ref fallback per Spec 201 §4.2.
+The old per-faction direct-margin fallback is intentionally not used after the 2026-05-27 reassessment; `201FITLSHADOC-001B` owns the generic relationship preview ref instead.
 
 ## Files to Touch
 

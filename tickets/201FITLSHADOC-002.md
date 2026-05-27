@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
-**Deps**: `archive/tickets/201FITLSHADOC-001C.md`
+**Deps**: `tickets/201FITLSHADOC-001D.md`
 
 ## Problem
 
@@ -20,12 +20,13 @@ Without these features, the strategic conditions in ticket 003 cannot resolve th
 4. `activeCard.hasTag.<tag>` is the correct syntax (verified during Spec 201 reassessment: `packages/engine/src/agents/policy-surface.ts`; cookbook line 588).
 5. Ticket `201FITLSHADOC-001B` landed the required generic engine support for candidate-feature `previewFallback` and `preview.relationship.<role>.*` refs.
 6. User-approved reassessment on 2026-05-27 found a second generic engine prerequisite: exact Available-pool US troop/base counts require `globalTokenAgg.zoneFilter.zoneIds`, because the live compiler supports `category`, `attribute`, and `variable` filters but not exact zone-id filters. Ticket `201FITLSHADOC-001C` owns that generic prerequisite before this YAML authoring begins.
+7. User-approved reassessment on 2026-05-27 found a third generic engine prerequisite: `distanceToCoup` is a state feature over `schedule.distance.toBoundary.coupEntry.cards`, but live compiler tests reject schedule-distance refs in state-feature scope. Ticket `201FITLSHADOC-001D` owns that generic prerequisite before this YAML authoring begins.
 
 ## Architecture Check
 
 1. Foundation #2 (Evolution-First): all new features are pure GameSpecDoc YAML data primitives consumed by evolution; the runtime treats them as additional library entries.
 2. Foundation #20 (Preview Signal Integrity): every preview-derived candidate feature MUST declare explicit `previewFallback.onUnavailable: noContribution`. The new candidate features in §4.2 all include this clause; ticket `201FITLSHADOC-001B` makes that clause a real compiled contract instead of raw ignored YAML.
-3. This ticket itself has no engine changes and introduces no backwards-compatibility shims; the required generic engine prerequisites are isolated in `201FITLSHADOC-001B` and `201FITLSHADOC-001C`.
+3. This ticket itself has no engine changes and introduces no backwards-compatibility shims; the required generic engine prerequisites are isolated in `201FITLSHADOC-001B`, `201FITLSHADOC-001C`, and `201FITLSHADOC-001D`.
 
 ## What to Change
 

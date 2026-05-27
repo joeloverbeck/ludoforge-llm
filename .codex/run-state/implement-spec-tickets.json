@@ -1,18 +1,17 @@
 {
   "originating_spec": "specs/200-plan-proposal-trace-completeness.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/200PLNPRPTRC-002.md",
+  "last_ticket": "archive/tickets/200PLNPRPTRC-003.md",
   "last_result": "completed_archived",
-  "last_work_commit": "30db578afe0599c99052d57e9b1bab23cd22fa68",
+  "last_work_commit": "77d5f15559b1157434df4e0495a6b7544e419010",
   "last_state_commit": "self",
-  "next_target": "tickets/200PLNPRPTRC-003.md",
+  "next_target": "tickets/200PLNPRPTRC-004.md",
   "queue": [
-    "tickets/200PLNPRPTRC-003.md",
     "tickets/200PLNPRPTRC-004.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Completed and archived 200PLNPRPTRC-002; next target is Phase 3.",
+  "owned_dirty_summary": "Completed and archived 200PLNPRPTRC-003; next target is Phase 4.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

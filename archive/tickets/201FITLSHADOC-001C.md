@@ -1,6 +1,6 @@
 # 201FITLSHADOC-001C: Exact zone-id filters for policy token aggregates
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — generic agent policy expression compiler/runtime/schema
@@ -94,3 +94,33 @@ Update compiled policy expression types and zod schemas so compiled GameDef arti
 2. Focused compiled node tests for the changed unit files.
 3. `pnpm -F @ludoforge/engine test:unit`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-27)
+
+Completed the generic zone-id filter prerequisite for Spec 201:
+
+1. Added `zoneFilter.zoneIds` to the shared compiled policy zone-filter type and `GameDef` schema mirror.
+2. Added compiler validation for non-empty string-list `zoneIds` values in the shared `globalTokenAgg` / `globalZoneAgg` zone-filter parser.
+3. Updated the runtime zone-filter predicate so `zoneIds` composes conjunctively with existing `category`, `attribute`, and `variable` filters.
+4. Added focused parser, runtime aggregation, and schema acceptance coverage.
+5. Regenerated `packages/engine/schemas/GameDef.schema.json`; `Trace.schema.json` and `EvalReport.schema.json` were unchanged after regeneration.
+
+User-approved source-size deferral:
+
+The final sweep found preexisting oversized TypeScript files with active growth. The user approved bounded deferral on 2026-05-27 because these are established parser/runtime/type/schema/test hubs and the retained additions are adjacent contract branches; extracting them for this ticket would widen or obscure the prerequisite seam. Residual extraction owner: none for this slice.
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| `packages/engine/src/agents/policy-expr.ts` | 1785 | 1823 | no; preexisting oversize | +38 | User-approved bounded deferral; parser validation sits beside existing aggregation zone-filter parsing. | none |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 3083 | 3086 | no; preexisting oversize | +3 | User-approved bounded deferral; runtime predicate addition belongs in existing zone-filter evaluation. | none |
+| `packages/engine/src/kernel/types-core.ts` | 2978 | 2979 | no; preexisting oversize | +1 | User-approved bounded deferral; single field belongs in canonical compiled type hub. | none |
+| `packages/engine/src/kernel/schemas-core.ts` | 3271 | 3272 | no; preexisting oversize | +1 | User-approved bounded deferral; single schema field belongs in canonical schema mirror. | none |
+| `packages/engine/test/unit/agents/policy-expr.test.ts` | 981 | 1008 | no; preexisting oversize | +27 | User-approved bounded deferral; focused parser cases extend the existing policy-expression test fixture. | none |
+| `packages/engine/test/unit/schemas-top-level.test.ts` | 1920 | 1921 | no; preexisting oversize | +1 | User-approved bounded deferral; schema acceptance assertion extends the existing top-level schema test. | none |
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-expr.test.js dist/test/unit/property/policy-aggregation.property.test.js dist/test/unit/schemas-top-level.test.js` — passed, 108 tests.
+3. `pnpm -F @ludoforge/engine run schema:artifacts:check` — initially failed with `GameDef.schema.json` out of sync; after regeneration, passed.
+4. `pnpm -F @ludoforge/engine test:unit` — initially failed only on `schema-artifacts-sync.test.js`; after regenerating `GameDef.schema.json`, passed, 657 tests.

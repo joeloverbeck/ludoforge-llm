@@ -651,6 +651,7 @@ describe('top-level runtime schemas', () => {
       aggOp: 'sum',
       prop: 'strength',
       zoneFilter: {
+        zoneIds: ['province-a:none', 'province-b:none'],
         category: 'province',
         attribute: {
           prop: 'population',

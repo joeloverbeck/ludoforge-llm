@@ -8783,7 +8783,7 @@
             "zoneFilter": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_6844ab0e"
+                  "$ref": "#/definitions/anon_9ffb7c57"
                 }
               ]
             },
@@ -8832,7 +8832,7 @@
             "zoneFilter": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/anon_6844ab0e"
+                  "$ref": "#/definitions/anon_9ffb7c57"
                 }
               ]
             },
@@ -9296,83 +9296,6 @@
           "additionalProperties": false
         }
       ]
-    },
-    "anon_6844ab0e": {
-      "type": "object",
-      "properties": {
-        "category": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/anon_4682db72"
-            }
-          ]
-        },
-        "attribute": {
-          "type": "object",
-          "properties": {
-            "prop": {
-              "$ref": "#/definitions/anon_4682db72"
-            },
-            "op": {
-              "type": "string",
-              "enum": [
-                "eq",
-                "gt",
-                "gte",
-                "lt",
-                "lte"
-              ]
-            },
-            "value": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/anon_4682db72"
-                },
-                {
-                  "$ref": "#/definitions/anon_c0e4ebfe"
-                },
-                {
-                  "$ref": "#/definitions/anon_def33f2f"
-                }
-              ]
-            }
-          },
-          "required": [
-            "prop",
-            "op",
-            "value"
-          ],
-          "additionalProperties": false
-        },
-        "variable": {
-          "type": "object",
-          "properties": {
-            "prop": {
-              "$ref": "#/definitions/anon_4682db72"
-            },
-            "op": {
-              "type": "string",
-              "enum": [
-                "eq",
-                "gt",
-                "gte",
-                "lt",
-                "lte"
-              ]
-            },
-            "value": {
-              "$ref": "#/definitions/anon_c0e4ebfe"
-            }
-          },
-          "required": [
-            "prop",
-            "op",
-            "value"
-          ],
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
     },
     "anon_68bc7f32": {
       "anyOf": [
@@ -12284,6 +12207,90 @@
       "required": [
         "effects"
       ],
+      "additionalProperties": false
+    },
+    "anon_9ffb7c57": {
+      "type": "object",
+      "properties": {
+        "zoneIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/anon_4682db72"
+          }
+        },
+        "category": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/anon_4682db72"
+            }
+          ]
+        },
+        "attribute": {
+          "type": "object",
+          "properties": {
+            "prop": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "op": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "gt",
+                "gte",
+                "lt",
+                "lte"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/anon_4682db72"
+                },
+                {
+                  "$ref": "#/definitions/anon_c0e4ebfe"
+                },
+                {
+                  "$ref": "#/definitions/anon_def33f2f"
+                }
+              ]
+            }
+          },
+          "required": [
+            "prop",
+            "op",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        "variable": {
+          "type": "object",
+          "properties": {
+            "prop": {
+              "$ref": "#/definitions/anon_4682db72"
+            },
+            "op": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "gt",
+                "gte",
+                "lt",
+                "lte"
+              ]
+            },
+            "value": {
+              "$ref": "#/definitions/anon_c0e4ebfe"
+            }
+          },
+          "required": [
+            "prop",
+            "op",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      },
       "additionalProperties": false
     },
     "anon_a5785b63": {

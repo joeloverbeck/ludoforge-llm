@@ -407,6 +407,9 @@ export function matchesZoneFilter(
   if (filter === undefined) {
     return true;
   }
+  if (filter.zoneIds !== undefined && !filter.zoneIds.includes(String(zoneDef.id))) {
+    return false;
+  }
   if (filter.category !== undefined && zoneDef.category !== filter.category) {
     return false;
   }

@@ -647,6 +647,7 @@ export interface AgentPolicyZoneVariableFilterComparison {
 }
 
 export interface AgentPolicyZoneFilter {
+  readonly zoneIds?: readonly string[];
   readonly category?: string;
   readonly attribute?: AgentPolicyZoneFilterComparison;
   readonly variable?: AgentPolicyZoneVariableFilterComparison;

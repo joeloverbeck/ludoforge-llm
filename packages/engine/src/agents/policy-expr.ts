@@ -1610,6 +1610,7 @@ function analyzePolicyAggregationZoneFilter(
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
+  const zoneIds = analyzePolicyAggregationZoneIds(operatorName, obj['zoneIds'], diagnostics, `${path}.zoneIds`);
   const category = obj['category'];
   const attribute = analyzePolicyAggregationAttributeFilterComparison(operatorName, obj['attribute'], diagnostics, `${path}.attribute`);
   const variable = analyzePolicyAggregationVariableFilterComparison(operatorName, obj['variable'], diagnostics, `${path}.variable`);
@@ -1625,15 +1626,52 @@ function analyzePolicyAggregationZoneFilter(
     return null;
   }
 
-  if (attribute === null || variable === null) {
+  if (zoneIds === null || attribute === null || variable === null) {
     return null;
   }
 
   return {
+    ...(zoneIds === undefined ? {} : { zoneIds }),
     ...(category === undefined ? {} : { category }),
     ...(attribute === undefined ? {} : { attribute }),
     ...(variable === undefined ? {} : { variable }),
   };
+}
+
+function analyzePolicyAggregationZoneIds(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
+  expr: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): readonly string[] | undefined | null {
+  if (expr === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(expr) || expr.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `${operatorName}.zoneFilter.zoneIds must be a non-empty array of zone id strings.`,
+      suggestion: 'Use zoneFilter: { zoneIds: ["available-US:none"] }.',
+    });
+    return null;
+  }
+  const zoneIds: string[] = [];
+  for (const [index, zoneId] of expr.entries()) {
+    if (typeof zoneId !== 'string' || zoneId.length === 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `${operatorName}.zoneFilter.zoneIds entries must be non-empty strings.`,
+        suggestion: 'Use exact zone ids such as "available-US:none".',
+      });
+      return null;
+    }
+    zoneIds.push(zoneId);
+  }
+  return zoneIds;
 }
 
 function analyzePolicyAggregationAttributeFilterComparison(

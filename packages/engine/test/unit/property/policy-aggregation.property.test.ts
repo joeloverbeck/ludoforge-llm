@@ -286,6 +286,18 @@ function countBoardTroopsForUs(def: GameDef, state: GameState): number {
   return total;
 }
 
+function countTroopsInZones(state: GameState, zoneIds: readonly string[]): number {
+  let total = 0;
+  for (const zoneId of zoneIds) {
+    for (const token of state.zones[zoneId] ?? []) {
+      if (token.type === 'troop' && String(token.props?.seat) === '0') {
+        total += 1;
+      }
+    }
+  }
+  return total;
+}
+
 describe('policy aggregation invariants', () => {
   it('globalTokenAgg count matches manual board token totals across generated states', () => {
     const expr: AgentPolicyExpr = {
@@ -301,6 +313,29 @@ describe('policy aggregation invariants', () => {
       const expected = countBoardTokens(def, state);
 
       assert.equal(actual, expected, `seed ${seed} should match manual board token count`);
+    }
+  });
+
+  it('globalTokenAgg zoneIds filters count only exact named zones', () => {
+    const zoneIds = ['target-a:none', 'reserve:none'];
+    const expr: AgentPolicyExpr = {
+      kind: 'globalTokenAgg',
+      aggOp: 'count',
+      zoneScope: 'all',
+      tokenFilter: {
+        type: 'troop',
+        props: { seat: { eq: '0' } },
+      },
+      zoneFilter: { zoneIds },
+    };
+    const def = createDef(expr);
+
+    for (let seed = 0; seed < 24; seed += 1) {
+      const state = createGeneratedState(def, seed);
+      const actual = evaluateAggregation(expr, state);
+      const expected = countTroopsInZones(state, zoneIds);
+
+      assert.equal(actual, expected, `seed ${seed} should count only named zones`);
     }
   });
 

@@ -910,6 +910,7 @@ const AgentPolicyTokenFilterSchema = z.object({
 }).strict();
 
 const AgentPolicyZoneFilterSchema = z.object({
+  zoneIds: z.array(StringSchema).nonempty().optional(),
   category: StringSchema.optional(),
   attribute: z.object({
     prop: StringSchema,

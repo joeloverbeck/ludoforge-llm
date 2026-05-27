@@ -1,6 +1,6 @@
 # Implementation Order — AI Agent Architecture Overhaul (Second Iteration)
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Date**: 2026-05-26
 **Source report**: `reports/ai-agent-policy-overhaul-second-iteration.md`
 **Prior triage**: `archive/specs/191-plan-role-semantic-integrity.md` §11 (triaged the first iteration; this index continues from where that left off)
@@ -96,3 +96,18 @@ This series is the operationalization of the second-iteration audit's proposals.
 | #9 — Cookbook conceptual rewrite | Not a spec → `reassess-agent-dsl-cookbook` skill | (skill) |
 | #10 — Cross-game conformance corpus | Adopted | Spec 198 |
 | #11 — Authoring-error negative tests | Adopted (folded into Spec 198) | Spec 198 |
+
+## Outcome
+
+Completed on 2026-05-27.
+
+- The implementation-order file served as the live ordering record for the second-iteration AI agent architecture overhaul batch.
+- Specs 196, 197, 198, and 199 are now archived under `archive/specs/`, and their ticket families are closed.
+- The final live dependency verdict remains unchanged: the four specs were mutually independent and had no required ordering.
+- Deviation from the original closeout criterion: the cookbook conceptual rewrite remains routed to the non-spec `reassess-agent-dsl-cookbook` follow-up named in this index.
+- The active planning artifact is archived with a dated filename so a future batch can create a fresh `specs/IMPLEMENTATION-ORDER.md` if needed.
+
+Verification:
+
+- Destination collision check for `archive/specs/IMPLEMENTATION-ORDER-2026-05-27.md` — clear.
+- `pnpm run check:ticket-deps` — passed for 0 active tickets and 2535 archived tickets.

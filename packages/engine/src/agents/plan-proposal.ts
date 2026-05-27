@@ -29,13 +29,10 @@ import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { evaluateSelector, type SelectedItem, type SelectorEvalCandidate } from './policy-selector-eval.js';
 import { constraintsSatisfied, routeGraphProviderForDef } from './plan-role-constraint-eval.js';
 import { eligiblePlanTemplates, type FilteredOutPlanTemplate } from './plan-template-eligibility.js';
+import { availabilityForPlanRoot, capLimitFor, compareCompoundAvailability, PLAN_CAP_CLASS_BUDGETS } from './plan-proposal-compound-availability.js';
+import type { CompoundAvailability } from '../kernel/microturn/compound-availability-probe.js';
 
-export const PLAN_CAP_CLASS_BUDGETS = {
-  standard256: 256,
-  deep1024: 1024,
-} as const;
-
-type PlanCapClass = keyof typeof PLAN_CAP_CLASS_BUDGETS;
+export { PLAN_CAP_CLASS_BUDGETS };
 
 interface PlanExprContext {
   readonly def?: GameDef;
@@ -56,6 +53,7 @@ export interface PlanProposalAlternative {
   readonly score: number;
   readonly priorityTier: number;
   readonly stableKey: string;
+  readonly compoundAvailability?: CompoundAvailability;
   readonly roleBindings: Readonly<Record<string, PlanRoleBinding>>;
   readonly posture: PolicyPlanTrace['posture'];
 }
@@ -122,6 +120,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
   const alternatives: PlanProposalAlternative[] = [];
   let capClass: string | undefined;
   let capLimit: number | undefined;
+  const compoundAvailabilityMemo = new Map<string, CompoundAvailability>();
 
   for (const templateId of eligibleTemplateIds) {
     const template = input.catalog.library.planTemplates?.[templateId];
@@ -152,6 +151,9 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
         score: priorityTier + roleScore + considerationScore + posture.scoreDelta,
         priorityTier,
         stableKey,
+        ...(template.root.compound === undefined
+          ? {}
+          : { compoundAvailability: memoizedCompoundAvailability(input, root, template.root.compound, compoundAvailabilityMemo) }),
         roleBindings,
         posture: posture.trace,
       });
@@ -195,6 +197,27 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
     posture: selected.posture,
   };
 };
+
+function compoundFingerprint(compound: NonNullable<CompiledPlanTemplate['root']['compound']>): string {
+  const interrupt = compound.interruptAfterStage === undefined ? '' : `:i${compound.interruptAfterStage}`;
+  return `${compound.timing}:${compound.specialTags.join(',')}${interrupt}`;
+}
+
+function memoizedCompoundAvailability(
+  input: ProposeAdvisoryTurnPlanInput,
+  root: PlanProposalRootCandidate,
+  compound: NonNullable<CompiledPlanTemplate['root']['compound']>,
+  memo: Map<string, CompoundAvailability>,
+): CompoundAvailability {
+  const key = `${root.stableMoveKey}|${compoundFingerprint(compound)}`;
+  const cached = memo.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const computed = availabilityForPlanRoot(input, root.decision, compound);
+  memo.set(key, computed);
+  return computed;
+}
 
 export const proposeAndCommitAdvisoryTurnPlan = (
   input: AgentMicroturnDecisionInput,
@@ -638,13 +661,10 @@ function unavailablePosture(reason: string): PolicyPlanTrace['posture'] {
   };
 }
 
-function capLimitFor(template: CompiledPlanTemplate): number {
-  return PLAN_CAP_CLASS_BUDGETS[template.caps.capClass as PlanCapClass] ?? PLAN_CAP_CLASS_BUDGETS.standard256;
-}
-
 function compareAlternatives(left: PlanProposalAlternative, right: PlanProposalAlternative): number {
   return right.priorityTier - left.priorityTier
     || right.score - left.score
+    || compareCompoundAvailability(left.compoundAvailability, right.compoundAvailability)
     || compareStable(left.stableKey, right.stableKey);
 }
 

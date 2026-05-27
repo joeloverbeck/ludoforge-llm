@@ -45,6 +45,12 @@ function diagnosticSnapshot(doc: GameSpecDoc): ReadonlyArray<Pick<ReturnType<typ
   return compileGameSpecToGameDef(doc).diagnostics.map(({ code, message, path }) => ({ code, message, path }));
 }
 
+function compoundDiagnostics(doc: GameSpecDoc): ReturnType<typeof compileGameSpecToGameDef>['diagnostics'] {
+  return compileGameSpecToGameDef(doc).diagnostics.filter(
+    (diagnostic) => diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+  );
+}
+
 describe('agent plan-template validation diagnostics', () => {
   it('accepts a valid plan template without unknown-library-key diagnostics', () => {
     const result = compileGameSpecToGameDef(createDoc({ trainGovern: validTemplate() }));
@@ -151,6 +157,62 @@ describe('agent plan-template validation diagnostics', () => {
       }),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
       /trainGovern.*root\.compound.*no authored operation\/special-activity continuation witness/u,
+    );
+  });
+
+  it('accepts compound special tags that align with special-activity grant vocabulary', () => {
+    assert.deepEqual(compoundDiagnostics(createDoc({ trainGovern: validTemplate() })), []);
+  });
+
+  it('rejects compound special tags outside the special-activity grant vocabulary', () => {
+    const diagnostics = compoundDiagnostics(createDoc({
+      trainGovern: validTemplate({
+        root: {
+          actionTags: ['operation'],
+          compound: { specialTags: ['special-activity', 'misspelled-special'], timing: 'after' },
+        },
+      }),
+    }));
+
+    assert.ok(
+      diagnostics.some((diagnostic) =>
+        diagnostic.path === 'doc.agents.library.planTemplates.trainGovern.root.compound.specialTags.1'
+        && diagnostic.message === 'Unknown special tag "misspelled-special" in plan template root.compound — no accompanyingOps entry references this tag.'),
+      `expected unknown special tag diagnostic; got ${diagnostics.map((diagnostic) => `${diagnostic.path}: ${diagnostic.message}`).join('\n')}`,
+    );
+  });
+
+  it('does not run compound vocabulary validation when compound metadata is absent', () => {
+    const { compound: _compound, ...rootWithoutCompound } = validTemplate().root;
+    void _compound;
+
+    assert.deepEqual(compoundDiagnostics(createDoc({
+      trainGovern: validTemplate({ root: rootWithoutCompound }),
+    })), []);
+  });
+
+  it('reports one compound vocabulary diagnostic per unknown special tag', () => {
+    const diagnostics = compoundDiagnostics(createDoc({
+      trainGovern: validTemplate({
+        root: {
+          actionTags: ['operation'],
+          compound: { specialTags: ['first-misspelling', 'second-misspelling'], timing: 'after' },
+        },
+      }),
+    })).filter((diagnostic) => diagnostic.message.includes('Unknown special tag'));
+
+    assert.deepEqual(
+      diagnostics.map((diagnostic) => [diagnostic.path, diagnostic.message]),
+      [
+        [
+          'doc.agents.library.planTemplates.trainGovern.root.compound.specialTags.0',
+          'Unknown special tag "first-misspelling" in plan template root.compound — no accompanyingOps entry references this tag.',
+        ],
+        [
+          'doc.agents.library.planTemplates.trainGovern.root.compound.specialTags.1',
+          'Unknown special tag "second-misspelling" in plan template root.compound — no accompanyingOps entry references this tag.',
+        ],
+      ],
     );
   });
 

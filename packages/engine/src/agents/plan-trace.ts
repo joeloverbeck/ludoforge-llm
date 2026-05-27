@@ -32,6 +32,9 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
     score: alternative.score,
     priorityTier: alternative.priorityTier,
     stableKey: alternative.stableKey,
+    ...(alternative.compoundAvailability === undefined
+      ? {}
+      : { compoundAvailability: alternative.compoundAvailability }),
   })),
   posture: result.posture,
 });

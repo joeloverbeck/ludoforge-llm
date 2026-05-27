@@ -43,8 +43,8 @@ Each spec carries its own replay-identity and determinism proof obligations inde
    (`archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md`)
    Authors one minimal perfect-information board game spec; builds the cross-family architectural-invariant test surface across FITL / Texas Hold'em / new game; promotes observer-safety from informal expectation to enforced architectural invariant; adds authoring-error negative-test infrastructure. Operationalizes Foundation #16's literal corpus mandate.
 
-4. **Spec 199 — Compound Availability at Root Proposal**
-   (`specs/199-compound-availability-at-root-proposal.md`)
+4. **Spec 199 — Compound Availability at Root Proposal** (COMPLETED 2026-05-26)
+   (`archive/specs/199-compound-availability-at-root-proposal.md`)
    Adds a bounded compound-availability probe at the kernel-publication seam; the proposer consults it for compound-bearing root candidates; trace surfaces availability status with Foundation-#20-style provenance. Closes the proposal-trace integrity gap where the proposer overstates compound coherence the runtime fallback later corrects. Promoted from ticket-sized to standalone spec at user request.
 
 **Dependency direction:** none — the four specs are mutually independent. Per-spec acceptance is recoverable in any sequence. A natural authoring sequence (196 → 197 → 198 → 199) is suggested by complexity ordering rather than required by architectural dependency.

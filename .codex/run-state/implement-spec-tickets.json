@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md",
-  "archived_spec": "archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md",
-  "last_ticket": "archive/tickets/198GAMECONFCORP-004.md",
+  "originating_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
+  "archived_spec": "archive/specs/199-compound-availability-at-root-proposal.md",
+  "last_ticket": "archive/tickets/199COMAVAROO-004.md",
   "last_result": "final_spec_archived",
-  "last_work_commit": "28720c154ae0466914dc4d9089ea0bbeb15786f6",
+  "last_work_commit": "7ae694157bd6b56434ed98866543a35bf66fb5dc",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "All Spec 198 tickets and originating spec archived.",
+  "owned_dirty_summary": "Spec 199 archived in 7ae694157bd6b56434ed98866543a35bf66fb5dc. Unrelated .claude skill edits remain outside harness ownership.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "unrelated_dirty: .claude/skills/fix-pr-ci/SKILL.md, .claude/skills/skill-audit/SKILL.md",
   "updated_at": "2026-05-26"
 }

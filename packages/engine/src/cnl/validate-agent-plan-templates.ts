@@ -273,6 +273,19 @@ function validatePlanTemplateCompound(
     }
   }
 
+  const specialTagVocabulary = new Set(witnesses.flatMap((witness) => witness.specialTags));
+  for (const [tagIndex, tag] of specialTags.entries()) {
+    if (!specialTagVocabulary.has(tag)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.specialTags[${tagIndex}]`,
+        severity: 'error',
+        message: `Unknown special tag "${tag}" in plan template root.compound — no accompanyingOps entry references this tag.`,
+        suggestion: 'Align compound.specialTags with tags on a special-activity action that can accompany an operation pipeline.',
+      });
+    }
+  }
+
   const hasWitness = witnesses.some((witness) =>
     matchesRootAction(witness, actionIds, actionTags)
     && specialTags.every((tag) => witness.specialTags.includes(tag))

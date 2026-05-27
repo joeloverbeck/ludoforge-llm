@@ -417,6 +417,7 @@ archive/specs/197-doctrine-gated-plan-template-eligibility.md
 archive/specs/198-cross-game-conformance-corpus-and-observer-safety-proofs.md
 archive/specs/199-compound-availability-at-root-proposal.md
 archive/specs/20-fitl-event-framework-and-initial-card-pack.md
+archive/specs/200-plan-proposal-trace-completeness.md
 archive/specs/2026-03-30-province-border-map-layers-design.md
 archive/specs/21-fitl-foundation-integration-tests-and-traces.md
 archive/specs/22-fitl-foundation-implementation-order.md
@@ -537,6 +538,7 @@ archive/specs/99-map-editor-renderer-unification.md
 archive/specs/IMPLEMENTATION-ORDER-2026-05-22.md
 archive/specs/IMPLEMENTATION-ORDER-2026-05-23.md
 archive/specs/IMPLEMENTATION-ORDER-2026-05-25.md
+archive/specs/IMPLEMENTATION-ORDER-2026-05-27.md
 archive/specs/spec-61-universal-game-player-agent.md
 archive/tickets/100COMEVEEFF-001.md
 archive/tickets/100COMEVEEFF-002.md
@@ -1211,6 +1213,10 @@ archive/tickets/199COMAVAROO-001.md
 archive/tickets/199COMAVAROO-002.md
 archive/tickets/199COMAVAROO-003.md
 archive/tickets/199COMAVAROO-004.md
+archive/tickets/200PLNPRPTRC-001.md
+archive/tickets/200PLNPRPTRC-002.md
+archive/tickets/200PLNPRPTRC-003.md
+archive/tickets/200PLNPRPTRC-004.md
 archive/tickets/60RUNCONSUR-001-add-runner-ui-store-for-chrome-state.md
 archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-001-add-shared-hover-popover-session-controller.md
 archive/tickets/60RUNHOVTOOLIF/60RUNHOVTOOLIF-002-centralize-floating-anchor-resolution-and-safe-render-gating.md
@@ -3303,7 +3309,9 @@ packages/engine/src/agents/microturn-option-eval.ts
 packages/engine/src/agents/microturn-option-evaluator.ts
 packages/engine/src/agents/plan-controller.ts
 packages/engine/src/agents/plan-execution.ts
+packages/engine/src/agents/plan-proposal-candidates.ts
 packages/engine/src/agents/plan-proposal-compound-availability.ts
+packages/engine/src/agents/plan-proposal-role-fallbacks.ts
 packages/engine/src/agents/plan-proposal.ts
 packages/engine/src/agents/plan-role-constraint-eval.ts
 packages/engine/src/agents/plan-template-eligibility.ts
@@ -3692,6 +3700,7 @@ packages/engine/src/kernel/schemas-ast.ts
 packages/engine/src/kernel/schemas-core.ts
 packages/engine/src/kernel/schemas-extensions.ts
 packages/engine/src/kernel/schemas-gamespec.ts
+packages/engine/src/kernel/schemas-plan-trace.ts
 packages/engine/src/kernel/schemas.ts
 packages/engine/src/kernel/scoped-var-contract.ts
 packages/engine/src/kernel/scoped-var-name-resolution.ts
@@ -3855,6 +3864,10 @@ packages/engine/test/architecture/observer-safety-invariants.test.ts
 packages/engine/test/architecture/plan-controller-compound-availability-correspondence.test.ts
 packages/engine/test/architecture/plan-controller-legality-frontier.test.ts
 packages/engine/test/architecture/plan-proposal-compound-availability-witness.test.ts
+packages/engine/test/architecture/plan-trace-completeness-cross-family-golden.test.ts
+packages/engine/test/architecture/plan-trace-fallback-reason-union-closed.test.ts
+packages/engine/test/architecture/plan-trace-rejected-by-constraint-bounded.test.ts
+packages/engine/test/architecture/plan-trace-role-binding-status-coverage.test.ts
 packages/engine/test/architecture/policy-eval-cache-binding-dedup.test.ts
 packages/engine/test/architecture/policy-evaluation-context-constructor-invariant.test.ts
 packages/engine/test/architecture/policy-evaluation-context-outer-state-isolation.test.ts
@@ -4397,6 +4410,7 @@ packages/engine/test/policy-profile-quality/arvn-sweep-raid-expose-before-remova
 packages/engine/test/policy-profile-quality/arvn-train-govern-fallback.test.ts
 packages/engine/test/policy-profile-quality/arvn-train-govern-separation.test.ts
 packages/engine/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.ts
+packages/engine/test/policy-profile-quality/arvn-transport-rejected-by-reachable.test.ts
 packages/engine/test/policy-profile-quality/arvn-us-rival-risk-flip.test.ts
 packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.ts
 packages/engine/test/policy-profile-quality/fitl-buildpoliticalengine-gating-witness.test.ts
@@ -5559,6 +5573,9 @@ reports/fitl-competent-agent-ai.md
 reports/fitl-perf-baseline-2026-05-24.md
 reports/iterative-improvement-logic.md
 reports/ludoforge-ai-overhaul-first-iteration.md
+reports/ludoforge-ai-overhaul-second-iteration-triage.md
+reports/ludoforge-ai-overhaul-second-iteration.md
+reports/manifest_2026-05-27.txt
 reports/perf-baseline/.gitkeep
 reports/perf-baseline/arvn-tournament-parallel-775e93568e.json
 reports/perf-baseline/arvn-tournament-parallel-8203b4d023.json
@@ -5619,7 +5636,6 @@ scripts/check-worktree-pointers.test.mjs
 scripts/fitl-policy-seed-scan.mjs
 scripts/fitl-policy-seed-scan.test.mjs
 scripts/git-guard-utils.mjs
-specs/IMPLEMENTATION-ORDER.md
 tickets/README.md
 tickets/_TEMPLATE.md
 tools/eslint-rules/no-conditional-spread.d.ts

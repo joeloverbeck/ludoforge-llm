@@ -1,6 +1,6 @@
 # 200PLNPRPTRC-003: Phase 3 — Promote `PolicyPlanMicroturnTrace.fallbackReason` to discriminated union; re-bless three golden traces
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-plan-trace.ts` (microturn trace type); `packages/engine/src/agents/plan-controller.ts` (emission migration)
@@ -140,3 +140,35 @@ Re-bless golden trace: <test-file> — Spec 200 promotes free-form fallbackReaso
 ```
 
 Multiple files may share one commit when the reason matches.
+
+## Outcome (2026-05-27)
+
+Implemented Phase 3 by promoting `PolicyPlanMicroturnTrace.fallbackReason` from a free-form string to the `PlanMicroturnFallbackReason` discriminated union in `packages/engine/src/kernel/types-plan-trace.ts` and `packages/engine/src/kernel/schemas-plan-trace.ts`. The controller now emits structured fallback reasons for the live primitive-consideration and stable-frontier fallback paths, and the existing reselection path can emit `{ kind: 'reselectedWithinRole', from, to }` when it has both role values available.
+
+The three observer-scope variants are declared in the union and schema, but no new controller plumbing was added because the current controller does not expose separate hidden-state, partial-observer, or depth-cap signals at this seam. Those cases continue to fold into the existing live fallback behavior, which stays within this ticket's out-of-scope boundary for significant observer-scope refactoring.
+
+Golden trace impact was narrower than the draft expected: `packages/engine/test/determinism/plan-semantic-correspondence-golden.test.ts` pinned `fallbackReason` and was re-blessed through `packages/engine/test/fixtures/trace/plan-semantic-correspondence.golden.json`; `plan-trace-replay.test.ts` and `plan-trace-doctrine-gating-golden.test.ts` did not pin literal `fallbackReason` strings and needed no fixture changes.
+
+Generated artifact provenance: `packages/engine/schemas/Trace.schema.json` was regenerated from the canonical Zod schema input in `packages/engine/src/kernel/schemas-plan-trace.ts` via `pnpm -F @ludoforge/engine run schema:artifacts`; the generator remains `packages/engine/scripts/schema-artifacts.mjs`; `pnpm -F @ludoforge/engine run schema:artifacts:check` and `pnpm turbo schema:artifacts` verified durability.
+
+Source-size ledger: touched source/test files remain below the repository guidance and no extraction was triggered (`plan-controller.ts` 277 lines, `types-plan-trace.ts` 147, `schemas-plan-trace.ts` 135, new invariant test 210).
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+3. `pnpm -F @ludoforge/engine run schema:artifacts`
+4. `pnpm -F @ludoforge/engine run schema:artifacts:check`
+5. `node --test packages/engine/dist/test/architecture/plan-trace-fallback-reason-union-closed.test.js`
+6. `node --test packages/engine/dist/test/architecture/plan-controller-legality-frontier.test.js`
+7. `node --test packages/engine/dist/test/architecture/plan-controller-compound-availability-correspondence.test.js`
+8. `node --test packages/engine/dist/test/determinism/plan-semantic-correspondence-golden.test.js`
+9. `node --test packages/engine/dist/test/determinism/plan-trace-replay.test.js`
+10. `node --test packages/engine/dist/test/determinism/plan-trace-doctrine-gating-golden.test.js`
+11. `node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-fallback.test.js`
+12. `pnpm -F @ludoforge/engine test`
+13. `pnpm turbo build`
+14. `pnpm turbo test`
+15. `pnpm turbo lint`
+16. `pnpm turbo typecheck`
+17. `pnpm turbo schema:artifacts`

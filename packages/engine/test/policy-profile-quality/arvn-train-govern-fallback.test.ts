@@ -94,7 +94,7 @@ describe('Spec 186 ARVN Train+Govern fallback', () => {
 
     const passed = controlled?.decision === legalDecision
       && microturnTrace?.match === 'fallback'
-      && microturnTrace?.fallbackReason === 'primitiveConsiderationPolicy';
+      && microturnTrace?.fallbackReason?.kind === 'primitiveConsiderationPolicyFallback';
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -109,7 +109,7 @@ describe('Spec 186 ARVN Train+Govern fallback', () => {
     assert.ok(microturnTrace, 'expected plan controller to emit a microturn trace');
     assert.equal(controlled?.decision, legalDecision);
     assert.equal(microturnTrace.match, 'fallback');
-    assert.equal(microturnTrace.fallbackReason, 'primitiveConsiderationPolicy');
+    assert.deepEqual(microturnTrace.fallbackReason, { kind: 'primitiveConsiderationPolicyFallback' });
     assert.equal([legalDecision].includes(controlled.decision), true);
   });
 });

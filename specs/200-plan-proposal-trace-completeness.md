@@ -275,5 +275,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-27:
 
 - [`archive/tickets/200PLNPRPTRC-001.md`](../archive/tickets/200PLNPRPTRC-001.md) — Phase 1 — Add `roleBindingStatuses` and `decisionSurfaceMatch` trace fields; remove `roleBindings` (covers §4.1 + §4.2 + §7 P1)
 - [`archive/tickets/200PLNPRPTRC-002.md`](../archive/tickets/200PLNPRPTRC-002.md) — Phase 2 — Add `rejectedByConstraint` trace field; re-split `probeRoleBoundPostState` into three explicit failure reasons (covers §4.3 + §4.4 + §7 P2)
-- [`tickets/200PLNPRPTRC-003.md`](../tickets/200PLNPRPTRC-003.md) — Phase 3 — Promote `PolicyPlanMicroturnTrace.fallbackReason` to discriminated union; re-bless three golden traces (covers §4.5 + §7 P3)
+- [`archive/tickets/200PLNPRPTRC-003.md`](../archive/tickets/200PLNPRPTRC-003.md) — Phase 3 — Promote `PolicyPlanMicroturnTrace.fallbackReason` to discriminated union; re-bless three golden traces (covers §4.5 + §7 P3)
 - [`tickets/200PLNPRPTRC-004.md`](../tickets/200PLNPRPTRC-004.md) — Phase 4 — Extend cross-game conformance corpus with new trace field coverage and observer-safety vocabulary (covers §7 P4 + §8)

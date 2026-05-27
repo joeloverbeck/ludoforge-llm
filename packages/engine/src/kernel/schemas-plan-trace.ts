@@ -2,13 +2,27 @@ import { z } from 'zod';
 
 import { IntegerSchema, NumberSchema, StringSchema } from './schemas-ast.js';
 
+const PlanMicroturnFallbackReasonSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('noExactRoleValueMatch') }).strict(),
+  z.object({
+    kind: z.literal('reselectedWithinRole'),
+    from: StringSchema,
+    to: StringSchema,
+  }).strict(),
+  z.object({ kind: z.literal('primitiveConsiderationPolicyFallback') }).strict(),
+  z.object({ kind: z.literal('stableFrontierTieBreakFallback') }).strict(),
+  z.object({ kind: z.literal('hiddenStatePrecludedMatch') }).strict(),
+  z.object({ kind: z.literal('partialObserverScope') }).strict(),
+  z.object({ kind: z.literal('depthCapped') }).strict(),
+]);
+
 const PolicyPlanMicroturnTraceSchema = z.object({
   expectedStep: StringSchema.nullable(),
   matchedRole: StringSchema.nullable(),
   selectedLegalOption: StringSchema,
   match: z.enum(['exact', 'reselected', 'fallback']),
   deviation: StringSchema.optional(),
-  fallbackReason: StringSchema.optional(),
+  fallbackReason: PlanMicroturnFallbackReasonSchema.optional(),
 }).strict();
 
 const CompoundAvailabilitySchema = z.discriminatedUnion('kind', [

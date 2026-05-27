@@ -105,13 +105,22 @@ export interface PolicyPlanTracePosture {
   readonly allyWeightContext?: PolicyPlanTraceAllyWeightContext;
 }
 
+export type PlanMicroturnFallbackReason =
+  | { readonly kind: 'noExactRoleValueMatch' }
+  | { readonly kind: 'reselectedWithinRole'; readonly from: string; readonly to: string }
+  | { readonly kind: 'primitiveConsiderationPolicyFallback' }
+  | { readonly kind: 'stableFrontierTieBreakFallback' }
+  | { readonly kind: 'hiddenStatePrecludedMatch' }
+  | { readonly kind: 'partialObserverScope' }
+  | { readonly kind: 'depthCapped' };
+
 export interface PolicyPlanMicroturnTrace {
   readonly expectedStep: string | null;
   readonly matchedRole: string | null;
   readonly selectedLegalOption: string;
   readonly match: 'exact' | 'reselected' | 'fallback';
   readonly deviation?: string;
-  readonly fallbackReason?: string;
+  readonly fallbackReason?: PlanMicroturnFallbackReason;
 }
 
 export interface PolicyPlanTrace {

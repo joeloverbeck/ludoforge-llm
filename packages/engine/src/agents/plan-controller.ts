@@ -1,6 +1,6 @@
 import type { Decision, DecisionContext } from '../kernel/microturn/types.js';
 import type { AgentPolicyCatalog, CompiledPlanTemplate, GameDef } from '../kernel/types.js';
-import type { PolicyPlanMicroturnTrace, PolicyPlanTrace } from '../kernel/types-plan-trace.js';
+import type { PlanMicroturnFallbackReason, PolicyPlanMicroturnTrace, PolicyPlanTrace } from '../kernel/types-plan-trace.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import {
   commitPlanExecutionState,
@@ -55,7 +55,15 @@ export const selectPlanControlledDecision = (
   );
   if (reselected !== undefined) {
     const deviation = `${step.role}.reselected`;
-    const trace = microturnTraceFor(input.def, reselected, step.label, step.role, 'reselected', deviation);
+    const trace = microturnTraceFor(
+      input.def,
+      reselected,
+      step.label,
+      step.role,
+      'reselected',
+      deviation,
+      reselectedFallbackReason(reselected, state.roleBindings[step.role]),
+    );
     commitPlanExecutionState(input.store, advanceState(state, deviation));
     return { decision: reselected, planTrace: traceForState(state, template, trace) };
   }
@@ -63,14 +71,30 @@ export const selectPlanControlledDecision = (
   const primitive = input.primitiveDecision;
   if (primitive !== undefined && input.legalActions.includes(primitive)) {
     const reason = 'primitiveConsiderationPolicy';
-    const trace = microturnTraceFor(input.def, primitive, step.label, step.role, 'fallback', reason, reason);
+    const trace = microturnTraceFor(
+      input.def,
+      primitive,
+      step.label,
+      step.role,
+      'fallback',
+      reason,
+      { kind: 'primitiveConsiderationPolicyFallback' },
+    );
     commitPlanExecutionState(input.store, advanceState(state, reason, reason));
     return { decision: primitive, planTrace: traceForState(state, template, trace) };
   }
 
   const fallback = stableFallbackDecision(input.def, input.legalActions);
   const reason = 'stableFrontierTieBreak';
-  const trace = microturnTraceFor(input.def, fallback, step.label, step.role, 'fallback', reason, reason);
+  const trace = microturnTraceFor(
+    input.def,
+    fallback,
+    step.label,
+    step.role,
+    'fallback',
+    reason,
+    { kind: 'stableFrontierTieBreakFallback' },
+  );
   commitPlanExecutionState(input.store, advanceState(state, reason, reason));
   return { decision: fallback, planTrace: traceForState(state, template, trace) };
 };
@@ -185,7 +209,7 @@ const microturnTraceFor = (
   matchedRole: string | null,
   match: PolicyPlanMicroturnTrace['match'],
   deviation?: string,
-  fallbackReason?: string,
+  fallbackReason?: PlanMicroturnFallbackReason,
 ): PolicyPlanMicroturnTrace => ({
   expectedStep,
   matchedRole,
@@ -208,6 +232,30 @@ const advanceState = (
 
 const stableFallbackDecision = (def: GameDef, legalActions: readonly Decision[]): Decision =>
   [...legalActions].sort((left, right) => compareStable(frontierDecisionKey(def, left), frontierDecisionKey(def, right)))[0]!;
+
+const reselectedFallbackReason = (
+  decision: Decision,
+  binding: PlanExecutionState['roleBindings'][string] | undefined,
+): PlanMicroturnFallbackReason | undefined => {
+  if (binding === undefined) {
+    return undefined;
+  }
+  const selected = selectedRoleValue(decision);
+  return selected === undefined
+    ? undefined
+    : { kind: 'reselectedWithinRole', from: binding.selectedId, to: selected };
+};
+
+const selectedRoleValue = (decision: Decision): string | undefined => {
+  switch (decision.kind) {
+    case 'chooseOne':
+      return String(decision.value);
+    case 'chooseNStep':
+      return decision.value === undefined ? undefined : String(decision.value);
+    default:
+      return undefined;
+  }
+};
 
 const frontierDecisionKey = (def: GameDef, decision: Decision): string => {
   switch (decision.kind) {

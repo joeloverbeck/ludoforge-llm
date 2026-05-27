@@ -1,6 +1,6 @@
 # 201FITLSHADOC-001: Metric availability survey + preview ref probe
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
@@ -88,3 +88,28 @@ For each Open Question item:
 
 1. `pnpm turbo build` — confirm no inadvertent changes broke compilation.
 2. Manual review of `reports/201-fitl-metric-availability-survey.md` — verify completeness against Spec 201 §4.1 / §4.2 lists.
+
+## Outcome
+
+Completed on 2026-05-27.
+
+What changed:
+
+- Added `reports/201-fitl-metric-availability-survey.md` with a per-feature verdict for every Spec 201 §11 metric/ref question.
+- Updated Spec 201 §11 to record concrete P0 outcomes:
+  - `totalSupport` / `totalOpposition` are available only with adjusted `metric.auto:victory:markerTotal:*` ids.
+  - `nvaBaseCount` is available via `globalTokenAgg` faction/type filtering.
+  - `availableUsTroops` / `availableUsBases` need `globalTokenAgg` plus `zoneFilter.zoneIds: [available-US:none]`, not token props alone.
+  - `sabotagedEcon`, `terrorMarkerCount`, and `preview.relationship.nominalAlly.gainValueDelta` are deferred/unavailable.
+
+Deviations:
+
+- No probe fixture was authored because source tracing produced a definitive answer for `preview.relationship.nominalAlly.gainValueDelta`: only current-state `relationship.<role>.seat` / `.gainValue` refs are compiled today, and preview ref collection has no relationship family.
+- No engine source or FITL YAML data file was modified.
+
+Verification:
+
+- Manual report completeness review: all Spec 201 §11 items were enumerated in `reports/201-fitl-metric-availability-survey.md`.
+- `pnpm run check:ticket-deps` — passed for 6 active tickets and 2539 archived tickets.
+- `git diff --check -- .codex/run-state/implement-spec-tickets.json specs/201-fitl-shared-doctrine-and-lifecycle.md tickets/201FITLSHADOC-001.md reports/201-fitl-metric-availability-survey.md` — passed.
+- `pnpm turbo build` — passed (3 packages successful; cached package logs replayed).

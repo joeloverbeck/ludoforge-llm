@@ -496,15 +496,21 @@ All additions are pure data — no engine code paths change. The shared modules 
 
 ## 11. Open questions
 
-- **Metric availability**: which of `totalSupport`, `totalOpposition`, `nvaBaseCount`, `availableUsTroops`, `availableUsBases`, `sabotagedEcon`, `terrorMarkerCount` materialize via existing `metric.auto:*` synthesis vs. require explicit derived-metric authoring in `91-victory-standings.md` or `40-content-data-assets.md`? Answered in P0; any metric that cannot ship in this spec is deferred to the faction spec that needs it.
-- **`preview.relationship.nominalAlly.gainValueDelta` ref**: does the post-Spec-187 relationship metadata surface expose a preview-derived ally-margin delta? Answered in P0 via a probe witness; if not, the spec falls back to per-faction direct margin deltas in faction-spec bindings.
+- **Metric availability**: answered by `reports/201-fitl-metric-availability-survey.md` (ticket `201FITLSHADOC-001`).
+  - `totalSupport`: **available with adjustment** — use `metric.auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport`, not the draft `metric.auto:victory:totalSupport` id.
+  - `totalOpposition`: **available with adjustment** — use `metric.auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition`, not the draft `metric.auto:victory:totalOpposition` id.
+  - `nvaBaseCount`: **available** via `globalTokenAgg` filtering on `runtimeProps.faction: NVA` and `runtimeProps.type: base`.
+  - `availableUsTroops` / `availableUsBases`: **available with adjustment** if authored with `globalTokenAgg` plus `zoneFilter.zoneIds: [available-US:none]`; token props alone distinguish US troop/base type but not Available-pool location.
+  - `sabotagedEcon`: **unavailable — defer** until a faction spec proves the need and authors a concrete derived metric or state feature.
+  - `terrorMarkerCount`: **unavailable — defer**; the current global var is `terrorSabotageMarkersPlaced`, not a separate terror-marker-count derived metric.
+- **`preview.relationship.nominalAlly.gainValueDelta` ref**: answered by `reports/201-fitl-metric-availability-survey.md` (ticket `201FITLSHADOC-001`) as **unavailable**. The current compiler/runtime relationship surface exposes current-state `relationship.<role>.seat` and `relationship.<role>.gainValue`; preview relationship deltas are not a supported ref family. Ticket 002 must not author `projectedAllyMarginDelta` with `preview.relationship.nominalAlly.gainValueDelta`; downstream bindings should use direct per-seat projected margin delta refs or a later engine ticket that explicitly adds preview relationship refs.
 - **Priority tier calibration**: do the illustrative tiers in §4.4 (90/80/70/65/60/50) preserve replay-identity for existing convergence canaries? Answered in P3 by iteration; the spec ships with whatever tiers preserve the canaries.
 
 ## Tickets
 
 Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per user invocation; the spec's `Ticket namespace` metadata field lists `201FITLSHADOCLIF`, but the user argument is authoritative):
 
-- [`tickets/201FITLSHADOC-001.md`](../tickets/201FITLSHADOC-001.md) — Metric availability survey + preview ref probe (covers §4.1 / §4.2 P0 survey)
+- [`archive/tickets/201FITLSHADOC-001.md`](../archive/tickets/201FITLSHADOC-001.md) — Metric availability survey + preview ref probe (covers §4.1 / §4.2 P0 survey) — COMPLETED
 - [`tickets/201FITLSHADOC-002.md`](../tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features)
 - [`tickets/201FITLSHADOC-003.md`](../tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1)
 - [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)

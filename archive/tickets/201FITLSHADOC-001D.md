@@ -1,6 +1,6 @@
 # 201FITLSHADOC-001D: Schedule-distance refs in state features
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — generic agent policy compiler/runtime scope support
@@ -81,3 +81,24 @@ Add focused coverage showing a state feature can compile and evaluate a schedule
 2. Focused compiled node tests for the changed schedule-distance unit files.
 3. `pnpm -F @ludoforge/engine test:unit`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-27)
+
+Completed the generic schedule-distance state-feature prerequisite for Spec 201:
+
+1. Allowed valid `schedule.distance.*` refs to lower in state-feature expressions while leaving `phase.*` and `schedule.nextBoundary.id` rejected in state-feature scope.
+2. Preserved existing schedule-distance static validation for unknown boundaries/phases and unsupported units.
+3. Added compiler coverage proving state-feature schedule-distance refs lower to compiled `scheduleDistance` refs.
+4. Added runtime coverage proving a schedule-distance value can be evaluated through a state feature.
+
+Source-size check:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+| --- | ---: | ---: | --- | ---: | --- | --- |
+| `packages/engine/src/cnl/compile-agents.ts` | 6108 | 6104 | no; preexisting oversize | -4 | Net-negative surgical edit in canonical compiler hub; source-size hard gate not triggered. | none |
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/phase-boundary-compile-validation.test.js dist/test/unit/agents/schedule-distance-cards-golden.test.js` — passed, 20 tests.
+3. `pnpm -F @ludoforge/engine test:unit` — passed, 657 tests.

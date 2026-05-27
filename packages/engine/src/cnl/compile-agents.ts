@@ -4158,10 +4158,6 @@ class AgentLibraryCompiler {
     if (!refPath.startsWith(prefix)) {
       return null;
     }
-    if (scope === 'stateFeature') {
-      this.reportUnknownLibraryRef(refPath, path);
-      return null;
-    }
 
     const context = buildPhaseBoundaryValidationContext(this.options.phaseBoundaries, this.options.turnStructure ?? null);
     const rest = refPath.slice(prefix.length);

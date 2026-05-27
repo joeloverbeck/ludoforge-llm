@@ -160,7 +160,7 @@ interface PolicyPlanTraceAlternative {
 }
 ```
 
-The full set of rejected candidates is bounded by the existing `maxCandidatesPerRole` cap (Foundation #10); the trace inherits the same cap and records `…+N more` when truncated.
+The full set of rejected candidates is bounded by the existing plan-template cap surface (`caps.capClass` as materialized by `capLimitFor(template)` and recorded as trace `capClass`/`capLimit`) per Foundation #10; the trace inherits that cap and records a truncation count when capped. This corrects the draft's earlier `maxCandidatesPerRole` wording: no such live cap exists, and this spec does not introduce a new per-role cap contract.
 
 `probeRoleBoundPostState` returning `null` is internally re-split: the function (or a sibling) returns one of three explicit failure reasons rather than a `null`/`GameState` union, so the caller can map directly to `PostStateRejection`. Per Foundation #15, the underlying probe distinguishes the three failure modes; the current `null` collapses them.
 
@@ -199,7 +199,7 @@ The first four cases correspond to existing string vocabulary emitted by `plan-c
 - **Multiple constraints reject the same candidate** — record the *first* rejection encountered (matching the evaluator's existing short-circuit semantics; Foundation #10's bounded-iteration guarantee preserved).
 - **Hidden state under partial-visibility observer** (Foundation #4) — `'hiddenScope'` (§4.1) and `'partialObserverScope'` (§4.5) are distinct surfaces: the former fires when the *selector* cannot see candidates; the latter when the *controller* cannot match a microturn. Both reasons are observer-safe (do not leak hidden ids).
 - **Probe budget exhausted on post-state** — distinguished from predicate-false (§4.4); the kernel-side budget value is recorded in trace for replay reproducibility.
-- **Cap-truncated rejection list** — `rejectedByConstraint` is capped at `maxCandidatesPerRole`; `…+N more` recorded.
+- **Cap-truncated rejection list** — `rejectedByConstraint` is capped at the proposal trace's recorded `capLimit`; a truncation count is recorded.
 - **All alternatives `mismatched`** — top-level `status: 'noRootMatch'` (existing); each alternative's `decisionSurfaceMatch` provides the contrastive evidence.
 
 ## 7. Phases & acceptance criteria
@@ -215,7 +215,7 @@ The first four cases correspond to existing string vocabulary emitted by `plan-c
 
 - **Architectural invariants** (`packages/engine/test/architecture/plan-trace-completeness-*.test.ts`):
   - `plan-trace-role-binding-status-coverage.test.ts`: every template-declared role has a `roleBindingStatuses` entry.
-  - `plan-trace-rejected-by-constraint-bounded.test.ts`: `rejectedByConstraint` length ≤ `maxCandidatesPerRole`; truncation recorded.
+  - `plan-trace-rejected-by-constraint-bounded.test.ts`: `rejectedByConstraint` length ≤ trace `capLimit`; truncation recorded.
   - `plan-trace-fallback-reason-union-closed.test.ts`: no microturn `fallbackReason.kind` outside the declared union.
 - **Observer safety** (extending Spec 198): `'hiddenScope'` / `'partialObserverScope'` reasons do not leak hidden zone / token / card ids into the trace.
 - **FITL convergence witnesses** (`packages/engine/test/policy-profile-quality/`):
@@ -227,7 +227,7 @@ The first four cases correspond to existing string vocabulary emitted by `plan-c
 
 - **#1 (Engine Agnosticism)** — new trace fields are generic vocabulary (`hiddenScope`, `unreachable`, `postStateProbeExhausted`); no FITL-specific labels.
 - **#4 (Authoritative State and Observer Views)** — `hiddenScope` and `partialObserverScope` make observer-driven unavailability explicit without leaking hidden ids.
-- **#10 (Bounded Computation)** — `rejectedByConstraint` inherits `maxCandidatesPerRole`; the new fields add no unbounded surface.
+- **#10 (Bounded Computation)** — `rejectedByConstraint` inherits the existing plan-template `capClass` / `capLimitFor(template)` proposal cap; the new fields add no unbounded surface.
 - **#14 (No Backwards Compatibility)** — Both shape changes migrate all internal callers in the same change: `fallbackReason` `string` → discriminated union (no string-form compatibility shim) AND `PolicyPlanTrace.roleBindings` removed in favor of `roleBindingStatuses` (no deferred trace-consumer migration). The 2 internal callers of the dropped `roleBindings` (`plan-trace.ts:18-29`, `observer-safety-invariants.test.ts:349`) migrate in the same commit.
 - **#15 (Architectural Completeness)** — root-causes the trace-opacity gap on five surfaces rather than papering each one with a free-form string.
 - **#16 (Testing as Proof)** — architectural invariants enforce union closure, status coverage, and bounded rejection lists; conformance corpus per Spec 198 extends to the new fields.
@@ -274,6 +274,6 @@ The companion triage memo `reports/ludoforge-ai-overhaul-second-iteration-triage
 Decomposed via `/spec-to-tickets` on 2026-05-27:
 
 - [`archive/tickets/200PLNPRPTRC-001.md`](../archive/tickets/200PLNPRPTRC-001.md) — Phase 1 — Add `roleBindingStatuses` and `decisionSurfaceMatch` trace fields; remove `roleBindings` (covers §4.1 + §4.2 + §7 P1)
-- [`tickets/200PLNPRPTRC-002.md`](../tickets/200PLNPRPTRC-002.md) — Phase 2 — Add `rejectedByConstraint` trace field; re-split `probeRoleBoundPostState` into three explicit failure reasons (covers §4.3 + §4.4 + §7 P2)
+- [`archive/tickets/200PLNPRPTRC-002.md`](../archive/tickets/200PLNPRPTRC-002.md) — Phase 2 — Add `rejectedByConstraint` trace field; re-split `probeRoleBoundPostState` into three explicit failure reasons (covers §4.3 + §4.4 + §7 P2)
 - [`tickets/200PLNPRPTRC-003.md`](../tickets/200PLNPRPTRC-003.md) — Phase 3 — Promote `PolicyPlanMicroturnTrace.fallbackReason` to discriminated union; re-bless three golden traces (covers §4.5 + §7 P3)
 - [`tickets/200PLNPRPTRC-004.md`](../tickets/200PLNPRPTRC-004.md) — Phase 4 — Extend cross-game conformance corpus with new trace field coverage and observer-safety vocabulary (covers §7 P4 + §8)

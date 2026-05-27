@@ -391,12 +391,34 @@ describe('plan role constraint runtime evaluation', () => {
       baseState,
     );
 
-    assert.notEqual(postState, null);
-    assert.equal(
+    assert.equal(postState.kind, 'ready');
+    const missingEarlierRoleResult = probeRoleBoundPostState(
+      roleBinding('saDestination', 'sa-b'),
+      constraint,
+      {},
+      {
+        def,
+        rootMove: { actionId: asActionId('operate'), params: {} },
+        root: {
+          actionTags: ['operate'],
+          actionIds: [],
+          compound: { specialTags: ['sa'], timing: 'after' },
+        },
+        steps,
+        playerId: asPlayerId(1),
+      },
+      baseState,
+    );
+    assert.deepEqual(
+      missingEarlierRoleResult,
+      { kind: 'unavailable', reason: 'postStateObserverInsufficient' },
+      'missing earlier role bindings should fail closed',
+    );
+    assert.deepEqual(
       probeRoleBoundPostState(
         roleBinding('saDestination', 'sa-b'),
-        constraint,
-        {},
+        { ...constraint, maxSteps: -1 },
+        { operationTarget: roleBinding('operationTarget', 'op-a') },
         {
           def,
           rootMove: { actionId: asActionId('operate'), params: {} },
@@ -410,8 +432,8 @@ describe('plan role constraint runtime evaluation', () => {
         },
         baseState,
       ),
-      null,
-      'missing earlier role bindings should fail closed',
+      { kind: 'unavailable', reason: 'postStatePredicateFailed' },
+      'applyMove failures that are not probe-materialization exhaustion should fail as predicate failures',
     );
   });
 });

@@ -3020,6 +3020,193 @@
                               "additionalProperties": false
                             }
                           ]
+                        },
+                        "rejectedByConstraint": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role": {
+                                "$ref": "#/definitions/anon_4682db72"
+                              },
+                              "candidateId": {
+                                "$ref": "#/definitions/anon_4682db72"
+                              },
+                              "rejection": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "reachable"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "const": "unreachable"
+                                      },
+                                      "via": {
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        ]
+                                      },
+                                      "maxHops": {
+                                        "exclusiveMinimum": 0,
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_e7c99bd4"
+                                          }
+                                        ]
+                                      },
+                                      "from": {
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        ]
+                                      },
+                                      "to": {
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "adjacent"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "const": "nonAdjacent"
+                                      },
+                                      "from": {
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        ]
+                                      },
+                                      "to": {
+                                        "allOf": [
+                                          {
+                                            "$ref": "#/definitions/anon_4682db72"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "postState"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "enum": [
+                                          "postStateProbeExhausted",
+                                          "postStatePredicateFailed",
+                                          "postStateObserverInsufficient"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "locatedIn"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "const": "tokenNotInContainer"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "distinctOriginDestination"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "const": "originEqualsDestination"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "notEqual"
+                                      },
+                                      "reason": {
+                                        "type": "string",
+                                        "const": "rolesEqual"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "reason"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "role",
+                              "candidateId",
+                              "rejection"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "rejectedByConstraintTruncatedCount": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
                         }
                       },
                       "required": [

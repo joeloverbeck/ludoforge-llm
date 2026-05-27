@@ -28,6 +28,12 @@ export const buildPlanProposalTrace = (result: PlanProposalResult): PolicyPlanTr
     ...(alternative.decisionSurfaceMatch === undefined
       ? {}
       : { decisionSurfaceMatch: alternative.decisionSurfaceMatch }),
+    ...(alternative.rejectedByConstraint === undefined
+      ? {}
+      : { rejectedByConstraint: alternative.rejectedByConstraint }),
+    ...(alternative.rejectedByConstraintTruncatedCount === undefined
+      ? {}
+      : { rejectedByConstraintTruncatedCount: alternative.rejectedByConstraintTruncatedCount }),
   })),
   posture: result.posture,
 });

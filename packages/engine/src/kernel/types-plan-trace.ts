@@ -21,6 +21,35 @@ export type DecisionSurfaceMatch =
   | { readonly kind: 'matched' }
   | { readonly kind: 'mismatched'; readonly expected: string; readonly observed: string };
 
+export type RouteConstraintRejection =
+  | {
+    readonly kind: 'reachable';
+    readonly reason: 'unreachable';
+    readonly via?: string;
+    readonly maxHops?: number;
+    readonly from?: string;
+    readonly to?: string;
+  }
+  | { readonly kind: 'adjacent'; readonly reason: 'nonAdjacent'; readonly from?: string; readonly to?: string };
+
+export type PostStateRejection =
+  | { readonly kind: 'postState'; readonly reason: 'postStateProbeExhausted' }
+  | { readonly kind: 'postState'; readonly reason: 'postStatePredicateFailed' }
+  | { readonly kind: 'postState'; readonly reason: 'postStateObserverInsufficient' };
+
+export type RoleConstraintRejection =
+  | RouteConstraintRejection
+  | PostStateRejection
+  | { readonly kind: 'locatedIn'; readonly reason: 'tokenNotInContainer' }
+  | { readonly kind: 'distinctOriginDestination'; readonly reason: 'originEqualsDestination' }
+  | { readonly kind: 'notEqual'; readonly reason: 'rolesEqual' };
+
+export interface RoleConstraintRejectionRecord {
+  readonly role: string;
+  readonly candidateId: string;
+  readonly rejection: RoleConstraintRejection;
+}
+
 export interface PolicyPlanTraceAlternative {
   readonly templateId: string;
   readonly rootStableMoveKey: string;
@@ -29,6 +58,8 @@ export interface PolicyPlanTraceAlternative {
   readonly stableKey: string;
   readonly compoundAvailability?: CompoundAvailability;
   readonly decisionSurfaceMatch?: DecisionSurfaceMatch;
+  readonly rejectedByConstraint?: readonly RoleConstraintRejectionRecord[];
+  readonly rejectedByConstraintTruncatedCount?: number;
 }
 
 export interface PolicyPlanTracePostureMustViolation {

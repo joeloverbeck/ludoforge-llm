@@ -215,8 +215,8 @@ describe('FITL ARVN Transport route constraint migration', () => {
       state,
     );
 
-    assert.ok(postState, 'expected materialized Train+Transport probe to apply');
-    assert.equal(Number(postState.globalVars.transportCount), Number(state.globalVars.transportCount) + 1);
+    assert.equal(postState.kind, 'ready', 'expected materialized Train+Transport probe to apply');
+    assert.equal(Number(postState.postState.globalVars.transportCount), Number(state.globalVars.transportCount) + 1);
   });
 
   it('rejects origin-control-losing Transport bindings at role-constraint admissibility', () => {

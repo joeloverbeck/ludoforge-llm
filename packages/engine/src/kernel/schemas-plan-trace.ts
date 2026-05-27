@@ -45,6 +45,45 @@ const DecisionSurfaceMatchSchema = z.discriminatedUnion('kind', [
   }).strict(),
 ]);
 
+const RoleConstraintRejectionSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('reachable'),
+    reason: z.literal('unreachable'),
+    via: StringSchema.optional(),
+    maxHops: IntegerSchema.positive().optional(),
+    from: StringSchema.optional(),
+    to: StringSchema.optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('adjacent'),
+    reason: z.literal('nonAdjacent'),
+    from: StringSchema.optional(),
+    to: StringSchema.optional(),
+  }).strict(),
+  z.object({
+    kind: z.literal('postState'),
+    reason: z.enum(['postStateProbeExhausted', 'postStatePredicateFailed', 'postStateObserverInsufficient']),
+  }).strict(),
+  z.object({
+    kind: z.literal('locatedIn'),
+    reason: z.literal('tokenNotInContainer'),
+  }).strict(),
+  z.object({
+    kind: z.literal('distinctOriginDestination'),
+    reason: z.literal('originEqualsDestination'),
+  }).strict(),
+  z.object({
+    kind: z.literal('notEqual'),
+    reason: z.literal('rolesEqual'),
+  }).strict(),
+]);
+
+const RoleConstraintRejectionRecordSchema = z.object({
+  role: StringSchema,
+  candidateId: StringSchema,
+  rejection: RoleConstraintRejectionSchema,
+}).strict();
+
 export const PolicyPlanTraceSchema = z.object({
   status: z.enum(['selected', 'noTemplate', 'noEligibleTemplate', 'noRootMatch', 'noRoleBinding']),
   capClass: StringSchema.optional(),
@@ -74,6 +113,8 @@ export const PolicyPlanTraceSchema = z.object({
     stableKey: StringSchema,
     compoundAvailability: CompoundAvailabilitySchema.optional(),
     decisionSurfaceMatch: DecisionSurfaceMatchSchema.optional(),
+    rejectedByConstraint: z.array(RoleConstraintRejectionRecordSchema).optional(),
+    rejectedByConstraintTruncatedCount: IntegerSchema.nonnegative().optional(),
   }).strict()),
   posture: z.object({ status: StringSchema, mustViolations: z.array(z.object({ id: StringSchema, action: z.enum(['demote', 'veto']), penalty: NumberSchema.optional() }).strict()), preferContributions: z.array(z.object({ id: StringSchema, status: StringSchema, value: NumberSchema.optional(), weight: NumberSchema.optional(), contribution: NumberSchema, fallbackReason: StringSchema.optional() }).strict()), allyWeightContext: z.object({ activeRoles: z.array(z.object({ relationshipId: StringSchema, role: StringSchema, seat: StringSchema, priority: IntegerSchema, gainValue: NumberSchema.optional() }).strict()), flips: z.array(z.object({ contributionId: StringSchema, allyRole: StringSchema, thresholdRole: StringSchema, seat: StringSchema, fired: z.boolean() }).strict()) }).strict().optional() }).strict(),
   microturns: z.array(PolicyPlanMicroturnTraceSchema).optional(),

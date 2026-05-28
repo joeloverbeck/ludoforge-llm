@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
-**Deps**: `archive/tickets/201FITLSHADOC-002.md`
+**Deps**: `tickets/201FITLSHADOC-001F.md`
 
 ## Problem
 
@@ -17,12 +17,13 @@ Without these conditions, the shared.* modules in ticket 004 cannot evaluate the
 1. `data/games/fire-in-the-lake/92-agents.md` declares a `strategicConditions` block (existing entries: `selfPoliticalEngineBehind` @ 240, `usNearWin` @ 261, `arvnNearWin` @ 273, `nvaNearWin` @ 285, `vcNearWin` @ 297). New conditions are additive at the bottom of the block.
 2. The features referenced by the new conditions land in ticket 002 (predecessor), and prerequisite ticket `201FITLSHADOC-001B` lands the generic `preview.relationship.<role>.victoryMargin` ref. After 002 lands, `feature.projectedSelfMargin`, `feature.projectedCurrentLeaderMargin`, `feature.distanceToCoup`, `feature.monsoonNow`, `feature.selfResources`, and `preview.relationship.nominalAlly.victoryMargin` are all resolvable.
 3. The existing per-faction `*NearWin` conditions are NOT removed by this ticket; they remain alongside the new `currentLeaderNearWin` (which provides the generic shared-doctrine entry point per Spec 201 §4.3).
+4. User-approved reassessment on 2026-05-28 found a fourth runtime prerequisite for this ticket: `allyNearWin` uses `preview.relationship.nominalAlly.victoryMargin`, but live strategic-condition evaluation drops candidate context before resolving preview refs. Ticket `201FITLSHADOC-001F` owns that generic prerequisite before this YAML authoring begins.
 
 ## Architecture Check
 
 1. Foundation #2: conditions are pure GameSpecDoc YAML primitives; evolution may mutate the thresholds (`-2` for leader-near-win, `-1` for ally-near-win, `< 2` for resources-low).
 2. Foundation #15: shared conditions close the four-faction parity gap by providing a single named gate for each cross-cutting decision point (immediate win, leader denial, coup imminence, monsoon awareness, resource floor, ally rivalry). Per-faction conditions remain for faction-specific scoring nuance.
-3. No engine changes; no schema additions.
+3. No engine changes in this ticket; the required generic candidate-aware strategic-condition evaluation prerequisite is isolated in `201FITLSHADOC-001F`.
 
 ## What to Change
 

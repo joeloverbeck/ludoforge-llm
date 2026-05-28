@@ -1,6 +1,6 @@
 # 201FITLSHADOC-001E: Active-card tag refs compile as booleans
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — generic agent policy compiler typing
@@ -88,3 +88,27 @@ Add or extend focused compiler tests proving:
 2. Focused compiled node test for the changed unit file
 3. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-production-data-compilation.test.js`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-28)
+
+Completed the generic active-card tag typing prerequisite for Spec 201:
+
+1. Added shared compiler surface-type mapping so current and preview `activeCard.hasTag.*` refs compile as boolean policy expressions.
+2. Preserved existing id typing for active-card identity/global markers and unknown typing for active-card metadata.
+3. Added focused compiler coverage proving current and preview active-card tag refs lower as boolean refs.
+4. Added focused coverage proving preview active-card tag candidate features still require explicit preview fallback.
+5. Confirmed FITL production compilation accepts the pending `monsoonNow` YAML from ticket 002 once this generic prerequisite is present.
+
+Source-size decision:
+
+| path | before lines | after lines | crossed cap? | active growth | decision |
+| --- | ---: | ---: | --- | ---: | --- |
+| `packages/engine/src/cnl/compile-agents.ts` | 6104 | 6104 | no; preexisting oversize | 0 | Net-neutral helper extraction; no deferral needed. |
+| `packages/engine/test/unit/cnl/active-card-tag-policy-typing.test.ts` | 0 | 118 | no | +118 | New focused test file under the repo cap. |
+| `packages/engine/test/unit/compile-agents-authoring.test.ts` | 3308 | 3308 | no; preexisting oversize | 0 | Temporary local edits were moved into the focused test file; no retained growth. |
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/active-card-tag-policy-typing.test.js dist/test/unit/compile-agents-authoring.test.js` — passed, 58 tests.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-production-data-compilation.test.js` — passed, 3 tests.

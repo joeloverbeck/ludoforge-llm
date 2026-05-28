@@ -4045,14 +4045,7 @@ class AgentLibraryCompiler {
 
     const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
     if (surfaceResolved !== null) {
-      const ref = surfaceResolved.ref as { readonly family?: string };
-      const surfaceType = ref.family === 'globalMarker'
-        || ref.family === 'activeCardIdentity'
-        ? 'id' as const
-        : ref.family === 'activeCardMetadata'
-          ? 'unknown' as const
-          : 'number' as const;
-      return { type: surfaceType, costClass: 'state', ref: surfaceResolved.ref };
+      return { type: policySurfaceRefValueType(surfaceResolved.ref), costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -4449,14 +4442,7 @@ class AgentLibraryCompiler {
     }
     const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
     if (resolved !== null) {
-      const ref = resolved.ref as { readonly family?: string };
-      const previewSurfaceType = ref.family === 'globalMarker'
-        || ref.family === 'activeCardIdentity'
-        ? 'id' as const
-        : ref.family === 'activeCardMetadata'
-          ? 'unknown' as const
-          : 'number' as const;
-      return { type: previewSurfaceType, costClass: 'preview', ref: resolved.ref };
+      return { type: policySurfaceRefValueType(resolved.ref), costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;
@@ -5046,6 +5032,20 @@ function normalizeDeclaredPolicyValueType(
     suggestion: `Use one of: ${POLICY_VALUE_TYPES.join(', ')}.`,
   });
   return null;
+}
+
+function policySurfaceRefValueType(ref: ResolvedPolicyRef['ref']): AgentPolicyValueType | 'unknown' {
+  const family = (ref as { readonly family?: string }).family;
+  if (family === 'globalMarker' || family === 'activeCardIdentity') {
+    return 'id';
+  }
+  if (family === 'activeCardTag') {
+    return 'boolean';
+  }
+  if (family === 'activeCardMetadata') {
+    return 'unknown';
+  }
+  return 'number';
 }
 
 function normalizeAggregateOp(

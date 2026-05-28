@@ -28,7 +28,7 @@ Make four-faction competence completion possible by authoring the shared scaffol
    - `shared.blockCurrentLeader` — when an enemy is within near-win range, gate the candidate set toward denial templates against that specific seat.
    - `shared.nearCoupConcreteSwing` — when a Coup is imminent (`distanceToCoup ≤ 1`), suppress speculative setup templates in favor of concrete margin/resource/control swing templates.
    - `shared.resourceLogistics` — when `selfResources < 2` or per-faction logistics conditions hold, prioritize resource-restoring plan families.
-   - `shared.eventDirectSwing` — when an active event card offers direct margin/resource/denial/eligibility value, gate eligibility toward an event-handling template; uses `activeCard.hasTag.*` and active-card annotation refs.
+   - `shared.eventDirectSwing` — when an event-play candidate is available, elevate the fallback-backed projected self margin signal for event handling. Generic active-card annotation routing is not introduced by this spec slice.
    - `shared.allyRivalThrottle` — when a nominal ally is near win and that ally's gain would mean rival victory, demote plan templates whose `gainValue` contributes to the ally's margin.
 
 2. **Lifecycle features and strategic conditions** consumed across the library:
@@ -273,7 +273,9 @@ shared.immediateWin:
     scopes: [move]
   priority: { tier: 90 }
   scoreGroups:
-    - prefer:
+    - id: immediateWin
+      summary: sum
+      terms:
         - { weight: 10, value: { ref: feature.projectedSelfMargin } }
   # No plan-template gating — eligibility is preserved; this module elevates
   # the scoring tier of any candidate that completes the win.
@@ -286,7 +288,9 @@ shared.blockCurrentLeader:
     scopes: [move]
   priority: { tier: 80 }
   scoreGroups:
-    - prefer:
+    - id: leaderDenial
+      summary: sum
+      terms:
         - weight: 10
           value:
             sub:
@@ -301,7 +305,9 @@ shared.nearCoupConcreteSwing:
     scopes: [move]
   priority: { tier: 70 }
   scoreGroups:
-    - prefer:
+    - id: concreteCoupSwing
+      summary: sum
+      terms:
         - weight: 5
           value:
             add:
@@ -316,29 +322,28 @@ shared.resourceLogistics:
     scopes: [move]
   priority: { tier: 60 }
   scoreGroups:
-    - prefer:
+    - id: logisticsSwing
+      summary: sum
+      terms:
         - weight: 4
           value:
-            coalesce:
-              - { ref: preview.var.player.self.resources }
-              - { ref: var.player.self.resources }
+            add:
+              - { ref: feature.projectedAidDelta }
+              - { ref: feature.projectedTrailDelta }
 
 shared.eventDirectSwing:
   traceLabel: "play event for direct swing"
   when:
-    or:
-      - { ref: candidate.tag.event-play }
-      - { ref: activeCard.hasAnnotation.directVictorySwing }
+    ref: candidate.tag.event-play
   applies:
     scopes: [move]
   priority: { tier: 50 }
   scoreGroups:
-    - prefer:
+    - id: eventSwing
+      summary: sum
+      terms:
         - weight: 8
-          value:
-            coalesce:
-              - { ref: preview.victory.currentMargin.self }
-              - { ref: feature.selfMargin }
+          value: { ref: feature.projectedSelfMargin }
 
 shared.allyRivalThrottle:
   traceLabel: "throttle ally gains when ally near win"
@@ -348,7 +353,9 @@ shared.allyRivalThrottle:
     scopes: [move]
   priority: { tier: 65 }
   scoreGroups:
-    - prefer:
+    - id: allyRivalRisk
+      summary: sum
+      terms:
         - weight: -6
           value: { ref: feature.projectedAllyMarginDelta }
 ```

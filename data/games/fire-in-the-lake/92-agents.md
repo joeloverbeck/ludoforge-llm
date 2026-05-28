@@ -1608,6 +1608,102 @@ agents:
           ref: victory.currentMargin.nva
 
     strategyModules:
+      shared.immediateWin:
+        traceLabel: "complete immediate win"
+        when:
+          ref: condition.selfCanWinNow.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 90
+        scoreGroups:
+          - id: immediateWin
+            summary: sum
+            terms:
+              - weight: 10
+                value:
+                  ref: feature.projectedSelfMargin
+      shared.blockCurrentLeader:
+        traceLabel: "block current leader"
+        when:
+          ref: condition.currentLeaderNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 80
+        scoreGroups:
+          - id: leaderDenial
+            summary: sum
+            terms:
+              - weight: 10
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedLeaderMarginDelta }
+      shared.nearCoupConcreteSwing:
+        traceLabel: "concrete coup swing"
+        when:
+          ref: condition.coupImminent.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 70
+        scoreGroups:
+          - id: concreteCoupSwing
+            summary: sum
+            terms:
+              - weight: 5
+                value:
+                  add:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - { ref: feature.projectedAidDelta }
+      shared.resourceLogistics:
+        traceLabel: "preserve resources and logistics"
+        when:
+          ref: condition.resourcesLow.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 60
+        scoreGroups:
+          - id: logisticsSwing
+            summary: sum
+            terms:
+              - weight: 4
+                value:
+                  add:
+                    - { ref: feature.projectedAidDelta }
+                    - { ref: feature.projectedTrailDelta }
+      shared.eventDirectSwing:
+        traceLabel: "play event for direct swing"
+        when:
+          ref: candidate.tag.event-play
+        applies:
+          scopes: [move]
+        priority:
+          tier: 50
+        scoreGroups:
+          - id: eventSwing
+            summary: sum
+            terms:
+              - weight: 8
+                value:
+                  ref: feature.projectedSelfMargin
+      shared.allyRivalThrottle:
+        traceLabel: "throttle ally gains when ally near win"
+        when:
+          ref: condition.allyNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 65
+        scoreGroups:
+          - id: allyRivalRisk
+            summary: sum
+            terms:
+              - weight: -6
+                value:
+                  ref: feature.projectedAllyMarginDelta
       arvnPursueProjectedMargin:
         traceLabel: "ARVN pursue projected margin"
         when: true

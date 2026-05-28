@@ -55,12 +55,12 @@ For each profile in {us, arvn, nva, vc}:
 ### 4. `shared.resourceLogistics` witnesses (4 files)
 
 For each profile in {us, arvn, nva, vc}:
-- `shared-resource-logistics-<profile>.test.ts` — curated state where `condition.resourcesLow.satisfied = true` (selfResources < 2); assert resource-restoring template selected.
+- `shared-resource-logistics-<profile>.test.ts` — curated state where `condition.resourcesLow.satisfied = true` (selfResources < 2); assert a logistics-improving candidate is elevated through the fallback-backed aid/trail delta signals.
 
 ### 5. `shared.eventDirectSwing` witnesses (4 files)
 
 For each profile in {us, arvn, nva, vc}:
-- `shared-event-direct-swing-<profile>.test.ts` — curated state where active card carries `tag.event-play` OR `hasAnnotation.directVictorySwing`; assert event-play template selected over plain-op alternative.
+- `shared-event-direct-swing-<profile>.test.ts` — curated state where a candidate carries `tag.event-play`; assert the event-play candidate is selected over a plain-op alternative through the fallback-backed projected self margin signal.
 
 ### 6. `shared.allyRivalThrottle` witnesses (4 files)
 

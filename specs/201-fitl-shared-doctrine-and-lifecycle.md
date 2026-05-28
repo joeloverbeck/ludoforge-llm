@@ -27,7 +27,7 @@ Make four-faction competence completion possible by authoring the shared scaffol
    - `shared.immediateWin` — when the projected self margin crosses the win threshold, gate the candidate set toward win-completing templates and suppress speculative setup.
    - `shared.blockCurrentLeader` — when an enemy is within near-win range, gate the candidate set toward denial templates against that specific seat.
    - `shared.nearCoupConcreteSwing` — when a Coup is imminent (`distanceToCoup ≤ 1`), suppress speculative setup templates in favor of concrete margin/resource/control swing templates.
-   - `shared.resourceLogistics` — when `selfResources < 2` or per-faction logistics conditions hold, prioritize resource-restoring plan families.
+   - `shared.resourceLogistics` — when `selfResources < 2` or per-faction logistics conditions hold, elevate logistics-improving candidates through fallback-backed aid/trail delta signals.
    - `shared.eventDirectSwing` — when an event-play candidate is available, elevate the fallback-backed projected self margin signal for event handling. Generic active-card annotation routing is not introduced by this spec slice.
    - `shared.allyRivalThrottle` — when a nominal ally is near win and that ally's gain would mean rival victory, demote plan templates whose `gainValue` contributes to the ally's margin.
 
@@ -426,7 +426,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 - `shared-immediate-win-{us,arvn,nva,vc}.test.ts` — scenario where `selfCanWinNow` is true; module fires; candidate set ranked toward win-completing template; selected root completes the win.
 - `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` — scenario where an enemy is within near-win range; module fires; candidate set ranked toward denial template against that specific seat.
 - `shared-near-coup-concrete-swing-{us,arvn,nva,vc}.test.ts` — scenario where `coupImminent`; module fires; speculative-setup template is demoted vs. concrete-swing template.
-- `shared-resource-logistics-{us,arvn,nva,vc}.test.ts` — scenario where `selfResources < 2`; module fires; resource-restoring template chosen over alternative.
+- `shared-resource-logistics-{us,arvn,nva,vc}.test.ts` — scenario where `selfResources < 2`; module fires; logistics-improving candidate chosen over alternative through fallback-backed aid/trail delta signals.
 - `shared-event-direct-swing-{us,arvn,nva,vc}.test.ts` — scenario where active card offers direct margin swing; module fires; event-play template selected over plain-op.
 - `shared-ally-rival-throttle-{us,arvn,nva,vc}.test.ts` — scenario where nominal ally near win; module fires; candidate that contributes to ally margin demoted.
 - `shared-monsoon-awareness-{us,arvn,nva,vc}.test.ts` — when `monsoonNow`, plans gated on Sweep/March are excluded from the candidate set (Spec 197 eligibility gating); profile chooses Assault/Patrol/etc. fallback.
@@ -526,6 +526,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per u
 - [`archive/tickets/201FITLSHADOC-002.md`](../archive/tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-001F.md`](../archive/tickets/201FITLSHADOC-001F.md) — Candidate-aware strategic condition refs (Foundation #15/#20 prerequisite for preview-dependent `allyNearWin`) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-003.md`](../archive/tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1) — COMPLETED
-- [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)
+- [`archive/tickets/201FITLSHADOC-004.md`](../archive/tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2) — COMPLETED
 - [`tickets/201FITLSHADOC-005.md`](../tickets/201FITLSHADOC-005.md) — Per-profile bindings + atomic blockImmediateWin removal (covers §4.5 / P3 — Foundation #14 atomic cut)
 - [`tickets/201FITLSHADOC-006.md`](../tickets/201FITLSHADOC-006.md) — Profile-quality witness suite (covers §7 / P4 — 31 tests)

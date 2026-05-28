@@ -1,6 +1,6 @@
 # 206WASMCANDCOV-002: Coverage manifest fixture + architectural-invariant guard test
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/` (new manifest fixture + standing architectural-invariant test); no `src/` behavior change
@@ -78,3 +78,21 @@ Add `packages/engine/test/architecture/policy-wasm-coverage-manifest.test.ts`: c
 1. `pnpm -F @ludoforge/engine build && node --test "packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js"`
 2. Re-bless check: `UPDATE_GOLDEN=1 node --test "packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js"` then re-run without the env var.
 3. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completed**: 2026-05-28
+
+### What changed
+- Added `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` — a canonically-ordered manifest keyed per game → profile → sorted list of `{ id, coverage, reason, featureExprFingerprint }`. FITL profiles carry real verdicts; `generic-control`/`texas-holdem` carry empty verdict sets (zero-preview).
+- Added `packages/engine/test/architecture/policy-wasm-coverage-manifest.test.ts` (architectural-invariant, default lane): recomputes `classifyCandidateFeatureCoverage` for every profile of every conformance-corpus game with agents, assembles the verdict map, and `assert.deepEqual`s it against the manifest. `UPDATE_GOLDEN=1` re-blesses. Includes determinism, zero-preview-non-FITL, and synthetic-`preview.relationship`-injection forcing-function sub-cases.
+- `featureExprFingerprint` = first 16 hex chars of SHA-256 over the canonical (recursively key-sorted) JSON of the compiled candidate-feature expr (documented in the test header).
+
+### Pinned FITL verdicts (pre-§4.2), as predicted by reassessment #5 and confirmed against the runtime probe
+- `projectedCurrentLeaderMargin: wasm-row`; `projectedLeaderMarginDelta: ts-oracle`; `projectedAllyMarginDelta: ts-oracle`.
+- Additionally recorded as `ts-oracle` (consistent with always-oracle runtime behavior): `projectedAidDelta`, `projectedTrailDelta`. `tickets/206WASMCANDCOV-003.md` flips `projectedLeaderMarginDelta`, `projectedAidDelta`, and `projectedTrailDelta` to `wasm-row` via the conscious manifest re-bless the guard is designed to force.
+
+### Verification
+- `UPDATE_GOLDEN=1 node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` regenerated a byte-stable fixture; a second run without the env var passes (4/4).
+- Synthetic `preview.relationship.*` injection classifies `ts-oracle` and is absent from the manifest (forcing-function proof).
+- `pnpm turbo lint typecheck` → green.

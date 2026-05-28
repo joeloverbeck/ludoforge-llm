@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (ref recognition); manifest reason re-bless
-**Deps**: `archive/tickets/206WASMCANDCOV-001.md`, `tickets/206WASMCANDCOV-002.md`
+**Deps**: `archive/tickets/206WASMCANDCOV-001.md`, `archive/tickets/206WASMCANDCOV-002.md`
 
 ## Problem
 

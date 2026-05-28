@@ -79,6 +79,38 @@ export const collectPreviewDynamicRefs = (expr: CompiledPolicyExpr): readonly Co
 };
 
 /**
+ * Spec 206 §4.3: detects whether a candidate-feature expr reads any
+ * `previewRelationship` ref. Such refs require resolving a relationship role→seat
+ * and evaluating an arbitrary `gainValue` expression INSIDE the preview state
+ * (`resolvePreviewRelationshipRef`), which the fixed-slot WASM preview-row
+ * extraction model cannot express. The score-row route uses this to defer the
+ * whole feature to the TS oracle deterministically and up-front, instead of
+ * attempting materialization and discovering the gap only at row evaluation.
+ */
+export const exprReadsPreviewRelationship = (expr: CompiledPolicyExpr): boolean => {
+  switch (expr.kind) {
+    case 'literal':
+    case 'param':
+      return false;
+    case 'ref':
+      return expr.ref.kind === 'previewRelationship';
+    case 'op':
+      return expr.args.some(exprReadsPreviewRelationship);
+    case 'seatAgg':
+      return exprReadsPreviewRelationship(expr.expr);
+    case 'zoneTokenAgg':
+      return typeof expr.zone !== 'string' && exprReadsPreviewRelationship(expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone !== 'string' && exprReadsPreviewRelationship(expr.anchorZone);
+    case 'zoneProp':
+      return typeof expr.zone !== 'string' && exprReadsPreviewRelationship(expr.zone);
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return false;
+  }
+};
+
+/**
  * Resolves the fixed preview-state slot names a collected preview-dynamic ref
  * reads. Returns `undefined` when the ref shape cannot be reduced to fixed
  * slots (e.g. a `victoryCurrentMargin`/`Rank` ref without a role selector, or a

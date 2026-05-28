@@ -1,6 +1,6 @@
 # 206WASMCANDCOV-004: Explicit previewRelationship deferral in the score-row route
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (ref recognition); manifest reason re-bless
@@ -80,3 +80,23 @@ Ensure the 001 classifier emits `coverage: 'ts-oracle', reason: 'preview-relatio
 
 1. `pnpm -F @ludoforge/engine build && node --test "packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js" "packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js"`
 2. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completed**: 2026-05-28
+
+### What changed
+- `packages/engine/src/agents/policy-wasm-coverage-predicates.ts`: added the shared `exprReadsPreviewRelationship(expr)` predicate (recurses through op/seatAgg/zone sources) — the single source of truth for "this candidate feature must defer to the TS oracle because it reads a `preview.relationship.*` ref".
+- `packages/engine/src/agents/policy-wasm-score-routing.ts`: in the preview-cost candidate-feature loop, short-circuits a `previewRelationship`-bearing feature to `pushTsOracleCandidateFeatureRow(id, costClass); continue;` BEFORE `materializePreviewDynamicRowsWithWasm` — a deterministic, up-front deferral. The per-row oracle backstop remains as defense-in-depth.
+- `packages/engine/test/unit/agents/policy-wasm-coverage-classifier.test.ts`: added a `exprReadsPreviewRelationship` describe block (bare ref, nested-in-op/seatAgg, negative cases). The classifier already asserts `projectedAllyMarginDelta → ts-oracle` with reason `preview-relationship requires preview-state role resolution` (from ticket 001).
+
+### Deviation / clarification from the ticket (empirical reassessment)
+- The ticket's mechanism premise — that a `previewRelationship` feature currently "slips through as no refs, attempts materialization, and only fails later at `rawValues === null` → per-row oracle fallback" — does NOT match the observed runtime. Empirically `projectedAllyMarginDelta` currently produces a **WASM row**: the bytecode VM resolves the `previewRelationship` ref to unavailable and `coalesce(..., 0)` yields `0`, which is byte-equal to the TS oracle's `0` on the measured ARVN corpus. So the prior path was a (coincidentally-correct) wasm-row, not a late null fallback.
+- The up-front deferral is therefore both correct AND a latent-bug hardening: it eliminates the silent-`0` risk (where the bytecode coalesces an unavailable relationship to `0` while the TS oracle would compute a non-zero `gainValueDelta`). Values are unchanged on the corpus (0 = 0), so no trajectory change; the route path for the feature simply moves from wasm-row to oracle.
+- The 002 manifest reason for `projectedAllyMarginDelta` was already `preview-relationship requires preview-state role resolution`, so no manifest re-bless was needed (the coverage-manifest guard passes unchanged).
+
+### Verification
+- `arvn-tournament-wasm-equivalence` → green; WASM/TS decision streams byte-identical (no value/trajectory change).
+- coverage-manifest guard → green without re-bless (`projectedAllyMarginDelta: ts-oracle`, preview-relationship reason).
+- classifier + predicate unit tests → 16/16 pass.
+- `pnpm turbo lint typecheck` → green. `pnpm -F @ludoforge/engine test` → 189/189 files pass.

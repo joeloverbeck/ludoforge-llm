@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { classifyCandidateFeatureCoverage } from '../../../src/agents/policy-wasm-coverage-classifier.js';
+import { exprReadsPreviewRelationship } from '../../../src/agents/policy-wasm-coverage-predicates.js';
 import type {
   AgentPolicyCatalog,
   CompiledAgentProfile,
@@ -393,5 +394,40 @@ describe('Spec 206 candidate-feature coverage classifier', () => {
       planOrder: ['a', 'b'],
     };
     assert.deepEqual(classify(input), classify(input));
+  });
+});
+
+describe('Spec 206 §4.3 exprReadsPreviewRelationship (route up-front deferral predicate)', () => {
+  const previewRelationship: CompiledPolicyExpr = {
+    kind: 'ref',
+    ref: { kind: 'previewRelationship', role: 'nominalAlly', field: 'gainValueDelta' },
+  };
+
+  it('detects a bare previewRelationship ref', () => {
+    assert.equal(exprReadsPreviewRelationship(previewRelationship), true);
+  });
+
+  it('detects a previewRelationship ref nested inside op/seatAgg (projectedAllyMarginDelta shape)', () => {
+    assert.equal(
+      exprReadsPreviewRelationship({ kind: 'op', op: 'coalesce', args: [previewRelationship, literal(0)] }),
+      true,
+    );
+    assert.equal(
+      exprReadsPreviewRelationship({
+        kind: 'seatAgg',
+        over: 'all',
+        expr: { kind: 'op', op: 'sub', args: [previewRelationship, literal(0)] },
+        aggOp: 'sum',
+      }),
+      true,
+    );
+  });
+
+  it('returns false for exprs with no previewRelationship ref', () => {
+    assert.equal(
+      exprReadsPreviewRelationship({ kind: 'op', op: 'coalesce', args: [previewVictoryMarginSelf, currentGlobalAid, literal(0)] }),
+      false,
+    );
+    assert.equal(exprReadsPreviewRelationship(literal(0)), false);
   });
 });

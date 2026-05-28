@@ -13,6 +13,7 @@ import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 import {
   collectPreviewDynamicRefs,
+  exprReadsPreviewRelationship,
   previewGlobalSlotsForRef,
 } from './policy-wasm-coverage-predicates.js';
 import {
@@ -462,6 +463,16 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
         costClass: feature.costClass,
         values: input.candidates.map((candidate) => encodeWasmPrecomputedPolicyValue(input.evaluation.evaluateCandidateFeature(candidate, id))),
       });
+      continue;
+    }
+    if (exprReadsPreviewRelationship(feature.expr)) {
+      // Spec 206 §4.3: a `preview.relationship.*` ref needs dynamic preview-state
+      // role→seat resolution plus an arbitrary `gainValue` expression evaluated in
+      // the preview state, which the fixed-slot row-extraction model cannot
+      // express. Defer the whole feature to the TS oracle deterministically and
+      // up-front rather than attempting materialization and discovering the gap at
+      // row evaluation. The per-row oracle backstop remains as defense-in-depth.
+      pushTsOracleCandidateFeatureRow(id, feature.costClass);
       continue;
     }
     const aggregateFedPreviewFeature = candidateFeatureFeedsPlanAggregate(input.profile, input.catalog, id);

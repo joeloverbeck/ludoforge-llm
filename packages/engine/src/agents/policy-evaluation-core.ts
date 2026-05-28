@@ -2023,7 +2023,7 @@ export class PolicyEvaluationContext {
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
-        return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+        return this.resolveStrategicConditionRef(ref.conditionId, ref.field, candidate);
       case 'relationship':
         return this.resolveRelationshipRef(ref.role, ref.field);
       case 'previewRelationship':
@@ -2235,11 +2235,8 @@ export class PolicyEvaluationContext {
     return undefined;
   }
 
-  private resolveStrategicConditionRef(
-    conditionId: string,
-    field: 'satisfied' | 'proximity',
-  ): PolicyValue {
-    const cacheKey = `${conditionId}.${field}`;
+  private resolveStrategicConditionRef(conditionId: string, field: 'satisfied' | 'proximity', candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    const cacheKey = `${conditionId}.${field}:${candidate?.stableMoveKey ?? '__state__'}`;
     const cache = this.strategicConditions();
     if (cache.has(cacheKey)) {
       return cache.get(cacheKey);
@@ -2256,12 +2253,12 @@ export class PolicyEvaluationContext {
 
     let value: PolicyValue;
     if (field === 'satisfied') {
-      value = this.evaluateCompiledExpr(condition.target, undefined);
+      value = this.evaluateCompiledExpr(condition.target, candidate);
     } else {
       if (condition.proximity === undefined) {
         value = undefined;
       } else {
-        const current = this.evaluateCompiledExpr(condition.proximity.current, undefined);
+        const current = this.evaluateCompiledExpr(condition.proximity.current, candidate);
         if (typeof current !== 'number') {
           value = undefined;
         } else {
@@ -2339,7 +2336,7 @@ export class PolicyEvaluationContext {
     return {
       def: this.input.def, state: this.activeState, seatId: this.input.seatId,
       relationships: this.input.catalog.compiled.relationships ?? {},
-      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied') === true,
+      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied', undefined) === true,
       evaluateExpr: (expr) => this.evaluateCompiledExpr(expr, undefined),
     };
   }

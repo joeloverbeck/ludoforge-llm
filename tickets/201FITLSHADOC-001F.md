@@ -1,6 +1,6 @@
 # 201FITLSHADOC-001F: Candidate-aware strategic condition refs
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — generic agent policy evaluation
@@ -97,3 +97,29 @@ Add or extend focused policy-evaluation coverage proving that a strategic condit
 2. Focused compiled node test for the changed policy-evaluation file
 3. `pnpm -F @ludoforge/engine test:unit`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-28)
+
+Implemented.
+
+What landed:
+
+1. `condition.<id>.satisfied` and `condition.<id>.proximity` now preserve the candidate context that reached the strategic-condition ref.
+2. Strategic-condition cache entries are scoped by condition id, field, and candidate stable move key, with a stable no-candidate key for state-only evaluation.
+3. Relationship activation checks still resolve strategic conditions without a candidate, preserving the existing state-only relationship path.
+4. Added `packages/engine/test/unit/agents/strategic-condition-candidate-context.test.ts`, proving preview relationship refs inside strategic conditions evaluate differently for low/high candidate preview states and remain unavailable without a candidate.
+5. Added the missing `@test-class` marker to `packages/engine/test/unit/cnl/active-card-tag-policy-typing.test.ts`; the final unit lane's first failure was the corpus marker invariant on that preexisting test file.
+
+Source-size decision:
+
+1. `packages/engine/src/agents/policy-evaluation-core.ts` remains preexisting-oversize, but this ticket reduced the file by three net lines (`git diff --numstat` showed `6 9`), so there is no active source-size growth.
+2. New focused test file is 225 lines.
+3. Marker hygiene test file is 119 lines.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/strategic-condition-candidate-context.test.js` — passed (`2/2`).
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js` — passed after adding the missing marker (`1/1`).
+4. `pnpm -F @ludoforge/engine test:unit` — first post-build diagnostic run failed only on `dist/test/unit/infrastructure/test-class-markers.test.js`; final rerun after marker repair passed (`659/659`).
+5. `pnpm run check:ticket-deps` — passed for 5 active tickets and 2545 archived tickets.

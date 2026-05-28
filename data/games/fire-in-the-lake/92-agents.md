@@ -153,7 +153,10 @@ agents:
       monsoonNow:
         type: boolean
         expr:
-          ref: activeCard.hasTag.monsoon
+          lte:
+            - scheduleLowerBound:
+                ref: schedule.distance.toBoundary.coupEntry.cards
+            - 2
       aid:
         type: number
         expr:
@@ -1705,6 +1708,26 @@ agents:
               - weight: -6
                 value:
                   ref: feature.projectedAllyMarginDelta
+      shared.monsoonOperationalRestriction:
+        traceLabel: "avoid Sweep and March under Monsoon"
+        when:
+          ref: condition.monsoonNow.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [sweep, march]
+        priority:
+          tier: 75
+        scoreGroups: []
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - arvn.sweepRaid
+          - us.sweepAirStrike
+          - nva.marchInfiltrate
+          - nva.marchAmbush
+          - nva.locOccupationBeforeCoup
+          - vc.marchSubvert
+          - vc.marchAmbushFromLoc
       arvnPursueProjectedMargin:
         traceLabel: "ARVN pursue projected margin"
         when: true
@@ -2522,6 +2545,7 @@ agents:
           - shared.resourceLogistics
           - shared.eventDirectSwing
           - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - us.createAndDefendSupport
           - us.forceMultiplier
           - us.preserveAvailability
@@ -2592,6 +2616,7 @@ agents:
           - shared.resourceLogistics
           - shared.eventDirectSwing
           - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - buildPoliticalEngine
           - arvn.harvestPatronage
           - arvn.holdHighPopControl
@@ -2632,6 +2657,7 @@ agents:
           - shared.resourceLogistics
           - shared.eventDirectSwing
           - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - nva.logisticsAndTrail
           - nva.controlAndBases
           - nva.vcRivalLeverage
@@ -2675,6 +2701,7 @@ agents:
           - shared.resourceLogistics
           - shared.eventDirectSwing
           - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - vc.buildPoliticalNetwork
           - vc.subvertRegimeSecurity
           - vc.fundAndAmbushCarefully

@@ -238,6 +238,7 @@ class BytecodeEmitter {
       case 'clamp':
       case 'if':
       case 'in':
+      case 'scheduleLowerBound':
         this.emitDynamic(DYNAMIC_REASON_UNSUPPORTED_EXPR, `operator "${expr.op}" requires a later VM opcode expansion`);
         return;
     }

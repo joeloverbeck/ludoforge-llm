@@ -43,8 +43,8 @@ The five specs are **NOT fully independent** (unlike 196–199, which were mutua
 ### Per-spec scope (one-line rationale)
 
 1. **Spec 201 — FITL Shared Doctrine Library and Lifecycle Awareness**
-   (`specs/201-fitl-shared-doctrine-and-lifecycle.md`)
-   Introduces `shared.*` strategy modules (immediateWin, blockCurrentLeader, nearCoupConcreteSwing, resourceLogistics, eventDirectSwing, allyRivalThrottle); adds monsoon/coup/event lifecycle features as YAML primitives; replaces the three per-faction `blockImmediateWin` duplicates (ARVN, US, NVA — VC's `vc.denyNvaIfNearWin` is preserved as faction-specific nuance per Spec 201 §2). Foundation for four-faction parity; removes duplicated doctrine and gives the per-faction completions a consistent base.
+   (`archive/specs/201-fitl-shared-doctrine-and-lifecycle.md`)
+   Introduces `shared.*` strategy modules (immediateWin, blockCurrentLeader, nearCoupConcreteSwing, resourceLogistics, eventDirectSwing, allyRivalThrottle, monsoonOperationalRestriction); adds monsoon/coup/event lifecycle features as YAML primitives; replaces the three per-faction `blockImmediateWin` duplicates (ARVN, US, NVA — VC's `vc.denyNvaIfNearWin` is preserved as faction-specific nuance per Spec 201 §2). Foundation for four-faction parity; removes duplicated doctrine and gives the per-faction completions a consistent base. Completed and archived on 2026-05-28.
 
 2. **Spec 202 — FITL US Baseline Completion to ARVN-Parity**
    (`specs/202-fitl-us-completion.md`)

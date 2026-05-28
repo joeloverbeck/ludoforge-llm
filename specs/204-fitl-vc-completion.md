@@ -8,7 +8,7 @@
 - `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `adjacent` for Ambush-from-LoC
 - `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — eligibility gating
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — compound probe for Terror+Tax, Terror+Subvert, etc.
-- **Soft**: `specs/201-fitl-shared-doctrine-and-lifecycle.md` (PROPOSED)
+- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED)
 
 **Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27).
 

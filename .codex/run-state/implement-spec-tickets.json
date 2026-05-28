@@ -1,19 +1,17 @@
 {
-  "originating_spec": "specs/201-fitl-shared-doctrine-and-lifecycle.md",
-  "archived_spec": null,
-  "last_ticket": "archive/tickets/201FITLSHADOC-005.md",
-  "last_result": "implemented_archived",
+  "originating_spec": "archive/specs/201-fitl-shared-doctrine-and-lifecycle.md",
+  "archived_spec": "archive/specs/201-fitl-shared-doctrine-and-lifecycle.md",
+  "last_ticket": "archive/tickets/201FITLSHADOC-007.md",
+  "last_result": "final_spec_archived",
   "last_work_commit": "0ee125e45307276a40b0b30994420ecdec7ef217",
   "last_state_commit": "self",
-  "next_target": "tickets/201FITLSHADOC-006.md",
-  "queue": [
-    "tickets/201FITLSHADOC-006.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": null,
+  "queue": [],
+  "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "201FITLSHADOC-005 implemented and archived; next target is tickets/201FITLSHADOC-006.md.",
+  "owned_dirty_summary": "Spec 201 ticket family complete; tickets 001-007 and originating spec archived.",
   "blocked": false,
   "blocker": null,
-  "dirty_state": "clean",
+  "dirty_state": "owned_dirty: archive/specs/201-fitl-shared-doctrine-and-lifecycle.md, archive/tickets/201FITLSHADOC-006.md, archive/tickets/201FITLSHADOC-007.md, specs/202-fitl-us-completion.md, specs/203-fitl-nva-completion.md, specs/204-fitl-vc-completion.md, specs/205-fitl-arvn-selector-cleanup.md, specs/IMPLEMENTATION-ORDER.md, data/games/fire-in-the-lake/92-agents.md, packages/engine/src/agents/policy-evaluation-core.ts, packages/engine/src/agents/policy-expr.ts, packages/engine/src/cnl/policy-bytecode/compile.ts, packages/engine/src/kernel/schemas-core.ts, packages/engine/src/kernel/types-core.ts, packages/engine/schemas/GameDef.schema.json, packages/engine/test/integration/partial-visibility-expression-lower-bound.test.ts, packages/engine/test/architecture/*.ts, packages/engine/test/policy-profile-quality/shared-*.test.ts",
   "updated_at": "2026-05-28"
 }

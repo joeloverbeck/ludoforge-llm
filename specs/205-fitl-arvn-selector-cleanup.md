@@ -6,7 +6,7 @@
 **Date**: 2026-05-27
 **Dependencies**:
 - `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `postState` constraints (Transport origin-control)
-- **Soft**: `specs/201-fitl-shared-doctrine-and-lifecycle.md` (PROPOSED) — Spec 205 is *independent* of 201, but the selector-vocabulary baseline 201 P0 surveys is consumed here when relevant.
+- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — Spec 205 is *independent* of 201, but the selector-vocabulary baseline 201 P0 surveys is consumed here when relevant.
 
 **Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27).
 

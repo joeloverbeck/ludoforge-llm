@@ -8,7 +8,7 @@
 - `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `reachable`/`adjacent` for March/Infiltrate route binding
 - `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates`
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — bounded compound probe for March+Infiltrate / March+Ambush
-- **Soft**: `specs/201-fitl-shared-doctrine-and-lifecycle.md` (PROPOSED) — `shared.*` modules and lifecycle conditions
+- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — `shared.*` modules and lifecycle conditions
 
 **Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 NVA faction-by-faction analysis + §6.8 NVA plan-template slice + §§6.9–6.10 NVA posture and guardrail slices.
 

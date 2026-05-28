@@ -1427,6 +1427,9 @@ export class PolicyEvaluationContext {
     expr: Extract<CompiledPolicyExpr, { readonly kind: 'op' }>,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
+    if (expr.op === 'scheduleLowerBound') {
+      return expr.args.length === 1 ? this.evaluateScheduleLowerBoundExpr(expr.args[0], candidate) : undefined;
+    }
     const values = expr.args.map((arg) => this.evaluateCompiledExprDirect(arg, candidate));
     const first = values[0];
     switch (expr.op) {
@@ -1492,6 +1495,45 @@ export class PolicyEvaluationContext {
       case 'boolToNumber':
         return typeof first === 'boolean' ? (first ? 1 : 0) : undefined;
     }
+  }
+
+  private evaluateScheduleLowerBoundExpr(
+    expr: CompiledPolicyExpr | undefined,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (expr?.kind !== 'ref' || expr.ref.kind !== 'scheduleDistance') {
+      return expr === undefined ? undefined : this.evaluateCompiledExprDirect(expr, candidate);
+    }
+    const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(expr.ref, this.activeState);
+    const refId = scheduleDistanceRefId(expr.ref);
+    if (resolution.kind === 'ready') {
+      if (resolution.observerPolicy?.kind === 'topNVisible') {
+        this.recordScheduleInputRef(candidate, refId, {
+          status: 'ready',
+          value: resolution.value,
+          observerPolicy: 'topNVisible',
+          ...(resolution.visiblePrefixLength === undefined ? {} : { visiblePrefixLength: resolution.visiblePrefixLength }),
+          ...(resolution.visibleSequenceSources === undefined
+            ? {}
+            : { visibleSequenceSources: resolution.visibleSequenceSources }),
+        });
+      }
+      return resolution.value;
+    }
+    if (resolution.kind === 'partial') {
+      this.recordScheduleInputRef(candidate, refId, {
+        status: 'partial',
+        partialKind: resolution.partialKind,
+        lowerBound: resolution.lowerBound,
+        observerPolicy: 'topNVisible',
+        visiblePrefixLength: resolution.visiblePrefixLength,
+        visibleSequenceSources: resolution.visibleSequenceSources,
+      });
+      this.recordSchedulePartialFallbackApplied(candidate, [{ refId }], 'useLowerBound', resolution.lowerBound);
+      return resolution.lowerBound;
+    }
+    this.scheduleUnavailableDuringValue = true;
+    return undefined;
   }
 
   private resolveVmRef(refId: number): PolicyValue {

@@ -82,6 +82,7 @@ type KnownOperator =
   | 'or'
   | 'param'
   | 'ref'
+  | 'scheduleLowerBound'
   | 'sub'
   | 'globalTokenAgg'
   | 'globalZoneAgg'
@@ -116,6 +117,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'or',
   'param',
   'ref',
+  'scheduleLowerBound',
   'sub',
   'globalTokenAgg',
   'globalZoneAgg',
@@ -240,6 +242,8 @@ export function analyzePolicyExpr(
       return analyzeInOperator(value, context, diagnostics, path);
     case 'coalesce':
       return analyzeCoalesceOperator(value, context, diagnostics, path);
+    case 'scheduleLowerBound':
+      return analyzeScheduleLowerBoundOperator(value, context, diagnostics, path);
     case 'clamp':
       return analyzeClampOperator(value, context, diagnostics, path);
     case 'boolToNumber':
@@ -664,6 +668,39 @@ function analyzeCoalesceOperator(
   return compileOperatorAnalysis('coalesce', resultType, analyzed, analyzed.every((entry) => entry.isStaticallyZero));
 }
 
+function analyzeScheduleLowerBoundOperator(
+  expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  const analyzed = analyzePolicyExpr(expr, context, diagnostics, `${path}.scheduleLowerBound`);
+  if (analyzed === null) {
+    return null;
+  }
+  if (!matchesType(analyzed.valueType, 'number')) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+      path,
+      severity: 'error',
+      message: 'scheduleLowerBound requires a numeric schedule-distance expression.',
+      suggestion: 'Wrap a schedule.distance.* ref with scheduleLowerBound.',
+    });
+    return null;
+  }
+  if (!containsScheduleDistanceRef(analyzed.expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'scheduleLowerBound must wrap a schedule-distance ref.',
+      suggestion: 'Use scheduleLowerBound: { ref: schedule.distance.toBoundary.<id>.cards }.',
+    });
+    return null;
+  }
+  return compileOperatorAnalysis('scheduleLowerBound', 'number', [analyzed], analyzed.isStaticallyZero);
+}
+
 function analyzeClampOperator(
   expr: GameSpecPolicyExpr,
   context: AnalyzePolicyExprContext,
@@ -705,6 +742,28 @@ function analyzeBoolToNumberOperator(
     return null;
   }
   return compileOperatorAnalysis('boolToNumber', 'number', [analyzed], false);
+}
+
+function containsScheduleDistanceRef(expr: AgentPolicyExpr): boolean {
+  switch (expr.kind) {
+    case 'ref':
+      return expr.ref.kind === 'scheduleDistance';
+    case 'op':
+      return expr.args.some(containsScheduleDistanceRef);
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? false : containsScheduleDistanceRef(expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? false : containsScheduleDistanceRef(expr.anchorZone);
+    case 'seatAgg':
+      return containsScheduleDistanceRef(expr.expr);
+    case 'zoneProp':
+      return typeof expr.zone === 'string' ? false : containsScheduleDistanceRef(expr.zone);
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return false;
+  }
 }
 
 function analyzeChildExpressions(

@@ -441,6 +441,7 @@ export type AgentPolicyOperator =
   | 'neg'
   | 'not'
   | 'or'
+  | 'scheduleLowerBound'
   | 'sub';
 export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'previewStateFeature';
 export type SurfaceRefFamily =

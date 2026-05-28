@@ -8,7 +8,7 @@
 - `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `reachable`/`adjacent`/etc. for Air Lift route binding
 - `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates`
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — bounded compound probe for Air Lift compound availability
-- **Soft**: `specs/201-fitl-shared-doctrine-and-lifecycle.md` (PROPOSED) — `shared.*` modules and lifecycle conditions referenced by the new US bindings. Spec 202 can author against stub names if 201 has not landed yet; the P5 acceptance gate is replay-identity once 201 is also live.
+- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — `shared.*` modules and lifecycle conditions referenced by the new US bindings.
 
 **Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 (US faction-by-faction analysis) + §6.8 US plan-template slice + §§6.9–6.10 US posture and guardrail slices. Engine architecture concerns are confirmed out of scope.
 

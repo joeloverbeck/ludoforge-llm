@@ -1,6 +1,6 @@
 # Spec 201 — FITL Shared Doctrine Library and Lifecycle Awareness
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — foundational for four-faction parity. Today three FITL profiles reimplement `blockImmediateWin` (ARVN, US, NVA modules with that exact `id` exist as three independent copies in `data/games/fire-in-the-lake/92-agents.md`; VC handles immediate-win via `vc.denyNvaIfNearWin`, a faction-specific variant preserved per §2 Non-Goals), and lifecycle awareness is limited to a single ARVN guardrail (`arvn.doNotOvercommitTroopsPreCoupWithoutBase` referencing `schedule.distance.toBoundary.coupEntry.cards`). Events surface only as a binary `preferEvent` weight in `considerations`, not as first-class doctrine. The competence report (`reports/fitl-competent-agent-ai.md`) requires monsoon awareness, coup awareness, and event-as-first-class decision across all four factions — none of these has a shared module today, so per-faction completions (Specs 202–204) would repeat the same scaffolding four times if this spec did not land first.
 **Complexity**: M — generic engine prerequisites for candidate-feature preview fallback, preview relationship refs, exact zone-id aggregate filters, schedule-distance state features, and active-card tag boolean typing, followed by YAML authoring inside `data/games/fire-in-the-lake/92-agents.md` plus new policy-profile-quality tests. The remaining DSL primitives (strategic conditions, strategy modules with `enablesPlanTemplates`/`suppressesPlanTemplates`, relationships) are already supported by the post-Spec-197/199 engine surface.
 **Date**: 2026-05-27
@@ -30,13 +30,14 @@ Make four-faction competence completion possible by authoring the shared scaffol
    - `shared.resourceLogistics` — when `selfResources < 2` or per-faction logistics conditions hold, elevate logistics-improving candidates through fallback-backed aid/trail delta signals.
    - `shared.eventDirectSwing` — when an event-play candidate is available, elevate the fallback-backed projected self margin signal for event handling. Generic active-card annotation routing is not introduced by this spec slice.
    - `shared.allyRivalThrottle` — when a nominal ally is near win and that ally's gain would mean rival victory, demote plan templates whose `gainValue` contributes to the ally's margin.
+   - `shared.monsoonOperationalRestriction` — when Monsoon is active, suppress Sweep/March plan templates through Spec 197 plan-template eligibility gating while leaving non-Monsoon alternatives available.
 
 2. **Lifecycle features and strategic conditions** consumed across the library:
-   - State features: `distanceToCoup` (via `schedule.distance.toBoundary.coupEntry.cards`), `monsoonNow` (via `activeCard.hasTag.monsoon`), `aid`, `trail`, `selfResources`, `totalSupport`, `totalOpposition`, `vcBaseCount`, `nvaBaseCount`, `availableUsTroops`, `availableUsBases`.
+   - State features: `distanceToCoup` (via `schedule.distance.toBoundary.coupEntry.cards`), `monsoonNow` (via explicit `scheduleLowerBound(schedule.distance.toBoundary.coupEntry.cards) <= 2`, matching FITL's lookahead-Coup Monsoon carrier under the top-N-visible schedule distance surface), `aid`, `trail`, `selfResources`, `totalSupport`, `totalOpposition`, `vcBaseCount`, `nvaBaseCount`, `availableUsTroops`, `availableUsBases`.
    - Candidate features: `projectedSelfMarginDelta` (already present), plus `projectedLeaderMarginDelta`, `projectedAllyMarginDelta`, `projectedAidDelta`, `projectedTrailDelta`, `projectedSupportDelta`, `projectedOppositionDelta`.
    - Strategic conditions: `selfCanWinNow`, `currentLeaderNearWin`, `coupImminent`, `monsoonNow`, `resourcesLow`, plus the ally-rival flips `allyNearWin` and `nominalAllyHasBecomeRival`.
 
-3. **Per-profile bindings**: each of `us-baseline`, `arvn-baseline`, `nva-baseline`, `vc-baseline` references the six shared modules with profile-appropriate priority tiers and conditions; the three pre-existing per-faction `blockImmediateWin` modules (ARVN, US, NVA) are replaced by their `shared.*` analogues. VC's `vc.denyNvaIfNearWin` is preserved as faction-specific nuance (it carries VC-specific scoring beyond the generic block-leader doctrine; no `vc.blockImmediateWin` exists today).
+3. **Per-profile bindings**: each of `us-baseline`, `arvn-baseline`, `nva-baseline`, `vc-baseline` references the seven shared modules with profile-appropriate priority tiers and conditions; the three pre-existing per-faction `blockImmediateWin` modules (ARVN, US, NVA) are replaced by their `shared.*` analogues. VC's `vc.denyNvaIfNearWin` is preserved as faction-specific nuance (it carries VC-specific scoring beyond the generic block-leader doctrine; no `vc.blockImmediateWin` exists today).
 
 4. **Relationship use** is generalized: the existing four ally/rival pairs (`92-agents.md:1379-1431`) gain explicit consumption via `shared.allyRivalThrottle`'s suppression list, not new relationship records.
 
@@ -77,7 +78,10 @@ distanceToCoup:
 monsoonNow:
   type: boolean
   expr:
-    ref: activeCard.hasTag.monsoon
+    lte:
+      - scheduleLowerBound:
+          ref: schedule.distance.toBoundary.coupEntry.cards
+      - 2
 
 aid:
   type: number
@@ -358,13 +362,33 @@ shared.allyRivalThrottle:
       terms:
         - weight: -6
           value: { ref: feature.projectedAllyMarginDelta }
+
+shared.monsoonOperationalRestriction:
+  traceLabel: "avoid Sweep and March under Monsoon"
+  when:
+    ref: condition.monsoonNow.satisfied
+  applies:
+    scopes: [move]
+    actionTags: [sweep, march]
+  priority: { tier: 75 }
+  scoreGroups: []
+  guardrailIds: []
+  fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+  suppressesPlanTemplates:
+    - arvn.sweepRaid
+    - us.sweepAirStrike
+    - nva.marchInfiltrate
+    - nva.marchAmbush
+    - nva.locOccupationBeforeCoup
+    - vc.marchSubvert
+    - vc.marchAmbushFromLoc
 ```
 
 The exact priority tiers in this draft are illustrative; P3 calibrates them against the four-profile convergence canary so existing FITL witnesses continue to pass.
 
 ### 4.5 Per-profile bindings
 
-Each profile's `bindings` section consumes the six shared modules. The existing per-faction `blockImmediateWin` modules are removed; their semantic is now carried by `shared.immediateWin` + `shared.blockCurrentLeader`.
+Each profile's `bindings` section consumes the seven shared modules. The existing per-faction `blockImmediateWin` modules are removed; their semantic is now carried by `shared.immediateWin` + `shared.blockCurrentLeader`.
 
 Example pattern for `arvn-baseline`:
 
@@ -378,6 +402,7 @@ arvn-baseline:
       - shared.resourceLogistics
       - shared.eventDirectSwing
       - shared.allyRivalThrottle      # ally = US via relationship arvn.usNominalAlly
+      - shared.monsoonOperationalRestriction
       - arvn.harvestPatronage
       - arvn.holdHighPopControl
       - arvn.protectAidEcon
@@ -390,9 +415,9 @@ arvn-baseline:
 
 The same pattern applies to the other three profiles (one-line stubs for the Spec-201 surface; faction-specific module sets are owned by Specs 202–204):
 
-- `us-baseline.bindings.strategyModules`: binds all six `shared.*` modules + `us.createAndDefendSupport` + `us.forceMultiplier` + `us.preserveAvailability`. `us.blockImmediateWin` is removed in P3.
-- `nva-baseline.bindings.strategyModules`: binds all six `shared.*` modules + `nva.logisticsAndTrail` + `nva.controlAndBases` + `nva.vcRivalLeverage`. `nva.blockImmediateWin` is removed in P3.
-- `vc-baseline.bindings.strategyModules`: binds all six `shared.*` modules + `vc.buildPoliticalNetwork` + `vc.subvertRegimeSecurity` + `vc.fundAndAmbushCarefully` + `vc.denyNvaIfNearWin`. No `vc.blockImmediateWin` removal — none exists today; `vc.denyNvaIfNearWin` is preserved as faction-specific nuance.
+- `us-baseline.bindings.strategyModules`: binds all seven `shared.*` modules + `us.createAndDefendSupport` + `us.forceMultiplier` + `us.preserveAvailability`. `us.blockImmediateWin` is removed in P3.
+- `nva-baseline.bindings.strategyModules`: binds all seven `shared.*` modules + `nva.logisticsAndTrail` + `nva.controlAndBases` + `nva.vcRivalLeverage`. `nva.blockImmediateWin` is removed in P3.
+- `vc-baseline.bindings.strategyModules`: binds all seven `shared.*` modules + `vc.buildPoliticalNetwork` + `vc.subvertRegimeSecurity` + `vc.fundAndAmbushCarefully` + `vc.denyNvaIfNearWin`. No `vc.blockImmediateWin` removal — none exists today; `vc.denyNvaIfNearWin` is preserved as faction-specific nuance.
 
 `shared.allyRivalThrottle` reads ally identity from the profile's existing relationship (`arvn.usNominalAlly`, `us.arvnNominalAlly`, `nva.vcNominalAlly`, `vc.nvaNominalAlly`); no relationship records are added or modified by this spec.
 
@@ -404,7 +429,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 
 - **No nominal ally exists** — `shared.allyRivalThrottle` is profile-bound only when the profile declares a `nominalAlly` relationship; in profiles without one (none in FITL, but a forward-compatibility consideration), the module is omitted from `bindings.strategyModules` rather than referencing a missing relationship.
 - **Coup never reached in a curated seed** — `feature.distanceToCoup` falls back to `999` (`coalesce`); `coupImminent` evaluates false; the module is inactive. Existing FITL convergence witnesses must not regress.
-- **Active card has no Monsoon tag** — `feature.monsoonNow` evaluates false; modules gated on it inactive. The four existing `*-baseline` profiles must compile and run identically to today on seeds that never reach Monsoon.
+- **Coup is not in the lookahead/next-card position** — `feature.monsoonNow` evaluates false; modules gated on it inactive. The four existing `*-baseline` profiles must compile and run identically to today on seeds that never reach Monsoon.
 - **Preview relationship refs unavailable before prerequisite** — ticket `201FITLSHADOC-001B` must land before YAML authoring consumes `preview.relationship.nominalAlly.gainValueDelta` or `preview.relationship.nominalAlly.victoryMargin`; candidate-feature `previewFallback.onUnavailable: noContribution` then ensures no silent coercion.
 - **Existing per-faction `blockImmediateWin` modules removed** — convergence witnesses that reference them by id (verified absence: no FITL witness depends on `*.blockImmediateWin` by name; they reference `arvn.trainGovern`, `us.trainAdvise`, etc.) continue to pass. The P3 acceptance criterion is replay-identity preservation.
 
@@ -415,9 +440,10 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 | **P0a** | Generic engine prerequisite for candidate-feature preview fallback and preview relationship refs | Candidate-feature `previewFallback` is validated/compiled; `preview.relationship.<role>.victoryMargin` and `preview.relationship.<role>.gainValueDelta` compile and evaluate generically; no FITL-specific engine ids | M |
 | **P0b** | State/candidate feature additions (§4.1, §4.2) and metric-availability survey | All new features compile; metric survey records which `metric.auto:*` ids materialize from current victory-standings vs. which need derived-metric authoring; Open Questions list any feature that cannot ship in this spec | S–M |
 | **P1** | Strategic conditions (§4.3) | All six conditions compile; standalone witness asserts each condition evaluates correctly on a curated scenario | S |
-| **P2** | Shared strategy modules (§4.4) | Six `shared.*` modules compile; each carries explicit `when`/`applies`/`priority`/`scoreGroups`; no plan-template gating beyond what the module's doctrine requires | M |
+| **P2** | Shared strategy modules (§4.4) | Seven `shared.*` modules compile; each carries explicit `when`/`applies`/`priority`/`scoreGroups`; Monsoon gating uses the existing Spec 197 `suppressesPlanTemplates` eligibility surface | M |
 | **P3** | Per-profile bindings (§4.5) + removal of three `*.blockImmediateWin` duplicates (ARVN, US, NVA — VC has no such module) | All four `*-baseline` profiles compile and bind the new modules; existing convergence witnesses (ARVN seed 1000, FITL seed 2057, march dead-end, spec-143 boundedness, four-profile convergence, guardrail uniformity, preview opponent-margin, plan selected-root authority, compound availability correspondence) replay byte-identically; priority tiers calibrated to preserve replay identity | M |
-| **P4** | Profile-quality witnesses (§7) | One witness per `shared.*` module per profile (24 witnesses) PLUS one cross-profile assertion that the three pre-existing `*.blockImmediateWin` modules no longer appear in any compiled profile; `pnpm turbo build` byte-identical; `pnpm turbo schema:artifacts` regen idempotent | M |
+| **P4** | Profile-quality witnesses (§7) | One witness per scoring `shared.*` module per profile (24 witnesses), four Monsoon template-suppression witnesses, preview-integrity reattestation, and two architectural invariants; `pnpm turbo build` byte-identical; `pnpm turbo schema:artifacts` regen idempotent | M |
+| **P5** | Live Monsoon lower-bound carrier follow-up | Production `condition.monsoonNow` can evaluate from an explicitly-authored schedule-distance lower-bound fallback in policy value expressions, and the Monsoon witnesses no longer force the condition ready in a cloned catalog | M |
 
 ## 7. Test plan
 
@@ -433,7 +459,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 
 **Architectural invariants:**
 
-- `shared-modules-bound-by-all-profiles.test.ts` — compile-time assertion that every `*-baseline` profile binds at minimum `shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.resourceLogistics`, `shared.eventDirectSwing`.
+- `shared-modules-bound-by-all-profiles.test.ts` — compile-time assertion that every `*-baseline` profile binds at minimum `shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.resourceLogistics`, `shared.eventDirectSwing`, `shared.allyRivalThrottle`, and `shared.monsoonOperationalRestriction`.
 - `no-per-faction-block-immediate-win.test.ts` — compile-time assertion that no profile references `arvn.blockImmediateWin`, `us.blockImmediateWin`, or `nva.blockImmediateWin` (these three are removed by P3; no `vc.blockImmediateWin` exists today, so the assertion does not name it).
 
 **Determinism / replay:**
@@ -457,7 +483,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 | #10 Bounded Computation | No new cap classes; no new iteration; existing bounded compounds unchanged |
 | #14 No Backwards Compatibility | The three `*.blockImmediateWin` modules are removed in P3 in the same change as their `shared.*` replacements bind into the four `*-baseline` profiles — no transitional period, no compatibility shim. |
 | #15 Architectural Completeness | Closes the four-faction-parity scaffolding gap before the per-faction completions (202–204) attempt to consume shared modules |
-| #16 Testing as Proof | 24 profile-quality witnesses + 2 architectural invariants + determinism re-attestation |
+| #16 Testing as Proof | 24 shared-module profile-quality witnesses + 4 Monsoon gating witnesses + 2 architectural invariants + determinism re-attestation |
 | #20 Preview Signal Integrity | All new preview-derived features declare explicit compiled `previewFallback`; no silent coercion |
 
 ## 9. Reassessment of source proposal (`reports/fitl-ai-encoding-first-iteration.md`)
@@ -475,7 +501,7 @@ After the generic prerequisite lands, the remaining additions are pure data. The
 **Adopted with adjustment:**
 
 - §4 Coup-awareness universal row: proposal recommends "near-Coup posture modules: concrete scoring over speculative setup; resources/redeploy/agitation/pacification readiness." Adopted as `shared.nearCoupConcreteSwing` (§4.4) plus per-faction near-Coup posture deferred to faction specs (the readiness modules are faction-specific — ARVN redeploy, US Pacification, NVA Trail, VC Agitation — and belong with the respective faction completions).
-- §6.5 `monsoonNow` syntax: proposal uses `activeCard.tag.monsoon`; corrected to `activeCard.hasTag.monsoon` per verified DSL surface (`packages/engine/src/agents/policy-surface.ts`, cookbook line 588).
+- §6.5 `monsoonNow` syntax: proposal uses `activeCard.tag.monsoon`; corrected first to the verified `activeCard.hasTag.monsoon` syntax, then amended during P4/P5 witness implementation to the production FITL Monsoon carrier: explicit `scheduleLowerBound(schedule.distance.toBoundary.coupEntry.cards) <= 2`, because live rules apply Monsoon when the lookahead card is Coup, production event cards do not carry a `monsoon` tag, and the top-N-visible schedule-distance carrier counts the current played card plus the lookahead.
 
 **Corrected:**
 
@@ -528,4 +554,32 @@ Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per u
 - [`archive/tickets/201FITLSHADOC-003.md`](../archive/tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-004.md`](../archive/tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-005.md`](../archive/tickets/201FITLSHADOC-005.md) — Per-profile bindings + atomic blockImmediateWin removal (covers §4.5 / P3 — Foundation #14 atomic cut) — COMPLETED
-- [`tickets/201FITLSHADOC-006.md`](../tickets/201FITLSHADOC-006.md) — Profile-quality witness suite (covers §7 / P4 — 31 tests)
+- [`archive/tickets/201FITLSHADOC-006.md`](../archive/tickets/201FITLSHADOC-006.md) — Profile-quality witness suite (covers §7 / P4 — 31 tests) — COMPLETED
+- [`archive/tickets/201FITLSHADOC-007.md`](../archive/tickets/201FITLSHADOC-007.md) — Live schedule-distance lower-bound carrier for Monsoon policy conditions (post-review P5 follow-up) — COMPLETED
+
+## Outcome
+
+Completed on 2026-05-28.
+
+Spec 201 is implemented and ticket-complete:
+
+- Added the shared FITL doctrine/lifecycle scaffolding consumed by all four baseline profiles: immediate win, block leader, near-Coup concrete swing, resource logistics, event direct swing, ally-rival throttle, and Monsoon operational restriction.
+- Added the generic prerequisites needed to keep the spec Foundation-aligned, including preview relationship refs, candidate-feature fallback discipline, exact zone-id aggregate filters, schedule-distance refs in state features, candidate-aware strategic conditions, and the explicit `scheduleLowerBound` policy expression for partial schedule-distance lower bounds.
+- Migrated FITL `monsoonNow` away from the nonexistent active-card Monsoon tag and onto the production lookahead-Coup schedule-distance carrier.
+- Added 31 Spec 201 profile-quality and architecture witnesses plus generic partial-visibility lower-bound coverage.
+- Archived all owned tickets `201FITLSHADOC-001` through `201FITLSHADOC-007`.
+
+Deviations from the draft: Monsoon awareness became a generic shared module in P4 rather than being deferred to per-faction modules, and the live Monsoon carrier required the P5 generic `scheduleLowerBound` follow-up to preserve Foundation #20 provenance instead of silently coercing partial schedule-distance values.
+
+Verification summary:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/shared-*.test.js packages/engine/dist/test/architecture/shared-modules-bound-by-all-profiles.test.js packages/engine/dist/test/architecture/no-per-faction-block-immediate-win.test.js` — passed, 31 tests.
+- `node --test packages/engine/dist/test/integration/partial-visibility-expression-lower-bound.test.js packages/engine/dist/test/policy-profile-quality/shared-monsoon-awareness-us.test.js packages/engine/dist/test/policy-profile-quality/shared-monsoon-awareness-arvn.test.js packages/engine/dist/test/policy-profile-quality/shared-monsoon-awareness-nva.test.js packages/engine/dist/test/policy-profile-quality/shared-monsoon-awareness-vc.test.js` — passed, 6 tests.
+- `node --test packages/engine/dist/test/integration/partial-visibility-*.test.js packages/engine/dist/test/unit/agents/schedule-ref-*.test.js` — passed, 43 tests.
+- `pnpm turbo schema:artifacts` — passed.
+- `node --test dist/test/unit/json-schema.test.js` from `packages/engine/` — passed, 36 tests.
+- `node --test packages/engine/dist/test/unit/schemas-top-level.test.js` — passed, 71 tests.
+- `pnpm run check:ticket-deps` — passed after ticket 006 archive, before ticket 007 archive.
+
+Known broad-suite note: during ticket 006, `pnpm turbo lint typecheck test` was red only for two pre-existing engine default test fixture failures involving missing `test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/decision-sequence.json`. The focused Spec 201 lanes above passed after the final P5 implementation.

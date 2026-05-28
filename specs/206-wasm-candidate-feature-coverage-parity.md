@@ -24,6 +24,7 @@ Concretely:
 
 2. **Extend WASM materialization for the tractable shapes.** Make `evaluateDynamicCandidateFeatureRows` / the bytecode path cover the candidate-feature expression shapes Spec 201 introduced that do **not** require preview-state relationship evaluation:
    - role-selected `seatAgg` (`over: { role: currentLeader }` etc.) at a non-top-level position (e.g. inside `coalesce(sub(...))`);
+   - non-preview `currentSurface` leaves nested inside such a `seatAgg` (e.g. `victory.currentMargin.$seat`), which are candidate-independent functions of the current state;
    - candidate-feature cross-refs (`feature.<otherCandidateFeature>`).
    These are deterministic functions of already-materialized rows + the current state and are within the slot/precompute model.
 
@@ -39,7 +40,7 @@ Concretely:
 ## 3. Context (verified against codebase, 2026-05-28)
 
 - **Route entry / degradation**: `packages/engine/src/agents/policy-wasm-score-routing.ts` → `tryScoreMoveConsiderationsWithWasm`. For each preview-cost candidate feature it calls `materializePreviewDynamicRowsWithWasm(input, collectPreviewDynamicRefs(feature.expr))`, then `evaluateDynamicCandidateFeatureRows(...) ?? evaluateWasmCandidateFeatureRow(...)`. PR #291 changed the two "row could not be produced" branches (materialize `=== null`, and `rawValues === null`) to call the shared `pushTsOracleCandidateFeatureRow(id, costClass)` and `continue`, so the route stays exercised instead of returning `false`.
-- **TS dynamic-row evaluator gap**: `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts` → `evaluateDynamicCandidateFeatureRows` returns `null` unless the **top-level** expr is `seatAgg`. `evaluateDynamicCandidateFeatureExpr` already handles `op`/`seatAgg`/`ref` recursively (including `resolveSeatAggOver` with `{ role }`), so a `coalesce(sub(feature.X, seatAgg{role}), 0)` shape is evaluable in principle — the top-level guard is the blocker.
+- **TS dynamic-row evaluator gap**: `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts` → `evaluateDynamicCandidateFeatureRows` returns `null` unless the **top-level** expr is `seatAgg`. `evaluateDynamicCandidateFeatureExpr` already handles `op`/`seatAgg`/`ref` recursively (including `resolveSeatAggOver` with `{ role }`), so a `coalesce(sub(feature.X, seatAgg{role}), 0)` shape is evaluable in principle. The top-level guard is *one* blocker, but **not the only one** for the real `projectedLeaderMarginDelta` shape: its inner role-`seatAgg` leaf is `victory.currentMargin.$seat`, a **non-preview `currentSurface` ref**, and the `ref` case (`policy-wasm-dynamic-candidate-feature-rows.ts:80-85`) returns `undefined` for anything that is not `previewSurface` / `previewStateFeature`. That `undefined` then flows through `sub(…) → undefined` and is swallowed by the enclosing `coalesce(…, 0) → 0`, so merely lifting the guard would yield a silently-wrong `0` rather than an oracle fallback (the fix is in §4.2).
 - **Ref collection gap**: `collectPreviewDynamicRefs` recognizes only `previewSurface` and `library/previewStateFeature` refs; `previewRelationship` is not collected (and `previewGlobalSlotsForRef` returns `undefined` for it).
 - **Bytecode emitter**: `packages/engine/src/cnl/policy-bytecode/compile.ts` emits `RESOLVE_DYNAMIC(DYNAMIC_REASON_UNSUPPORTED_EXPR)` for unsupported operators (`clamp`, `if`, `in`, `scheduleLowerBound`); `scheduleLowerBound` (Spec 201) is precomputed in TS as a state feature, so it does not by itself disable the score-row route.
 - **TS preview-relationship resolver**: `packages/engine/src/agents/policy-evaluation-core.ts` → `resolvePreviewRelationshipRef` resolves the role→seat inside `withEvaluationState(previewState, ...)` and reads `buildPolicyVictorySurface(def, previewState, runtime)` / the relationship `gainValue` expr — i.e. arbitrary evaluation against the preview state, not a fixed numeric slot.
@@ -52,7 +53,7 @@ Concretely:
 
 Add a deterministic classifier and a checked-in manifest:
 
-- A pure helper (agent layer) that, given a compiled profile + catalog, returns for each preview-cost candidate feature a verdict `{ id, coverage: 'wasm-row' | 'ts-oracle', reason }`, derived from the same predicates the route uses (`collectPreviewDynamicRefs`, the dynamic-row evaluability check, and a "contains unsupported op / uncollected ref" scan). No game execution required.
+- A pure helper (agent layer) that, given a compiled profile + catalog, returns for each preview-cost candidate feature a verdict `{ id, coverage: 'wasm-row' | 'ts-oracle', reason }`, derived from the same predicates the route uses (`collectPreviewDynamicRefs`, the dynamic-row evaluability check, and a "contains unsupported op / uncollected ref" scan). The materializability predicate MUST treat non-preview `currentSurface` leaves as materializable (per §4.2); otherwise `projectedLeaderMarginDelta` is misclassified as `ts-oracle` even after P1 lands. No game execution required.
 - A manifest fixture (e.g. `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`) keyed by `{ gameDefHash, profileId }` listing the verdicts, with a check-mode (`UPDATE_*` env) re-bless like other golden fixtures.
 - An architectural-invariant test that recomputes the verdicts for the production FITL profiles (and any other conformance-corpus game with agents) and asserts equality with the manifest. A diff means a feature changed WASM coverage — review must consciously accept it (extend WASM, or accept TS-oracle and re-bless the manifest).
 
@@ -60,7 +61,9 @@ This is the forcing function: it converts "silent acceleration loss" into "manif
 
 ### 4.2 Cover role-`seatAgg` and candidate-feature cross-refs (P1)
 
-Lift the top-level-`seatAgg`-only restriction in `evaluateDynamicCandidateFeatureRows` so it evaluates any expression whose leaves are all materializable (preview-dynamic refs, already-computed candidate-feature rows, literals/params, and `seatAgg`/`op` compositions thereof). `evaluateDynamicCandidateFeatureExpr` already recurses; the change is (a) entering it for non-`seatAgg` top-level exprs, and (b) teaching it to read prior `candidateFeatureRows` for `feature.<id>` cross-refs (the route already accumulates `precomputedCandidateFeatures`). Guard with a strict "any unmaterializable leaf ⇒ return `null` ⇒ TS oracle" fallback so coverage never silently produces a wrong value.
+Lift the top-level-`seatAgg`-only restriction in `evaluateDynamicCandidateFeatureRows` so it evaluates any expression whose leaves are all materializable. The materializable-leaf set is: preview-dynamic refs, **non-preview `currentSurface` refs** (evaluated once against the current state — candidate-independent, e.g. via `buildPolicyVictorySurface(def, state, runtime)`), already-computed candidate-feature rows, literals/params, and `seatAgg`/`op` compositions thereof. `evaluateDynamicCandidateFeatureExpr` already recurses; the changes are (a) entering it for non-`seatAgg` top-level exprs, (b) evaluating `currentSurface` refs against current state instead of returning `undefined`, and (c) teaching it to read prior rows from the `candidateFeatureRows` accumulator (`policy-wasm-score-routing.ts:517`) for `feature.<id>` cross-refs — note that `projectedLeaderMarginDelta`'s cross-ref target `projectedCurrentLeaderMargin` is itself a *preview*-cost row, so the lookup must consult the unified accumulator, not only the non-preview `precomputedCandidateFeatures` slice (`:586`) handed to the bytecode VM.
+
+The "any unmaterializable leaf ⇒ return `null` ⇒ TS oracle" guard cannot be layered onto the current `undefined` semantics, because `undefined` is overloaded: it means both "preview legitimately unavailable (must `coalesce` to its fallback)" **and** "structurally unmaterializable leaf (must abort the whole row to the oracle)". Introduce a distinct null-propagating sentinel for the structural case so an unmaterializable leaf aborts the row (returning `null` from `evaluateDynamicCandidateFeatureRows`) instead of being swallowed by an enclosing `coalesce` into a silently-wrong value (Foundation #8 / #20).
 
 ### 4.3 Classify `preview.relationship.*` as TS-oracle-only (P1)
 
@@ -76,7 +79,7 @@ Make `collectPreviewDynamicRefs` (or a sibling predicate) recognize `previewRela
 ## 6. Phases & acceptance criteria
 
 - **P0 — Coverage guard**: classifier + manifest + architectural-invariant test land; running it on `main` is green; deleting/altering a production candidate feature's WASM coverage makes it fail with an actionable diff. *Acceptance*: a synthetic profile that adds a `preview.relationship.*` feature flips its manifest entry to `ts-oracle` and the test fails until re-blessed.
-- **P1 — Extend materialization**: `projectedLeaderMarginDelta` (role-`seatAgg` + cross-ref) classifies as `wasm-row` and its WASM-materialized values are byte-equal to the TS oracle on the production corpus; `arvn-tournament-wasm-equivalence` still passes and `wasmPreviewCandidateFeatureRowOracleFallbackCount` reflects only the genuinely oracle-only features. *Acceptance*: manifest shows `projectedLeaderMarginDelta: wasm-row`, `projectedAllyMarginDelta: ts-oracle`.
+- **P1 — Extend materialization**: contingent on §4.2's `currentSurface`-leaf evaluation and null-propagating sentinel, `projectedLeaderMarginDelta` (role-`seatAgg` over a `currentSurface` leaf + `feature.<id>` cross-ref) classifies as `wasm-row` and its WASM-materialized values are byte-equal to the TS oracle on the production corpus; `arvn-tournament-wasm-equivalence` still passes and `wasmPreviewCandidateFeatureRowOracleFallbackCount` reflects only the genuinely oracle-only features. *Acceptance*: manifest shows `projectedLeaderMarginDelta: wasm-row`, `projectedAllyMarginDelta: ts-oracle`, plus an explicit per-candidate byte-equivalence assertion (WASM row vs. TS oracle) for `projectedLeaderMarginDelta`.
 
 ## 7. Test plan
 
@@ -99,10 +102,20 @@ The per-row TS-oracle degradation (`pushTsOracleCandidateFeatureRow`) is correct
 ## 10. Out of scope (named follow-on)
 
 - **Full `preview.relationship.*` WASM materialization** — would require resolving the relationship role→seat and evaluating the `gainValue` expression *inside* the WASM-driven preview state, beyond the fixed-slot extraction model. Defer to a dedicated spec, justified only if profiling shows the ARVN ally-doctrine features are a measurable scoring-time cost.
+- **Agnostic coverage corpus with real preview-cost features** — exercising the classifier against a *second* preview-enabled game (beyond FITL) to prove agnostic coverage classification on non-empty non-FITL manifests. Deferred until such a game exists in the conformance corpus (see §11.3).
 - Extending the bytecode VM to support `scheduleLowerBound`/`clamp`/`if`/`in` operators (independent deferral noted in `compile.ts`).
 
-## 11. Open questions
+## 11. Resolved decisions
 
-1. Manifest granularity: per-`(gameDefHash, profileId)` (re-bless on every GameDef change) vs per-`(profileId, featureExprFingerprint)` (re-bless only when the feature expr changes)? The latter is more stable across unrelated GameDef edits.
-2. Should the guard live in the `default` lane (fast, static) or alongside the determinism/policy-quality lanes? Static classification argues for `default`.
-3. Is a non-FITL conformance game with preview-cost candidate features available today to exercise the agnostic path, or does P0 ship FITL-only with a TODO for corpus breadth?
+1. **Manifest granularity** — key the manifest per-`(profileId, featureExprFingerprint)`, not per-`(gameDefHash, profileId)`. Coverage is a deterministic function of the compiled feature expr plus the route's materializability predicates, *not* of the rest of the GameDef, so fingerprinting the feature expr re-blesses exactly when coverage can change and avoids churn on every unrelated FITL `gameDefHash` shift. `profileId` disambiguates same-named features across profiles.
+2. **Lane** — the guard lives in the `default` lane. Classification is static and MUST NOT require the WASM module (§5 edge case), so it belongs with the fast static checks rather than the determinism/policy-quality lanes.
+3. **Conformance-corpus breadth** — no non-FITL game has preview-cost candidate features today (`generic-control` and `texas-holdem` both declare `preview: mode: disabled`). P0 therefore ships real per-feature coverage classification **FITL-only**; the non-FITL conformance games with agents exercise the *agnostic classifier path* against empty manifests (proving the classifier runs game-agnostically and emits zero entries on zero-preview profiles, per §5). A corpus with a second preview-enabled game is a named follow-on (§10).
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-28:
+
+- [`tickets/206WASMCANDCOV-001.md`](../tickets/206WASMCANDCOV-001.md) — Coverage classifier helper + unit tests (covers §4.1 classifier)
+- [`tickets/206WASMCANDCOV-002.md`](../tickets/206WASMCANDCOV-002.md) — Coverage manifest fixture + architectural-invariant guard test (covers §4.1 manifest + §6 P0)
+- [`tickets/206WASMCANDCOV-003.md`](../tickets/206WASMCANDCOV-003.md) — Extend dynamic candidate-feature row materialization: currentSurface leaves, cross-refs, null sentinel (covers §4.2 + §6 P1)
+- [`tickets/206WASMCANDCOV-004.md`](../tickets/206WASMCANDCOV-004.md) — Explicit `previewRelationship` deferral in the score-row route (covers §4.3)

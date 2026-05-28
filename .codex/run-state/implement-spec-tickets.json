@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/201-fitl-shared-doctrine-and-lifecycle.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/201FITLSHADOC-001D.md",
+  "last_ticket": "archive/tickets/201FITLSHADOC-001E.md",
   "last_result": "implemented_archived",
-  "last_work_commit": "903f34a539ed404c6404a557a0780251d9232d03",
+  "last_work_commit": "7c7bae9e06e1a4e4352027b070c17ce16841495c",
   "last_state_commit": "self",
-  "next_target": "tickets/201FITLSHADOC-001E.md",
+  "next_target": "tickets/201FITLSHADOC-002.md",
   "queue": [
-    "tickets/201FITLSHADOC-001E.md",
     "tickets/201FITLSHADOC-002.md",
     "tickets/201FITLSHADOC-003.md",
     "tickets/201FITLSHADOC-004.md",
@@ -16,9 +15,9 @@
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Retargeted Spec 201 queue to user-approved active-card tag boolean typing prerequisite before tickets/201FITLSHADOC-002.md.",
+  "owned_dirty_summary": "201FITLSHADOC-001E implemented and archived; next target is tickets/201FITLSHADOC-002.md.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-27"
+  "updated_at": "2026-05-28"
 }

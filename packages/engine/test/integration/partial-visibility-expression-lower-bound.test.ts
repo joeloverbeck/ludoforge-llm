@@ -7,7 +7,6 @@ import {
   asActionId,
   asPlayerId,
   type CompiledPolicyExpr,
-  type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
 import {

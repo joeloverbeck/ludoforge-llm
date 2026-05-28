@@ -2,29 +2,20 @@
 // @witness: spec-158-completion-to-microturn-equivalence
 
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../../src/agents/index.js';
 import {
-  applyDecision,
   assertValidatedGameDef,
-  createGameDefRuntime,
   createRng,
-  initialState,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type CompiledAgentPolicyRef,
-  type Decision,
   type GameDef,
-  type GameState,
 } from '../../../src/kernel/index.js';
-import { publishMicroturn } from '../../../src/kernel/microturn/publish.js';
+import { driveToGovernChooseOneMicroturn } from '../../helpers/govern-mode-microturn.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
-
-const fixtureDir = join(process.cwd(), 'test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end');
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
@@ -100,21 +91,6 @@ function withPreferPatronageMode(def: GameDef): GameDef {
   return assertValidatedGameDef({ ...def, agents: updatedAgents });
 }
 
-const readDecisionSequence = (): readonly Decision[] =>
-  JSON.parse(readFileSync(join(fixtureDir, 'decision-sequence.json'), 'utf8')) as readonly Decision[];
-
-const isGovernModeDecisionKey = (decisionKey: string): boolean => decisionKey.includes('$governMode@');
-
-const governModeDecisionKey = (decision: Decision): string | undefined =>
-  decision.kind === 'chooseOne' && isGovernModeDecisionKey(String(decision.decisionKey))
-    ? String(decision.decisionKey)
-    : undefined;
-
-const expectedGovernModes = (decisions: readonly Decision[]): readonly string[] =>
-  decisions
-    .filter((decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> => governModeDecisionKey(decision) !== undefined)
-    .map((decision) => String(decision.value));
-
 describe('preferPatronageMode migration equivalence', () => {
   it('documents the retired completion-scope baseline and the microturn rewrite', () => {
     assert.deepEqual(completionScopeBaseline, {
@@ -131,32 +107,18 @@ describe('preferPatronageMode migration equivalence', () => {
     });
   });
 
-  it('reproduces the captured govern-mode patronage choices on a fixed FITL seed', () => {
+  it('chooses Patronage at a deterministically-reached FITL Govern microturn', () => {
+    // Distilled from the retired seed-1001 trajectory scan: Spec 201's ARVN
+    // doctrine no longer routes through Govern on seed 1001, so the witness now
+    // drives to a Govern $governMode chooseOne microturn directly and proves the
+    // migrated microturn-scope preferPatronageMode consideration still selects
+    // Patronage there — the equivalence property the witness guards.
     const def = withPreferPatronageMode(getFitlProductionFixture().gameDef);
-    const runtime = createGameDefRuntime(def);
-    const fixtureDecisions = readDecisionSequence();
+    const { state, microturn, runtime } = driveToGovernChooseOneMicroturn(def);
     const agent = new PolicyAgent({ profileId: 'arvn-baseline', traceLevel: 'summary' });
-    let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
-    const expected = expectedGovernModes(fixtureDecisions);
-    const selected: string[] = [];
 
-    for (const fixtureDecision of fixtureDecisions) {
-      if (selected.length >= expected.length) {
-        break;
-      }
-      const microturn = publishMicroturn(def, state, runtime);
-      if (microturn.kind === 'chooseOne' && microturn.legalActions.some((decision) => governModeDecisionKey(decision) !== undefined)) {
-        const agentDecision = agent.chooseDecision({ def, state, microturn, rng: createRng(1001n + BigInt(selected.length)) });
-        assert.equal(agentDecision.decision.kind, 'chooseOne');
-        assert.equal(agentDecision.decision.value, 'patronage');
-        selected.push(String(agentDecision.decision.value));
-        state = applyDecision(def, state, agentDecision.decision, undefined, runtime).state;
-        continue;
-      }
-      state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
-    }
-
-    assert.deepEqual(expected, ['patronage', 'patronage', 'patronage']);
-    assert.deepEqual(selected, expected);
+    const agentDecision = agent.chooseDecision({ def, state, microturn, rng: createRng(1001n), runtime });
+    assert.equal(agentDecision.decision.kind, 'chooseOne');
+    assert.equal(agentDecision.decision.value, 'patronage');
   });
 });

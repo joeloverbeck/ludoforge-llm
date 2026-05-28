@@ -519,6 +519,17 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
     readonly costClass: string;
     readonly values: readonly PolicyValue[];
   }[] = [];
+  const pushTsOracleCandidateFeatureRow = (featureId: string, costClass: string): void => {
+    recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
+    const values = input.candidates.map((candidate) => {
+      const value = encodeWasmPrecomputedPolicyValue(input.evaluation.evaluateCandidateFeature(candidate, featureId));
+      if (candidate.previewOutcome === undefined) {
+        input.evaluation.finalizePreviewOutcome(candidate);
+      }
+      return value;
+    });
+    candidateFeatureRows.push({ id: featureId, costClass, values });
+  };
   for (const id of input.profile.plan.candidateFeatures) {
     const feature = input.catalog.compiled.candidateFeatures[id];
     if (feature === undefined) {
@@ -543,19 +554,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       collectPreviewDynamicRefs(feature.expr),
     );
     if (precomputedDynamicCandidateFeatures === null) {
-      recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      const values = input.candidates.map((candidate) => {
-        const value = encodeWasmPrecomputedPolicyValue(input.evaluation.evaluateCandidateFeature(candidate, id));
-        if (candidate.previewOutcome === undefined) {
-          input.evaluation.finalizePreviewOutcome(candidate);
-        }
-        return value;
-      });
-      candidateFeatureRows.push({
-        id,
-        costClass: feature.costClass,
-        values,
-      });
+      pushTsOracleCandidateFeatureRow(id, feature.costClass);
       continue;
     }
     const rawValues = evaluateDynamicCandidateFeatureRows({
@@ -597,9 +596,13 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       precomputedDynamicCandidateFeatures,
     });
     if (rawValues === null) {
-      recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
-      // @policy-wasm-unsupported: null-return
-      return false;
+      // The candidate-feature expression shape is not WASM-row-evaluable (e.g.
+      // a candidate-feature cross-ref, a role-selected seatAgg, or a preview
+      // relationship ref). Degrade this single feature row to the TS oracle
+      // rather than disabling the whole score-row route; the route stays
+      // exercised and the oracle preserves byte-equivalence with the TS path.
+      pushTsOracleCandidateFeatureRow(id, feature.costClass);
+      continue;
     }
     const values = aggregateFedPreviewFeature
       ? applyAggregatePreviewCandidateFeatureRowOracle(input, id, rawValues)

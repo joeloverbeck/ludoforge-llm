@@ -3317,7 +3317,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -3325,7 +3325,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -3336,7 +3336,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -3351,8 +3351,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -3394,6 +3394,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -4302,7 +4332,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -4310,7 +4340,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -4321,7 +4351,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -4336,8 +4366,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -4368,6 +4398,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -4946,7 +4995,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -4954,7 +5003,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -4965,7 +5014,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -4980,8 +5029,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -5022,6 +5071,25 @@
           "unknownPreviewRefs": [],
           "previewFallbackFired": null,
           "selectionReason": "tiebreak",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
           "previewOutcome": "ready",
           "previewDrive": {
             "depth": 1,
@@ -5590,7 +5658,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"cam-ranh:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -5598,7 +5666,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -5609,7 +5677,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -5624,8 +5692,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -5667,6 +5735,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -300,
           "scoreContributions": [
             {
@@ -6575,7 +6673,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -6583,7 +6681,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -6594,7 +6692,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -6609,8 +6707,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -6641,6 +6739,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -7219,7 +7336,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"can-tho:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -7227,7 +7344,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -7238,7 +7355,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -7253,8 +7370,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -7296,6 +7413,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -300,
           "scoreContributions": [
             {
@@ -8204,7 +8351,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -8212,7 +8359,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -8223,7 +8370,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -8238,8 +8385,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -8270,6 +8417,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -8848,7 +9014,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -8856,7 +9022,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -8867,7 +9033,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -8882,8 +9048,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -8914,6 +9080,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -9492,7 +9677,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"hue:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -9500,7 +9685,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -2,
             "max": 0,
@@ -9511,7 +9696,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -9526,8 +9711,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -9569,6 +9754,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -600,
           "scoreContributions": [
             {
@@ -10477,7 +10692,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -10485,7 +10700,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -10496,7 +10711,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -10511,8 +10726,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -10543,6 +10758,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -11121,7 +11355,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"khanh-hoa:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -11129,7 +11363,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -11140,7 +11374,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -11155,8 +11389,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -11187,6 +11421,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -300,
           "scoreContributions": [
             {
@@ -11765,7 +12018,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"kien-hoa-vinh-binh:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -11773,7 +12026,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -2,
             "max": 0,
@@ -11784,7 +12037,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -11799,8 +12052,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -11831,6 +12084,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -600,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -600
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -600,
           "scoreContributions": [
             {
@@ -12409,7 +12681,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -12417,7 +12689,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -12428,7 +12700,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -12443,8 +12715,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -12475,6 +12747,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -13053,7 +13344,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"phu-bon-phu-yen:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -13061,7 +13352,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -13072,7 +13363,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -13087,8 +13378,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -13119,6 +13410,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -300,
           "scoreContributions": [
             {
@@ -13697,7 +14007,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -13705,7 +14015,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -13716,7 +14026,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -13731,8 +14041,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -13763,6 +14073,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -14341,7 +14670,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"qui-nhon:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -14349,7 +14678,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 2,
             "min": -1,
             "max": 0,
@@ -14360,7 +14689,7 @@
         "utility": "differentiating",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -14375,8 +14704,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": false,
@@ -14418,6 +14747,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": -300,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": -300
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": -300,
           "scoreContributions": [
             {
@@ -15326,7 +15685,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -15334,7 +15693,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -15345,7 +15704,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -15360,8 +15719,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -15392,6 +15751,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -15970,7 +16348,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -15978,7 +16356,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -15989,7 +16367,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -16004,8 +16382,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -16057,6 +16435,46 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -17265,7 +17683,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -17273,7 +17691,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -17284,7 +17702,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -17299,8 +17717,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -17342,6 +17760,36 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]:\"an-loc:none\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {
@@ -18250,7 +18698,7 @@
       "selectedStableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]:\"an-loc:none\"",
       "previewUsage": {
         "mode": "exactWorld",
-        "evaluatedCandidateCount": 31,
+        "evaluatedCandidateCount": 32,
         "completionPolicyFallbackCount": 0,
         "refIds": [
           "preview.option.delta.victory.currentMargin.self"
@@ -18258,7 +18706,7 @@
         "unknownRefs": [],
         "readyRefStats": {
           "preview.option.delta.victory.currentMargin.self": {
-            "readyCount": 31,
+            "readyCount": 32,
             "distinctValueCount": 1,
             "min": 0,
             "max": 0,
@@ -18269,7 +18717,7 @@
         "utility": "constant",
         "widenedBecauseUniform": false,
         "outcomeBreakdown": {
-          "ready": 31,
+          "ready": 32,
           "stochastic": 0,
           "unknownRandom": 0,
           "unknownHidden": 0,
@@ -18284,8 +18732,8 @@
         },
         "coverage": {
           "requestedRefCount": 1,
-          "evaluatedRootOptionCount": 31,
-          "readyRootOptionCount": 31,
+          "evaluatedRootOptionCount": 32,
+          "readyRootOptionCount": 32,
           "unavailableRootOptionCount": 0,
           "allRootsUnavailable": false,
           "selectedByTieBreakerBecausePreviewUnavailable": true,
@@ -18316,6 +18764,25 @@
         },
         {
           "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]:\"ba-xuyen:none\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 1,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": []
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]:\"binh-dinh:none\"",
           "score": 0,
           "scoreContributions": [
             {

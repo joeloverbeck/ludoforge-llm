@@ -1,28 +1,19 @@
 // @test-class: golden-trace
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/index.js';
 import {
-  applyDecision,
   assertValidatedGameDef,
-  createGameDefRuntime,
   createRng,
-  initialState,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type CompiledAgentPolicyRef,
-  type Decision,
   type GameDef,
-  type GameState,
 } from '../../src/kernel/index.js';
-import { publishMicroturn } from '../../src/kernel/microturn/publish.js';
+import { driveToGovernChooseOneMicroturn } from '../helpers/govern-mode-microturn.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
-
-const fixtureDir = join(process.cwd(), 'test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end');
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
@@ -106,24 +97,11 @@ function withPolicyGuidedPreferPatronageMode(def: GameDef): GameDef {
   return assertValidatedGameDef({ ...def, agents: updatedAgents });
 }
 
-const readDecisionSequence = (): readonly Decision[] =>
-  JSON.parse(readFileSync(join(fixtureDir, 'decision-sequence.json'), 'utf8')) as readonly Decision[];
-
 describe('policy-guided FITL canary golden', () => {
   it('keeps preferPatronageMode choosing Patronage on the fixed FITL Govern microturn', () => {
     const def = withPolicyGuidedPreferPatronageMode(getFitlProductionFixture().gameDef);
-    const runtime = createGameDefRuntime(def);
-    const fixtureDecisions = readDecisionSequence();
     const agent = new PolicyAgent({ profileId: 'arvn-baseline', traceLevel: 'verbose' });
-    let state: GameState = initialState(def, 1001, 4, undefined, runtime).state;
-
-    for (const fixtureDecision of fixtureDecisions.slice(0, 6)) {
-      state = applyDecision(def, state, fixtureDecision, undefined, runtime).state;
-    }
-
-    const microturn = publishMicroturn(def, state, runtime);
-    assert.equal(microturn.kind, 'chooseOne');
-    assert.equal(String(microturn.seatId), 'arvn');
+    const { state, microturn, runtime } = driveToGovernChooseOneMicroturn(def);
 
     const decision = agent.chooseDecision({ def, state, microturn, rng: createRng(1001n), runtime });
     assert.equal(decision.decision.kind, 'chooseOne');

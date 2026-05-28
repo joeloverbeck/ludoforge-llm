@@ -516,7 +516,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per u
 - [`archive/tickets/201FITLSHADOC-001C.md`](../archive/tickets/201FITLSHADOC-001C.md) — Exact zone-id filters for policy token aggregates (Foundation #2/#15 prerequisite for Available-pool features) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-001D.md`](../archive/tickets/201FITLSHADOC-001D.md) — Schedule-distance refs in state features (Foundation #2/#15 prerequisite for `distanceToCoup`) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-001E.md`](../archive/tickets/201FITLSHADOC-001E.md) — Active-card tag refs compile as booleans (Foundation #12/#15 prerequisite for `monsoonNow`) — COMPLETED
-- [`tickets/201FITLSHADOC-002.md`](../tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features)
+- [`archive/tickets/201FITLSHADOC-002.md`](../archive/tickets/201FITLSHADOC-002.md) — State features and candidate features (covers §4.1 / §4.2 P0 features) — COMPLETED
 - [`tickets/201FITLSHADOC-003.md`](../tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1)
 - [`tickets/201FITLSHADOC-004.md`](../tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2)
 - [`tickets/201FITLSHADOC-005.md`](../tickets/201FITLSHADOC-005.md) — Per-profile bindings + atomic blockImmediateWin removal (covers §4.5 / P3 — Foundation #14 atomic cut)

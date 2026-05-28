@@ -104,18 +104,20 @@ const strategyModule = (overrides: Partial<StrategyModuleDef> = {}): StrategyMod
 
 function createCatalog(options: {
   readonly modules?: readonly StrategyModuleDef[];
+  readonly useModuleIds?: readonly string[];
   readonly planTemplates?: readonly string[];
   readonly stateFeatureExprs?: Readonly<Record<string, CompiledPolicyExpr>>;
   readonly strategicConditionTargets?: Readonly<Record<string, CompiledPolicyExpr>>;
 } = {}): AgentPolicyCatalog {
   const modules = options.modules ?? [strategyModule()];
+  const useModuleIds = options.useModuleIds ?? modules.map((module) => String(module.id));
   const planTemplates = options.planTemplates ?? ['alpha', 'beta', 'gamma'];
   const stateFeatureExprs = options.stateFeatureExprs ?? {};
   const strategicConditionTargets = options.strategicConditionTargets ?? {};
   const profile: CompiledAgentProfile = {
     fingerprint: 'plan-proposer-eligibility-filter',
     params: {},
-    use: { considerations: [], strategyModules: modules.map((module) => String(module.id)), tieBreakers: [] },
+    use: { considerations: [], strategyModules: useModuleIds, tieBreakers: [] },
     preview: { mode: 'disabled' },
     selection: { mode: 'argmax' },
     plan: {
@@ -290,6 +292,22 @@ describe('plan proposer doctrine-gated template eligibility', () => {
       { templateId: 'beta', gatedBy: ['doctrine.suppress'], reason: 'suppressed' },
       { templateId: 'gamma', gatedBy: ['doctrine.enable'], reason: 'notEnabled' },
     ]);
+  });
+
+  it('does not activate dependency-only strategy modules omitted from profile use bindings', () => {
+    const result = propose(createCatalog({
+      modules: [
+        strategyModule({ id: 'doctrine.bound' as never }),
+        strategyModule({ id: 'doctrine.dependencyOnly' as never, enablesPlanTemplates: ['beta' as never] }),
+      ],
+      useModuleIds: ['doctrine.bound'],
+    }));
+
+    assert.equal(result.status, 'selected');
+    assert.deepEqual(result.activeDoctrines, ['doctrine.bound']);
+    assert.deepEqual(result.rejectedDoctrines, []);
+    assert.deepEqual(result.alternatives.map((alternative) => alternative.templateId), ['alpha', 'beta', 'gamma']);
+    assert.deepEqual(result.filteredOutTemplates, []);
   });
 
   it('preserves noTemplate status when no plan templates are declared', () => {

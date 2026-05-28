@@ -527,5 +527,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-27 (namespace `201FITLSHADOC` per u
 - [`archive/tickets/201FITLSHADOC-001F.md`](../archive/tickets/201FITLSHADOC-001F.md) — Candidate-aware strategic condition refs (Foundation #15/#20 prerequisite for preview-dependent `allyNearWin`) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-003.md`](../archive/tickets/201FITLSHADOC-003.md) — Strategic conditions (covers §4.3 / P1) — COMPLETED
 - [`archive/tickets/201FITLSHADOC-004.md`](../archive/tickets/201FITLSHADOC-004.md) — Shared strategy modules (covers §4.4 / P2) — COMPLETED
-- [`tickets/201FITLSHADOC-005.md`](../tickets/201FITLSHADOC-005.md) — Per-profile bindings + atomic blockImmediateWin removal (covers §4.5 / P3 — Foundation #14 atomic cut)
+- [`archive/tickets/201FITLSHADOC-005.md`](../archive/tickets/201FITLSHADOC-005.md) — Per-profile bindings + atomic blockImmediateWin removal (covers §4.5 / P3 — Foundation #14 atomic cut) — COMPLETED
 - [`tickets/201FITLSHADOC-006.md`](../tickets/201FITLSHADOC-006.md) — Profile-quality witness suite (covers §7 / P4 — 31 tests)

@@ -1629,6 +1629,7 @@ agents:
           ref: condition.currentLeaderNearWin.satisfied
         applies:
           scopes: [move]
+          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, infiltrate, bombard]
         priority:
           tier: 80
         scoreGroups:
@@ -1768,24 +1769,6 @@ agents:
           - arvn.patrolGovern
         suppressesPlanTemplates:
           - arvn.assaultRaid
-      arvn.blockImmediateWin:
-        traceLabel: "ARVN block immediate win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [govern, patrol, sweep, assault]
-        priority:
-          tier: 95
-        selectors:
-          - { role: assaultTarget, selectorId: arvn.assaultTargetSpace }
-          - { role: raidTarget, selectorId: arvn.raidRemovalTarget }
-        scoreGroups:
-          - id: blockThreat
-            summary: sum
-            terms:
-              - { id: enemyMarginReduction, weight: 10, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       arvn.harvestPatronage:
         traceLabel: "ARVN harvest Patronage"
         when: true
@@ -1899,25 +1882,6 @@ agents:
               - { id: stableTransport, weight: 4, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
-      us.blockImmediateWin:
-        traceLabel: "US win or block a win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [train, assault, air-strike]
-        priority:
-          tier: 90
-        selectors:
-          - { role: supportTarget, selectorId: us.trainSupportSpace }
-          - { role: assaultTarget, selectorId: us.assaultTargetSpace }
-          - { role: airStrikeTarget, selectorId: us.airStrikeTarget }
-        scoreGroups:
-          - id: winBlock
-            summary: sum
-            terms:
-              - { id: supportOrDenial, weight: 8, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       us.createAndDefendSupport:
         traceLabel: "US create and defend Support"
         when: true
@@ -1973,25 +1937,6 @@ agents:
             summary: sum
             terms:
               - { id: temporaryDeployment, weight: 5, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
-      nva.blockImmediateWin:
-        traceLabel: "NVA win or block a win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [march, attack, infiltrate, bombard]
-        priority:
-          tier: 90
-        selectors:
-          - { role: controlTarget, selectorId: nva.marchExpansionSpace }
-          - { role: infiltrateTarget, selectorId: nva.infiltrateTargetSpace }
-          - { role: attackTarget, selectorId: nva.attackTargetSpace }
-        scoreGroups:
-          - id: winBlock
-            summary: sum
-            terms:
-              - { id: controlOrBaseSwing, weight: 8, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       nva.logisticsAndTrail:
@@ -2571,7 +2516,12 @@ agents:
           - dropPassWhenOtherMovesExist
           - us.avoidPoliticalAirStrike
         strategyModules:
-          - us.blockImmediateWin
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
           - us.createAndDefendSupport
           - us.forceMultiplier
           - us.preserveAvailability
@@ -2636,8 +2586,13 @@ agents:
           - arvn.doNotOvercommitTroopsPreCoupWithoutBase
           - arvn.doNotFightLowYieldHighlands
         strategyModules:
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
           - buildPoliticalEngine
-          - arvn.blockImmediateWin
           - arvn.harvestPatronage
           - arvn.holdHighPopControl
           - arvn.protectAidEcon
@@ -2671,7 +2626,12 @@ agents:
           - nva.preserveTrailAndBases
           - nva.avoidLowYieldAttrition
         strategyModules:
-          - nva.blockImmediateWin
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
           - nva.logisticsAndTrail
           - nva.controlAndBases
           - nva.vcRivalLeverage
@@ -2709,6 +2669,12 @@ agents:
           - vc.protectBasesFromNvaInfiltrate
           - vc.avoidHighPopTaxWithoutPoliticalPlan
         strategyModules:
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
           - vc.buildPoliticalNetwork
           - vc.subvertRegimeSecurity
           - vc.fundAndAmbushCarefully

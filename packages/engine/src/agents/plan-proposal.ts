@@ -106,7 +106,7 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
   const activeDoctrines = activeDoctrineIds(input, rootCandidates);
   const rejectedDoctrines = rejectedDoctrineIds(input, activeDoctrines, rootCandidates);
   const templateEligibility = eligiblePlanTemplates({
-    profileStrategyModules: input.profile.plan.strategyModules ?? [],
+    profileStrategyModules: input.profile.use.strategyModules ?? [],
     compiledStrategyModules: input.catalog.compiled.strategyModules,
     activeDoctrines,
     templateIds,
@@ -508,7 +508,7 @@ function activeDoctrineIds(
     cacheBinding: input.runtime === undefined ? { kind: 'isolated' } : { kind: 'runtime', runtime: input.runtime },
   }, evaluationCandidates);
   try {
-    return (input.profile.plan.strategyModules ?? [])
+    return (input.profile.use.strategyModules ?? [])
       .filter((moduleId) => {
         const module = input.catalog.compiled.strategyModules?.[moduleId];
         if (module === undefined) {
@@ -531,7 +531,7 @@ function rejectedDoctrineIds(
   rootCandidates: readonly PlanProposalRootCandidate[],
 ): PlanProposalResult['rejectedDoctrines'] {
   const activeSet = new Set(active);
-  const inactive = (input.profile.plan.strategyModules ?? [])
+  const inactive = (input.profile.use.strategyModules ?? [])
     .filter((moduleId) => !activeSet.has(moduleId))
     .map<PlanProposalResult['rejectedDoctrines'][number]>((doctrineId) => ({ doctrineId, reason: 'inactive' }));
   const noRootMatch = active

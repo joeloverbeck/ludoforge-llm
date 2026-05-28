@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
-**Deps**: `tickets/201FITLSHADOC-003.md`
+**Deps**: `archive/tickets/201FITLSHADOC-003.md`
 
 ## Problem
 

@@ -11,6 +11,7 @@ import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
   AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
+  isAgentPolicyRelationshipRole,
 } from '../contracts/index.js';
 import { parsePolicyStandingRoleToken, POLICY_STANDING_ROLE_TOKEN_PREFIX } from '../agents/policy-standing-roles.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
@@ -2525,6 +2526,12 @@ class AgentLibraryCompiler {
     if (analysis === null) {
       return null;
     }
+    const previewFallback = scope === 'candidateFeature'
+      ? lowerPreviewFallback(`candidate feature "${featureId}"`, `${path}.previewFallback`, (def as GameSpecCandidateFeatureDef).previewFallback, this.diagnostics)
+      : undefined;
+    if (previewFallback === null) {
+      return null;
+    }
 
     const declaredType = normalizeDeclaredPolicyValueType(def.type, `${path}.type`, this.diagnostics);
     if (declaredType !== null && declaredType !== analysis.valueType) {
@@ -2547,12 +2554,26 @@ class AgentLibraryCompiler {
       });
       return null;
     }
+    if (scope === 'candidateFeature') {
+      const previewRefIds = collectPreviewDerivedRefIds(analysis.expr);
+      if (previewRefIds.length > 0 && previewFallback === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK,
+          path: `${path}.previewFallback`,
+          severity: 'error',
+          message: `Candidate feature "${featureId}" references ${previewRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
+          suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
+        });
+        return null;
+      }
+    }
 
     return {
       type: analysis.valueType,
       costClass: analysis.costClass,
       expr: analysis.expr,
       dependencies: analysis.dependencies,
+      ...(previewFallback === undefined ? {} : { previewFallback }),
     };
   }
 
@@ -3034,7 +3055,7 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    const previewFallback = lowerPreviewFallback(considerationId, `${path}.previewFallback`, def.previewFallback, this.diagnostics);
+    const previewFallback = lowerPreviewFallback(`Consideration "${considerationId}"`, `${path}.previewFallback`, def.previewFallback, this.diagnostics);
     if (previewFallback === null) {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
@@ -3356,6 +3377,23 @@ class AgentLibraryCompiler {
     return parsed;
   }
 
+  private parsePreviewRelationshipRef(scope: LibraryRefScope, refPath: string, path: string): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'victoryMargin' | 'gainValueDelta' } | null {
+    const parsed = parsePreviewRelationshipRefPath(refPath);
+    if (parsed === null) {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+    const hasRole = Object.keys(this.authoredLibrary.relationships ?? {}).some((relationshipId) => {
+      const relationship = this.compileRelationship(relationshipId);
+      return relationship?.role === parsed.role;
+    });
+    if (!hasRole) {
+      (scope === 'postureEvaluator' ? this.reportPostureRefUnknown : this.reportUnknownLibraryRef).call(this, refPath, path);
+      return null;
+    }
+    return parsed;
+  }
+
   private validateConsiderationScopeRefs(
     considerationId: string,
     consideration: AgentConsiderationWithExpr,
@@ -3491,7 +3529,7 @@ class AgentLibraryCompiler {
         });
         return null;
       }
-      const fallback = lowerPreviewFallback(component.id, `${componentPath}.previewFallback`, component.previewFallback, this.diagnostics);
+      const fallback = lowerPreviewFallback(`Selector quality component "${component.id}"`, `${componentPath}.previewFallback`, component.previewFallback, this.diagnostics);
       if (fallback === null) {
         return null;
       }
@@ -4007,14 +4045,7 @@ class AgentLibraryCompiler {
 
     const surfaceResolved = this.resolveSurfaceRuntimeRef(refPath, path, false);
     if (surfaceResolved !== null) {
-      const ref = surfaceResolved.ref as { readonly family?: string };
-      const surfaceType = ref.family === 'globalMarker'
-        || ref.family === 'activeCardIdentity'
-        ? 'id' as const
-        : ref.family === 'activeCardMetadata'
-          ? 'unknown' as const
-          : 'number' as const;
-      return { type: surfaceType, costClass: 'state', ref: surfaceResolved.ref };
+      return { type: policySurfaceRefValueType(surfaceResolved.ref), costClass: 'state', ref: surfaceResolved.ref };
     }
 
     this.reportUnknownLibraryRef(refPath, path);
@@ -4118,10 +4149,6 @@ class AgentLibraryCompiler {
     }
     const prefix = 'schedule.distance.';
     if (!refPath.startsWith(prefix)) {
-      return null;
-    }
-    if (scope === 'stateFeature') {
-      this.reportUnknownLibraryRef(refPath, path);
       return null;
     }
 
@@ -4402,16 +4429,20 @@ class AgentLibraryCompiler {
         dependency: { kind: 'stateFeatures', id: featureId },
       };
     }
+    if (nestedPath.startsWith('relationship.')) {
+      const parsed = this.parsePreviewRelationshipRef(scope, nestedPath, path);
+      if (parsed === null) {
+        return null;
+      }
+      return {
+        type: 'number',
+        costClass: 'preview',
+        ref: { kind: 'previewRelationship', role: parsed.role, field: parsed.field },
+      };
+    }
     const resolved = this.resolveSurfaceRuntimeRef(nestedPath, path, true);
     if (resolved !== null) {
-      const ref = resolved.ref as { readonly family?: string };
-      const previewSurfaceType = ref.family === 'globalMarker'
-        || ref.family === 'activeCardIdentity'
-        ? 'id' as const
-        : ref.family === 'activeCardMetadata'
-          ? 'unknown' as const
-          : 'number' as const;
-      return { type: previewSurfaceType, costClass: 'preview', ref: resolved.ref };
+      return { type: policySurfaceRefValueType(resolved.ref), costClass: 'preview', ref: resolved.ref };
     }
     this.reportUnknownLibraryRef(refPath, path);
     return null;
@@ -5003,6 +5034,20 @@ function normalizeDeclaredPolicyValueType(
   return null;
 }
 
+function policySurfaceRefValueType(ref: ResolvedPolicyRef['ref']): AgentPolicyValueType | 'unknown' {
+  const family = (ref as { readonly family?: string }).family;
+  if (family === 'globalMarker' || family === 'activeCardIdentity') {
+    return 'id';
+  }
+  if (family === 'activeCardTag') {
+    return 'boolean';
+  }
+  if (family === 'activeCardMetadata') {
+    return 'unknown';
+  }
+  return 'number';
+}
+
 function normalizeAggregateOp(
   value: unknown,
   path: string,
@@ -5209,7 +5254,7 @@ function normalizeConsiderationScopes(
 }
 
 function lowerPreviewFallback(
-  considerationId: string,
+  ownerLabel: string,
   path: string,
   value: GameSpecPreviewFallbackDef | undefined,
   diagnostics: Diagnostic[],
@@ -5222,7 +5267,7 @@ function lowerPreviewFallback(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
       path,
       severity: 'error',
-      message: `Consideration "${considerationId}" previewFallback must be an object.`,
+      message: `${ownerLabel} previewFallback must be an object.`,
       suggestion: 'Use previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
     });
     return null;
@@ -5241,7 +5286,7 @@ function lowerPreviewFallback(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
       path: `${path}.onUnavailable.constant`,
       severity: 'error',
-      message: `Consideration "${considerationId}" previewFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      message: `${ownerLabel} previewFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
       suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
     });
     return null;
@@ -5251,7 +5296,7 @@ function lowerPreviewFallback(
     code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
     path: `${path}.onUnavailable`,
     severity: 'error',
-    message: `Consideration "${considerationId}" previewFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
+    message: `${ownerLabel} previewFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
     suggestion: 'Use previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
   });
   return null;
@@ -5603,6 +5648,56 @@ function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
   return [...ids].sort();
 }
 
+function collectPreviewDerivedRefIds(expr: AgentPolicyExpr): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (current.ref.kind === 'previewOptionRef') {
+          ids.add(previewOptionRefKey(current.ref));
+        } else if (current.ref.kind === 'previewPlanRef') {
+          ids.add(`preview.plan.${current.ref.refKind}${current.ref.id === undefined ? '' : `.${current.ref.id}`}`);
+        } else if (current.ref.kind === 'previewSurface') {
+          ids.add(previewSurfaceRefKey(current.ref));
+        } else if (current.ref.kind === 'previewRelationship') {
+          ids.add(`preview.relationship.${current.ref.role}.${current.ref.field}`);
+        } else if (current.ref.kind === 'library' && current.ref.refKind === 'previewStateFeature') {
+          ids.add(`preview.feature.${current.ref.id}`);
+        } else if (current.ref.kind === 'lookup' && current.ref.surface === 'previewOptionState') {
+          ids.add(`lookup.${current.ref.surface}.${current.ref.collection}.${current.ref.path.join('.')}`);
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
 function collectLookupRefIds(
   expr: AgentPolicyExpr,
   surfaceFilter?: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['surface'],
@@ -5847,6 +5942,51 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
   }
 }
 
+function previewSurfaceRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewSurface' }>): string {
+  const selector = ref.selector?.kind === 'role'
+    ? ref.selector.seatToken
+    : ref.selector?.kind === 'player'
+      ? ref.selector.player
+      : undefined;
+  switch (ref.family) {
+    case 'victoryCurrentMargin':
+      return `preview.victory.currentMargin.${selector ?? ref.id}`;
+    case 'victoryCurrentRank':
+      return `preview.victory.currentRank.${selector ?? ref.id}`;
+    case 'globalVar':
+      return `preview.var.global.${ref.id}`;
+    case 'globalMarker':
+      return `preview.marker.global.${ref.id}`;
+    case 'perPlayerVar':
+      return `preview.var.player.${selector ?? 'self'}.${ref.id}`;
+    case 'derivedMetric':
+      return `preview.metric.${ref.id}`;
+    case 'activeCardIdentity':
+      return 'preview.activeCard.identity';
+    case 'activeCardTag':
+      return 'preview.activeCard.tag';
+    case 'activeCardMetadata':
+      return 'preview.activeCard.metadata';
+    case 'activeCardAnnotation':
+      return 'preview.activeCard.annotation';
+  }
+}
+
+function parsePreviewRelationshipRefPath(
+  refPath: string,
+): { readonly role: AgentRelationshipWithExpr['role']; readonly field: 'victoryMargin' | 'gainValueDelta' } | null {
+  const parts = refPath.split('.');
+  if (parts.length !== 3 || parts[0] !== 'relationship') {
+    return null;
+  }
+  const role = parts[1];
+  const field = parts[2];
+  if (!isAgentPolicyRelationshipRole(role) || (field !== 'victoryMargin' && field !== 'gainValueDelta')) {
+    return null;
+  }
+  return { role, field };
+}
+
 function collectConsiderationRefKinds(
   consideration: AgentConsiderationWithExpr,
 ): ReadonlySet<'candidate' | 'preview' | 'microturn' | 'contextKind'> {
@@ -5860,6 +6000,9 @@ function collectConsiderationRefKinds(
         kinds.add('candidate');
         return;
       case 'previewSurface':
+        kinds.add('preview');
+        return;
+      case 'previewRelationship':
         kinds.add('preview');
         return;
       case 'previewPlanRef':

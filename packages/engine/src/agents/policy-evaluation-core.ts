@@ -57,7 +57,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
-import { resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
+import { buildPolicyVictorySurface, resolvePolicyStandingRoleSelector, type PolicyValue } from './policy-surface.js';
 import { activePolicyRelationshipRoles, resolvePolicyRelationshipRef, type ActivePolicyRelationshipRole } from './policy-relationship-eval.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, UNSUPPORTED_FEATURE, type VMContext } from './policy-vm/index.js';
@@ -406,6 +406,9 @@ export function matchesZoneFilter(
 ): boolean {
   if (filter === undefined) {
     return true;
+  }
+  if (filter.zoneIds !== undefined && !filter.zoneIds.includes(String(zoneDef.id))) {
+    return false;
   }
   if (filter.category !== undefined && zoneDef.category !== filter.category) {
     return false;
@@ -791,9 +794,13 @@ export class PolicyEvaluationContext {
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate feature "${featureId}".`, { featureId });
     }
+    const unknownPreviewCountBefore = candidate.unknownPreviewRefs.size;
     const value = this.evaluateCompiledExpr(feature.expr, candidate);
-    candidateCache.set(featureId, value);
-    return value;
+    const finalValue = feature.previewFallback === undefined
+      ? value
+      : this.applyCandidateFeaturePreviewFallback(featureId, feature.previewFallback, value, candidate, unknownPreviewCountBefore);
+    candidateCache.set(featureId, finalValue);
+    return finalValue;
   }
 
   setCandidateFeatureValue(candidate: PolicyEvaluationCandidate, featureId: string, value: PolicyValue): void {
@@ -1420,6 +1427,9 @@ export class PolicyEvaluationContext {
     expr: Extract<CompiledPolicyExpr, { readonly kind: 'op' }>,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
+    if (expr.op === 'scheduleLowerBound') {
+      return expr.args.length === 1 ? this.evaluateScheduleLowerBoundExpr(expr.args[0], candidate) : undefined;
+    }
     const values = expr.args.map((arg) => this.evaluateCompiledExprDirect(arg, candidate));
     const first = values[0];
     switch (expr.op) {
@@ -1485,6 +1495,45 @@ export class PolicyEvaluationContext {
       case 'boolToNumber':
         return typeof first === 'boolean' ? (first ? 1 : 0) : undefined;
     }
+  }
+
+  private evaluateScheduleLowerBoundExpr(
+    expr: CompiledPolicyExpr | undefined,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (expr?.kind !== 'ref' || expr.ref.kind !== 'scheduleDistance') {
+      return expr === undefined ? undefined : this.evaluateCompiledExprDirect(expr, candidate);
+    }
+    const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(expr.ref, this.activeState);
+    const refId = scheduleDistanceRefId(expr.ref);
+    if (resolution.kind === 'ready') {
+      if (resolution.observerPolicy?.kind === 'topNVisible') {
+        this.recordScheduleInputRef(candidate, refId, {
+          status: 'ready',
+          value: resolution.value,
+          observerPolicy: 'topNVisible',
+          ...(resolution.visiblePrefixLength === undefined ? {} : { visiblePrefixLength: resolution.visiblePrefixLength }),
+          ...(resolution.visibleSequenceSources === undefined
+            ? {}
+            : { visibleSequenceSources: resolution.visibleSequenceSources }),
+        });
+      }
+      return resolution.value;
+    }
+    if (resolution.kind === 'partial') {
+      this.recordScheduleInputRef(candidate, refId, {
+        status: 'partial',
+        partialKind: resolution.partialKind,
+        lowerBound: resolution.lowerBound,
+        observerPolicy: 'topNVisible',
+        visiblePrefixLength: resolution.visiblePrefixLength,
+        visibleSequenceSources: resolution.visibleSequenceSources,
+      });
+      this.recordSchedulePartialFallbackApplied(candidate, [{ refId }], 'useLowerBound', resolution.lowerBound);
+      return resolution.lowerBound;
+    }
+    this.scheduleUnavailableDuringValue = true;
+    return undefined;
   }
 
   private resolveVmRef(refId: number): PolicyValue {
@@ -2016,9 +2065,11 @@ export class PolicyEvaluationContext {
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
       case 'strategicCondition':
-        return this.resolveStrategicConditionRef(ref.conditionId, ref.field);
+        return this.resolveStrategicConditionRef(ref.conditionId, ref.field, candidate);
       case 'relationship':
         return this.resolveRelationshipRef(ref.role, ref.field);
+      case 'previewRelationship':
+        return this.resolvePreviewRelationshipRef(ref.role, ref.field, candidate);
       case 'strategyModule':
         return this.resolveStrategyModuleRef(ref, candidate);
       case 'guardrail':
@@ -2226,11 +2277,8 @@ export class PolicyEvaluationContext {
     return undefined;
   }
 
-  private resolveStrategicConditionRef(
-    conditionId: string,
-    field: 'satisfied' | 'proximity',
-  ): PolicyValue {
-    const cacheKey = `${conditionId}.${field}`;
+  private resolveStrategicConditionRef(conditionId: string, field: 'satisfied' | 'proximity', candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    const cacheKey = `${conditionId}.${field}:${candidate?.stableMoveKey ?? '__state__'}`;
     const cache = this.strategicConditions();
     if (cache.has(cacheKey)) {
       return cache.get(cacheKey);
@@ -2247,12 +2295,12 @@ export class PolicyEvaluationContext {
 
     let value: PolicyValue;
     if (field === 'satisfied') {
-      value = this.evaluateCompiledExpr(condition.target, undefined);
+      value = this.evaluateCompiledExpr(condition.target, candidate);
     } else {
       if (condition.proximity === undefined) {
         value = undefined;
       } else {
-        const current = this.evaluateCompiledExpr(condition.proximity.current, undefined);
+        const current = this.evaluateCompiledExpr(condition.proximity.current, candidate);
         if (typeof current !== 'number') {
           value = undefined;
         } else {
@@ -2279,13 +2327,83 @@ export class PolicyEvaluationContext {
     return value;
   }
 
+  private resolvePreviewRelationshipRef(
+    role: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewRelationship' }>['role'],
+    field: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewRelationship' }>['field'],
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (candidate === undefined) {
+      return undefined;
+    }
+    const refId = `preview.relationship.${role}.${field}`;
+    candidate.previewRefIds.add(refId);
+    this.syncPreviewMetadata(candidate);
+    const previewOutcome = candidate.previewOutcome;
+    if (previewOutcome !== 'ready' && previewOutcome !== 'stochastic') {
+      if (previewOutcome !== undefined) {
+        this.recordUnknownPreviewRef(candidate, refId, previewOutcome);
+      }
+      return undefined;
+    }
+    const previewState = this.runtimeProviders.previewSurface.getPreviewState(candidate);
+    if (previewState === undefined) {
+      this.recordUnknownPreviewRef(candidate, refId, 'failed');
+      if (candidate.previewOutcome === undefined) {
+        candidate.previewOutcome = 'failed';
+      }
+      return undefined;
+    }
+    const previewValue = this.withEvaluationState(previewState, () => {
+      if (field === 'victoryMargin') {
+        const seat = resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, 'seat');
+        if (typeof seat !== 'string') {
+          return undefined;
+        }
+        return buildPolicyVictorySurface(this.input.def, previewState, this.runtime).marginBySeat.get(seat);
+      }
+      return resolvePolicyRelationshipRef(this.relationshipEvalOptions(), role, 'gainValue');
+    });
+    if (typeof previewValue !== 'number') {
+      this.recordUnknownPreviewRef(candidate, refId, 'unresolved');
+      return undefined;
+    }
+    const value = field === 'gainValueDelta'
+      ? previewValue - Number(this.resolveRelationshipRef(role, 'gainValue') ?? 0)
+      : previewValue;
+    this.recordResolvedPreviewRefValue(candidate, refId, value);
+    return value;
+  }
+
   private relationshipEvalOptions(): Parameters<typeof activePolicyRelationshipRoles>[0] {
     return {
       def: this.input.def, state: this.activeState, seatId: this.input.seatId,
       relationships: this.input.catalog.compiled.relationships ?? {},
-      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied') === true,
+      resolveCondition: (conditionId) => this.resolveStrategicConditionRef(conditionId, 'satisfied', undefined) === true,
       evaluateExpr: (expr) => this.evaluateCompiledExpr(expr, undefined),
     };
+  }
+
+  private applyCandidateFeaturePreviewFallback(
+    featureId: string,
+    fallback: NonNullable<import('../kernel/types.js').CompiledPolicyCandidateFeature['previewFallback']>,
+    value: PolicyValue,
+    candidate: PolicyEvaluationCandidate,
+    unknownPreviewCountBefore: number,
+  ): PolicyValue {
+    const previewUnavailable = value === undefined || candidate.unknownPreviewRefs.size > unknownPreviewCountBefore;
+    if (!previewUnavailable) {
+      return value;
+    }
+    if (fallback.onUnavailable === 'noContribution') {
+      this.recordPreviewFallbackFired(candidate, { termId: `feature.${featureId}`, kind: 'noContribution' });
+      return undefined;
+    }
+    this.recordPreviewFallbackFired(candidate, {
+      termId: `feature.${featureId}`,
+      kind: 'constant',
+      value: fallback.onUnavailable.value,
+    });
+    return fallback.onUnavailable.value;
   }
 
   private resolvePreviewOptionRef(

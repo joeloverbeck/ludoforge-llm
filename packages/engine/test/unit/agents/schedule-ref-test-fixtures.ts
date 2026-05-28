@@ -150,7 +150,14 @@ export function makeScheduleCatalog(): AgentPolicyCatalog {
     parameterDefs: {},
     candidateParamDefs: {},
     library: {
-      stateFeatures: {},
+      stateFeatures: {
+        distanceToCoup: {
+          type: 'number',
+          costClass: 'state',
+          expr: scheduleRefExpr(),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+        },
+      },
       candidateFeatures: {},
       candidateAggregates: {},
       guardrails: {},
@@ -186,6 +193,13 @@ export function makeScheduleCatalog(): AgentPolicyCatalog {
           weight: literal(3),
           value: literal(1),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+        },
+        stateFeatureDistance: {
+          scopes: ['microturn'],
+          costClass: 'state',
+          weight: literal(1),
+          value: refExpr({ kind: 'library', refKind: 'stateFeature', id: 'distanceToCoup' }),
+          dependencies: { parameters: [], stateFeatures: ['distanceToCoup'], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
       tieBreakers: {},

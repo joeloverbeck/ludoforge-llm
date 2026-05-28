@@ -33,6 +33,18 @@ Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose 
 
 **Multi-spec output adaptation**: If the brainstorm produced 2+ specs in a single design pass (e.g., follow-up specs N+1 and N+2 from a predecessor that named both), expand option 1 into one decomposition option per spec (`Decompose Spec <N+1> into tickets (namespace <SUGGESTED-N+1>)`, `Decompose Spec <N+2> into tickets (namespace <SUGGESTED-N+2>)`, …) and renumber the remaining options. The namespace-derivation rule (uppercase-letter-chunks-of-first-3-to-4-meaningful-words) applies per-spec. Combine with Multi-phase spec adaptation below when a multi-spec output also has a phased earliest deliverable.
 
+**Soft-dependency variant**: When the IMPLEMENTATION-ORDER.md (or equivalent ordering artifact) records a recommended sequence among the specs (e.g., one spec is a soft prerequisite for the others), preserve the per-spec expansion rule but annotate the dependency direction in each option's label. The prerequisite spec leads (no annotation), and dependent specs carry a `— recommended after Spec <N> lands` suffix. For example, with Spec 201 as prerequisite for 202–204:
+
+```
+1. Decompose Spec 201 into tickets (namespace 201FITLSHADOCLIF)
+2. Decompose Spec 202 into tickets (namespace 202FITLUSCOMP) — recommended after Spec 201 lands
+3. Decompose Spec 203 into tickets (namespace 203FITLNVACOMP) — recommended after Spec 201 lands
+4. Decompose Spec 204 into tickets (namespace 204FITLVCCOMP) — recommended after Spec 201 lands
+5. Decompose Spec 205 into tickets (namespace 205FITLARVSEL) — independent
+```
+
+A consolidated form ("decompose Spec N first, then the rest in parallel") loses per-spec namespace surfacing — the user then has to derive each namespace themselves at handoff time, defeating the menu-shape purpose. Preserve the per-spec expansion; annotate the soft dependency in the suffix.
+
 **Multi-phase spec adaptation**: If the spec has a phased structure where the earliest phase is genuinely separable (small effort, no architectural dependencies on later phases, risk profile unrelated to later phases), append an option: "Start Phase 0 immediately while reviewing the rest." Two distinct Phase 0 topologies exist and they pair differently:
 
 - **(a) Phased strategic delivery — Phase 0 is a permanent deliverable.** The phased structure is purely a sequencing decision; Phase 0 produces durable code or infrastructure that stays in the codebase after later phases land. No restoration ticket needed — Phase 0 is a planned permanent improvement, not a regression. Surface the option as written.

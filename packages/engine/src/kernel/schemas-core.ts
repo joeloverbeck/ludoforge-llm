@@ -910,6 +910,7 @@ const AgentPolicyTokenFilterSchema = z.object({
 }).strict();
 
 const AgentPolicyZoneFilterSchema = z.object({
+  zoneIds: z.array(StringSchema).nonempty().optional(),
   category: StringSchema.optional(),
   attribute: z.object({
     prop: StringSchema,
@@ -961,6 +962,7 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.literal('neg'),
         z.literal('not'),
         z.literal('or'),
+        z.literal('scheduleLowerBound'),
         z.literal('sub'),
       ]),
       args: z.array(AgentPolicyExprSchema),
@@ -1050,6 +1052,7 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.literal('neg'),
         z.literal('not'),
         z.literal('or'),
+        z.literal('scheduleLowerBound'),
         z.literal('sub'),
       ]),
       args: z.array(CompiledPolicyExprSchema),

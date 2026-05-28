@@ -8,21 +8,16 @@ import { parseDocument } from 'yaml';
 
 import { PolicyAgent } from '../../src/agents/index.js';
 import {
-  applyDecision,
   assertValidatedGameDef,
-  createGameDefRuntime,
   createRng,
-  initialState,
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type CompiledAgentPreviewConfig,
   type CompiledAgentPolicyRef,
-  type Decision,
   type GameDef,
-  type GameState,
 } from '../../src/kernel/index.js';
-import { publishMicroturn } from '../../src/kernel/microturn/publish.js';
+import { driveToGovernChooseOneMicroturn } from '../helpers/govern-mode-microturn.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 interface DiagnosticProfileArtifact {
@@ -76,7 +71,6 @@ const CONSIDERATION_ID = 'preferOptionProjectedMargin';
 const PREVIEW_REF_ID = 'preview.option.delta.victory.currentMargin.self';
 const here = dirname(fileURLToPath(import.meta.url));
 const fixtureUrl = new URL('../../../test/fixtures/trace/policy-preview-inner-fitl-canary.json', import.meta.url);
-const replayFixtureUrl = new URL('../../../test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/decision-sequence.json', import.meta.url);
 
 function resolveRepoRoot(): string {
   let cursor = here;
@@ -208,10 +202,6 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
   return assertValidatedGameDef({ ...def, agents: updatedAgents });
 }
 
-function readReplayDecisions(): readonly Decision[] {
-  return JSON.parse(readFileSync(replayFixtureUrl, 'utf8')) as readonly Decision[];
-}
-
 function normalizeCanaryTrace(input: InnerPreviewCanaryFixture): InnerPreviewCanaryFixture {
   return JSON.parse(`${JSON.stringify(input, null, 2)}\n`) as InnerPreviewCanaryFixture;
 }
@@ -219,20 +209,11 @@ function normalizeCanaryTrace(input: InnerPreviewCanaryFixture): InnerPreviewCan
 function capturePolicyPreviewInnerFitlCanary(): InnerPreviewCanaryFixture {
   const expected = JSON.parse(readFileSync(fixtureUrl, 'utf8')) as InnerPreviewCanaryFixture;
   const def = withDiagnosticInnerPreviewProfile(getFitlProductionFixture().gameDef);
-  const runtime = createGameDefRuntime(def);
-  const replayDecisions = readReplayDecisions();
   const agent = new PolicyAgent({ profileId: PROFILE_ID, traceLevel: 'verbose' });
-  let state: GameState = initialState(def, expected.seed, 4, undefined, runtime).state;
-
-  for (let index = 0; index < expected.replayedDecisionCount; index += 1) {
-    const decision = replayDecisions[index];
-    assert.ok(decision, `Expected replay decision ${index}`);
-    state = applyDecision(def, state, decision, undefined, runtime).state;
-  }
-
-  const microturn = publishMicroturn(def, state, runtime);
-  assert.equal(microturn.kind, 'chooseOne');
-  assert.equal(String(microturn.seatId), 'arvn');
+  // Spec 201's ARVN doctrine no longer routes seed 1001 through Govern, so the
+  // canary drives to the Govern $governMode chooseOne microturn directly instead
+  // of replaying the regenerated seed-1001 probe-recovery decision prefix.
+  const { state, microturn, runtime } = driveToGovernChooseOneMicroturn(def);
   const decision = agent.chooseDecision({ def, state, microturn, rng: createRng(BigInt(expected.seed)), runtime });
   const trace = decision.agentDecision;
   assert.ok(trace, 'Expected verbose policy trace');

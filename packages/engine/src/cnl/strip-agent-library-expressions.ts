@@ -43,6 +43,7 @@ export function stripAgentLibraryExpressions(library: AgentPolicyLibraryWithExpr
       type: feature.type,
       costClass: feature.costClass,
       dependencies: feature.dependencies,
+      ...(feature.previewFallback === undefined ? {} : { previewFallback: feature.previewFallback }),
     };
   }
   for (const [id, aggregate] of Object.entries(library.candidateAggregates)) {

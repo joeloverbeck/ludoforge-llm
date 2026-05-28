@@ -3082,18 +3082,22 @@ describe('agents authoring surface', () => {
             projectedMargin: {
               type: 'number',
               expr: { ref: 'preview.victory.currentMargin.us' },
+              previewFallback: { onUnavailable: 'noContribution' },
             },
             projectedCurrentMarginFeature: {
               type: 'number',
               expr: { ref: 'preview.feature.currentMargin' },
+              previewFallback: { onUnavailable: 'noContribution' },
             },
             projectedResources: {
               type: 'number',
               expr: { ref: 'preview.var.player.self.resources' },
+              previewFallback: { onUnavailable: 'noContribution' },
             },
             projectedBoobyTraps: {
               type: 'id',
               expr: { ref: 'preview.globalMarker.cap_boobyTraps' },
+              previewFallback: { onUnavailable: 'noContribution' },
             },
           },
           tieBreakers: {

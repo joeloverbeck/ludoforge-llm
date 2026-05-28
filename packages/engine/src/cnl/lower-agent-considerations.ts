@@ -42,6 +42,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly costClass: AgentPolicyCostClass;
     readonly expr: AgentPolicyExpr;
     readonly dependencies: CompiledAgentDependencyRefs;
+    readonly previewFallback?: AgentPreviewFallback;
   }>>;
   readonly candidateAggregates: Readonly<Record<string, {
     readonly type: AgentPolicyValueType;

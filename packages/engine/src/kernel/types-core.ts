@@ -441,6 +441,7 @@ export type AgentPolicyOperator =
   | 'neg'
   | 'not'
   | 'or'
+  | 'scheduleLowerBound'
   | 'sub';
 export type CompiledAgentPolicyLibraryRefKind = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'previewStateFeature';
 export type SurfaceRefFamily =
@@ -614,6 +615,11 @@ export type CompiledAgentPolicyRef =
       readonly field: 'seat' | 'gainValue';
     }
   | {
+      readonly kind: 'previewRelationship';
+      readonly role: AgentPolicyRelationshipRole;
+      readonly field: 'victoryMargin' | 'gainValueDelta';
+    }
+  | {
       readonly kind: 'candidateTag';
       readonly tagName: string;
     }
@@ -642,6 +648,7 @@ export interface AgentPolicyZoneVariableFilterComparison {
 }
 
 export interface AgentPolicyZoneFilter {
+  readonly zoneIds?: readonly string[];
   readonly category?: string;
   readonly attribute?: AgentPolicyZoneFilterComparison;
   readonly variable?: AgentPolicyZoneVariableFilterComparison;
@@ -779,6 +786,7 @@ export interface CompiledPolicyCandidateFeature {
   readonly costClass: AgentPolicyCostClass;
   readonly expr: CompiledPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly previewFallback?: AgentPreviewFallback;
 }
 
 export interface CompiledPolicyAggregate {
@@ -1125,6 +1133,7 @@ export interface CompiledAgentCandidateFeature {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly previewFallback?: AgentPreviewFallback;
 }
 
 export interface CompiledAgentAggregate {

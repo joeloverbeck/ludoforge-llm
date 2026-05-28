@@ -195,9 +195,9 @@ describe('phase boundary compile validation', () => {
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
     ],
     [
-      'rejects schedule refs outside move and microturn policy scopes',
-      docWithStateFeatureRef('schedule.distance.toBoundary.coupEntry.cards'),
-      CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+      'rejects unknown schedule refs in state features',
+      docWithStateFeatureRef('schedule.distance.toBoundary.missing.cards'),
+      CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNKNOWN_BOUNDARY,
     ],
   ];
 
@@ -272,6 +272,16 @@ describe('phase boundary compile validation', () => {
       ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'cards' },
     });
     assert.deepEqual(considerations.scheduleFallback!.scheduleFallback, { onUnavailable: 'dropConsideration' });
+  });
+
+  it('lowers schedule distance refs in state features', () => {
+    const result = compileGameSpecToGameDef(docWithStateFeatureRef('schedule.distance.toBoundary.coupEntry.cards'));
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.deepEqual(result.gameDef!.agents!.compiled.stateFeatures.scheduleState!.expr, {
+      kind: 'ref',
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'cards' },
+    });
   });
 
   it('warns and picks the first declared boundary when toPhase is ambiguous', () => {

@@ -627,6 +627,7 @@ export interface GameSpecStateFeatureDef {
 export interface GameSpecCandidateFeatureDef {
   readonly type?: string;
   readonly expr: GameSpecPolicyExpr;
+  readonly previewFallback?: GameSpecPreviewFallbackDef;
 }
 
 export interface GameSpecCandidateAggregateDef {

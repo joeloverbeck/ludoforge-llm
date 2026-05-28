@@ -385,6 +385,7 @@ describe('policy-expr analysis', () => {
           aggOp: 'sum',
           prop: 'strength',
           zoneFilter: {
+            zoneIds: ['frontier:none', 'target-a:none'],
             category: 'province',
             attribute: {
               prop: 'population',
@@ -419,6 +420,7 @@ describe('policy-expr analysis', () => {
         aggOp: 'sum',
         prop: 'strength',
         zoneFilter: {
+          zoneIds: ['frontier:none', 'target-a:none'],
           category: 'province',
           attribute: {
             prop: 'population',
@@ -533,6 +535,29 @@ describe('policy-expr analysis', () => {
       && diagnostic.message.includes('{ eq: <scalar> }')));
   });
 
+  it('rejects invalid globalTokenAgg zoneIds filters', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        globalTokenAgg: {
+          tokenFilter: { type: 'base' },
+          aggOp: 'count',
+          zoneFilter: {
+            zoneIds: ['frontier:none', ''],
+          },
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.globalTokenAgg.zoneFilter.zoneIds.1'
+      && diagnostic.message.includes('non-empty strings')));
+  });
+
   it('analyzes globalZoneAgg expressions with explicit attribute source and shared zone filters', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(
@@ -542,6 +567,7 @@ describe('policy-expr analysis', () => {
           field: 'population',
           aggOp: 'max',
           zoneFilter: {
+            zoneIds: ['frontier:none'],
             category: 'province',
             attribute: {
               prop: 'population',
@@ -570,6 +596,7 @@ describe('policy-expr analysis', () => {
         field: 'population',
         aggOp: 'max',
         zoneFilter: {
+          zoneIds: ['frontier:none'],
           category: 'province',
           attribute: {
             prop: 'population',

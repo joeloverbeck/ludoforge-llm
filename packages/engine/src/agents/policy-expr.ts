@@ -82,6 +82,7 @@ type KnownOperator =
   | 'or'
   | 'param'
   | 'ref'
+  | 'scheduleLowerBound'
   | 'sub'
   | 'globalTokenAgg'
   | 'globalZoneAgg'
@@ -116,6 +117,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'or',
   'param',
   'ref',
+  'scheduleLowerBound',
   'sub',
   'globalTokenAgg',
   'globalZoneAgg',
@@ -240,6 +242,8 @@ export function analyzePolicyExpr(
       return analyzeInOperator(value, context, diagnostics, path);
     case 'coalesce':
       return analyzeCoalesceOperator(value, context, diagnostics, path);
+    case 'scheduleLowerBound':
+      return analyzeScheduleLowerBoundOperator(value, context, diagnostics, path);
     case 'clamp':
       return analyzeClampOperator(value, context, diagnostics, path);
     case 'boolToNumber':
@@ -664,6 +668,39 @@ function analyzeCoalesceOperator(
   return compileOperatorAnalysis('coalesce', resultType, analyzed, analyzed.every((entry) => entry.isStaticallyZero));
 }
 
+function analyzeScheduleLowerBoundOperator(
+  expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  const analyzed = analyzePolicyExpr(expr, context, diagnostics, `${path}.scheduleLowerBound`);
+  if (analyzed === null) {
+    return null;
+  }
+  if (!matchesType(analyzed.valueType, 'number')) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+      path,
+      severity: 'error',
+      message: 'scheduleLowerBound requires a numeric schedule-distance expression.',
+      suggestion: 'Wrap a schedule.distance.* ref with scheduleLowerBound.',
+    });
+    return null;
+  }
+  if (!containsScheduleDistanceRef(analyzed.expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'scheduleLowerBound must wrap a schedule-distance ref.',
+      suggestion: 'Use scheduleLowerBound: { ref: schedule.distance.toBoundary.<id>.cards }.',
+    });
+    return null;
+  }
+  return compileOperatorAnalysis('scheduleLowerBound', 'number', [analyzed], analyzed.isStaticallyZero);
+}
+
 function analyzeClampOperator(
   expr: GameSpecPolicyExpr,
   context: AnalyzePolicyExprContext,
@@ -705,6 +742,28 @@ function analyzeBoolToNumberOperator(
     return null;
   }
   return compileOperatorAnalysis('boolToNumber', 'number', [analyzed], false);
+}
+
+function containsScheduleDistanceRef(expr: AgentPolicyExpr): boolean {
+  switch (expr.kind) {
+    case 'ref':
+      return expr.ref.kind === 'scheduleDistance';
+    case 'op':
+      return expr.args.some(containsScheduleDistanceRef);
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? false : containsScheduleDistanceRef(expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? false : containsScheduleDistanceRef(expr.anchorZone);
+    case 'seatAgg':
+      return containsScheduleDistanceRef(expr.expr);
+    case 'zoneProp':
+      return typeof expr.zone === 'string' ? false : containsScheduleDistanceRef(expr.zone);
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return false;
+  }
 }
 
 function analyzeChildExpressions(
@@ -1610,6 +1669,7 @@ function analyzePolicyAggregationZoneFilter(
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
+  const zoneIds = analyzePolicyAggregationZoneIds(operatorName, obj['zoneIds'], diagnostics, `${path}.zoneIds`);
   const category = obj['category'];
   const attribute = analyzePolicyAggregationAttributeFilterComparison(operatorName, obj['attribute'], diagnostics, `${path}.attribute`);
   const variable = analyzePolicyAggregationVariableFilterComparison(operatorName, obj['variable'], diagnostics, `${path}.variable`);
@@ -1625,15 +1685,52 @@ function analyzePolicyAggregationZoneFilter(
     return null;
   }
 
-  if (attribute === null || variable === null) {
+  if (zoneIds === null || attribute === null || variable === null) {
     return null;
   }
 
   return {
+    ...(zoneIds === undefined ? {} : { zoneIds }),
     ...(category === undefined ? {} : { category }),
     ...(attribute === undefined ? {} : { attribute }),
     ...(variable === undefined ? {} : { variable }),
   };
+}
+
+function analyzePolicyAggregationZoneIds(
+  operatorName: 'globalTokenAgg' | 'globalZoneAgg',
+  expr: unknown,
+  diagnostics: Diagnostic[],
+  path: string,
+): readonly string[] | undefined | null {
+  if (expr === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(expr) || expr.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `${operatorName}.zoneFilter.zoneIds must be a non-empty array of zone id strings.`,
+      suggestion: 'Use zoneFilter: { zoneIds: ["available-US:none"] }.',
+    });
+    return null;
+  }
+  const zoneIds: string[] = [];
+  for (const [index, zoneId] of expr.entries()) {
+    if (typeof zoneId !== 'string' || zoneId.length === 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `${operatorName}.zoneFilter.zoneIds entries must be non-empty strings.`,
+        suggestion: 'Use exact zone ids such as "available-US:none".',
+      });
+      return null;
+    }
+    zoneIds.push(zoneId);
+  }
+  return zoneIds;
 }
 
 function analyzePolicyAggregationAttributeFilterComparison(

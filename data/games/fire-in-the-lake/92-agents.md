@@ -144,6 +144,70 @@ agents:
         type: number
         expr:
           ref: victory.currentRank.self
+      distanceToCoup:
+        type: number
+        expr:
+          coalesce:
+            - { ref: schedule.distance.toBoundary.coupEntry.cards }
+            - 999
+      monsoonNow:
+        type: boolean
+        expr:
+          lte:
+            - scheduleLowerBound:
+                ref: schedule.distance.toBoundary.coupEntry.cards
+            - 2
+      aid:
+        type: number
+        expr:
+          ref: var.global.aid
+      trail:
+        type: number
+        expr:
+          ref: var.global.trail
+      totalSupport:
+        type: number
+        expr:
+          ref: metric.auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport
+      totalOpposition:
+        type: number
+        expr:
+          ref: metric.auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition
+      nvaBaseCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: NVA }
+                type: { eq: base }
+      availableUsTroops:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: US }
+                type: { eq: troops }
+            zoneFilter:
+              zoneIds:
+                - available-US:none
+            zoneScope: all
+      availableUsBases:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: US }
+                type: { eq: base }
+            zoneFilter:
+              zoneIds:
+                - available-US:none
+            zoneScope: all
 
     candidateFeatures:
       projectedSelfMargin:
@@ -152,30 +216,40 @@ agents:
           coalesce:
             - { ref: preview.victory.currentMargin.self }
             - { ref: feature.selfMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedNvaMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.nva }
             - { ref: feature.nvaMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedVcMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.vc }
             - { ref: feature.vcMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedUsMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.us }
             - { ref: feature.usMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedArvnMargin:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentMargin.arvn }
             - { ref: feature.arvnMargin }
+        previewFallback:
+          onUnavailable: noContribution
       projectedSelfMarginDelta:
         type: number
         expr:
@@ -198,12 +272,16 @@ agents:
                     - { ref: feature.vcFriendlyCapCount }
                 - { ref: feature.vcFriendlyCapCount }
             - 0
+        previewFallback:
+          onUnavailable: noContribution
       projectedSelfRank:
         type: number
         expr:
           coalesce:
             - { ref: preview.victory.currentRank.self }
             - { ref: feature.selfRank }
+        previewFallback:
+          onUnavailable: noContribution
       projectedCurrentLeaderMargin:
         type: number
         expr:
@@ -212,6 +290,8 @@ agents:
             expr: { ref: preview.victory.currentMargin.$seat }
             aggOp: sum
             availability: selfAndTargetReady
+        previewFallback:
+          onUnavailable: noContribution
       projectedNearestThreatMargin:
         type: number
         expr:
@@ -220,6 +300,70 @@ agents:
             expr: { ref: preview.victory.currentMargin.$seat }
             aggOp: sum
             availability: selfAndTargetReady
+        previewFallback:
+          onUnavailable: noContribution
+      projectedLeaderMarginDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: feature.projectedCurrentLeaderMargin }
+                - seatAgg:
+                    over: { role: currentLeader }
+                    expr: { ref: victory.currentMargin.$seat }
+                    aggOp: sum
+                    availability: selfAndTargetReady
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedAllyMarginDelta:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.relationship.nominalAlly.gainValueDelta }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedAidDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.var.global.aid }
+                - { ref: var.global.aid }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedTrailDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.var.global.trail }
+                - { ref: var.global.trail }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedSupportDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.feature.totalSupport }
+                - { ref: feature.totalSupport }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedOppositionDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.feature.totalOpposition }
+                - { ref: feature.totalOpposition }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -306,6 +450,42 @@ agents:
               - { ref: feature.vcMargin }
               - 1
           threshold: 1
+      selfCanWinNow:
+        description: "Self projected margin crosses the win threshold under the current plan."
+        target:
+          gte:
+            - { ref: feature.projectedSelfMargin }
+            - 0
+      currentLeaderNearWin:
+        description: "Current leader is within near-win threshold; denial overrides ordinary efficiency."
+        target:
+          gte:
+            - { ref: feature.projectedCurrentLeaderMargin }
+            - -2
+      coupImminent:
+        description: "Coup is one card away or sooner; speculative setup is dominated by concrete swing."
+        target:
+          lte:
+            - { ref: feature.distanceToCoup }
+            - 1
+      monsoonNow:
+        description: "Monsoon is in effect; Sweep/March unavailable, Air Strike/Air Lift restricted."
+        target:
+          eq:
+            - { ref: feature.monsoonNow }
+            - true
+      resourcesLow:
+        description: "Self resources are below the operating floor."
+        target:
+          lt:
+            - { ref: feature.selfResources }
+            - 2
+      allyNearWin:
+        description: "Self's nominal ally is near win; their gains are rival gains."
+        target:
+          gte:
+            - { ref: preview.relationship.nominalAlly.victoryMargin }
+            - -1
 
     selectors:
       # Spec 181 migration: preferOptionProjectedMargin previously read
@@ -1431,6 +1611,123 @@ agents:
           ref: victory.currentMargin.nva
 
     strategyModules:
+      shared.immediateWin:
+        traceLabel: "complete immediate win"
+        when:
+          ref: condition.selfCanWinNow.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 90
+        scoreGroups:
+          - id: immediateWin
+            summary: sum
+            terms:
+              - weight: 10
+                value:
+                  ref: feature.projectedSelfMargin
+      shared.blockCurrentLeader:
+        traceLabel: "block current leader"
+        when:
+          ref: condition.currentLeaderNearWin.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, infiltrate, bombard]
+        priority:
+          tier: 80
+        scoreGroups:
+          - id: leaderDenial
+            summary: sum
+            terms:
+              - weight: 10
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedLeaderMarginDelta }
+      shared.nearCoupConcreteSwing:
+        traceLabel: "concrete coup swing"
+        when:
+          ref: condition.coupImminent.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 70
+        scoreGroups:
+          - id: concreteCoupSwing
+            summary: sum
+            terms:
+              - weight: 5
+                value:
+                  add:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - { ref: feature.projectedAidDelta }
+      shared.resourceLogistics:
+        traceLabel: "preserve resources and logistics"
+        when:
+          ref: condition.resourcesLow.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 60
+        scoreGroups:
+          - id: logisticsSwing
+            summary: sum
+            terms:
+              - weight: 4
+                value:
+                  add:
+                    - { ref: feature.projectedAidDelta }
+                    - { ref: feature.projectedTrailDelta }
+      shared.eventDirectSwing:
+        traceLabel: "play event for direct swing"
+        when:
+          ref: candidate.tag.event-play
+        applies:
+          scopes: [move]
+        priority:
+          tier: 50
+        scoreGroups:
+          - id: eventSwing
+            summary: sum
+            terms:
+              - weight: 8
+                value:
+                  ref: feature.projectedSelfMargin
+      shared.allyRivalThrottle:
+        traceLabel: "throttle ally gains when ally near win"
+        when:
+          ref: condition.allyNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 65
+        scoreGroups:
+          - id: allyRivalRisk
+            summary: sum
+            terms:
+              - weight: -6
+                value:
+                  ref: feature.projectedAllyMarginDelta
+      shared.monsoonOperationalRestriction:
+        traceLabel: "avoid Sweep and March under Monsoon"
+        when:
+          ref: condition.monsoonNow.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [sweep, march]
+        priority:
+          tier: 75
+        scoreGroups: []
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - arvn.sweepRaid
+          - us.sweepAirStrike
+          - nva.marchInfiltrate
+          - nva.marchAmbush
+          - nva.locOccupationBeforeCoup
+          - vc.marchSubvert
+          - vc.marchAmbushFromLoc
       arvnPursueProjectedMargin:
         traceLabel: "ARVN pursue projected margin"
         when: true
@@ -1495,24 +1792,6 @@ agents:
           - arvn.patrolGovern
         suppressesPlanTemplates:
           - arvn.assaultRaid
-      arvn.blockImmediateWin:
-        traceLabel: "ARVN block immediate win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [govern, patrol, sweep, assault]
-        priority:
-          tier: 95
-        selectors:
-          - { role: assaultTarget, selectorId: arvn.assaultTargetSpace }
-          - { role: raidTarget, selectorId: arvn.raidRemovalTarget }
-        scoreGroups:
-          - id: blockThreat
-            summary: sum
-            terms:
-              - { id: enemyMarginReduction, weight: 10, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       arvn.harvestPatronage:
         traceLabel: "ARVN harvest Patronage"
         when: true
@@ -1626,25 +1905,6 @@ agents:
               - { id: stableTransport, weight: 4, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
-      us.blockImmediateWin:
-        traceLabel: "US win or block a win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [train, assault, air-strike]
-        priority:
-          tier: 90
-        selectors:
-          - { role: supportTarget, selectorId: us.trainSupportSpace }
-          - { role: assaultTarget, selectorId: us.assaultTargetSpace }
-          - { role: airStrikeTarget, selectorId: us.airStrikeTarget }
-        scoreGroups:
-          - id: winBlock
-            summary: sum
-            terms:
-              - { id: supportOrDenial, weight: 8, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       us.createAndDefendSupport:
         traceLabel: "US create and defend Support"
         when: true
@@ -1700,25 +1960,6 @@ agents:
             summary: sum
             terms:
               - { id: temporaryDeployment, weight: 5, value: 1 }
-        guardrailIds: []
-        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
-      nva.blockImmediateWin:
-        traceLabel: "NVA win or block a win"
-        when: true
-        applies:
-          scopes: [move]
-          actionTags: [march, attack, infiltrate, bombard]
-        priority:
-          tier: 90
-        selectors:
-          - { role: controlTarget, selectorId: nva.marchExpansionSpace }
-          - { role: infiltrateTarget, selectorId: nva.infiltrateTargetSpace }
-          - { role: attackTarget, selectorId: nva.attackTargetSpace }
-        scoreGroups:
-          - id: winBlock
-            summary: sum
-            terms:
-              - { id: controlOrBaseSwing, weight: 8, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
       nva.logisticsAndTrail:
@@ -2298,7 +2539,13 @@ agents:
           - dropPassWhenOtherMovesExist
           - us.avoidPoliticalAirStrike
         strategyModules:
-          - us.blockImmediateWin
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - us.createAndDefendSupport
           - us.forceMultiplier
           - us.preserveAvailability
@@ -2363,8 +2610,14 @@ agents:
           - arvn.doNotOvercommitTroopsPreCoupWithoutBase
           - arvn.doNotFightLowYieldHighlands
         strategyModules:
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - buildPoliticalEngine
-          - arvn.blockImmediateWin
           - arvn.harvestPatronage
           - arvn.holdHighPopControl
           - arvn.protectAidEcon
@@ -2398,7 +2651,13 @@ agents:
           - nva.preserveTrailAndBases
           - nva.avoidLowYieldAttrition
         strategyModules:
-          - nva.blockImmediateWin
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - nva.logisticsAndTrail
           - nva.controlAndBases
           - nva.vcRivalLeverage
@@ -2436,6 +2695,13 @@ agents:
           - vc.protectBasesFromNvaInfiltrate
           - vc.avoidHighPopTaxWithoutPoliticalPlan
         strategyModules:
+          - shared.immediateWin
+          - shared.blockCurrentLeader
+          - shared.nearCoupConcreteSwing
+          - shared.resourceLogistics
+          - shared.eventDirectSwing
+          - shared.allyRivalThrottle
+          - shared.monsoonOperationalRestriction
           - vc.buildPoliticalNetwork
           - vc.subvertRegimeSecurity
           - vc.fundAndAmbushCarefully

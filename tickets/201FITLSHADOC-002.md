@@ -1,6 +1,6 @@
 # 201FITLSHADOC-002: State features and candidate features
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
@@ -93,3 +93,22 @@ Each declares `previewFallback.onUnavailable: noContribution` exactly as written
 2. `pnpm turbo schema:artifacts`
 3. `pnpm turbo build` (twice) — confirm byte-identical GameDef
 4. `pnpm turbo lint typecheck`
+
+## Outcome (2026-05-28)
+
+Completed the Spec 201 state-feature and candidate-feature authoring slice:
+
+1. Added the shared lifecycle state features `distanceToCoup`, `monsoonNow`, `aid`, and `trail`.
+2. Added survey-confirmed aggregate state features `totalSupport`, `totalOpposition`, `nvaBaseCount`, `availableUsTroops`, and `availableUsBases`.
+3. Added the shared candidate features `projectedLeaderMarginDelta`, `projectedAllyMarginDelta`, `projectedAidDelta`, `projectedTrailDelta`, `projectedSupportDelta`, and `projectedOppositionDelta`.
+4. Added explicit `previewFallback.onUnavailable: noContribution` to every new preview-derived candidate feature.
+5. No deferred metric comments were needed because every ticket-owned §4.1 metric was available or available with the prerequisite adjustments from tickets `201FITLSHADOC-001C`, `201FITLSHADOC-001D`, and `201FITLSHADOC-001E`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-production-data-compilation.test.js` — passed, 3 tests.
+3. `pnpm turbo schema:artifacts` — passed; no retained schema diff.
+4. `pnpm turbo build` — passed twice.
+5. `node --input-type=module -e "<compile FITL production GameDef twice and compare JSON bytes>"` — passed; byte-identical SHA-256 `de39c5ed5174e6318d9a56c0b1f8bef0981c76e6126b94dbb37a1f698902aec3`.
+6. `pnpm turbo lint typecheck` — passed, 5 tasks.

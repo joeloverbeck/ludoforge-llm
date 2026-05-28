@@ -144,6 +144,67 @@ agents:
         type: number
         expr:
           ref: victory.currentRank.self
+      distanceToCoup:
+        type: number
+        expr:
+          coalesce:
+            - { ref: schedule.distance.toBoundary.coupEntry.cards }
+            - 999
+      monsoonNow:
+        type: boolean
+        expr:
+          ref: activeCard.hasTag.monsoon
+      aid:
+        type: number
+        expr:
+          ref: var.global.aid
+      trail:
+        type: number
+        expr:
+          ref: var.global.trail
+      totalSupport:
+        type: number
+        expr:
+          ref: metric.auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport
+      totalOpposition:
+        type: number
+        expr:
+          ref: metric.auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition
+      nvaBaseCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: NVA }
+                type: { eq: base }
+      availableUsTroops:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: US }
+                type: { eq: troops }
+            zoneFilter:
+              zoneIds:
+                - available-US:none
+            zoneScope: all
+      availableUsBases:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: US }
+                type: { eq: base }
+            zoneFilter:
+              zoneIds:
+                - available-US:none
+            zoneScope: all
 
     candidateFeatures:
       projectedSelfMargin:
@@ -236,6 +297,68 @@ agents:
             expr: { ref: preview.victory.currentMargin.$seat }
             aggOp: sum
             availability: selfAndTargetReady
+        previewFallback:
+          onUnavailable: noContribution
+      projectedLeaderMarginDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: feature.projectedCurrentLeaderMargin }
+                - seatAgg:
+                    over: { role: currentLeader }
+                    expr: { ref: victory.currentMargin.$seat }
+                    aggOp: sum
+                    availability: selfAndTargetReady
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedAllyMarginDelta:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.relationship.nominalAlly.gainValueDelta }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedAidDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.var.global.aid }
+                - { ref: var.global.aid }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedTrailDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.var.global.trail }
+                - { ref: var.global.trail }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedSupportDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.feature.totalSupport }
+                - { ref: feature.totalSupport }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
+      projectedOppositionDelta:
+        type: number
+        expr:
+          coalesce:
+            - sub:
+                - { ref: preview.feature.totalOpposition }
+                - { ref: feature.totalOpposition }
+            - 0
         previewFallback:
           onUnavailable: noContribution
 

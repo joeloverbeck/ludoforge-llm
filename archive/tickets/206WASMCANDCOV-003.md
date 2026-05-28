@@ -1,6 +1,6 @@
 # 206WASMCANDCOV-003: Extend dynamic candidate-feature row materialization (currentSurface leaves, cross-refs, null sentinel)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/` (dynamic-row evaluator, classifier predicate); manifest re-bless; new equivalence test
@@ -96,3 +96,28 @@ Update the `archive/tickets/206WASMCANDCOV-001.md` classifier so `currentSurface
 1. `pnpm -F @ludoforge/engine build && node --test "packages/engine/dist/test/integration/policy-wasm-candidate-feature-materialization-equivalence.test.js"`
 2. `node --test "packages/engine/dist/test/integration/arvn-tournament-wasm-equivalence.test.js" "packages/engine/dist/test/integration/policy-bytecode-equivalence.test.js" "packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js"`
 3. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+**Completed**: 2026-05-28
+
+### What changed
+- `packages/engine/src/agents/policy-wasm-dynamic-candidate-feature-rows.ts`:
+  - Introduced a null-propagating `UNMATERIALIZABLE` sentinel (a `unique symbol`) distinct from `undefined`. `undefined` stays "preview legitimately unavailable" (coalesce-able); the sentinel means "structurally unmaterializable leaf" and hard-aborts through `op`/`coalesce`/`seatAgg` so the whole row returns `null` (Foundation #8/#20).
+  - Removed the top-level-`seatAgg`-only guard in `evaluateDynamicCandidateFeatureRows`; it now evaluates any expr and maps a sentinel result to a `null` row.
+  - The `ref` case now resolves non-preview `currentSurface` leaves against the current state via a memoized `SurfaceResolutionContext` (`buildPolicyVictorySurface` computed at most once per row set), and resolves `feature.<id>` candidate cross-refs from the unified accumulator (absent row → sentinel). `stateFeature`/`aggregate`/`param`/unsupported-op/other leaves → sentinel (abort to bytecode/oracle).
+  - New input fields: `playerId`, `candidateFeatureRows` (unified accumulator map), optional `runtime`.
+- `packages/engine/src/agents/policy-wasm-score-routing.ts`: passes `playerId`, the unified `candidateFeatureRows` map, and `runtime` to `evaluateDynamicCandidateFeatureRows`.
+- `packages/engine/src/agents/policy-wasm-coverage-classifier.ts`: `currentSurface` and nested role-`seatAgg` now classify materializable; added an explicit `previewSurface globalVar → ts-oracle` rule (see deviation below).
+- Re-blessed `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`: the ONLY diff is `projectedLeaderMarginDelta: ts-oracle → wasm-row` across all four FITL baselines.
+- New `packages/engine/test/integration/policy-wasm-candidate-feature-materialization-equivalence.test.ts`; updated the classifier unit test for post-§4.2 verdicts.
+
+### Deviation / clarification from the ticket (empirical reassessment)
+- The ticket implied the §4.2 `currentSurface` extension would also flip `projectedAidDelta`/`projectedTrailDelta`. A runtime probe showed those two are gated earlier — by the **production preview drive's inability to project a `globalVar` preview effect** (`preview.var.global.aid`/`trail`): the drive returns "only matching global scalar addVar/setVar effects are supported", so materialization returns `null` BEFORE the dynamic-row evaluator runs. They are therefore permanently TS-oracle in this corpus, independent of §4.2. To keep the classifier faithful to runtime, a `previewSurface globalVar → ts-oracle` rule was added. Net manifest diff is exactly the one the ticket targeted: `projectedLeaderMarginDelta → wasm-row` only. (`projectedLeaderMarginDelta` carries NO `previewSurface` ref — its `collectPreviewDynamicRefs` set is empty — so it bypasses the drive and the dynamic-row evaluator fully materializes it.)
+- Full-route value equivalence was verified empirically (instrumented probe): `projectedLeaderMarginDelta` WASM-materialized values are byte-equal to the TS oracle for every candidate across the ARVN corpus (zero mismatches).
+- One downstream test shifted legitimately: `preview-budget-allocator.test.ts` "materializes preview-state feature rows…" — a top-level `previewStateFeature` row now materializes through the dynamic-row evaluator instead of the bytecode VM, so the score-row bytecode compile count dropped 3 → 2 (route count, preview-row route count, selected move, and ready outcome all unchanged). Updated the assertion with an explanatory comment.
+
+### Verification
+- New equivalence test (3 cases incl. sentinel hard-abort vs coalesced-0) → pass.
+- `arvn-tournament-wasm-equivalence` + `policy-bytecode-equivalence` + coverage-manifest + classifier unit → all green; decision streams byte-identical (no trajectory change).
+- `pnpm turbo lint typecheck` → green. `pnpm -F @ludoforge/engine test:all` → 9614 architectural-invariant pass, 0 fail (full unit/architecture/integration/performance/memory/e2e).

@@ -50,7 +50,7 @@ Ensure the 001 classifier emits `coverage: 'ts-oracle', reason: 'preview-relatio
 ## Out of Scope
 
 - Full `preview.relationship.*` WASM materialization (§10 follow-on) — these features stay TS-oracle-only.
-- The §4.2 materialization extension (currentSurface/cross-refs/sentinel) — owned by `tickets/206WASMCANDCOV-003.md`.
+- The §4.2 materialization extension (currentSurface/cross-refs/sentinel) — owned by `archive/tickets/206WASMCANDCOV-003.md`.
 - Removing the per-row oracle backstop — it remains the correctness safety net.
 - Any value/trajectory change — `projectedAllyMarginDelta` values are unchanged (Foundation #8).
 

@@ -477,7 +477,12 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       def: input.def,
       state: input.state,
       seatId: input.seatId,
+      playerId: input.playerId,
       candidateCount: input.candidates.length,
+      // Unified accumulator (preview + non-preview prior rows) for `feature.<id>`
+      // cross-refs — including preview-cost dependencies (Spec 206 §4.2).
+      candidateFeatureRows: new Map(candidateFeatureRows.map((row) => [row.id, row.values])),
+      ...(input.gameDefRuntime === undefined ? {} : { runtime: input.gameDefRuntime }),
     }, feature.expr, precomputedDynamicCandidateFeatures)
       ?? evaluateWasmCandidateFeatureRow(input.runtime, {
       def: input.def,

@@ -4,7 +4,7 @@
       {
         "id": "projectedAidDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.aid\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "3a88a84e59693deb"
       },
       {
@@ -27,8 +27,8 @@
       },
       {
         "id": "projectedLeaderMarginDelta",
-        "coverage": "ts-oracle",
-        "reason": "nested role-selected seatAgg requires preview-state role resolution the WASM row path does not yet support",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "ec974d2e326b2630"
       },
       {
@@ -52,7 +52,7 @@
       {
         "id": "projectedTrailDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.trail\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "eca97a0b629dfcbc"
       },
       {
@@ -78,7 +78,7 @@
       {
         "id": "projectedAidDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.aid\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "3a88a84e59693deb"
       },
       {
@@ -101,8 +101,8 @@
       },
       {
         "id": "projectedLeaderMarginDelta",
-        "coverage": "ts-oracle",
-        "reason": "nested role-selected seatAgg requires preview-state role resolution the WASM row path does not yet support",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "ec974d2e326b2630"
       },
       {
@@ -126,7 +126,7 @@
       {
         "id": "projectedTrailDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.trail\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "eca97a0b629dfcbc"
       },
       {
@@ -146,7 +146,7 @@
       {
         "id": "projectedAidDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.aid\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "3a88a84e59693deb"
       },
       {
@@ -169,8 +169,8 @@
       },
       {
         "id": "projectedLeaderMarginDelta",
-        "coverage": "ts-oracle",
-        "reason": "nested role-selected seatAgg requires preview-state role resolution the WASM row path does not yet support",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "ec974d2e326b2630"
       },
       {
@@ -194,7 +194,7 @@
       {
         "id": "projectedTrailDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.trail\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "eca97a0b629dfcbc"
       },
       {
@@ -220,7 +220,7 @@
       {
         "id": "projectedAidDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.aid\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "3a88a84e59693deb"
       },
       {
@@ -249,8 +249,8 @@
       },
       {
         "id": "projectedLeaderMarginDelta",
-        "coverage": "ts-oracle",
-        "reason": "nested role-selected seatAgg requires preview-state role resolution the WASM row path does not yet support",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "ec974d2e326b2630"
       },
       {
@@ -274,7 +274,7 @@
       {
         "id": "projectedTrailDelta",
         "coverage": "ts-oracle",
-        "reason": "currentSurface ref \"globalVar.trail\" requires current-state materialization the WASM row path does not yet support",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
         "featureExprFingerprint": "eca97a0b629dfcbc"
       },
       {

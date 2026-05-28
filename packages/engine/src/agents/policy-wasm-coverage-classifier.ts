@@ -23,14 +23,18 @@ import {
  * stays paired with runtime reality (Foundation #15, cf. Spec 154 dispatch
  * completeness).
  *
- * This module encodes the materializability contract of the *current* WASM row
- * path. Three shapes route to the TS oracle today:
- *   - `previewRelationship` refs (dynamic preview-state role→seat resolution);
- *   - `currentSurface` refs (candidate-independent current-state leaves the row
- *     path does not yet evaluate — Spec 206 §4.2 / ticket 003 lifts this);
- *   - role-selected `seatAgg` below the top level (the TS dynamic-row evaluator
- *     only enters non-top-level exprs after ticket 003), plus the unsupported
- *     bytecode operators (`clamp`/`if`/`in`/`scheduleLowerBound`).
+ * This module encodes the materializability contract of the WASM row path after
+ * Spec 206 §4.2 (ticket 003): the dynamic-row evaluator resolves `currentSurface`
+ * leaves and `seatAgg` (role/all/opponents) at any depth, and `feature.<id>`
+ * candidate cross-refs read the prior unified row accumulator; the bytecode VM
+ * fallback covers the remaining `stateFeature`/`param`/non-role shapes. The
+ * residual TS-oracle triggers are:
+ *   - `previewRelationship` refs (dynamic preview-state role→seat resolution that
+ *     the fixed-slot extraction model cannot express);
+ *   - the unsupported bytecode operators (`clamp`/`if`/`in`/`scheduleLowerBound`);
+ *   - a preview-dynamic ref with no fixed materialization slot;
+ *   - a `feature.<id>` cross-ref whose target is itself TS-oracle (or unresolved
+ *     earlier in plan order).
  *
  * No game-specific identifiers appear here; any game's profile classifies
  * through the same code (Foundation #1).
@@ -64,13 +68,11 @@ interface ClassifyContext {
 
 /**
  * Returns the first reason the expr is NOT WASM-row-materializable, or `null`
- * when every leaf materializes. `isTopLevel` distinguishes a top-level `seatAgg`
- * (evaluated by `evaluateDynamicCandidateFeatureRows`) from a nested one (only
- * reachable through the bytecode VM today, which cannot resolve a dynamic role).
+ * when every leaf materializes (by the dynamic-row evaluator or the bytecode VM
+ * fallback).
  */
 const firstUnmaterializableReason = (
   expr: CompiledPolicyExpr,
-  isTopLevel: boolean,
   ctx: ClassifyContext,
 ): string | null => {
   switch (expr.kind) {
@@ -83,9 +85,19 @@ const firstUnmaterializableReason = (
         return 'preview-relationship requires preview-state role resolution';
       }
       if (ref.kind === 'currentSurface') {
-        return `currentSurface ref "${ref.family}.${ref.id}" requires current-state materialization the WASM row path does not yet support`;
+        // Spec 206 §4.2: the dynamic-row evaluator now resolves candidate-independent
+        // currentSurface leaves against the current state.
+        return null;
       }
       if (ref.kind === 'previewSurface') {
+        if (ref.family === 'globalVar') {
+          // The production preview drive only projects matching scalar addVar/setVar
+          // effects; an arbitrary globalVar preview value is not generally
+          // materializable, so it deterministically routes to the TS oracle
+          // (confirmed against the FITL ARVN corpus, where projectedAidDelta /
+          // projectedTrailDelta never materialize).
+          return `preview-surface globalVar ref "${ref.id}" is not materializable by the production preview drive (action-dependent scalar projection)`;
+        }
         return previewGlobalSlotsForRef(ctx.catalog, ctx.def, ref, ctx.seatContextIds) === undefined
           ? `preview-surface ref "${ref.family}.${ref.id}" has no fixed materialization slot`
           : null;
@@ -111,20 +123,17 @@ const firstUnmaterializableReason = (
         return `operator "${expr.op}" requires a later VM opcode expansion and is not WASM-row-evaluable`;
       }
       for (const arg of expr.args) {
-        const reason = firstUnmaterializableReason(arg, false, ctx);
+        const reason = firstUnmaterializableReason(arg, ctx);
         if (reason !== null) {
           return reason;
         }
       }
       return null;
     }
-    case 'seatAgg': {
-      const over = expr.over;
-      if (typeof over === 'object' && !Array.isArray(over) && 'role' in over && !isTopLevel) {
-        return 'nested role-selected seatAgg requires preview-state role resolution the WASM row path does not yet support';
-      }
-      return firstUnmaterializableReason(expr.expr, false, ctx);
-    }
+    case 'seatAgg':
+      // Spec 206 §4.2: the dynamic-row evaluator resolves role/all/opponents
+      // `seatAgg` at any depth; only the inner leaves gate materializability.
+      return firstUnmaterializableReason(expr.expr, ctx);
     default:
       return `expression kind "${expr.kind}" is not materialized by the WASM row path`;
   }
@@ -151,7 +160,7 @@ const classifyExpr = (
       };
     }
   }
-  const reason = firstUnmaterializableReason(expr, true, ctx);
+  const reason = firstUnmaterializableReason(expr, ctx);
   return reason === null
     ? { coverage: 'wasm-row', reason: WASM_ROW_REASON }
     : { coverage: 'ts-oracle', reason };

@@ -124,7 +124,7 @@ describe('Spec 206 candidate-feature coverage classifier', () => {
     assert.equal(coverageOf(verdicts, 'projectedCurrentLeaderMargin')?.coverage, 'wasm-row');
   });
 
-  it('classifies a top-level coalesce wrapping a nested role-seatAgg over a currentSurface leaf as ts-oracle (projectedLeaderMarginDelta shape)', () => {
+  it('classifies a coalesce(sub(cross-ref, nested role-seatAgg over a currentSurface leaf), 0) as wasm-row (projectedLeaderMarginDelta shape, post-§4.2)', () => {
     const verdicts = classify({
       candidateFeatures: {
         projectedCurrentLeaderMargin: previewFeature({
@@ -158,11 +158,32 @@ describe('Spec 206 candidate-feature coverage classifier', () => {
       planOrder: ['projectedCurrentLeaderMargin', 'projectedLeaderMarginDelta'],
     });
     assert.equal(coverageOf(verdicts, 'projectedCurrentLeaderMargin')?.coverage, 'wasm-row');
-    const delta = coverageOf(verdicts, 'projectedLeaderMarginDelta');
-    assert.equal(delta?.coverage, 'ts-oracle');
-    // Both the nested role-selected seatAgg and its inner currentSurface leaf are
-    // pre-ticket-003 blockers; the classifier reports the first one it reaches.
-    assert.match(delta?.reason ?? '', /role-selected seatAgg|currentSurface/u);
+    // §4.2: the dynamic-row evaluator now resolves the nested role-seatAgg over a
+    // currentSurface leaf and reads the prior cross-ref row → wasm-row.
+    assert.equal(coverageOf(verdicts, 'projectedLeaderMarginDelta')?.coverage, 'wasm-row');
+  });
+
+  it('classifies a nested role-seatAgg over a currentSurface leaf alone as wasm-row (§4.2 currentSurface + seatAgg)', () => {
+    const verdicts = classify({
+      candidateFeatures: {
+        currentLeaderMargin: previewFeature({
+          kind: 'op',
+          op: 'coalesce',
+          args: [
+            {
+              kind: 'seatAgg',
+              over: { role: 'currentLeader' },
+              expr: currentVictoryMarginSeat,
+              aggOp: 'sum',
+              availability: 'selfAndTargetReady',
+            },
+            literal(0),
+          ],
+        }),
+      },
+      planOrder: ['currentLeaderMargin'],
+    });
+    assert.equal(coverageOf(verdicts, 'currentLeaderMargin')?.coverage, 'wasm-row');
   });
 
   it('classifies a previewRelationship feature as ts-oracle with the preview-relationship reason (projectedAllyMarginDelta shape)', () => {
@@ -225,7 +246,7 @@ describe('Spec 206 candidate-feature coverage classifier', () => {
     assert.equal(coverageOf(verdicts, 'projectedSelfMargin')?.coverage, 'wasm-row');
   });
 
-  it('classifies a currentSurface globalVar delta as ts-oracle (projectedAidDelta shape)', () => {
+  it('classifies a previewSurface-globalVar delta as ts-oracle (projectedAidDelta shape — preview drive cannot project globalVar)', () => {
     const verdicts = classify({
       candidateFeatures: {
         projectedAidDelta: previewFeature({
@@ -241,7 +262,30 @@ describe('Spec 206 candidate-feature coverage classifier', () => {
     });
     const verdict = coverageOf(verdicts, 'projectedAidDelta');
     assert.equal(verdict?.coverage, 'ts-oracle');
-    assert.match(verdict?.reason ?? '', /currentSurface/u);
+    assert.match(verdict?.reason ?? '', /preview-surface globalVar/u);
+  });
+
+  it('classifies a bare currentSurface globalVar leaf as wasm-row (§4.2 currentSurface materialization)', () => {
+    const verdicts = classify({
+      candidateFeatures: {
+        currentAidOnly: previewFeature({
+          kind: 'op',
+          op: 'coalesce',
+          args: [currentGlobalAid, literal(0)],
+        }),
+        // A preview-cost feature must reference some preview surface; pair the
+        // currentSurface leaf with a previewSurface victory ref to keep it preview-cost
+        // in spirit while exercising the currentSurface materialization path.
+        currentAidWithVictory: previewFeature({
+          kind: 'op',
+          op: 'coalesce',
+          args: [previewVictoryMarginSelf, currentGlobalAid],
+        }),
+      },
+      planOrder: ['currentAidOnly', 'currentAidWithVictory'],
+    });
+    assert.equal(coverageOf(verdicts, 'currentAidOnly')?.coverage, 'wasm-row');
+    assert.equal(coverageOf(verdicts, 'currentAidWithVictory')?.coverage, 'wasm-row');
   });
 
   it('classifies a feature with an unsupported operator as ts-oracle', () => {

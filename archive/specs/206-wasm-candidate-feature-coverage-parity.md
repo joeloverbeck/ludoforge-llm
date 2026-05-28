@@ -1,6 +1,6 @@
 # Spec 206 — WASM Candidate-Feature Coverage Parity and Drift Guard
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: Medium — Correctness is not at risk (the TS oracle path is exact), but production FITL baselines silently lost WASM acceleration for an entire class of candidate features when Spec 201 landed, and nothing surfaced it until an unrelated architectural-invariant test (`arvn-tournament-wasm-equivalence`) tripped during PR #291 CI recovery. The gap is *visibility and forcing function*, not a live bug.
 **Complexity**: M — A standing coverage assertion (guard) is small; extending the WASM bytecode emitter / preview-row materialization to cover the tractable ref shapes is moderate; full `preview.relationship.*` materialization is large and explicitly out of scope here.
 **Date**: 2026-05-28
@@ -115,7 +115,26 @@ The per-row TS-oracle degradation (`pushTsOracleCandidateFeatureRow`) is correct
 
 Decomposed via `/spec-to-tickets` on 2026-05-28:
 
-- [`tickets/206WASMCANDCOV-001.md`](../tickets/206WASMCANDCOV-001.md) — Coverage classifier helper + unit tests (covers §4.1 classifier)
-- [`tickets/206WASMCANDCOV-002.md`](../tickets/206WASMCANDCOV-002.md) — Coverage manifest fixture + architectural-invariant guard test (covers §4.1 manifest + §6 P0)
-- [`tickets/206WASMCANDCOV-003.md`](../tickets/206WASMCANDCOV-003.md) — Extend dynamic candidate-feature row materialization: currentSurface leaves, cross-refs, null sentinel (covers §4.2 + §6 P1)
-- [`tickets/206WASMCANDCOV-004.md`](../tickets/206WASMCANDCOV-004.md) — Explicit `previewRelationship` deferral in the score-row route (covers §4.3)
+- [`archive/tickets/206WASMCANDCOV-001.md`](../archive/tickets/206WASMCANDCOV-001.md) — Coverage classifier helper + unit tests (covers §4.1 classifier) ✅
+- [`archive/tickets/206WASMCANDCOV-002.md`](../archive/tickets/206WASMCANDCOV-002.md) — Coverage manifest fixture + architectural-invariant guard test (covers §4.1 manifest + §6 P0) ✅
+- [`archive/tickets/206WASMCANDCOV-003.md`](../archive/tickets/206WASMCANDCOV-003.md) — Extend dynamic candidate-feature row materialization: currentSurface leaves, cross-refs, null sentinel (covers §4.2 + §6 P1) ✅
+- [`archive/tickets/206WASMCANDCOV-004.md`](../archive/tickets/206WASMCANDCOV-004.md) — Explicit `previewRelationship` deferral in the score-row route (covers §4.3) ✅
+
+## Outcome
+
+**Completed**: 2026-05-28 (tickets 001–004, all archived).
+
+### What shipped
+- **P0 forcing function** (§4.1, tickets 001/002): a pure static `classifyCandidateFeatureCoverage` classifier (`packages/engine/src/agents/policy-wasm-coverage-classifier.ts`) backed by the lifted shared predicates module (`policy-wasm-coverage-predicates.ts`), plus a checked-in coverage manifest (`packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`) and a standing architectural-invariant guard (`packages/engine/test/architecture/policy-wasm-coverage-manifest.test.ts`) over the FITL + generic-control + texas-holdem corpus. A coverage change now surfaces as a reviewable manifest diff.
+- **P1 materialization extension** (§4.2, ticket 003): the dynamic-row evaluator now resolves `currentSurface` leaves, reads the unified `candidateFeatureRows` accumulator for `feature.<id>` cross-refs, and uses a null-propagating `UNMATERIALIZABLE` sentinel so an unmaterializable leaf hard-aborts the row to the TS oracle instead of coalescing to a silently-wrong value. `projectedLeaderMarginDelta` reclaimed WASM acceleration, byte-equal to the TS oracle (manifest re-bless: only that feature flipped).
+- **previewRelationship deferral** (§4.3, ticket 004): the route now defers `preview.relationship.*` features to the TS oracle deterministically and up-front via the shared `exprReadsPreviewRelationship` predicate.
+
+### Deviations from the spec's assumptions (empirically reassessed, recorded in each ticket Outcome)
+1. The route currently produces a (coalesced-`0`) WASM row for `projectedAllyMarginDelta`, NOT a late `rawValues===null` fallback as §3/ticket 004 stated. Ticket 004's up-front deferral is value-preserving (0 = 0 on the corpus) and additionally hardens against the latent silent-`0` risk.
+2. `projectedAidDelta` / `projectedTrailDelta` are gated by the production preview drive's inability to project a `globalVar` preview effect (not by the §4.2 `currentSurface` gap), so they remain `ts-oracle`. A `previewSurface globalVar → ts-oracle` classifier rule keeps the manifest faithful to runtime. Net §4.2 manifest diff is exactly `projectedLeaderMarginDelta → wasm-row`, as the spec intended.
+
+### Out-of-scope items confirmed deferred (§10)
+Full `preview.relationship.*` WASM materialization; a second preview-enabled conformance game; bytecode VM support for `clamp`/`if`/`in`/`scheduleLowerBound`. The production preview drive's narrow `globalVar` projection support (surfaced by reassessment) is a candidate for a future follow-on if profiling justifies accelerating `projectedAidDelta`/`projectedTrailDelta`.
+
+### Verification
+`pnpm turbo lint typecheck` green; `pnpm -F @ludoforge/engine test:all` → 9614 architectural-invariant pass, 0 fail (full unit/architecture/integration/performance/memory/e2e); `arvn-tournament-wasm-equivalence` + `policy-bytecode-equivalence` decision streams byte-identical (no trajectory change).

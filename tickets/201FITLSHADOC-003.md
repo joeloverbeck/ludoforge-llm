@@ -1,6 +1,6 @@
 # 201FITLSHADOC-003: Strategic conditions
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
@@ -43,6 +43,7 @@ The old per-faction direct-margin fallback is intentionally not used after the 2
 ## Files to Touch
 
 - `data/games/fire-in-the-lake/92-agents.md` (modify — additive entries to `strategicConditions` block)
+- `packages/engine/test/policy-profile-quality/spec-201-strategic-conditions-evaluation.test.ts` (new — focused condition-evaluation witness)
 
 ## Out of Scope
 
@@ -74,3 +75,30 @@ The old per-faction direct-margin fallback is intentionally not used after the 2
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test packages/engine/dist/test/policy-profile-quality/spec-201-strategic-conditions-evaluation.test.js`
 3. `pnpm turbo lint typecheck test`
+
+## Outcome (2026-05-28)
+
+Implemented.
+
+What landed:
+
+1. Added the six Spec 201 shared strategic conditions to `data/games/fire-in-the-lake/92-agents.md`: `selfCanWinNow`, `currentLeaderNearWin`, `coupImminent`, `monsoonNow`, `resourcesLow`, and `allyNearWin`.
+2. Kept the existing per-faction `usNearWin` / `arvnNearWin` / `nvaNearWin` / `vcNearWin` conditions unchanged.
+3. Added `packages/engine/test/policy-profile-quality/spec-201-strategic-conditions-evaluation.test.ts`, which imports the production compiled conditions and evaluates every new condition in a curated ready scenario, including candidate-aware `preview.relationship.nominalAlly.victoryMargin`.
+4. Removed an unused helper from the archived `201FITLSHADOC-001F` regression test after the broad lint lane exposed it; no runtime behavior changed.
+
+Source-size decision:
+
+1. New policy-profile-quality witness is 221 lines.
+2. The touched 001F regression test is 217 lines after lint cleanup.
+3. No source file was modified by this ticket.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/spec-201-strategic-conditions-evaluation.test.js` — passed (`1/1`).
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/strategic-condition-candidate-context.test.js` — passed after lint cleanup (`2/2`).
+4. `pnpm -F @ludoforge/engine lint` — passed after removing unused test declarations.
+5. `pnpm turbo schema:artifacts` — passed; no schema artifacts changed.
+6. `pnpm turbo build` — passed from cache after the schema-artifacts lane.
+7. `pnpm turbo lint typecheck test` — first run failed only on unused test declarations; final rerun passed (`9/9` tasks).

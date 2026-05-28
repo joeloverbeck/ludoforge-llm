@@ -447,6 +447,42 @@ agents:
               - { ref: feature.vcMargin }
               - 1
           threshold: 1
+      selfCanWinNow:
+        description: "Self projected margin crosses the win threshold under the current plan."
+        target:
+          gte:
+            - { ref: feature.projectedSelfMargin }
+            - 0
+      currentLeaderNearWin:
+        description: "Current leader is within near-win threshold; denial overrides ordinary efficiency."
+        target:
+          gte:
+            - { ref: feature.projectedCurrentLeaderMargin }
+            - -2
+      coupImminent:
+        description: "Coup is one card away or sooner; speculative setup is dominated by concrete swing."
+        target:
+          lte:
+            - { ref: feature.distanceToCoup }
+            - 1
+      monsoonNow:
+        description: "Monsoon is in effect; Sweep/March unavailable, Air Strike/Air Lift restricted."
+        target:
+          eq:
+            - { ref: feature.monsoonNow }
+            - true
+      resourcesLow:
+        description: "Self resources are below the operating floor."
+        target:
+          lt:
+            - { ref: feature.selfResources }
+            - 2
+      allyNearWin:
+        description: "Self's nominal ally is near win; their gains are rival gains."
+        target:
+          gte:
+            - { ref: preview.relationship.nominalAlly.victoryMargin }
+            - -1
 
     selectors:
       # Spec 181 migration: preferOptionProjectedMargin previously read

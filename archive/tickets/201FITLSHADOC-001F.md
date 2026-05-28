@@ -100,6 +100,8 @@ Add or extend focused policy-evaluation coverage proving that a strategic condit
 
 ## Outcome (2026-05-28)
 
+Outcome amended: 2026-05-28
+
 Implemented.
 
 What landed:
@@ -113,7 +115,7 @@ What landed:
 Source-size decision:
 
 1. `packages/engine/src/agents/policy-evaluation-core.ts` remains preexisting-oversize, but this ticket reduced the file by three net lines (`git diff --numstat` showed `6 9`), so there is no active source-size growth.
-2. New focused test file is 225 lines.
+2. New focused test file is 217 lines after the post-archive lint cleanup removed an unused helper.
 3. Marker hygiene test file is 119 lines.
 
 Verification:

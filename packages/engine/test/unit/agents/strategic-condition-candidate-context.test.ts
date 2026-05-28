@@ -27,14 +27,6 @@ const opExpr = (
   ...args: AgentPolicyExpr[]
 ): AgentPolicyExpr => ({ kind: 'op', op, args });
 
-const emptyDeps = {
-  parameters: [] as readonly string[],
-  stateFeatures: [] as readonly string[],
-  candidateFeatures: [] as readonly string[],
-  aggregates: [] as readonly string[],
-  strategicConditions: [] as readonly string[],
-};
-
 function conditionRef(conditionId: string): CompiledPolicyExpr {
   return { kind: 'ref', ref: { kind: 'strategicCondition', conditionId, field: 'satisfied' } };
 }

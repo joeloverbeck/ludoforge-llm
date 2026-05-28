@@ -3,7 +3,6 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import type {
   AgentPolicyCatalog,
   CompiledAgentPolicyRef,
-  CompiledPolicyExpr,
   GameDef,
   GameState,
   Move,
@@ -12,6 +11,10 @@ import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/i
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import {
+  collectPreviewDynamicRefs,
+  previewGlobalSlotsForRef,
+} from './policy-wasm-coverage-predicates.js';
 import {
   evaluateDynamicCandidateFeatureRows,
   previewDynamicRefCode,
@@ -97,93 +100,6 @@ const encodeWasmPreviewOutcome = (candidate: PolicyWasmScoreRoutingCandidate): P
 const previewTraceOutcomeFromWasmStatus = (
   status: PolicyWasmPreviewStatus,
 ): PolicyPreviewTraceOutcome => status === 'ready' ? 'ready' : status;
-
-const collectPreviewDynamicRefs = (expr: CompiledPolicyExpr): readonly CompiledAgentPolicyRef[] => {
-  const refs: CompiledAgentPolicyRef[] = [];
-  const visit = (current: CompiledPolicyExpr | undefined): void => {
-    if (current === undefined) {
-      return;
-    }
-    switch (current.kind) {
-      case 'literal':
-      case 'param':
-        return;
-      case 'ref':
-        if (
-          current.ref.kind === 'previewSurface'
-          || (current.ref.kind === 'library' && current.ref.refKind === 'previewStateFeature')
-        ) {
-          refs.push(current.ref);
-        }
-        return;
-      case 'op':
-        current.args.forEach(visit);
-        return;
-      case 'zoneTokenAgg':
-        if (typeof current.zone !== 'string') visit(current.zone);
-        return;
-      case 'globalTokenAgg':
-      case 'globalZoneAgg':
-        return;
-      case 'adjacentTokenAgg':
-        if (typeof current.anchorZone !== 'string') visit(current.anchorZone);
-        return;
-      case 'seatAgg':
-        visit(current.expr);
-        return;
-      case 'zoneProp':
-        if (typeof current.zone !== 'string') visit(current.zone);
-        return;
-    }
-  };
-  visit(expr);
-  const seen = new Set<number>();
-  return refs.filter((ref) => {
-    const code = previewDynamicRefCode(ref);
-    if (seen.has(code)) {
-      return false;
-    }
-    seen.add(code);
-    return true;
-  });
-};
-
-const previewGlobalSlotsForRef = (
-  catalog: AgentPolicyCatalog,
-  def: GameDef,
-  ref: CompiledAgentPolicyRef,
-  seatContextIds: readonly string[] = [],
-): readonly string[] | undefined => {
-  if (ref.kind === 'previewSurface') {
-    if (ref.family === 'globalVar' && ref.selector === undefined) {
-      return [`global.${ref.id}`];
-    }
-    if (ref.family === 'victoryCurrentMargin' || ref.family === 'victoryCurrentRank') {
-      if (ref.selector?.kind !== 'role') {
-        return undefined;
-      }
-      const seatTokens = ref.selector.seatToken === '$seat'
-        ? seatContextIds
-        : [ref.selector.seatToken];
-      return [
-        ...seatTokens.map((seatToken) => `surface.${ref.family}.${seatToken}`),
-        ...def.globalVars.map((variable) => `global.${variable.name}`),
-      ];
-    }
-    return undefined;
-  }
-  if (ref.kind !== 'library' || ref.refKind !== 'previewStateFeature') {
-    return undefined;
-  }
-  const feature = catalog.compiled.stateFeatures[ref.id];
-  const exprRef = feature?.expr.kind === 'ref' ? feature.expr.ref : undefined;
-  if (exprRef?.kind === 'currentSurface' && exprRef.family === 'globalVar' && exprRef.selector === undefined) {
-    return [`global.${exprRef.id}`];
-  }
-  return feature === undefined
-    ? undefined
-    : [`feature.${ref.id}`, ...def.globalVars.map((variable) => `global.${variable.name}`)];
-};
 
 const compareOrdinalStrings = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;

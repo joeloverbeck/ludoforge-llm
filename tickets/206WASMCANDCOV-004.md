@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-score-routing.ts` (ref recognition); manifest reason re-bless
-**Deps**: `tickets/206WASMCANDCOV-001.md`, `tickets/206WASMCANDCOV-002.md`
+**Deps**: `archive/tickets/206WASMCANDCOV-001.md`, `tickets/206WASMCANDCOV-002.md`
 
 ## Problem
 
@@ -30,7 +30,7 @@ Today the deferral is **incidental**: `collectPreviewDynamicRefs` (`policy-wasm-
 
 ### 1. Recognize `previewRelationship` in the shared predicate
 
-In `collectPreviewDynamicRefs` (or the sibling predicate lifted in `tickets/206WASMCANDCOV-001.md`), detect a `previewRelationship` ref anywhere in the candidate-feature expr and signal "TS-oracle-only" so the route skips materialization and calls `pushTsOracleCandidateFeatureRow` directly for that feature.
+In `collectPreviewDynamicRefs` (or the sibling predicate lifted in `archive/tickets/206WASMCANDCOV-001.md`), detect a `previewRelationship` ref anywhere in the candidate-feature expr and signal "TS-oracle-only" so the route skips materialization and calls `pushTsOracleCandidateFeatureRow` directly for that feature.
 
 ### 2. Deterministic up-front deferral in the route
 

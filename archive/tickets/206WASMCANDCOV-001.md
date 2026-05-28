@@ -1,6 +1,6 @@
 # 206WASMCANDCOV-001: Coverage classifier helper + unit tests
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/` (new pure classifier helper; export/extract of the route's preview-dynamic-ref predicate)
@@ -99,3 +99,25 @@ Resolve `feature.<id>` cross-refs against `plan.candidateFeatures` order: a depe
 
 1. `pnpm -F @ludoforge/engine build && node --test "packages/engine/dist/test/unit/agents/policy-wasm-coverage-classifier.test.js"`
 2. `pnpm turbo lint typecheck && pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+**Completed**: 2026-05-28
+
+### What changed
+- Lifted `collectPreviewDynamicRefs` and `previewGlobalSlotsForRef` out of `packages/engine/src/agents/policy-wasm-score-routing.ts` into a new shared module `packages/engine/src/agents/policy-wasm-coverage-predicates.ts`. The route now imports them; runtime behavior is byte-for-byte identical (verified by `arvn-tournament-wasm-equivalence`).
+- Added `packages/engine/src/agents/policy-wasm-coverage-classifier.ts` exporting the pure `classifyCandidateFeatureCoverage({ profile, catalog, def })`. It classifies each **preview-cost** candidate feature (in `plan.candidateFeatures` order) as `wasm-row` or `ts-oracle` with a specific reason, by scanning the compiled expr for: `previewRelationship` refs, unsupported ops (`clamp`/`if`/`in`/`scheduleLowerBound`), `currentSurface` refs, nested role-selected `seatAgg`, unmaterializable preview-dynamic refs (no fixed slot), and `feature.<id>` candidate cross-refs whose target is `ts-oracle`/unresolved.
+- Exported both new modules from `packages/engine/src/agents/index.ts`.
+- Added `packages/engine/test/unit/agents/policy-wasm-coverage-classifier.test.ts` (architectural-invariant) with 11 cases covering every shape.
+
+### Deviations / clarifications from the ticket (empirical reassessment)
+- The ticket framed the classifier as the **top-level-`seatAgg`-only** evaluability check. Reassessment via a runtime probe (instrumenting the route on the production FITL ARVN corpus) showed runtime coverage is richer and partly state-dependent, but the *structural* shape that forces the oracle is best captured as: **`currentSurface` ref present, or `previewRelationship`, or unsupported op, or a role-selected `seatAgg` below the top level, or an oracle cross-ref dependency.** This is the predicate implemented, and it correctly yields the pinned verdicts:
+  - `projectedCurrentLeaderMargin` → `wasm-row` (top-level role-seatAgg over previewSurface leaf).
+  - `projectedLeaderMarginDelta` → `ts-oracle` (nested role-seatAgg + currentSurface leaf; pre-§4.2).
+  - `projectedAllyMarginDelta` → `ts-oracle` (previewRelationship). NOTE: at runtime the route currently still produces a *wasm-row* for this feature whose value coalesces to `0` (byte-equal to the TS oracle's `0` on the measured corpus). `tickets/206WASMCANDCOV-004.md` makes the route's behavior match this classifier verdict (deterministic up-front deferral).
+  - Additionally, `projectedAidDelta` and `projectedTrailDelta` classify `ts-oracle` (currentSurface globalVar delta) — consistent with their always-oracle runtime behavior. `tickets/206WASMCANDCOV-003.md`'s `currentSurface`-leaf extension will flip these to `wasm-row` as well, not only `projectedLeaderMarginDelta`.
+
+### Verification
+- `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-wasm-coverage-classifier.test.js` → 11/11 pass.
+- `arvn-tournament-wasm-equivalence` → 2/2 pass (predicate lift behavior-preserving).
+- `pnpm turbo lint typecheck` → green. `pnpm -F @ludoforge/engine test` → 187/187 files pass.

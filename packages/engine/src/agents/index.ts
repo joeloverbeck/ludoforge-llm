@@ -15,3 +15,5 @@ export * from './policy-wasm-runtime.js';
 export * from './policy-wasm-preview-drive.js';
 export * from './policy-wasm-production-preview-drive.js';
 export * from './policy-wasm-score-bytecode-cache.js';
+export * from './policy-wasm-coverage-predicates.js';
+export * from './policy-wasm-coverage-classifier.js';

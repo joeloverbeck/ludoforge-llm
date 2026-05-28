@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/` (dynamic-row evaluator, classifier predicate); manifest re-bless; new equivalence test
-**Deps**: `tickets/206WASMCANDCOV-001.md`, `tickets/206WASMCANDCOV-002.md`
+**Deps**: `archive/tickets/206WASMCANDCOV-001.md`, `tickets/206WASMCANDCOV-002.md`
 
 ## Problem
 
@@ -20,7 +20,7 @@ This ticket delivers the §4.2 correctness core: lift the guard, evaluate `curre
 2. `undefined` is overloaded: it means both "preview legitimately unavailable (must `coalesce` to fallback)" and "structurally unmaterializable leaf (must abort the row)". A distinct sentinel is required; `coalesce` (`:98-99`), `sub`/`add`/etc. type-guards must propagate the sentinel as a hard `null`-row abort rather than swallowing it.
 3. The cross-ref target `projectedCurrentLeaderMargin` is itself a **preview**-cost row, so it is accumulated in `candidateFeatureRows` (`policy-wasm-score-routing.ts:517`) and surfaced to the bytecode VM as `precomputedPreviewCandidateFeatures` (`:589`), NOT the non-preview `precomputedCandidateFeatures` slice (`:586`). The TS dynamic-row evaluator must read the **unified** accumulator for `feature.<id>` lookups.
 4. `currentSurface` `victory.currentMargin` is candidate-independent and computable once via `buildPolicyVictorySurface(def, state, runtime)` (`packages/engine/src/agents/policy-surface.ts:482`) — confirmed; suitable as a materializable leaf evaluated against the current state.
-5. The classifier (`tickets/206WASMCANDCOV-001.md`) and manifest (`tickets/206WASMCANDCOV-002.md`) currently classify `projectedLeaderMarginDelta` as `ts-oracle`; this ticket updates the predicate to count `currentSurface`/cross-ref leaves as materializable and re-blesses the manifest — the forcing-function diff the guard is designed to surface.
+5. The classifier (`archive/tickets/206WASMCANDCOV-001.md`) and manifest (`tickets/206WASMCANDCOV-002.md`) currently classify `projectedLeaderMarginDelta` as `ts-oracle`; this ticket updates the predicate to count `currentSurface`/cross-ref leaves as materializable and re-blesses the manifest — the forcing-function diff the guard is designed to surface.
 
 ## Architecture Check
 
@@ -49,7 +49,7 @@ Teach the `ref` case to resolve `library`/`candidateFeature` (`feature.<id>`) re
 
 ### 5. Update classifier predicate + re-bless manifest
 
-Update the `tickets/206WASMCANDCOV-001.md` classifier so `currentSurface` leaves and resolvable cross-refs count as materializable (the predicate must stay paired with the evaluator). Re-bless `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` so `projectedLeaderMarginDelta → wasm-row` (`projectedAllyMarginDelta` stays `ts-oracle`).
+Update the `archive/tickets/206WASMCANDCOV-001.md` classifier so `currentSurface` leaves and resolvable cross-refs count as materializable (the predicate must stay paired with the evaluator). Re-bless `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` so `projectedLeaderMarginDelta → wasm-row` (`projectedAllyMarginDelta` stays `ts-oracle`).
 
 ## Files to Touch
 

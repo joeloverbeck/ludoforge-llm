@@ -4,17 +4,17 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/` (new manifest fixture + standing architectural-invariant test); no `src/` behavior change
-**Deps**: `tickets/206WASMCANDCOV-001.md`
+**Deps**: `archive/tickets/206WASMCANDCOV-001.md`
 
 ## Problem
 
-The classifier from `tickets/206WASMCANDCOV-001.md` computes coverage verdicts but nothing yet asserts them against a checked-in baseline. Without a standing artifact, a future policy ref family or candidate-feature shape (as `preview.relationship.*` did in Spec 201) can silently flip a production feature from WASM-row to TS-oracle, and it surfaces only via an unrelated invariant — exactly the PR #291 failure mode.
+The classifier from `archive/tickets/206WASMCANDCOV-001.md` computes coverage verdicts but nothing yet asserts them against a checked-in baseline. Without a standing artifact, a future policy ref family or candidate-feature shape (as `preview.relationship.*` did in Spec 201) can silently flip a production feature from WASM-row to TS-oracle, and it surfaces only via an unrelated invariant — exactly the PR #291 failure mode.
 
 This ticket completes the §4.1 forcing function (§6 P0): a checked-in coverage manifest plus an architectural-invariant test that recomputes the verdicts for the production FITL profiles (and at least one non-FITL conformance game with agents) and asserts equality with the manifest. A diff means a feature changed WASM coverage — review must consciously accept it (extend WASM via a later ticket, or accept TS-oracle and re-bless the manifest). This converts "silent acceleration loss" into "manifest diff in review."
 
 ## Assumption Reassessment (2026-05-28)
 
-1. The classifier helper `classifyCandidateFeatureCoverage` is delivered by `tickets/206WASMCANDCOV-001.md` and is a pure static function (no WASM module, no game execution) — this test is therefore safe in the fast `default` lane (§11.2 decision).
+1. The classifier helper `classifyCandidateFeatureCoverage` is delivered by `archive/tickets/206WASMCANDCOV-001.md` and is a pure static function (no WASM module, no game execution) — this test is therefore safe in the fast `default` lane (§11.2 decision).
 2. The `UPDATE_GOLDEN=1` re-bless convention is established across the suite (e.g. `packages/engine/test/architecture/policy-preview-inner-outcome-parity.test.ts`, `packages/engine/test/determinism/plan-semantic-correspondence-golden.test.ts`) — reuse it for the manifest.
 3. The proposed fixture path `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` and its parent dir do **not** exist yet (confirmed by reassessment) — both are created here.
 4. Non-FITL games `generic-control` and `texas-holdem` both declare `preview: mode: disabled` (`data/games/*/92-agents.md`) — confirmed. Their manifest entries are therefore **empty**; the test still asserts the agnostic classifier runs and emits zero entries on zero-preview profiles (§5 edge case, §11.3 decision). Real per-feature coverage classification ships FITL-only.

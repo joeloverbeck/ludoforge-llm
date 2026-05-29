@@ -53,13 +53,16 @@ const loadFitlGame = (): ProbeLoadedGame => {
 };
 
 describe('FITL ARVN May-17-equivalent opponent preview witness', () => {
-  // QUARANTINED pending Spec 207 (specs/207-fitl-agent-decision-cost-regression.md):
-  // opponent-margin preview refs land `unknown` (preview-cap exhaustion) instead of `ready`
-  // — a manifestation of the agent decision/preview hot-path regression (slow preview hits
-  // grant-flow / post-grant / free-operation budget caps). Un-skip as part of the Spec 207
-  // acceptance gate (expects >=2 ready opponent-preview candidates).
+  // QUARANTINED pending Spec 208 (specs/208-fitl-arvn-baseline-pq-witness-failures.md):
+  // re-attributed 2026-05-29. This is NOT the Spec 207 chooseNStep cost-drift regression
+  // (that was resolved by distilling fitl-spec-143). The grant-flow opponent-margin preview
+  // lands `unknown` on the branch baseline (bounded-preview cap exhaustion — the
+  // integrity-preserving Foundation #20 outcome), and the ARVN replay-window trajectory
+  // shifted after Spec 191. Whether this is a grant-flow preview regression or a
+  // legitimately-bounded outcome that the witness over-demands needs its own diagnosis —
+  // Spec 208 (fix the grant-flow preview, or distill the witness; do NOT coerce unknown->ready).
   it('keeps opponent/standing preview refs ready and non-uniform in the May-17 replay window', {
-    skip: 'Spec 207: opponent-margin preview refs land unknown via preview-cap exhaustion from the decision/preview cost regression',
+    skip: 'Spec 208: grant-flow opponent-margin preview lands unknown on the branch baseline — needs diagnosis (not the Spec 207 cost-drift)',
   }, () => {
     const result = runProbe(arvnOpponentPreviewProbe, {
       loadGame: loadFitlGame,

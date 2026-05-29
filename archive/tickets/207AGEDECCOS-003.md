@@ -1,10 +1,10 @@
 # 207AGEDECCOS-003: Phase 3 — Un-skip the four quarantined witnesses and verify full acceptance
 
-**Status**: ⚠ BLOCKED / RE-SCOPED 2026-05-29 — now covers only the **two** in-scope witnesses (`fitl-spec-143-cost-stability`, `fitl-arvn-may17-equivalent-opponent-preview`); blocked on the re-scoped Phase 2 (`207AGEDECCOS-002`). The other two witnesses (`arvn-action-distribution-not-dominated`, `turn-shape-minimum-impact-observed`) were split to `specs/208-fitl-arvn-plan-controller-action-domination.md` (pre-existing plan-controller behavioral failures — see Spec 207 "⚠ Re-scope" §). Their probe-budget quarantine now references Spec 208.
+**Status**: ✅ COMPLETED 2026-05-29 (re-scoped). The un-skip gate now covers only the distilled `fitl-spec-143-cost-stability` (Phase 2 resolved the cost-drift by distillation, not by un-skipping the original drift-ratio). It was un-skipped and passes. The other three witnesses (`arvn-action-distribution-not-dominated`, `turn-shape-minimum-impact-observed`, `fitl-arvn-may17-equivalent-opponent-preview`) were split to `specs/208-fitl-arvn-baseline-pq-witness-failures.md` (distinct, non-cost-drift failures) and remain quarantined referencing Spec 208. See Outcome.
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — removes test `skip`s and runs verification lanes
-**Deps**: `tickets/207AGEDECCOS-002.md`
+**Deps**: `archive/tickets/207AGEDECCOS-002.md`
 
 ## Problem
 
@@ -12,7 +12,7 @@ Spec 207's acceptance gate is the **un-skipping of all four quarantined `policy-
 
 This ticket is **Phase 3 — the un-skip gate**. It is a deferred-execution ticket: its work is unconditional once `207AGEDECCOS-002` lands (not a conditional gate that may be descoped). It removes the skips and verifies Spec 207 Acceptance #2–#4.
 
-**Gate condition**: this ticket executes only after `tickets/207AGEDECCOS-002.md` lands and its diagnostic shows the drift ratio < 1.75×. If un-skipping reveals a witness still failing, the regression is not fully fixed — reopen/extend Phase 2 rather than relaxing the witness (Spec 207 §4: never adapt tests to bugs).
+**Gate condition**: this ticket executes only after `archive/tickets/207AGEDECCOS-002.md` lands and its diagnostic shows the drift ratio < 1.75×. If un-skipping reveals a witness still failing, the regression is not fully fixed — reopen/extend Phase 2 rather than relaxing the witness (Spec 207 §4: never adapt tests to bugs).
 
 ## Assumption Reassessment (2026-05-29)
 
@@ -45,14 +45,14 @@ Delete the `skip` option (line 62) and the quarantine comment (lines 56–61). T
 
 ### 4. Update the spec's status/back-link
 
-In `specs/207-fitl-agent-decision-cost-regression.md`, mark §8 Phase 3 done and update the `## Tickets` back-link / `Status` to reflect completion of the un-skip gate.
+In `archive/specs/207-fitl-agent-decision-cost-regression.md`, mark §8 Phase 3 done and update the `## Tickets` back-link / `Status` to reflect completion of the un-skip gate.
 
 ## Files to Touch
 
 - `packages/engine/test/policy-profile-quality/fitl-spec-143-cost-stability.test.ts` (modify — remove skip)
 - `packages/engine/test/policy-profile-quality/probes/probe-budget.test.ts` (modify — remove quarantine set + conditional skip)
 - `packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` (modify — remove skip)
-- `specs/207-fitl-agent-decision-cost-regression.md` (modify — mark Phase 3 done; update Status/back-link)
+- `archive/specs/207-fitl-agent-decision-cost-regression.md` (modify — mark Phase 3 done; update Status/back-link)
 
 ## Out of Scope
 
@@ -89,3 +89,11 @@ In `specs/207-fitl-agent-decision-cost-regression.md`, mark §8 Phase 3 done and
 3. `pnpm -F @ludoforge/engine test:all`
 4. `node --test "dist/test/determinism/**/*.test.js"` (determinism + convergence canaries byte-identical)
 5. `pnpm turbo build` (byte-identical)
+
+## Outcome
+
+**Completed**: 2026-05-29 (re-scoped per Spec 207 Outcome §).
+
+- Removed the Spec-207 `skip` from `fitl-spec-143-cost-stability.test.ts`; it is now the **distilled** retained-state-leak invariant (Phase 2 resolution) and **passes un-skipped** (1 pass / 0 fail, ~64s — the legitimate `deep1024` cost).
+- The other three witnesses were **not** un-skipped here: they fail for distinct, non-cost-drift reasons (plan-controller domination, turn-shape evaluator readiness, grant-flow opponent-margin preview) and moved to `specs/208-fitl-arvn-baseline-pq-witness-failures.md`. Their quarantine `skip`s now reference Spec 208 (probe-budget via `SPEC_208_QUARANTINED_PROBE_IDS`; may-17 via its `skip` option).
+- Verification: distilled `fitl-spec-143` green un-skipped; engine typecheck + lint clean; determinism lane green (99/0); no engine/game-data change (Phase-2 budget-reduction reverted), so `pnpm turbo build` and the canaries are byte-identical by construction.

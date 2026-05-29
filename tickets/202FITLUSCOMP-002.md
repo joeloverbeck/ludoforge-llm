@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None (unless 001 classified a required ref as a genuine engine gap — see Gate condition)
-**Deps**: `tickets/202FITLUSCOMP-001.md`
+**Deps**: `archive/tickets/202FITLUSCOMP-001.md`
 
 ## Problem
 

@@ -460,7 +460,27 @@ Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 
 ## 11. Open questions
 
-- **Selector/feature vocabulary (P0 capability audit)**: which of `zoneProp.coinControl`, `zoneProp.usTroopCount`, `zoneProp.usControlCritical`, `zoneProp.hasTerrorMarker`, `zoneProp.supportShiftAvailable`, `zoneProp.removableEnemyValue`, `zoneProp.controlSwingPossible`, `zoneProp.hasUsTroops`, `zoneProp.hasRemovableEnemy` exist today vs. require introduction in the FITL token/zone data files? Likewise `feature.projectedArvnMarginDelta` (not yet authored; sibling of `feature.projectedUsMarginDelta`). P0 classifies each as YAML-authorable or genuine engine gap.
+- **Selector/feature vocabulary (P0 capability audit)** — **RESOLVED by 202FITLUSCOMP-001 (2026-05-29). No genuine engine gaps; all signals YAML-authorable.** The audit confirmed the spec's `zoneProp.<name>` ref forms are illustrative — the real agent-policy *per-zone (item-local)* read surface (used by existing FITL selectors such as `arvn.governPatronageSpace`, `us.trainSupportSpace`) is:
+  - `zoneProp: { zone: { ref: selector.item.key }, prop: <name> }` → **static** zone attributes only (resolver `plan-proposal.ts:729` reads `zone.category` + `zone.attributes[prop]`): `population`, `econ`, `category` exist; dynamic state (control, terror) is **not** a static attribute and is not readable here.
+  - `lookup: { surface: policyState, collection: zones, keyType: ZoneId, key: { ref: selector.item.key }, path: [markers, supportOpposition], onMissing: {...} }` → per-zone `supportOpposition` marker state (the only zone marker; control is **not** a marker).
+  - `zoneTokenAgg: { zone: { ref: selector.item.key }, owner: self|active|none|"<seatIndex>", prop: <numericTokenProp>, aggOp: count|sum|min|max }` → per-zone token counts by owner (`self` = US for `us-baseline`; numeric seat index counts a specific faction's tokens — FITL seat order US/ARVN/NVA/VC).
+  - `adjacentTokenAgg`, numeric/boolean ops, `coalesce`, `boolToNumber`, and global `feature.*` / `candidateFeature` refs.
+
+  Per-zone control is the global metric `metric.auto:victory:controlledPopulation:coin` (not per-zone); `terrorCount` is a per-zone `zoneVar` (not readable via `zoneProp`, which only reads static attributes). Classification of each required signal:
+
+  | Spec signal | Real expression | Class |
+  |---|---|---|
+  | `population` / `econ` / `category` | `zoneProp` (static) | (a) authorable — exists |
+  | `supportShiftAvailable` | `lookup` `supportOpposition` ≠ `activeSupport` via `boolToNumber` | (a) authorable |
+  | `coinControl` (as **filter**) | not needed — legal-move enumeration already gates Pacify/Assault legality; selectors only **rank** legal candidates | (a) re-expressed: dropped as filter |
+  | `hasUsTroops` / `usTroopCount` | `zoneTokenAgg owner: self aggOp: count` | (a) authorable |
+  | `usControlCritical` | self-token-count (`zoneTokenAgg owner: self`) as a control-criticality proxy (negative weight in Air Lift origin) | (a) authorable via proxy |
+  | `hasTerrorMarker` | per-zone `terrorCount` zoneVar **not** item-locally readable; pacify ranking already captured by `population` + `supportShiftAvailable` | (a) re-expressed: dropped |
+  | `removableEnemyValue` / `hasRemovableEnemy` | `zoneTokenAgg owner: "<NVA/VC seatIndex>" aggOp: count` for per-zone enemy mass, plus `feature.projectedVcMargin`/`feature.projectedNvaMargin` as effect signals | (a) authorable via proxy |
+  | `controlSwingPossible` | `feature.projectedSelfMargin` / projected-margin delta | (a) authorable via proxy |
+  | `feature.projectedArvnMarginDelta` | new `candidateFeature` = `sub(feature.projectedArvnMargin, feature.arvnMargin)` (sibling of `projectedUsMarginDelta`); both operands exist | (a) authorable — authored in 002 |
+
+  Other refs confirmed present: `feature.totalSupport`, `feature.availableUsTroops`, `feature.projectedSupportDelta`, `feature.projectedAidDelta`, `feature.projectedUsMarginDelta`, `var.global.aid`, `preview.feature.totalSupport`, `preview.var.global.aid`, `condition.arvnNearWin`/`condition.usNearWin` (`92-agents.md:405,417`), candidate tags `train`/`assault`/`air-lift` (action tags; `candidate.tag.*` validates kebab-case format only, not existence, so `pacify` compiles and evaluates as a harmless extra signal alongside `train`). **Conclusion: no engine prerequisite spec is required; tickets 002–004 author entirely in `92-agents.md` YAML.**
 - **`us.airLiftTrain` enablement**: does a safe authoring exist? Deferred to a follow-up ticket post-202.
 - **`us.airStrikePoliticalCost` vs `us.avoidPoliticalAirStrike`**: posture and guardrail both demote Air Strike on populated Support via projected-delta proxies; P2 decides whether both are retained or one is dropped.
 - **Threshold calibration**: the `totalSupport < 30` / `availableUsTroops < 4` / `aid < 15` thresholds in §4.3 are initial drafts; P4 calibrates against the four-profile convergence canary.

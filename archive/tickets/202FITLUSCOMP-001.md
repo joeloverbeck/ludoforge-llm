@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-001: P0 — US capability-gap audit (selector / feature / role-constraint vocabulary)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None (read-only audit; output may surface engine prerequisites as separate specs)
@@ -71,3 +71,20 @@ Update Spec 202 §11 Open Questions with the resolved classification table (whic
 
 1. `grep -rn '<ref>' data/games/fire-in-the-lake packages/engine/src` (per ref, during audit)
 2. `pnpm turbo build` (confirm no code drift)
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed**: Recorded the resolved P0 capability classification in `specs/202-fitl-us-completion.md` §11 (replacing the open vocabulary question with a resolution table). No code or data changed.
+
+**Findings**:
+- The spec's `zoneProp.<name>` ref forms are illustrative. The real agent-policy *per-zone (item-local)* read surface is `zoneProp: { zone, prop }` (static attributes: `population`/`econ`/`category` only — resolver `plan-proposal.ts:729`), `lookup: { surface: policyState, collection: zones, path: [markers, supportOpposition] }` (the only zone marker), and `zoneTokenAgg: { zone, owner: self|active|none|"<seatIndex>", prop, aggOp }` (per-zone token counts; `owner` numeric maps to a seat — `policy-evaluation-core.ts:291`).
+- Per-zone control is the **global** metric `metric.auto:victory:controlledPopulation:coin` (not a per-zone marker); `terrorCount` is a per-zone `zoneVar` not readable via `zoneProp`.
+- **No genuine engine gaps.** Every required signal is (a) directly authorable (`population`/`econ`/`category`/`supportShiftAvailable`/`usTroopCount`), (b) authorable via an established proxy (control-criticality via self-token count; enemy mass via `zoneTokenAgg owner:"<seatIndex>"` or projected-margin features; `controlSwingPossible` via projected-margin delta), or (c) re-expressed/dropped (`coinControl` as filter — legal-move enumeration already gates legality; `hasTerrorMarker` — captured by population + support signals).
+- `feature.projectedArvnMarginDelta` is authorable as a `candidateFeature` sibling of `projectedUsMarginDelta` (`sub(projectedArvnMargin, arvnMargin)`; both operands exist).
+- Refs confirmed present: `feature.totalSupport`/`availableUsTroops`/`projectedSupportDelta`/`projectedAidDelta`/`projectedUsMarginDelta`, `var.global.aid`, `preview.feature.totalSupport`, `preview.var.global.aid`, `condition.arvnNearWin`/`usNearWin` (`92-agents.md:405,417`), candidate tags `train`/`assault`/`air-lift` (`candidate.tag.*` validates kebab-case format only, so `pacify` compiles as a harmless extra signal).
+
+**Deviations**: None. The corrected Non-Goal held — engine gaps would have escalated to a prerequisite spec, but none were found.
+
+**Verification**: `pnpm turbo build` green (3/3 tasks); audit touched only spec markdown (not a build input), so build output is unaffected.

@@ -1,16 +1,16 @@
 # Spec 202 — FITL US Baseline Completion to ARVN-Parity
 
 **Status**: PROPOSED
-**Priority**: High — `us-baseline` has 4 plan templates, 4 strategy modules, 2 guardrails, and 2 profile-quality witnesses, vs. ARVN's 6/8/7/10. The competence report (`reports/fitl-competent-agent-ai.md` §1) requires the US to be encoded as an expeditionary stabilizer balancing Support with Available US pieces — concretely: a Support engine that weighs Pacification by space-local features (not generic projected margin), an availability/overcommitment posture, Air Lift as force projection AND withdrawal, Aid/Econ protection as a US concern, and an ARVN-kingmaker throttle. None of these is fully encoded today.
-**Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. No engine work. Consumes the shared scaffolding from Spec 201.
+**Priority**: High — `us-baseline` has 4 plan templates, 3 faction-specific strategy modules (post-Spec-201, after `us.blockImmediateWin` removal; 10 modules bound including the 7 `shared.*`), 2 bound guardrails, and 2 profile-quality witnesses, vs. ARVN's 6 plan templates / 7 faction-specific modules (14 bound) / 7 bound guardrails / 10 witnesses. The competence report (`reports/fitl-competent-agent-ai.md` §1) requires the US to be encoded as an expeditionary stabilizer balancing Support with Available US pieces — concretely: a Support engine that weighs Pacification by space-local features (not generic projected margin), an availability/overcommitment posture, Air Lift as force projection AND withdrawal, Aid/Econ protection as a US concern, and an ARVN-kingmaker throttle. None of these is fully encoded today.
+**Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. P0 audits each required DSL surface for capability gaps; the work is YAML-only unless P0 surfaces a genuine engine gap (see §2). Consumes the shared scaffolding from Spec 201.
 **Date**: 2026-05-27
 **Dependencies**:
 - `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `reachable`/`adjacent`/etc. for Air Lift route binding
 - `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates`
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — bounded compound probe for Air Lift compound availability
-- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — `shared.*` modules and lifecycle conditions referenced by the new US bindings.
+- **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — `shared.*` modules and lifecycle conditions referenced by the new US bindings. 201 has landed and `us-baseline` already binds all 7 `shared.*` modules; conditional "until 201 lands" framing has been removed throughout.
 
-**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 (US faction-by-faction analysis) + §6.8 US plan-template slice + §§6.9–6.10 US posture and guardrail slices. Engine architecture concerns are confirmed out of scope.
+**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 (US faction-by-faction analysis) + §6.8 US plan-template slice + §§6.9–6.10 US posture and guardrail slices. Engine architecture concerns are confirmed out of scope except where P0 surfaces a genuine capability gap (§2).
 
 **Ticket namespace**: `202FITLUSCOMP`
 
@@ -33,11 +33,11 @@ Complete `us-baseline` to ARVN-parity by authoring the plan templates, strategy 
    - `us.buildSupport` — gates `us.trainPacify` / `us.patrolAdvise` when total Support is below the per-profile threshold.
    - `us.preserveAvailability` — demotes plan templates whose net effect is increased US-on-map commitment without Support yield.
    - `us.protectAidEcon` — promotes Patrol-on-LoC and Train-Advise when Aid is low / Econ-LoCs sabotaged.
-   - `us.avoidArvnKingmaking` — binds the existing `arvn.usNominalAlly`/`us.arvnNominalAlly` relationship pair via `shared.allyRivalThrottle` consumption AND adds US-side suppression of `us.trainPacify` when ARVN is at or above near-win threshold (rivalry overrides the default cooperative state). Note: `shared.allyRivalThrottle` lives in Spec 201; if 201 has not landed when this spec's P4 starts, this module reduces to the suppression behavior alone until 201 lands and the shared throttle activates.
+   - `us.avoidArvnKingmaking` — binds the existing `arvn.usNominalAlly`/`us.arvnNominalAlly` relationship pair via `shared.allyRivalThrottle` consumption AND adds US-side suppression of `us.trainPacify` when ARVN is at or above near-win threshold (rivalry overrides the default cooperative state). `shared.allyRivalThrottle` is available (Spec 201 landed and `us-baseline` binds it), so the throttle is active from P4.
 
 3. **New US posture evaluators**:
-   - `us.preserveSupportAndAvailability` — existing skeleton if any; this spec strengthens it with explicit `prefer` terms for projected Support delta AND projected Available-US delta.
-   - `us.airStrikePoliticalCost` — explicit `prefer` term demoting candidates that select a populated-Support space for Air Strike target.
+   - `us.preserveSupportAndAvailability` — existing skeleton (`92-agents.md:1477-1504`, already carries `must` + `prefer` terms); this spec strengthens it with explicit `prefer` terms for projected Support delta AND projected Available-US delta.
+   - `us.airStrikePoliticalCost` — explicit `prefer` term demoting Air Strike candidates whose projected Support delta is negative (see §4.4 — overlaps the existing `us.avoidPoliticalAirStrike` guardrail; dedupe decision deferred to P2).
    - `us.aidEconFloor` — demotes candidates that reduce Aid below a floor or that leave Sabotage on key Econ LoCs.
 
 4. **New US guardrails**:
@@ -48,129 +48,113 @@ Complete `us-baseline` to ARVN-parity by authoring the plan templates, strategy 
 
 ## 2. Non-Goals
 
-- **No engine changes.** All required DSL surfaces are post-Spec-199 shipped.
-- **No NVA / ARVN / VC scope.** Spec 203 owns NVA; Spec 204 owns VC; Spec 205 owns ARVN selector cleanup.
+- **Engine changes not assumed.** P0 audits each required DSL surface (refs, role constraints, zone props); any *genuine* capability gap is surfaced as an explicit engine prerequisite rather than silently assumed shipped. (The original "no engine changes" claim was inherited unverified from the source proposal; reassessment confirmed the cited surfaces from Specs 196/197/199/201 are shipped, and re-expressed the one gap it found — `roleTarget.target.*`, which does not exist — via the shipped `preview.feature.projectedSupportDelta` proxy, see §4.4.)
+- **No NVA / ARVN / VC scope.** Spec 203 owns NVA; Spec 204 owns VC; Spec 205 owns ARVN selector cleanup. (Specs 203/204 share the same nonexistent `roleTarget.*` ref; the §4.4 re-expression resolution carries to them.)
 - **No new cap classes.** `grantFlow16` remains the default; Air Lift compound is bounded by Spec 199's existing budget.
 - **No solitaire bot reproduction or expansion content** (per the competence report's explicit non-requirements).
 - **No new tunable parameters.** The existing `eventWeight`, `trainWeight`, etc., remain; new modules score via explicit `prefer` terms, not new parameters.
 - **No removal of existing US witnesses.** `us-advise-airlift-force-multiplier.test.ts` and `us-avoids-airstrike-populated-support.test.ts` are preserved (they continue to pass under the expanded template set).
 
-## 3. Context (verified against codebase, 2026-05-27)
+## 3. Context (verified against codebase, 2026-05-27; line citations re-verified 2026-05-29)
 
 - **Current US library inventory** (`92-agents.md`):
-  - Templates (4): `us.trainAdvise`, `us.patrolAdvise` (partial), `us.sweepAirStrike`, `us.assaultAirLiftAssault`.
-  - Modules (4): `us.blockImmediateWin` (removed by Spec 201), `us.createAndDefendSupport`, `us.forceMultiplier`, `us.preserveAvailability`.
-  - Posture: 1 (`us.preserveSupportAndAvailability`).
+  - Templates (4): `us.trainAdvise`, `us.patrolAdvise`, `us.sweepAirStrike`, `us.assaultAirLiftAssault`.
+  - Modules: 3 faction-specific — `us.createAndDefendSupport`, `us.forceMultiplier`, `us.preserveAvailability` (`us.blockImmediateWin` was removed by Spec 201). `us-baseline` also binds all 7 `shared.*` modules from Spec 201, for 10 bound modules total.
+  - Posture: 1 (`us.preserveSupportAndAvailability`, already carries `must` + `prefer` terms).
   - Guardrails (2): `us.avoidPoliticalAirStrike`, plus the shared `dropPassWhenOtherMovesExist`.
 - **Current US witnesses**: 2 (`us-advise-airlift-force-multiplier.test.ts`, `us-avoids-airstrike-populated-support.test.ts`).
 - **`us.airLiftTrain` exclusion**: `packages/engine/test/policy-profile-quality/us-advise-airlift-force-multiplier.test.ts:26,41` explicitly asserts `us.airLiftTrain` is NOT included in the US baseline templates. This spec's P3 decides whether that exclusion stands.
-- **Available `reachable` role constraint**: Spec 196 added `reachable`, `adjacent`, `distinctOriginDestination`, `locatedIn` to `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS`; Air Lift origin/destination role binding uses these.
+- **Available `reachable` role constraint**: Spec 196 added `reachable`, `adjacent`, `distinctOriginDestination`, `locatedIn`, `notEqual` to `SUPPORTED_PLAN_ROLE_CONSTRAINT_KINDS`; Air Lift origin/destination role binding uses these. Authoring form is the inline-map shorthand (`{ reachable: { from: role.X, to: role.Y, via: routeClass.land } }`, `{ distinctOriginDestination: { origin: role.X, destination: role.Y } }`, `{ notEqual: role.X }`), per the existing `us.assaultAirLiftAssault`/`arvn.assaultTransportAssault` templates — NOT the `{ kind, a, b }` list form.
 - **Compound availability**: Spec 199 added the proposer-time compound-availability probe; Air Lift compound templates (Assault + Air Lift + Assault) consult it.
-- **Relationships**: `us.arvnNominalAlly` and `us.arvnNearWin` already exist (`92-agents.md:1379-1431`); the gap is module-side consumption.
+- **Relationships**: `us.arvnNominalAlly` and `us.arvnNearWin` already exist (`92-agents.md:1559-1585`); the gap is module-side consumption.
 
 ## 4. Architecture
 
+> **Authoring-surface note (verified 2026-05-29).** The YAML below uses the real plan-template authoring surface as exercised by the existing `us.trainAdvise` template (`92-agents.md:1281`): `root: { actionTags, compound }`, `postureHook`, `roles` with inline `constraints`, `steps` with `{ label, role, match: { decisionKind, targetKind, decisionPath, actionTag } }`, `caps`, and `fallback`. The compiler lowers these to the `Compiled*` types; do not author the lowered key names (`steps`/`postureHook`/`compound` are authored as shown). Selector names and `match` `decisionPath`/`actionTag` details are illustrative and finalized in P1/P2 against the existing templates and the P0 vocabulary audit.
+
 ### 4.1 Plan templates (additions)
 
-`us.trainPacify` — Train operation, Pacification space target:
+`us.trainPacify` — Train operation, Pacification space target. The COIN-control + population requirement is carried by the `us.pacifyTargetSpace` selector's filters (§4.2), per the established pattern that selectors carry item-local filters while role `constraints` handle cross-role relations:
 
 ```yaml
 us.trainPacify:
-  matchActionTag: train
+  traceLabel: "US Train as Pacification carrier"
+  root: { actionTags: [train] }
+  postureHook: us.preserveSupportAndAvailability
   roles:
-    pacifySpace:
-      selector: us.pacifyTargetSpace
-      constraints:
-        - kind: postState
-          predicate: coinControlPresentInSpace
-        - kind: postState
-          predicate: spaceHasPopulation
-  microturnSteps:
-    - bindTo: pacifySpace
-  posture: us.preserveSupportAndAvailability
-  compoundSpecial: null
+    pacifySpace: { selector: us.pacifyTargetSpace, required: true }
+  steps:
+    - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+  caps: { capClass: standard256, maxSteps: 1 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-`us.patrolAdvise` — Patrol carrier with Advise free-Aid:
+`us.patrolAdvise` — Patrol carrier with Advise free-Aid (strengthens the existing partial `us.patrolAdvise`):
 
 ```yaml
 us.patrolAdvise:
-  matchActionTag: patrol
+  traceLabel: "US Patrol then Advise"
+  root: { actionTags: [patrol], compound: { specialTags: [advise], timing: after } }
+  postureHook: us.preserveSupportAndAvailability
   roles:
-    patrolLoc:
-      selector: us.patrolLocTarget
-    adviseSpace:
-      selector: us.adviseTargetSpace
-      constraints:
-        - kind: notEqual
-          a: patrolLoc
-          b: adviseSpace
-  microturnSteps:
-    - bindTo: patrolLoc
-    - bindTo: adviseSpace
-  compoundSpecial:
-    tag: advise
-    timing: during
-  posture: us.preserveSupportAndAvailability
+    patrolLoc: { selector: us.patrolLocTarget, required: true }
+    adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.patrolLoc }] }
+  steps:
+    - { label: patrol-loc, role: patrolLoc, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetLoCs, actionTag: patrol } }
+    - { label: advise-space, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
+  caps: { capClass: standard256, maxSteps: 2 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
 `us.airLiftAssault` — Air Lift route binding using `reachable`:
 
 ```yaml
 us.airLiftAssault:
-  matchActionTag: assault
+  traceLabel: "US Assault, Air Lift, Assault (mass Troops)"
+  root: { actionTags: [assault], compound: { specialTags: [air-lift], timing: during, interruptAfterStage: 1 } }
+  postureHook: us.preserveSupportAndAvailability
   roles:
-    assaultOrigin:
-      selector: us.airLiftAssaultOrigin
-    airLiftOrigin:
-      selector: us.airLiftRouteOrigin
+    assaultOrigin: { selector: us.airLiftAssaultOrigin, required: true }
     airLiftDestination:
       selector: us.airLiftRouteDestination
+      required: true
       constraints:
-        - kind: reachable
-          from: airLiftOrigin
-          to: airLiftDestination
-        - kind: distinctOriginDestination
-          a: airLiftOrigin
-          b: airLiftDestination
-    assaultSecondary:
-      selector: us.assaultHighValueTarget
-  microturnSteps:
-    - bindTo: assaultOrigin
-    - bindTo: airLiftOrigin
-    - bindTo: airLiftDestination
-    - bindTo: assaultSecondary
-  compoundSpecial:
-    tag: airLift
-    timing: during
+        - { reachable: { from: role.assaultOrigin, to: role.airLiftDestination, via: routeClass.land } }
+        - { distinctOriginDestination: { origin: role.assaultOrigin, destination: role.airLiftDestination } }
+  steps:
+    - { label: first-assault-space, role: assaultOrigin, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
+    - { label: air-lift-route, role: airLiftDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
+  caps: { capClass: standard256, maxSteps: 2 }
+  fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
 ```
 
 `us.airLiftControlOrWithdrawal` — Air Lift to preserve Control or withdraw to Available:
 
 ```yaml
 us.airLiftControlOrWithdrawal:
-  matchActionTag: airLift
+  traceLabel: "US Air Lift to preserve Control or withdraw"
+  root: { actionTags: [air-lift] }
+  postureHook: us.preserveSupportAndAvailability
   roles:
-    airLiftOrigin:
-      selector: us.airLiftControlOrigin
+    airLiftOrigin: { selector: us.airLiftControlOrigin, required: true }
     airLiftDestination:
       selector: us.airLiftControlDestination
+      required: true
       constraints:
-        - kind: reachable
-          from: airLiftOrigin
-          to: airLiftDestination
-  microturnSteps:
-    - bindTo: airLiftOrigin
-    - bindTo: airLiftDestination
+        - { reachable: { from: role.airLiftOrigin, to: role.airLiftDestination, via: routeClass.land } }
+  steps:
+    - { label: air-lift-route, role: airLiftDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
+  caps: { capClass: standard256, maxSteps: 1 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-`us.assaultHighValueInfrastructure`, `us.eventDirectSwing`: shaped analogously; targets and constraints documented in §4.2 selector definitions.
+`us.assaultHighValueInfrastructure`, `us.eventDirectSwing`: shaped analogously (same `root`/`roles`/`steps`/`caps`/`fallback` skeleton); targets and constraints documented in §4.2 selector definitions.
 
 **`us.airLiftTrain` decision**: this spec ships with the template *not authored*. The rationale (recorded in §11 and propagated to `us-advise-airlift-force-multiplier.test.ts`) is that the compound shape "Air Lift before Training to make a Pacification target legal" requires the airLift→train microturn sequencing surface to be verifiable, and no current witness proves the construction is safe. The decision is reversible: a follow-up ticket may author the template if a P3 authoring experiment demonstrates safe construction.
 
 ### 4.2 Selectors (additions)
 
-New US selectors with item-local features (not constant `value: 1` placeholders):
+New US selectors with item-local features (not constant `value: 1` placeholders). The selector ref/operator forms below (`zoneProp.*`, `filters`, `score`) are illustrative; the exact authoring shape follows the existing FITL selectors (which author zone-property access as `zoneProp: { zone: <role>, prop: <name> }` with `filters`/`score` expression trees), to be finalized against the P0 vocabulary audit:
 
 ```yaml
 us.pacifyTargetSpace:
@@ -219,9 +203,11 @@ us.airLiftRouteDestination:
           - boolToNumber: { ref: zoneProp.controlSwingPossible }
 ```
 
-The specific `zoneProp.*` references must resolve against the existing FITL zone-property authoring; the P0 deliverable surveys what zone props exist (`zoneProp.population`, `zoneProp.support`, `zoneProp.opposition`, `zoneProp.coinControl`, `zoneProp.usTroopCount`, etc.) and records gaps as Open Questions so Spec 205 (ARVN selector cleanup) can authoritatively replace placeholders with the same vocabulary.
+The specific `zoneProp.*` references must resolve against the existing FITL zone-property authoring; the P0 deliverable surveys what zone props exist (`zoneProp.population`, `zoneProp.econ`, `zoneProp.category` are authored today; `coinControl`, `usTroopCount`, `usControlCritical`, `hasTerrorMarker`, `supportShiftAvailable`, `removableEnemyValue`, `controlSwingPossible`, `hasUsTroops`, `hasRemovableEnemy` are NOT yet authored) and classifies each gap per §6 P0. Spec 205 (ARVN selector cleanup) replaces ARVN placeholders with the same vocabulary.
 
 ### 4.3 Strategy modules (additions)
+
+> `feature.totalSupport`, `feature.availableUsTroops`, and `feature.projectedSupportDelta` are authored today; `var.global.aid` is the authored Aid ref (there is no `feature.aid`); `feature.projectedArvnMarginDelta` is NOT yet authored — it must be added as a sibling of the existing `feature.projectedUsMarginDelta` synthesis (data-only authoring, surveyed by P0).
 
 ```yaml
 us.buildSupport:
@@ -266,7 +252,7 @@ us.protectAidEcon:
   traceLabel: "protect aid and econ"
   when:
     lt:
-      - { ref: feature.aid }
+      - { ref: var.global.aid }
       - 15
   applies:
     scopes: [move]
@@ -293,10 +279,12 @@ us.avoidArvnKingmaking:
   scoreGroups:
     - prefer:
         - weight: -5
-          value: { ref: feature.projectedArvnMarginDelta }
+          value: { ref: feature.projectedArvnMarginDelta }   # authored in P0/P2 as sibling of projectedUsMarginDelta
 ```
 
 ### 4.4 Posture evaluators (additions / strengthening)
+
+> `us.airStrikePoliticalCost` is re-expressed via the shipped `preview.feature.projectedSupportDelta` proxy. The original draft used `roleTarget.target.hasPopulation`/`hasSupport`, a ref namespace that does not exist anywhere in the engine, data, or fixtures — FITL has no posture-level mechanism to read a bound role's zone property, and the established pattern routes target-property-aware steering through selectors (§4.2) and effect-aware steering through projected-delta refs (as the existing `us.avoidPoliticalAirStrike` guardrail does via `feature.projectedUsMarginDelta`). This posture overlaps that guardrail; whether both are retained is a P2 dedupe decision. Preview-fallback is authored as the flat `onUnavailable:` key, matching the existing guardrail surface (`onUnavailable: noFire`).
 
 ```yaml
 us.preserveSupportAndAvailability:
@@ -305,28 +293,25 @@ us.preserveSupportAndAvailability:
   prefer:
     - weight: 4
       value: { ref: feature.projectedSupportDelta }
-      previewFallback:
-        onUnavailable: noContribution
+      onUnavailable: noContribution
     - weight: 3
       value:
         coalesce:
           - { ref: preview.feature.availableUsTroops }
           - { ref: feature.availableUsTroops }
-      previewFallback:
-        onUnavailable: noContribution
+      onUnavailable: noContribution
 
 us.airStrikePoliticalCost:
   applies:
     scopes: [move]
-    actionTags: [airStrike]
+    actionTags: [air-strike]
   prefer:
     - weight: -8
       value:
-        boolToNumber:
-          and:
-            - { ref: candidate.tag.airStrike }
-            - { ref: roleTarget.target.hasPopulation }
-            - { ref: roleTarget.target.hasSupport }
+        coalesce:
+          - { ref: preview.feature.projectedSupportDelta }
+          - 0
+      onUnavailable: noContribution
 
 us.aidEconFloor:
   applies:
@@ -340,18 +325,21 @@ us.aidEconFloor:
                 - { ref: preview.var.global.aid }
                 - { ref: var.global.aid }
             - 10
-      previewFallback:
-        onUnavailable: noContribution
+      onUnavailable: noContribution
 ```
 
 ### 4.5 Guardrails (additions)
 
+> Guardrails author `when:` (trigger condition) + `severity:` (`veto`/`demote`/`prune`) + `onUnavailable:`, matching the existing `us.avoidPoliticalAirStrike`. The earlier `trigger:`/`effect: veto` keys are not the authored surface.
+
 ```yaml
 us.avoidOvercommitment:
-  trigger:
+  traceLabel: "US avoid overcommitment without Support yield"
+  scopes: [move]
+  when:
     and:
       - or:
-          - { ref: candidate.tag.airLift }
+          - { ref: candidate.tag.air-lift }
           - { ref: candidate.tag.assault }
       - lte:
           - { ref: feature.availableUsTroops }
@@ -361,10 +349,13 @@ us.avoidOvercommitment:
               - { ref: preview.feature.projectedSupportDelta }
               - 0
           - 1
-  effect: veto
+  severity: veto
+  onUnavailable: noFire
 
 us.avoidArvnKingmaking:
-  trigger:
+  traceLabel: "US do not king-make ARVN near win"
+  scopes: [move]
+  when:
     and:
       - { ref: condition.arvnNearWin.satisfied }
       - not: { ref: condition.usNearWin.satisfied }
@@ -376,7 +367,8 @@ us.avoidArvnKingmaking:
               - { ref: preview.feature.projectedArvnMarginDelta }
               - 0
           - 0
-  effect: veto
+  severity: veto
+  onUnavailable: noFire
 ```
 
 ### 4.6 Bindings
@@ -385,40 +377,40 @@ us.avoidArvnKingmaking:
 
 ## 5. Edge cases
 
-- **Available US count is unknown via metric synthesis** — if Spec 201's P0 metric survey records `availableUsTroops` as unavailable, this spec authors it via `globalTokenAgg` filtering on faction + type + standing-pool location, recording the exact filter in §4.1 selector definitions.
+- **Available US count is unknown via metric synthesis** — `feature.availableUsTroops` is authored today; if P0's metric survey records it as unavailable in a needed scope, this spec authors it via `globalTokenAgg` filtering on faction + type + standing-pool location, recording the exact filter in §4.2 selector definitions.
 - **`reachable` constraint requires `routeGraph` data asset** — Spec 196 added `routeGraph` reader; FITL's authored `routeGraph` covers Air Lift adjacency. P2 acceptance verifies the route binding compiles and resolves correctly.
 - **`us.airLiftTrain` decision later flips** — reversible via a follow-up ticket that authors the template; the existing witness exclusion would be relaxed.
-- **`condition.arvnNearWin` and `condition.usNearWin`** already exist in `92-agents.md` (verified at lines 261-296); no new conditions needed for the kingmaking guardrail.
+- **`condition.arvnNearWin` and `condition.usNearWin`** already exist in `92-agents.md` (verified at lines 405-428); no new conditions needed for the kingmaking guardrail.
 - **Replay-identity preservation** — existing US witnesses (`us-advise-airlift-force-multiplier`, `us-avoids-airstrike-populated-support`) must continue passing under the expanded template set.
 
 ## 6. Phases & acceptance criteria
 
 | Phase | Deliverable | Acceptance | Effort |
 |---|---|---|---|
-| **P0** | Selector vocabulary survey | Inventory of available `zoneProp.*` references; gaps recorded as Open Questions for §4.2 selectors | S |
-| **P1** | New US plan templates (§4.1) | All 6 templates compile; `us.airLiftTrain` explicitly excluded with documented rationale | M |
-| **P2** | US strategy modules (§4.3) + posture (§4.4) + guardrails (§4.5) | All compile; eligibility-gating verified via Spec 197 trace surface | M |
+| **P0** | Capability-gap audit (selectors + features + role constraints) | Inventory of available `zoneProp.*` / `feature.*` / `var.global.*` refs and role-constraint kinds; each required-but-missing ref classified as (a) YAML-authorable (new selector/feature synthesis) or (b) genuine engine gap → explicit prerequisite. Gaps recorded as Open Questions for §4.2/§4.3 | S |
+| **P1** | New US plan templates (§4.1) | All 6 templates compile against the real authoring surface; `us.airLiftTrain` explicitly excluded with documented rationale | M |
+| **P2** | US strategy modules (§4.3) + posture (§4.4) + guardrails (§4.5) | All compile; eligibility-gating verified via Spec 197 trace surface; `us.airStrikePoliticalCost`-vs-`us.avoidPoliticalAirStrike` dedupe decided | M |
 | **P3** | `us-baseline` bindings (§4.6) | Profile compiles; existing US witnesses pass; replay-identity for FITL canaries preserved | S |
 | **P4** | US profile-quality witness suite (§7) | All 10 witnesses pass; `pnpm turbo build` byte-identical | M |
-| **P5** | Replay-identity reattestation against Spec 201 | After Spec 201 lands, ARVN seed 1000 / FITL seed 2057 / four-profile convergence canaries all byte-identical with US baseline changes folded in | S |
+| **P5** | Replay-identity reattestation | Spec 201 has landed; ARVN seed 1000 / FITL seed 2057 / four-profile convergence canaries all byte-identical with US baseline changes folded in | S |
 
 ## 7. Test plan
 
-Profile-quality witnesses (under `packages/engine/test/policy-profile-quality/`):
+Profile-quality witnesses (under `packages/engine/test/policy-profile-quality/`). Each new file declares a `// @test-class:` marker per `.claude/rules/testing.md` — scenario/seed-specific witnesses are `convergence-witness` (matching the two existing US witnesses); the architectural-invariant binding check is `architectural-invariant`:
 
-- `us-immediate-win-by-support.test.ts` — scenario where Pacification crosses the threshold; selected template = `us.trainPacify`.
-- `us-blocks-vc-near-win.test.ts` — scenario where VC at -1; selected template prefers VC-Base removal or Opposition reduction.
-- `us-blocks-nva-near-win.test.ts` — scenario where NVA at -1; selected template prefers NVA-Control/Base removal.
-- `us-train-pacify-high-pop-support.test.ts` — selector picks the highest-population COIN-Controlled Support-shift-available space.
-- `us-train-advise-beats-plain-train.test.ts` — when indigenous-removal opportunity exists, `us.trainAdvise` outscores `us.trainPacify`.
-- `us-sweep-airstrike-prefers-zero-pop-or-trail.test.ts` — existing `us-avoids-airstrike-populated-support.test.ts` strengthened with a positive case: zero-pop or Trail target preferred.
-- `us-airlift-assault-no-control-abandonment.test.ts` — `us.airLiftAssault` selector demotes origins whose `usControlCritical` is true.
-- `us-patrol-protects-high-econ-loc.test.ts` — Patrol target chosen by Econ value, not generic projected margin.
-- `us-avoid-arvn-kingmaking.test.ts` — when ARVN at -1 and US not near win, `us.trainPacify` is suppressed in favor of `us.assaultHighValueInfrastructure` or `us.sweepAirStrike`.
-- `us-airlift-train-not-enabled.test.ts` — existing exclusion preserved with new rationale comment.
+- `us-immediate-win-by-support.test.ts` (convergence-witness) — scenario where Pacification crosses the threshold; selected template = `us.trainPacify`.
+- `us-blocks-vc-near-win.test.ts` (convergence-witness) — scenario where VC at -1; selected template prefers VC-Base removal or Opposition reduction.
+- `us-blocks-nva-near-win.test.ts` (convergence-witness) — scenario where NVA at -1; selected template prefers NVA-Control/Base removal.
+- `us-train-pacify-high-pop-support.test.ts` (convergence-witness) — selector picks the highest-population COIN-Controlled Support-shift-available space.
+- `us-train-advise-beats-plain-train.test.ts` (convergence-witness) — when indigenous-removal opportunity exists, `us.trainAdvise` outscores `us.trainPacify`.
+- `us-sweep-airstrike-prefers-zero-pop-or-trail.test.ts` (convergence-witness) — positive-case companion to the preserved `us-avoids-airstrike-populated-support.test.ts`: zero-pop or Trail target preferred.
+- `us-airlift-assault-no-control-abandonment.test.ts` (convergence-witness) — `us.airLiftAssault` selector demotes origins whose `usControlCritical` is true.
+- `us-patrol-protects-high-econ-loc.test.ts` (convergence-witness) — Patrol target chosen by Econ value, not generic projected margin.
+- `us-avoid-arvn-kingmaking.test.ts` (convergence-witness) — when ARVN at -1 and US not near win, `us.trainPacify` is suppressed in favor of `us.assaultHighValueInfrastructure` or `us.sweepAirStrike`.
+- `us-airlift-train-not-enabled.test.ts` (convergence-witness) — **new** witness asserting the `us.airLiftTrain` exclusion with the §4.1 rationale comment. Distinct from the preserved `us-advise-airlift-force-multiplier.test.ts:26,41` (which also asserts the exclusion as a side-condition); if P3 finds the two redundant, fold this into the existing witness rather than shipping both.
 
 Architectural invariants:
-- `us-templates-bind-shared-modules.test.ts` — verifies `us-baseline` binds `shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.eventDirectSwing` (when Spec 201 is live).
+- `us-templates-bind-shared-modules.test.ts` (architectural-invariant) — verifies `us-baseline` binds `shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.eventDirectSwing` (these are bound today post-Spec-201; the witness guards against regression).
 
 Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 
@@ -426,12 +418,12 @@ Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 
 | Foundation | How |
 |---|---|
-| #1 | YAML-only |
+| #1 | YAML-only authoring; P0 routes any genuine engine gap to an explicit prerequisite rather than smuggling game logic into the engine |
 | #2 | All US doctrine evolvable via tunable parameters and bindings |
-| #15 | Closes the US-vs-ARVN parity gap with concrete templates and witnesses |
+| #15 | Closes the US-vs-ARVN parity gap with concrete templates and witnesses; the `roleTarget` re-expression fixes a root cause (nonexistent ref) rather than papering over it |
 | #16 | 10 witnesses cover the competence report's §1 requirements |
 | #19 | Compound shapes (Air Lift + Assault) emerge from microturn step decisions, not pre-declared compounds |
-| #20 | All preview-derived features declare `previewFallback.onUnavailable: noContribution` |
+| #20 | All preview-derived `prefer` terms declare `onUnavailable: noContribution`; guardrails declare `onUnavailable: noFire` |
 
 ## 9. Reassessment of source proposal (`reports/fitl-ai-encoding-first-iteration.md`)
 
@@ -446,7 +438,9 @@ Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 - §5 Air Lift coverage: adopted with `us.airLiftTrain` explicitly *not* enabled by default; rationale documented in §4.1 and propagated to the existing exclusion witness.
 
 **Corrected:**
-- The proposal lists 5 `postState` predicates (`notEqual`, `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`); these are role-constraint kinds added by Spec 196, not literal `postState` predicate kinds. The §4.1 templates use them as role constraints (Spec 196's surface), which is the actual supported shape.
+- The proposal lists 5 `postState` predicates (`notEqual`, `locatedIn`, `distinctOriginDestination`, `reachable`, `adjacent`); these are role-constraint kinds added by Spec 196, not literal `postState` predicate kinds. The §4.1 templates use them as role constraints in the authored inline-map form (Spec 196's surface), which is the actual supported shape.
+- The proposal's template/module/posture/guardrail YAML used field names (`matchActionTag`, `microturnSteps`/`bindTo`, `compoundSpecial`, `posture:`, `trigger:`/`effect:`, `previewFallback`) that do not match the real authoring surface; §4 now uses the verified surface (`root`/`steps`/`postureHook`/`compound`, `when`/`severity`/`onUnavailable`) per the existing `us.trainAdvise`/`us.avoidPoliticalAirStrike`.
+- `us.airStrikePoliticalCost` used `roleTarget.target.*`, a nonexistent ref; re-expressed via `preview.feature.projectedSupportDelta` (§4.4). `feature.aid` corrected to `var.global.aid` (§4.3).
 
 **Deferred:**
 - US Train+Advise Aid-mode variant — uncommitted until a witness shows the current Aid-mode selector cannot differentiate.
@@ -457,15 +451,28 @@ Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 
 ## 10. Out of scope (named follow-on / sibling)
 
-- **Spec 201** — shared doctrine + lifecycle awareness (soft prerequisite).
-- **Spec 203** — NVA completion.
-- **Spec 204** — VC completion.
+- **Spec 201** — shared doctrine + lifecycle awareness (soft prerequisite, COMPLETED).
+- **Spec 203** — NVA completion (shares the `roleTarget.*` re-expression resolution from §4.4).
+- **Spec 204** — VC completion (shares the `roleTarget.*` re-expression resolution from §4.4).
 - **Spec 205** — ARVN selector cleanup (the placeholder-replacement pattern this spec uses for US selectors is the same pattern Spec 205 applies to ARVN).
 - US Train+Advise Aid-mode specialization — uncommitted.
 - US Irregular/Ranger specific removal templates — uncommitted; current selectors treat indigenous removal as a generic option.
 
 ## 11. Open questions
 
-- **Zone-prop vocabulary**: which of `zoneProp.coinControl`, `zoneProp.usTroopCount`, `zoneProp.usControlCritical`, `zoneProp.hasTerrorMarker`, `zoneProp.supportShiftAvailable`, `zoneProp.removableEnemyValue`, `zoneProp.controlSwingPossible`, `zoneProp.hasUsTroops`, `zoneProp.hasRemovableEnemy` exist today vs. require introduction in the FITL token/zone data files? P0 deliverable answers.
+- **Selector/feature vocabulary (P0 capability audit)**: which of `zoneProp.coinControl`, `zoneProp.usTroopCount`, `zoneProp.usControlCritical`, `zoneProp.hasTerrorMarker`, `zoneProp.supportShiftAvailable`, `zoneProp.removableEnemyValue`, `zoneProp.controlSwingPossible`, `zoneProp.hasUsTroops`, `zoneProp.hasRemovableEnemy` exist today vs. require introduction in the FITL token/zone data files? Likewise `feature.projectedArvnMarginDelta` (not yet authored; sibling of `feature.projectedUsMarginDelta`). P0 classifies each as YAML-authorable or genuine engine gap.
 - **`us.airLiftTrain` enablement**: does a safe authoring exist? Deferred to a follow-up ticket post-202.
+- **`us.airStrikePoliticalCost` vs `us.avoidPoliticalAirStrike`**: posture and guardrail both demote Air Strike on populated Support via projected-delta proxies; P2 decides whether both are retained or one is dropped.
 - **Threshold calibration**: the `totalSupport < 30` / `availableUsTroops < 4` / `aid < 15` thresholds in §4.3 are initial drafts; P4 calibrates against the four-profile convergence canary.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-29:
+
+- [`tickets/202FITLUSCOMP-001.md`](../tickets/202FITLUSCOMP-001.md) — P0 US capability-gap audit (covers §6 P0)
+- [`tickets/202FITLUSCOMP-002.md`](../tickets/202FITLUSCOMP-002.md) — P1 US selectors + plan templates + vocabulary synthesis (covers §4.1, §4.2, §6 P1)
+- [`tickets/202FITLUSCOMP-003.md`](../tickets/202FITLUSCOMP-003.md) — P2a US strategy modules (covers §4.3)
+- [`tickets/202FITLUSCOMP-004.md`](../tickets/202FITLUSCOMP-004.md) — P2b US posture evaluators + guardrails (covers §4.4, §4.5)
+- [`tickets/202FITLUSCOMP-005.md`](../tickets/202FITLUSCOMP-005.md) — P3 `us-baseline` bindings (covers §4.6)
+- [`tickets/202FITLUSCOMP-006.md`](../tickets/202FITLUSCOMP-006.md) — P4 US profile-quality witness suite (covers §7)
+- [`tickets/202FITLUSCOMP-007.md`](../tickets/202FITLUSCOMP-007.md) — P5 replay-identity reattestation (covers §6 P5)

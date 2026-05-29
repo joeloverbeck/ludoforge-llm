@@ -1783,6 +1783,22 @@ agents:
             weight: -20
             fallback:
               contribution: 0
+          # Spec 202 (US completion): strengthen with projected-Support and
+          # Available-US preference terms (Foundation 20 fallback: contribution 0).
+          - id: projected-support-delta
+            value:
+              ref: feature.projectedSupportDelta
+            weight: 4
+            fallback:
+              contribution: 0
+          - id: available-us
+            value:
+              coalesce:
+                - { ref: preview.feature.availableUsTroops }
+                - { ref: feature.availableUsTroops }
+            weight: 3
+            fallback:
+              contribution: 0
       nva.protectLogisticsAndBases:
         traceLabel: "NVA protect logistics, Bases, and ally-rival leverage"
         must:
@@ -2564,6 +2580,67 @@ agents:
                 - 2
         severity: demote
         penalty: 700
+        onUnavailable: noFire
+      # --- Spec 202 (US completion) guardrails. "veto" intent (spec §4.5) is
+      # encoded as high-penalty demote — the FITL idiom (cf. arvn.doNotServeUSWin);
+      # prune is reserved for the pass-drop guardrail to never eliminate the last
+      # legal move. us.airStrikePoliticalCost (spec §4.4) is NOT authored: it
+      # duplicates us.avoidPoliticalAirStrike above (both demote Air Strike on
+      # negative projected support/margin), and posture evaluators cannot tag-filter
+      # to air-strike nor apply without a template postureHook. Dedupe = retain the
+      # guardrail, drop the posture (P2 decision). us.aidEconFloor (spec §4.4) is
+      # authored as a guardrail (not a posture) so it actually fires per-candidate —
+      # an unhooked posture is inert (plan-proposal.ts only applies template hooks). ---
+      us.aidEconFloor:
+        traceLabel: "US avoid dropping Aid below the floor"
+        scopes: [move]
+        when:
+          and:
+            - or:
+                - { ref: candidate.tag.patrol }
+                - { ref: candidate.tag.train }
+                - { ref: candidate.tag.assault }
+                - { ref: candidate.tag.air-strike }
+            - lt:
+                - coalesce:
+                    - { ref: preview.var.global.aid }
+                    - { ref: var.global.aid }
+                - 10
+        severity: demote
+        penalty: 400
+        onUnavailable: noFire
+      us.avoidOvercommitment:
+        traceLabel: "US avoid overcommitment without Support yield"
+        scopes: [move]
+        when:
+          and:
+            - or:
+                - { ref: candidate.tag.air-lift }
+                - { ref: candidate.tag.assault }
+            - lte:
+                - { ref: feature.availableUsTroops }
+                - 2
+            - lt:
+                - { ref: feature.projectedSupportDelta }
+                - 1
+        severity: demote
+        penalty: 800
+        onUnavailable: noFire
+      us.avoidArvnKingmaking:
+        traceLabel: "US do not king-make ARVN near win"
+        scopes: [move]
+        when:
+          and:
+            - { ref: condition.arvnNearWin.satisfied }
+            - not: { ref: condition.usNearWin.satisfied }
+            - or:
+                - { ref: candidate.tag.train }
+                - { ref: candidate.tag.pacify }
+            - gt:
+                - { ref: feature.projectedArvnMarginDelta }
+                - 0
+        severity: demote
+        penalty: 600
         onUnavailable: noFire
       nva.doNotServeVcWin:
         traceLabel: "NVA do not serve a VC win"

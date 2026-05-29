@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-004: P2b — US posture evaluators (§4.4) + guardrails (§4.5)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
@@ -69,3 +69,23 @@ Add `prefer` terms for `feature.projectedSupportDelta` and available-US (coalesc
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed** (`data/games/fire-in-the-lake/92-agents.md`):
+- **Strengthened `us.preserveSupportAndAvailability`** (posture, hooked by every US template): added two `prefer` terms preserving the existing `must` + `own-margin`/`arvn-rival-risk`: `projected-support-delta` (`feature.projectedSupportDelta`, weight 4) and `available-us` (`coalesce(preview.feature.availableUsTroops, feature.availableUsTroops)`, weight 3), each `fallback: { contribution: 0 }` (the real posture-`prefer` fallback surface, not `onUnavailable`).
+- **Added 3 guardrails** (FITL `guardrails` section, after `us.avoidPoliticalAirStrike`):
+  - `us.aidEconFloor` — COIN-op tag + projected `var.global.aid < 10` → `demote` 400.
+  - `us.avoidOvercommitment` — (air-lift | assault) + `availableUsTroops ≤ 2` + `projectedSupportDelta < 1` → `demote` 800.
+  - `us.avoidArvnKingmaking` — `arvnNearWin` + not `usNearWin` + (train | pacify) + `projectedArvnMarginDelta > 0` → `demote` 600 (mirrors `arvn.doNotServeUSWin`).
+
+**Dedupe / surface decisions (the explicit P2 deliverable)** — recorded in spec §4.4/§11:
+- **`us.airStrikePoliticalCost` DROPPED.** It duplicates the existing `us.avoidPoliticalAirStrike` guardrail (both demote Air Strike on negative projected support/margin); and the real `CompiledPostureEvaluator` schema has no `applies`/`actionTags`/`scopes`, while postures only score a plan via a template `postureHook` (`plan-proposal.ts:577`) — a standalone posture would be inert. Dedupe = retain guardrail, drop posture.
+- **`us.aidEconFloor` authored as a guardrail, not a posture**, for the same inert-posture reason — so it actually fires per-candidate.
+- **"veto" → high-penalty `demote`.** `veto` is not a valid `GuardrailSeverity` (`prune`/`demote`/`warn`/`auditOnly`); FITL encodes hard vetoes as high-penalty demote, reserving `prune` for the pass-drop guardrail so the last legal move is never eliminated.
+
+`us.avoidPoliticalAirStrike` is preserved unchanged; its witness is not removed.
+
+**Verification**: FITL compiles **0 errors**; 3 guardrails present (`demote`), posture carries 4 `prefer` terms, `us.airStrikePoliticalCost` absent as guardrail and posture. Byte-identical recompile. Bootstrap regenerated; `schema:artifacts:check` clean. Full `policy-profile-quality` suite: **60 pass / 9 fail — identical** to baseline (the 9 are pre-existing stale convergence witnesses, unrelated to spec 202); the posture strengthening is live (hooked) and added zero new failures.

@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-005: P3 — `us-baseline` bindings (§4.6)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None
@@ -68,3 +68,21 @@ Bind the new posture evaluators and guardrails from ticket 004 into `us-baseline
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed** (`data/games/fire-in-the-lake/92-agents.md`, `profiles.us-baseline.use`):
+- **planTemplates** += `us.trainPacify`, `us.airLiftAssault`, `us.airLiftControlOrWithdrawal`, `us.assaultHighValueInfrastructure` (now 8; `us.patrolAdvise` was already bound — its strengthened form is the same binding name; `us.eventDirectSwing` not bound, excluded by design).
+- **strategyModules** += `us.buildSupport`, `us.protectAidEcon`, `us.avoidArvnKingmaking`. `us.preserveAvailability` binding unchanged (replaced in place, Foundation 14 — verified single binding, no duplicate/alias).
+- **guardrails** += `us.aidEconFloor`, `us.avoidOvercommitment`, `us.avoidArvnKingmaking` (now 5).
+- No `use.postureEvaluators` change: the strengthened `us.preserveSupportAndAvailability` is already applied via every US template's `postureHook`; the dropped `us.airStrikePoliticalCost` and the guardrail-form `us.aidEconFloor` need no posture binding (per ticket 004's surface findings).
+
+**Note**: the strategy module and guardrail both named `us.avoidArvnKingmaking` are distinct constructs in separate catalog records (`strategyModules` vs `guardrails`) and bind into separate `use` lists — intentional per spec §4.3/§4.5.
+
+**Verification**:
+- FITL compiles **0 errors**; every bound name resolves; `us.preserveAvailability` bound exactly once.
+- Byte-identical recompile (compiler determinism); bootstrap fixture regenerated and `check` current; `schema:artifacts:check` clean.
+- Determinism lane **99/99 pass**; `perf-baseline-trajectory-identity` passes — **FITL replay-identity preserved** even with the new doctrine live.
+- `policy-profile-quality` + perf: **66 pass / 9 fail — the 9 are the pre-existing stale convergence witnesses**, unchanged; binding the new doctrine added zero new failures. The passing US witness (`us-advise-airlift-force-multiplier`) still passes.

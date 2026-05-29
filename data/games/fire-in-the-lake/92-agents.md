@@ -2968,6 +2968,9 @@ agents:
         guardrails:
           - dropPassWhenOtherMovesExist
           - us.avoidPoliticalAirStrike
+          - us.aidEconFloor
+          - us.avoidOvercommitment
+          - us.avoidArvnKingmaking
         strategyModules:
           - shared.immediateWin
           - shared.blockCurrentLeader
@@ -2979,11 +2982,18 @@ agents:
           - us.createAndDefendSupport
           - us.forceMultiplier
           - us.preserveAvailability
+          - us.buildSupport
+          - us.protectAidEcon
+          - us.avoidArvnKingmaking
         planTemplates:
           - us.trainAdvise
           - us.patrolAdvise
           - us.sweepAirStrike
           - us.assaultAirLiftAssault
+          - us.trainPacify
+          - us.airLiftAssault
+          - us.airLiftControlOrWithdrawal
+          - us.assaultHighValueInfrastructure
         considerations:
           - preferProjectedSelfMargin
           - preserveResources

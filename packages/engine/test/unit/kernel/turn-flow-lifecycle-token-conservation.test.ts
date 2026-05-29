@@ -2,9 +2,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyTurnFlowCardBoundary, applyTurnFlowInitialReveal } from '../../src/kernel/turn-flow-lifecycle.js';
-import { applyMove, asActionId, asPhaseId, initialState, legalMoves, type GameDef, type GameState, type Token } from '../../src/kernel/index.js';
-import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { applyTurnFlowCardBoundary, applyTurnFlowInitialReveal } from '../../../src/kernel/turn-flow-lifecycle.js';
+import { applyMove, asActionId, asPhaseId, initialState, legalMoves, type GameDef, type GameState, type Token } from '../../../src/kernel/index.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const collectCardMultiset = (state: GameState): Map<string, number> => {
   const counts = new Map<string, number>();

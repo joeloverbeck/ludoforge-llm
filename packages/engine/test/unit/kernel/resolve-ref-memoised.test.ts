@@ -3,24 +3,24 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyPreviewDriveGreedyChooseOne } from '../../src/kernel/microturn/drive.js';
-import { applyPublishedDecisionFromCanonicalState } from '../../src/kernel/microturn/apply.js';
-import { publishMicroturnGreedyChooseOne } from '../../src/kernel/microturn/publish.js';
-import { createDraftTokenStateIndex } from '../../src/kernel/token-state-index.js';
-import { createResolveRefCache, resolveRef, resolveRefMemoised } from '../../src/kernel/resolve-ref.js';
-import { createEvalContext, createEvalRuntimeResources } from '../../src/kernel/eval-context.js';
-import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
-import type { GameDef, GameState } from '../../src/kernel/index.js';
-import { asPlayerId } from '../../src/kernel/branded.js';
-import type { Reference } from '../../src/kernel/types-ast.js';
+import { applyPreviewDriveGreedyChooseOne } from '../../../src/kernel/microturn/drive.js';
+import { applyPublishedDecisionFromCanonicalState } from '../../../src/kernel/microturn/apply.js';
+import { publishMicroturnGreedyChooseOne } from '../../../src/kernel/microturn/publish.js';
+import { createDraftTokenStateIndex } from '../../../src/kernel/token-state-index.js';
+import { createResolveRefCache, resolveRef, resolveRefMemoised } from '../../../src/kernel/resolve-ref.js';
+import { createEvalContext, createEvalRuntimeResources } from '../../../src/kernel/eval-context.js';
+import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
+import type { GameDef, GameState } from '../../../src/kernel/index.js';
+import { asPlayerId } from '../../../src/kernel/branded.js';
+import type { Reference } from '../../../src/kernel/types-ast.js';
 import {
   PREVIEW_DEPTH_CAP,
   collectChooseOneDriveFixtures,
-} from '../helpers/drive-parity-helpers.js';
+} from '../../helpers/drive-parity-helpers.js';
 import {
   createFitlRuntime,
   FITL_PLAYER_COUNT,
-} from '../helpers/zobrist-incremental-property-helpers.js';
+} from '../../helpers/zobrist-incremental-property-helpers.js';
 
 /**
  * F8 oracle: `resolveRefMemoised(ref, ctx, freshCache)` must produce results

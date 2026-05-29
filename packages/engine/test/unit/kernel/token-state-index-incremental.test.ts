@@ -10,10 +10,10 @@ import {
   refreshCachedTokenStateIndexEntries,
   type TokenStateIndexEntry,
   __internal_for_tests,
-} from '../../src/kernel/token-state-index.js';
-import { applyPublishedDecisionFromCanonicalState } from '../../src/kernel/microturn/apply.js';
-import { publishMicroturnGreedyChooseOne } from '../../src/kernel/microturn/publish.js';
-import { createMutableState, freezeState } from '../../src/kernel/state-draft.js';
+} from '../../../src/kernel/token-state-index.js';
+import { applyPublishedDecisionFromCanonicalState } from '../../../src/kernel/microturn/apply.js';
+import { publishMicroturnGreedyChooseOne } from '../../../src/kernel/microturn/publish.js';
+import { createMutableState, freezeState } from '../../../src/kernel/state-draft.js';
 import {
   applyEffects,
   asPlayerId,
@@ -27,17 +27,17 @@ import {
   type GameDef,
   type GameState,
   type Token,
-} from '../../src/kernel/index.js';
-import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
-import { eff } from '../helpers/effect-tag-helper.js';
+} from '../../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
 import {
   PREVIEW_DEPTH_CAP,
   collectChooseOneDriveFixtures,
-} from '../helpers/drive-parity-helpers.js';
+} from '../../helpers/drive-parity-helpers.js';
 import {
   createFitlRuntime,
   FITL_PLAYER_COUNT,
-} from '../helpers/zobrist-incremental-property-helpers.js';
+} from '../../helpers/zobrist-incremental-property-helpers.js';
 
 describe('POLPREVDRIVE-002 draft token-state index', () => {
   it('matches a fresh rebuild after each greedy drive kernel mutation', () => {

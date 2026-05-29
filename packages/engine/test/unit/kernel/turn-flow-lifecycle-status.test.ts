@@ -9,13 +9,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { applyTurnFlowCardBoundary } from '../../src/kernel/turn-flow-lifecycle.js';
-import { enumerateLegalMoves, legalMoves } from '../../src/kernel/legal-moves.js';
-import { applyMove, probeMoveLegality, probeMoveViability } from '../../src/kernel/apply-move.js';
-import { publishMicroturn } from '../../src/kernel/microturn/publish.js';
-import { ILLEGAL_MOVE_REASONS } from '../../src/kernel/runtime-reasons.js';
-import { asActionId, asPhaseId, asPlayerId, initialState, type GameDef, type GameState } from '../../src/kernel/index.js';
-import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
+import { applyTurnFlowCardBoundary } from '../../../src/kernel/turn-flow-lifecycle.js';
+import { enumerateLegalMoves, legalMoves } from '../../../src/kernel/legal-moves.js';
+import { applyMove, probeMoveLegality, probeMoveViability } from '../../../src/kernel/apply-move.js';
+import { publishMicroturn } from '../../../src/kernel/microturn/publish.js';
+import { ILLEGAL_MOVE_REASONS } from '../../../src/kernel/runtime-reasons.js';
+import { asActionId, asPhaseId, asPlayerId, initialState, type GameDef, type GameState } from '../../../src/kernel/index.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
 const accumulatingCardDrivenDef = (): GameDef =>
   asTaggedGameDef({

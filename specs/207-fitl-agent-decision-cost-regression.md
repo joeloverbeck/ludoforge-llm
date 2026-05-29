@@ -9,6 +9,18 @@
 
 > **Scope (broadened 2026-05-29):** the regression manifests two ways, both on the agent decision/preview hot path: (1) **within-game per-decision cost drift** (§1), and (2) **preview-cap exhaustion** — when preview is materially slower it hits its grant-flow / post-grant / free-operation budget caps, marking opponent-margin refs `unknown` instead of `ready`. Both are almost certainly the same growing structure on the decision path. All four affected witnesses (§5) are quarantined under this one spec with a single un-skip acceptance gate.
 
+## ⚠ Re-scope (2026-05-29, during 207AGEDECCOS-002 implementation)
+
+Implementing Phase 2 surfaced two findings that **invalidate the original four-witness single-gate framing**. Recorded here; §5/§6/§8 are corrected below.
+
+1. **The cost is volume-bound, not a retained-state leak.** Phase 1 already established it is not a leaked cache. Phase 2 measurement localizes the cost to the **broad** `chooseNStep` enumeration over the *full* selectable add-option set (ARVN fills to ~32 add-options vs the compiler-validated `maxOptions: 8`). Empirically, with the deep pass made free (`deep.depthCap` 16→4) but **full breadth**, the seed-1002 diagnostic drift is still **23.45×** — the deep pass is only ~19% of the cost; the broad enumeration over ~32 options is ~81% and is **irreducible without reducing the option set**. A pure wall-time speedup (e.g. skipping per-step zobrist hashing, ~33% of per-apply cost) therefore **cannot** reach the 1.75× ceiling; only reducing the enumerated option count can — and that changes outcomes (next point).
+
+2. **The `chooseNStep` inner preview feeds `actionSelection` candidate scoring.** ARVN's action-selection previews drive each candidate action's `chooseNStep` completion; bounding/reducing that enumeration changes the projected refs → the action scores → ARVN's action distribution. So the originally-prescribed "bound the enumeration" fix is **not** the cost-only, outcome-preserving fix the spec assumed (it was byte-identical on seed 1002 only coincidentally — ARVN's margin refs are uniform there → tie-break). Confirmed: enforcing `maxOptions=8` (let alone reducing it) changes ARVN behavior on the probe seeds.
+
+3. **Two of the four quarantined witnesses fail for a *pre-existing, non-cost* reason (§5 mis-attribution).** On the **unmodified branch baseline** (no fix), `arvn-action-distribution-not-dominated` fails with *"action family rate 1.000 ≥ 0.600"* (ARVN's **plan controller** selects `arvn.patrolGovern` 100% of the time — a plan-policy behavior, 0 preview refs requested), and `turn-shape-minimum-impact-observed` fails with *"turn-shape evaluator currentTurnImpact never ready"*. Neither is a preview-cost/overhead failure; fixing the cost cannot un-skip them. These two are split to **`specs/208-fitl-arvn-plan-controller-action-domination.md`** (pre-existing plan-controller behavioral failures, likely Spec 190/191 era; consistent with this branch's other stale baseline witnesses).
+
+**Decision taken (user, 2026-05-29):** revert the budget-reduction approach (it violates Foundation 20 — it *reduces* preview signal instead of *restoring preview speed*; it also breaks `may-17`, dropping opponent-margin readiness to 0 by making the preview too shallow to reach the NVA/VC margins). Pursue an outcome-preserving pure speedup of the full-richness preview, accepting it may not alone reach 1.75×, and **defer `spec-143` + `may-17` to this re-scoped spec** (their Phase-2 fix is now: pure speedup + a still-open decision on whether the 1.75× drift ceiling is compatible with the legitimate full-breadth `deep1024` ARVN preview, or must be re-evaluated now that the "retained-state leak" premise the ceiling rested on is disproven). **Open question for the next implementer / user:** the only ways to reach the *existing* 1.75× ceiling are (a) reduce the ARVN preview budget (behavior change → re-bless canaries) or (b) re-evaluate the ceiling for the legitimate `deep1024` config (the Non-Goals below were premised on a retained-state leak that does not exist). Pick one before completing Phase 2.
+
 ## 1. Problem
 
 `packages/engine/test/policy-profile-quality/fitl-spec-143-cost-stability.test.ts` measures per-decision agent cost drift across a single FITL game (seed 1002, `maxTurns=3`, four `*-baseline` policy agents): the trimmed last-decile average decision time divided by the trimmed first-decile average, with a calibrated ceiling of **1.75×**.
@@ -104,19 +116,19 @@ A retained-state / monotonically-growing structure on the agent decision hot pat
 
 ## 5. Current quarantine
 
-Four `policy-profile-quality` witnesses are **skipped** (node `it(..., { skip })`) with a reference to this spec, so the lane can be made blocking for the other ~88 witnesses without masking this regression. **Un-skipping all four is the acceptance gate for this spec's fix.**
+Four `policy-profile-quality` witnesses are **skipped** (node `it(..., { skip })`). **Corrected 2026-05-29 (see Re-scope above): only #1 and #4 belong to this spec; #2 and #3 are pre-existing plan-controller behavioral failures split to `specs/208-fitl-arvn-plan-controller-action-domination.md`.**
 
-1. `fitl-spec-143-cost-stability.test.ts` — cost-drift ratio (seed 1002): ~20× vs the 1.75× ceiling.
-2. `probes/probe-budget.test.ts` → probe `arvn-action-distribution-not-dominated` — exceeds the hard per-decision overhead budget (~123s).
-3. `probes/probe-budget.test.ts` → probe `turn-shape-minimum-impact-observed` — exceeds the hard probe overhead budget (~100s).
-4. `probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — 0 ready opponent-preview candidates (expected ≥2): NVA/VC margin refs land `unknown` (preview-cap exhaustion) instead of `ready`.
+1. **[this spec]** `fitl-spec-143-cost-stability.test.ts` — cost-drift ratio (seed 1002): ~20–30× vs the 1.75× ceiling. (Volume-bound; see Re-scope — un-skip gated on the Phase-2 ceiling decision.)
+2. **[→ Spec 208]** `probes/probe-budget.test.ts` → probe `arvn-action-distribution-not-dominated` — **NOT a cost/overhead failure**: fails behaviorally on the unmodified baseline with *"action family rate 1.000 ≥ 0.600"* (plan controller selects `arvn.patrolGovern` 100%). Original "~123s overhead" attribution was wrong.
+3. **[→ Spec 208]** `probes/probe-budget.test.ts` → probe `turn-shape-minimum-impact-observed` — **NOT a cost/overhead failure**: fails behaviorally on the unmodified baseline with *"turn-shape evaluator currentTurnImpact never ready"*.
+4. **[this spec]** `probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — 0 ready opponent-preview candidates (expected ≥2): NVA/VC margin refs land `unknown` (preview-cap exhaustion) instead of `ready`. (Needs the full-depth preview to remain rich *and* not exhaust its budget caps — see Re-scope; the budget-reduction approach made this strictly worse.)
 
 ## 6. Acceptance criteria
 
-1. Root cause identified and documented (the growing structure + the spec that introduced it).
-2. All four quarantined witnesses pass **unskipped**: `fitl-spec-143` drift ratio < 1.75×; both `probe-budget` probes within the hard overhead budget; `may-17` sees ≥2 ready opponent-preview candidates (opponent margin refs resolve `ready`, not `unknown`).
-3. No behavioral change: FITL determinism lane + four-profile convergence canaries remain byte-identical; `pnpm turbo build` byte-identical.
-4. Full engine `test:all` + `policy-profile-quality` lanes green with the four witnesses unskipped.
+1. Root cause identified and documented (the growing structure + the spec that introduced it). ✔ (Phase 1 + the Re-scope above.)
+2. **(Corrected 2026-05-29)** The **two in-scope** witnesses pass **unskipped**: `fitl-spec-143` drift ratio < 1.75× **and** `may-17` sees ≥2 ready opponent-preview candidates (opponent margin refs resolve `ready`, not `unknown`). *(`arvn-action-distribution-not-dominated` and `turn-shape-minimum-impact-observed` moved to Spec 208 — they fail for a pre-existing plan-controller reason, not preview cost.)* Reaching the `spec-143` ceiling requires the open config-vs-ceiling decision recorded in the Re-scope section.
+3. No behavioral change: FITL determinism lane + four-profile convergence canaries remain byte-identical; `pnpm turbo build` byte-identical. *(This rules out the budget-reduction approach, which changes ARVN's action distribution.)*
+4. Full engine `test:all` + `policy-profile-quality` lanes green with the two in-scope witnesses unskipped.
 
 ## 7. Foundation alignment
 
@@ -142,5 +154,6 @@ This is a diagnosis-first spec: Phase 2/3 scope is gated on Phase 1 evidence, so
 Decomposed via `/spec-to-tickets` on 2026-05-29 (Phase 1 first; Phase 2/3 decomposed 2026-05-29 once Phase 1 localized the root cause):
 
 - [`archive/tickets/207AGEDECCOS-001.md`](../archive/tickets/207AGEDECCOS-001.md) — Phase 1 — Diagnose the within-game per-decision cost-accumulation root cause (covers §8 Phase 1, Acceptance #1) — ✅ COMPLETED 2026-05-29 (root cause: Spec 191; see §3)
-- [`tickets/207AGEDECCOS-002.md`](../tickets/207AGEDECCOS-002.md) — Phase 2 — Bound the chooseNStep continuedDeepening per-decision enumeration (covers §8 Phase 2, Acceptance #2–#3)
-- [`tickets/207AGEDECCOS-003.md`](../tickets/207AGEDECCOS-003.md) — Phase 3 — Un-skip the four quarantined witnesses + full acceptance verification (covers §8 Phase 3, Acceptance #2–#4)
+- [`tickets/207AGEDECCOS-002.md`](../tickets/207AGEDECCOS-002.md) — Phase 2 — Bound the chooseNStep continuedDeepening per-decision enumeration. ⚠ **RE-SCOPED 2026-05-29** during implementation: the "bound the enumeration" approach changes ARVN's action distribution (the preview feeds action scoring) and the cost is volume-bound (pure speedup cannot reach 1.75×). Pending the config-vs-ceiling decision in the Re-scope section. See the ticket's Outcome.
+- [`tickets/207AGEDECCOS-003.md`](../tickets/207AGEDECCOS-003.md) — Phase 3 — Un-skip gate. Re-scoped to the **two** in-scope witnesses (`spec-143`, `may-17`); blocked on Phase 2.
+- **Split out:** [`specs/208-fitl-arvn-plan-controller-action-domination.md`](208-fitl-arvn-plan-controller-action-domination.md) — the `arvn-action-distribution-not-dominated` + `turn-shape-minimum-impact-observed` witnesses (pre-existing plan-controller behavioral failures, mis-attributed to preview cost in the original §5).

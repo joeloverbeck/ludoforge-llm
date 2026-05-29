@@ -1,6 +1,6 @@
 # 207AGEDECCOS-003: Phase 3 — Un-skip the four quarantined witnesses and verify full acceptance
 
-**Status**: PENDING
+**Status**: ⚠ BLOCKED / RE-SCOPED 2026-05-29 — now covers only the **two** in-scope witnesses (`fitl-spec-143-cost-stability`, `fitl-arvn-may17-equivalent-opponent-preview`); blocked on the re-scoped Phase 2 (`207AGEDECCOS-002`). The other two witnesses (`arvn-action-distribution-not-dominated`, `turn-shape-minimum-impact-observed`) were split to `specs/208-fitl-arvn-plan-controller-action-domination.md` (pre-existing plan-controller behavioral failures — see Spec 207 "⚠ Re-scope" §). Their probe-budget quarantine now references Spec 208.
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — removes test `skip`s and runs verification lanes

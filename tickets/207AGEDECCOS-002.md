@@ -1,6 +1,24 @@
 # 207AGEDECCOS-002: Phase 2 — Bound the chooseNStep continuedDeepening per-decision enumeration
 
-**Status**: PENDING
+**Status**: ⚠ BLOCKED — RE-SCOPED 2026-05-29 (the "bound the enumeration" approach below was investigated and rejected; see Investigation Outcome)
+
+## Investigation Outcome (2026-05-29) — read before re-attempting
+
+Implementing the "bound the enumeration" approach surfaced findings that **invalidate this ticket as written** (full detail in `specs/207-fitl-agent-decision-cost-regression.md` → "⚠ Re-scope" §):
+
+1. **The cost is volume-bound, not reducible by a pure speedup.** It lives in the **broad** `chooseNStep` enumeration over the *full* selectable add-option set (ARVN fills to ~32 vs `maxOptions: 8`). Measured: with the deep pass made free but full breadth, seed-1002 diagnostic drift is still **23.45×** (broad-over-~32 is ~81% of the cost). Skipping per-step zobrist hashing (~33% of per-apply cost) cannot reach the 1.75× ceiling.
+2. **Bounding the enumeration changes ARVN's decision outcomes.** The `chooseNStep` inner preview feeds `actionSelection` candidate scoring, so capping/reducing it changes ARVN's action distribution — it is **not** the cost-only, outcome-preserving fix this ticket assumed (byte-identical on seed 1002 only coincidentally — ARVN margin refs are uniform there → tie-break).
+3. **The reduction approach broke `may-17`** (Foundation 20): shrinking `deep.depthCap` 16→4 stops the preview from reaching the NVA/VC opponent margins → 0 ready opponent-preview candidates (worse than the baseline `unknown`).
+4. **Two of the four Spec 207 witnesses were mis-attributed** — `arvn-action-distribution-not-dominated` and `turn-shape-minimum-impact-observed` fail behaviorally on the unmodified baseline (plan-controller domination), unrelated to preview cost → split to **`specs/208-fitl-arvn-plan-controller-action-domination.md`**.
+
+**Decision (user, 2026-05-29):** reverted the budget-reduction implementation. The genuine fix direction is an outcome-preserving pure speedup of the *full-richness* preview (may not alone reach 1.75×), and the residual `spec-143` ceiling requires an explicit **config-reduction-vs-ceiling-re-evaluation** decision (Spec 207 Re-scope §, "Open question"). This ticket is blocked until that decision is made; the engine `cappedChooseNAddDecisions` enforcement + `92-agents.md` budget reduction explored here were **reverted** and are NOT the path forward as-is.
+
+A reusable outcome-preservation oracle was added: `campaigns/fitl-arvn-agent-evolution/capture-decision-sequence.mjs` (seed-1002 decision-sequence + final-state-hash fingerprint, with replay-identity).
+
+---
+
+_Original ticket body (superseded by the re-scope above):_
+
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — agent policy preview inner-deepening drive (`policy-agent-inner-preview.ts`, `policy-preview-inner-deepening.ts`); possibly the `arvn-baseline` preview config in FITL game data

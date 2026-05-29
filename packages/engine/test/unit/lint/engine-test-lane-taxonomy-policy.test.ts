@@ -1,6 +1,6 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, it } from 'node:test';
@@ -434,5 +434,67 @@ describe('engine test lane taxonomy policy', () => {
     const expectedUnion = new Set([...fastLane, ...slowLane]);
     assert.deepEqual(new Set(allLane), expectedUnion);
     assert.equal(existsSync(e2eRoot), true);
+  });
+
+  it('runs every engine test directory in a CI-executed lane (no orphaned test dirs)', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const testRoot = resolve(repoRoot, 'packages/engine/test');
+
+    // Every top-level test directory that contains *.test.ts must map to a lane
+    // that an actual CI workflow executes. Mapping (see .github/workflows/):
+    //   unit, architecture     -> default blocking lane (ci.yml `pnpm turbo test`)
+    //                             + engine-tests.yml policy-preview-parity shard (slow architecture)
+    //   integration            -> engine-tests.yml integration shards + integration:core (default)
+    //   e2e, memory, performance-> engine-tests.yml lanes
+    //   perf                   -> engine-perf.yml (`test:perf`)
+    //   determinism            -> engine-determinism.yml determinism job (blocking)
+    //   policy-profile-quality -> engine-determinism.yml policy-profile-quality job (full lane, non-blocking quality signal)
+    // Adding a new test directory must be a deliberate act: wire it into a workflow
+    // AND add it here, so no lane silently stops running in CI.
+    const CI_EXECUTED_TEST_DIRS = new Set([
+      'unit',
+      'architecture',
+      'integration',
+      'e2e',
+      'memory',
+      'performance',
+      'perf',
+      'determinism',
+      'policy-profile-quality',
+    ]);
+
+    const dirEntries = readdirSync(testRoot, { withFileTypes: true });
+    const dirsContainingTests = dirEntries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((name) =>
+        readdirSync(resolve(testRoot, name), { recursive: true }).some(
+          (relative) => typeof relative === 'string' && relative.endsWith('.test.ts'),
+        ),
+      );
+
+    for (const name of dirsContainingTests) {
+      assert.equal(
+        CI_EXECUTED_TEST_DIRS.has(name),
+        true,
+        `packages/engine/test/${name} contains tests but is not wired into a CI-executed lane — add it to a workflow and to CI_EXECUTED_TEST_DIRS`,
+      );
+    }
+
+    // Recognized lanes must actually still have tests (guards against silently emptying a lane).
+    for (const name of CI_EXECUTED_TEST_DIRS) {
+      assert.equal(
+        dirsContainingTests.includes(name),
+        true,
+        `packages/engine/test/${name} is a recognized CI lane but contains no *.test.ts`,
+      );
+    }
+
+    // No stray *.test.ts may sit directly under test/ (outside a lane subdirectory).
+    const strayRootTests = dirEntries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.test.ts'))
+      .map((entry) => entry.name);
+    assert.deepEqual(strayRootTests, [], 'test/*.test.ts must live inside a lane subdirectory');
   });
 });

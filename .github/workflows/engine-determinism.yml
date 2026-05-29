@@ -93,29 +93,17 @@ jobs:
   policy-profile-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
+        # Single full-lane shard: runs every dist/test/policy-profile-quality/*.test.js
+        # via the manifest-backed `policy-profile-quality` lane (no explicit path
+        # subset), so newly-added witnesses are covered automatically with no
+        # file-list drift. Sharding is unnecessary — the full lane runs in ~6.5m,
+        # well under the 30m timeout.
         include:
-          - shard_id: baseline-variants
-            shard_label: baseline variants
-            test_paths: |
-              dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js
-              dist/test/policy-profile-quality/fitl-variant-arvn-baseline-convergence.test.js
-          - shard_id: campaign-seat-mapping
-            shard_label: campaign seat mapping
-            test_paths: |
-              dist/test/policy-profile-quality/fitl-variant-campaign-seat-mapping-seed-1000-convergence.test.js
-          - shard_id: regression-witnesses
-            shard_label: regression witnesses
-            test_paths: |
-              dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js
-              dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js
-          - shard_id: arvn-baseline-seed-1000
-            shard_label: arvn baseline seed 1000
-            test_paths: |
-              dist/test/policy-profile-quality/fitl-variant-arvn-baseline-seed-1000-draw-space-convergence.test.js
+          - shard_id: full
+            shard_label: full policy-profile-quality lane
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -125,15 +113,13 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - name: Run policy-profile-quality shard
+      - name: Run policy-profile-quality lane
         id: policy-profile-quality-run
         working-directory: packages/engine
         env:
           ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report-${{ matrix.shard_id }}.ndjson
-          POLICY_PROFILE_QUALITY_TEST_PATHS: ${{ matrix.test_paths }}
         run: |
-          mapfile -t test_paths <<< "$POLICY_PROFILE_QUALITY_TEST_PATHS"
-          node scripts/run-tests.mjs --lane policy-profile-quality "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
+          node scripts/run-tests.mjs --lane policy-profile-quality 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
       - name: Upload shard policy-profile-quality log
         if: always()
         uses: actions/upload-artifact@v7

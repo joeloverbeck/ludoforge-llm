@@ -1,0 +1,348 @@
+{
+  "fire-in-the-lake": {
+    "arvn-baseline": [
+      {
+        "id": "projectedAidDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "3a88a84e59693deb"
+      },
+      {
+        "id": "projectedAllyMarginDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-relationship requires preview-state role resolution",
+        "featureExprFingerprint": "e16aea26e7794f4d"
+      },
+      {
+        "id": "projectedArvnMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "19e5a2212ca4c605"
+      },
+      {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
+        "id": "projectedCurrentLeaderMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fffc83b04365f56a"
+      },
+      {
+        "id": "projectedLeaderMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "ec974d2e326b2630"
+      },
+      {
+        "id": "projectedNvaMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f0e233fed160d480"
+      },
+      {
+        "id": "projectedSelfMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "dfab7b0f0636cef3"
+      },
+      {
+        "id": "projectedSelfMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
+      },
+      {
+        "id": "projectedTrailDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "eca97a0b629dfcbc"
+      },
+      {
+        "id": "projectedUsMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a6626431c74ce3a5"
+      },
+      {
+        "id": "projectedUsMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a8b35d5653afadc6"
+      },
+      {
+        "id": "projectedVcMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      }
+    ],
+    "nva-baseline": [
+      {
+        "id": "projectedAidDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "3a88a84e59693deb"
+      },
+      {
+        "id": "projectedAllyMarginDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-relationship requires preview-state role resolution",
+        "featureExprFingerprint": "e16aea26e7794f4d"
+      },
+      {
+        "id": "projectedArvnMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "19e5a2212ca4c605"
+      },
+      {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
+        "id": "projectedCurrentLeaderMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fffc83b04365f56a"
+      },
+      {
+        "id": "projectedLeaderMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "ec974d2e326b2630"
+      },
+      {
+        "id": "projectedNvaMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f0e233fed160d480"
+      },
+      {
+        "id": "projectedSelfMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "dfab7b0f0636cef3"
+      },
+      {
+        "id": "projectedSelfMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
+      },
+      {
+        "id": "projectedTrailDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "eca97a0b629dfcbc"
+      },
+      {
+        "id": "projectedUsMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a6626431c74ce3a5"
+      },
+      {
+        "id": "projectedVcMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      }
+    ],
+    "us-baseline": [
+      {
+        "id": "projectedAidDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "3a88a84e59693deb"
+      },
+      {
+        "id": "projectedAllyMarginDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-relationship requires preview-state role resolution",
+        "featureExprFingerprint": "e16aea26e7794f4d"
+      },
+      {
+        "id": "projectedArvnMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "19e5a2212ca4c605"
+      },
+      {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
+        "id": "projectedCurrentLeaderMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fffc83b04365f56a"
+      },
+      {
+        "id": "projectedLeaderMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "ec974d2e326b2630"
+      },
+      {
+        "id": "projectedNvaMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f0e233fed160d480"
+      },
+      {
+        "id": "projectedSelfMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "dfab7b0f0636cef3"
+      },
+      {
+        "id": "projectedSelfMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
+      },
+      {
+        "id": "projectedTrailDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "eca97a0b629dfcbc"
+      },
+      {
+        "id": "projectedUsMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a6626431c74ce3a5"
+      },
+      {
+        "id": "projectedUsMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a8b35d5653afadc6"
+      },
+      {
+        "id": "projectedVcMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      }
+    ],
+    "vc-baseline": [
+      {
+        "id": "projectedAidDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"aid\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "3a88a84e59693deb"
+      },
+      {
+        "id": "projectedAllyMarginDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-relationship requires preview-state role resolution",
+        "featureExprFingerprint": "e16aea26e7794f4d"
+      },
+      {
+        "id": "projectedArvnMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "19e5a2212ca4c605"
+      },
+      {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
+        "id": "projectedCapabilityGain",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "7f60d67f5921fe70"
+      },
+      {
+        "id": "projectedCurrentLeaderMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fffc83b04365f56a"
+      },
+      {
+        "id": "projectedLeaderMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "ec974d2e326b2630"
+      },
+      {
+        "id": "projectedNvaMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f0e233fed160d480"
+      },
+      {
+        "id": "projectedSelfMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "dfab7b0f0636cef3"
+      },
+      {
+        "id": "projectedSelfMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
+      },
+      {
+        "id": "projectedTrailDelta",
+        "coverage": "ts-oracle",
+        "reason": "preview-surface globalVar ref \"trail\" is not materializable by the production preview drive (action-dependent scalar projection)",
+        "featureExprFingerprint": "eca97a0b629dfcbc"
+      },
+      {
+        "id": "projectedUsMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "a6626431c74ce3a5"
+      },
+      {
+        "id": "projectedVcMargin",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      }
+    ]
+  },
+  "generic-control": {
+    "baseline": []
+  },
+  "texas-holdem": {
+    "baseline": []
+  }
+}

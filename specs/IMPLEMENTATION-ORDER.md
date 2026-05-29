@@ -95,6 +95,13 @@ Per the audit's enumerated proposals, items deferred out of this series with rat
 - **Compiler-level enforcement of "no `value: 1` standalone constants"** — uncommitted; the Spec 205 fixture-driven scan covers spot-check enforcement.
 - **Evolution-pipeline integration of the new tunable surfaces** — owned by future evolution specs (Spec 14 and successors).
 
+### Related regression / profile-quality specs surfaced alongside this series (2026-05-29)
+
+These are not part of the 201–205 encoding series, but were surfaced and triaged while the `policy-profile-quality` lane was made blocking; recorded here for cross-reference:
+
+- **Spec 207 — FITL agent decision/preview cost-drift** — ✅ COMPLETED + ARCHIVED 2026-05-29 (`archive/specs/207-fitl-agent-decision-cost-regression.md`). The `fitl-spec-143-cost-stability` witness was **distilled** to a seed-independent no-retained-state-leak invariant (the cost is a legitimate, Foundation-10-bounded `deep1024` cost, not a leak; FOUNDATIONS Appendix + `.claude/rules/testing.md`). No engine/game-data change.
+- **Spec 208 — FITL ARVN baseline profile-quality witness failures** — PROPOSED (`specs/208-fitl-arvn-baseline-pq-witness-failures.md`). Three ARVN witnesses (`arvn-action-distribution-not-dominated`, `turn-shape-minimum-impact-observed`, `fitl-arvn-may17-equivalent-opponent-preview`) that fail on the branch baseline for distinct non-cost reasons (plan-controller action domination, turn-shape evaluator readiness, grant-flow opponent-margin preview), split out of Spec 207's mis-attributed §5. Diagnosis-first; quarantined pending per-witness fix-or-distill. Overlaps this branch's pre-existing stale Spec-188/144 PQ witnesses.
+
 ## Source proposal disposition reference
 
 The audit's macro recommendations and per-section findings are operationalized as follows:

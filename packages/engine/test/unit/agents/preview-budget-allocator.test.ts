@@ -409,7 +409,13 @@ describe('policy evaluation preview budget allocator', () => {
       assert.equal(previewedKeys.size, 0);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(), 0);
-      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 3);
+      // Spec 206 §4.2 lifted the top-level-`seatAgg`-only guard in the dynamic-row
+      // evaluator, so this top-level `previewStateFeature` candidate-feature row now
+      // materializes through `evaluateDynamicCandidateFeatureRows` instead of the
+      // bytecode VM — one fewer score-row bytecode compilation (3 → 2). The route
+      // is still exercised (route count 1) and the materialized value is unchanged
+      // (selected move rank 3, ready outcome 1 below).
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 2);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
       assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 1);

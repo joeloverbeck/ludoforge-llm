@@ -131,38 +131,54 @@
   },
   {
     "kind": "actionSelection",
-    "actionId": "march",
+    "actionId": "rally",
     "move": {
-      "actionId": "march",
+      "actionId": "rally",
       "params": {},
       "actionClass": "operation"
     }
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
     "value": "binh-dinh:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "binh-tuy-binh-thuan:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[1]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.else.0.chooseOne::$improveTrail",
+    "value": "yes"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.1.if.then.0.if.else.0.chooseN::$trailImproveSpaces",
     "command": "add",
     "value": "central-laos:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@binh-dinh:none[0]",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@central-laos:none[1]",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.1.if.then.0.if.else.0.chooseN::$trailImproveSpaces",
     "command": "confirm"
   },
   {
@@ -258,39 +274,44 @@
   },
   {
     "kind": "actionSelection",
-    "actionId": "march",
+    "actionId": "rally",
     "move": {
-      "actionId": "march",
+      "actionId": "rally",
       "params": {},
       "actionClass": "operation"
     }
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
     "value": "binh-dinh:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "central-laos:none"
+    "value": "binh-tuy-binh-thuan:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
     "command": "confirm"
   },
   {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@binh-dinh:none[0]",
-    "command": "confirm"
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
   },
   {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@central-laos:none[1]",
-    "command": "confirm"
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[1]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.else.0.chooseOne::$improveTrail",
+    "value": "no"
   },
   {
     "kind": "actionSelection",
@@ -441,24 +462,13 @@
   },
   {
     "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.then.0.chooseOne::$noBaseChoice[0]",
     "value": "place-guerrilla"
   },
   {
     "kind": "chooseOne",
     "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.else.0.chooseOne::$improveTrail",
-    "value": "yes"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.1.if.then.0.if.else.0.chooseN::$trailImproveSpaces",
-    "command": "add",
-    "value": "central-laos:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.1.if.then.0.if.else.0.chooseN::$trailImproveSpaces",
-    "command": "confirm"
+    "value": "no"
   },
   {
     "kind": "actionSelection",
@@ -1287,6 +1297,115 @@
   },
   {
     "kind": "actionSelection",
+    "actionId": "attack",
+    "move": {
+      "actionId": "attack",
+      "params": {
+        "decision:doc.actionPipelines.12.stages[0].effects.0.if.then.0.chooseN::$targetSpaces": [
+          "binh-dinh:none"
+        ],
+        "decision:doc.actionPipelines.12.stages[2].effects.0.if.else.0.forEach.effects.0.let.in.0.chooseOne::$attackMode[0]": "guerrilla-attack"
+      },
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "stochasticResolve",
+    "decisionKey": "$dieRoll",
+    "value": 5
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "patrol",
+    "move": {
+      "actionId": "patrol",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
+    "command": "add",
+    "value": "loc-ban-me-thuot-da-lat:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
+    "command": "add",
+    "value": "loc-cam-ranh-da-lat:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[1].effects.0.forEach.effects.0.chooseN::$movingCubes[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[1].effects.0.forEach.effects.0.chooseN::$movingCubes[1]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.3.stages[3].effects.0.chooseN::$assaultLoCs",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.0.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "binh-dinh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.0.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "place-at-base"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.0.stages[3].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "attack",
+    "move": {
+      "actionId": "attack",
+      "params": {
+        "decision:doc.actionPipelines.12.stages[0].effects.0.if.else.0.chooseN::$targetSpaces": [
+          "binh-dinh:none"
+        ],
+        "decision:doc.actionPipelines.12.stages[2].effects.0.if.else.0.forEach.effects.0.let.in.0.chooseOne::$attackMode[0]": "guerrilla-attack"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "stochasticResolve",
+    "decisionKey": "$dieRoll",
+    "value": 4
+  },
+  {
+    "kind": "actionSelection",
     "actionId": "march",
     "move": {
       "actionId": "march",
@@ -1296,18 +1415,18 @@
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "binh-dinh:none"
+    "value": "loc-can-tho-bac-lieu:none"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "decisionKey": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "confirm"
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@binh-dinh:none[0]",
+    "decisionKey": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@loc-can-tho-bac-lieu:none[0]",
     "command": "confirm"
   },
   {
@@ -1383,39 +1502,22 @@
   },
   {
     "kind": "actionSelection",
-    "actionId": "march",
+    "actionId": "attack",
     "move": {
-      "actionId": "march",
-      "params": {},
+      "actionId": "attack",
+      "params": {
+        "decision:doc.actionPipelines.12.stages[0].effects.0.if.else.0.chooseN::$targetSpaces": [
+          "binh-dinh:none"
+        ],
+        "decision:doc.actionPipelines.12.stages[2].effects.0.if.else.0.forEach.effects.0.let.in.0.chooseOne::$attackMode[0]": "guerrilla-attack"
+      },
       "actionClass": "operation"
     }
   },
   {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "binh-dinh:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "central-laos:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@binh-dinh:none[0]",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@central-laos:none[1]",
-    "command": "confirm"
+    "kind": "stochasticResolve",
+    "decisionKey": "$dieRoll",
+    "value": 3
   },
   {
     "kind": "actionSelection",
@@ -1430,7 +1532,7 @@
     "kind": "chooseNStep",
     "decisionKey": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "loc-ban-me-thuot-da-lat:none"
+    "value": "loc-saigon-can-tho:none"
   },
   {
     "kind": "chooseNStep",
@@ -1439,139 +1541,7 @@
   },
   {
     "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@loc-ban-me-thuot-da-lat:none[0]",
-    "command": "confirm"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "patrol",
-    "move": {
-      "actionId": "patrol",
-      "params": {},
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
-    "command": "add",
-    "value": "loc-ban-me-thuot-da-lat:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
-    "command": "add",
-    "value": "loc-cam-ranh-da-lat:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[0].effects.0.if.else.0.chooseN::$targetLoCs",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[1].effects.0.forEach.effects.0.chooseN::$movingCubes[0]",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[1].effects.0.forEach.effects.0.chooseN::$movingCubes[1]",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.3.stages[3].effects.0.chooseN::$assaultLoCs",
-    "command": "confirm"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "train",
-    "move": {
-      "actionId": "train",
-      "params": {},
-      "actionClass": "limitedOperation"
-    }
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.0.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "binh-dinh:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.0.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
-    "value": "place-at-base"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.0.stages[3].effects.0.if.else.0.chooseN::$subActionSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "march",
-    "move": {
-      "actionId": "march",
-      "params": {},
-      "actionClass": "operation"
-    }
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "binh-dinh:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "central-laos:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@binh-dinh:none[0]",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@central-laos:none[1]",
-    "command": "confirm"
-  },
-  {
-    "kind": "actionSelection",
-    "actionId": "march",
-    "move": {
-      "actionId": "march",
-      "params": {},
-      "actionClass": "limitedOperation"
-    }
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "loc-ban-me-thuot-da-lat:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.11.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@loc-ban-me-thuot-da-lat:none[0]",
+    "decisionKey": "decision:doc.actionPipelines.11.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@loc-saigon-can-tho:none[0]",
     "command": "confirm"
   },
   {
@@ -1663,7 +1633,7 @@
     "kind": "chooseNStep",
     "decisionKey": "decision:doc.actionPipelines.28.stages[0].effects.0.if.else.0.if.else.0.if.else.0.chooseN::$targetSpaces",
     "command": "add",
-    "value": "quang-tri-thua-thien:none"
+    "value": "pleiku-darlac:none"
   },
   {
     "kind": "chooseNStep",
@@ -1672,37 +1642,26 @@
   },
   {
     "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.28.stages[1].effects.0.forEach.effects.1.let.in.0.let.in.0.if.else.0.chooseOne::$ambushTargetMode@quang-tri-thua-thien:none[0][0]",
+    "decisionKey": "decision:doc.actionPipelines.28.stages[1].effects.0.forEach.effects.1.let.in.0.let.in.0.if.else.0.chooseOne::$ambushTargetMode@pleiku-darlac:none[0][0]",
     "value": "self"
   },
   {
     "kind": "actionSelection",
-    "actionId": "rally",
+    "actionId": "attack",
     "move": {
-      "actionId": "rally",
-      "params": {},
+      "actionId": "attack",
+      "params": {
+        "decision:doc.actionPipelines.12.stages[0].effects.0.if.then.0.chooseN::$targetSpaces": [
+          "binh-dinh:none"
+        ],
+        "decision:doc.actionPipelines.12.stages[2].effects.0.if.else.0.forEach.effects.0.let.in.0.chooseOne::$attackMode[0]": "guerrilla-attack"
+      },
       "actionClass": "limitedOperation"
     }
   },
   {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
-    "command": "add",
-    "value": "binh-dinh:none"
-  },
-  {
-    "kind": "chooseNStep",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
-    "command": "confirm"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
-    "value": "place-guerrilla"
-  },
-  {
-    "kind": "chooseOne",
-    "decisionKey": "decision:doc.actionPipelines.8.stages[2].effects.0.if.then.0.if.else.0.chooseOne::$improveTrail",
-    "value": "no"
+    "kind": "stochasticResolve",
+    "decisionKey": "$dieRoll",
+    "value": 4
   }
 ]

@@ -93,7 +93,6 @@ jobs:
   policy-profile-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:

@@ -262,6 +262,12 @@ agents:
           sub:
             - { ref: feature.projectedUsMargin }
             - { ref: feature.usMargin }
+      projectedArvnMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedArvnMargin }
+            - { ref: feature.arvnMargin }
       projectedCapabilityGain:
         type: number
         expr:
@@ -886,6 +892,224 @@ agents:
               weight: 4
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      # --- Spec 202 (US completion) item-local selectors. Per the P0 audit
+      # (202FITLUSCOMP-001), per-zone faction-token counts are not expressible in
+      # the agent-policy selector surface; control/terror are proxied by
+      # zoneProp.population + the supportOpposition marker, which are item-local. ---
+      us.pacifyTargetSpace:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: pacificationPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: supportCanImprove
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeSupport
+              weight: 8
+            - id: oppositionReclaim
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.patrolLocTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: locEconValue
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: econ
+                  - 0
+              weight: 5
+            - id: locCategory
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - loc
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftAssaultOrigin:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: avoidControlCriticalOrigin
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: -5
+            - id: avoidStrippingSupportedSpace
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: -3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftRouteDestination:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: highValueObjective
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+            - id: enemyStronghold
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 6
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftControlOrigin:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: liftFromLowValueOvercommitment
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: -4
+            - id: nothingToHold
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - neutral
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.airLiftControlDestination:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: controlPreservationPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: notLostToOpposition
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeOpposition
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      us.assaultHighValueTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: enemyControlledHighValue
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 6
+            - id: populationStakes
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.rallyBaseOrTrailSpace:
         scopes: [move]
         source:
@@ -1295,11 +1519,11 @@ agents:
         root: { actionTags: [patrol], compound: { specialTags: [advise], timing: after } }
         postureHook: us.preserveSupportAndAvailability
         roles:
-          patrolSpace: { selector: us.patrolEconLoc, required: true }
-          adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.patrolSpace }] }
+          patrolLoc: { selector: us.patrolLocTarget, required: true }
+          adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.patrolLoc }] }
         steps:
-          - { label: patrol-econ-loc, role: patrolSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetLoCs, actionTag: patrol } }
-          - { label: advise-force-multiplier, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
+          - { label: patrol-loc, role: patrolLoc, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetLoCs, actionTag: patrol } }
+          - { label: advise-space, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       us.sweepAirStrike:
@@ -1326,6 +1550,64 @@ agents:
           - { label: air-lift-route, role: airLiftRoute, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
+      # --- Spec 202 (US completion) plan templates. us.eventDirectSwing is
+      # deliberately NOT authored as a plan template (see §4.1 / §11): events share
+      # the single `event` action but expose heterogeneous, card-specific decisions
+      # with no uniform bindable decisionPath, and the engine requires every template
+      # to bind at least one role+step. The event direct-swing doctrine is already
+      # encoded by the bound shared.eventDirectSwing strategy module. Reversible. ---
+      us.trainPacify:
+        traceLabel: "US Train as Pacification carrier"
+        root: { actionTags: [train] }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          pacifySpace: { selector: us.pacifyTargetSpace, required: true }
+        steps:
+          - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      us.airLiftAssault:
+        traceLabel: "US Assault, Air Lift, Assault (mass Troops)"
+        root: { actionTags: [assault], compound: { specialTags: [air-lift], timing: during, interruptAfterStage: 1 } }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          assaultOrigin: { selector: us.airLiftAssaultOrigin, required: true }
+          airLiftDestination:
+            selector: us.airLiftRouteDestination
+            required: true
+            constraints:
+              - { reachable: { from: role.assaultOrigin, to: role.airLiftDestination, via: routeClass.land } }
+              - { distinctOriginDestination: { origin: role.assaultOrigin, destination: role.airLiftDestination } }
+        steps:
+          - { label: first-assault-space, role: assaultOrigin, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault, stageIndex: 0 } }
+          - { label: air-lift-route, role: airLiftDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifSpecialUnavailable: primitivePolicy, ifRoleTargetUnavailable: primitivePolicy }
+      us.airLiftControlOrWithdrawal:
+        traceLabel: "US Air Lift to preserve Control or withdraw"
+        root: { actionTags: [air-lift] }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          airLiftOrigin: { selector: us.airLiftControlOrigin, required: true }
+          airLiftDestination:
+            selector: us.airLiftControlDestination
+            required: true
+            constraints:
+              - { reachable: { from: role.airLiftOrigin, to: role.airLiftDestination, via: routeClass.land } }
+        steps:
+          - { label: air-lift-route, role: airLiftDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: spaces, actionTag: air-lift } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      us.assaultHighValueInfrastructure:
+        traceLabel: "US Assault high-value infrastructure (Base / Control removal)"
+        root: { actionTags: [assault] }
+        postureHook: us.preserveSupportAndAvailability
+        roles:
+          assaultTarget: { selector: us.assaultHighValueTarget, required: true }
+        steps:
+          - { label: assault-high-value, role: assaultTarget, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: assault } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.rallyInfiltrate:
         traceLabel: "NVA Rally then Infiltrate"
         root: { actionTags: [rally], compound: { specialTags: [infiltrate], timing: after } }

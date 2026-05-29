@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-002: P1 — US selectors (§4.2) + plan templates (§4.1) + new vocabulary synthesis
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None (unless 001 classified a required ref as a genuine engine gap — see Gate condition)
@@ -74,3 +74,24 @@ Author the YAML-authorable zone props (`coinControl`, `usTroopCount`, `usControl
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed** (`data/games/fire-in-the-lake/92-agents.md`):
+- **New candidateFeature** `projectedArvnMarginDelta` = `sub(feature.projectedArvnMargin, feature.arvnMargin)` (sibling of `projectedUsMarginDelta`).
+- **7 new item-local selectors**: `us.pacifyTargetSpace`, `us.patrolLocTarget`, `us.airLiftAssaultOrigin`, `us.airLiftRouteDestination`, `us.airLiftControlOrigin`, `us.airLiftControlDestination`, `us.assaultHighValueTarget`. All score via per-zone `zoneProp` (population/econ/category) + `lookup` (supportOpposition marker) — no constant `value: 1` placeholders. Per the P0 audit, per-zone faction-token counts are not expressible, so control-criticality / enemy-value are proxied by `population` and the support/opposition marker (documented inline + in spec §11).
+- **5 plan templates**: `us.trainPacify` (new), `us.patrolAdvise` (strengthened — now binds `us.patrolLocTarget` + `us.adviseTargetSpace` with `notEqual` constraint, replacing the `us.patrolEconLoc` form), `us.airLiftAssault` (new; `reachable` + `distinctOriginDestination` role constraints via `routeClass.land`, mirroring the proven `arvn.trainTransport` pattern), `us.airLiftControlOrWithdrawal` (new; `reachable` origin→destination), `us.assaultHighValueInfrastructure` (new).
+- `us.airLiftTrain` NOT authored (excluded by design — witness in 006).
+
+**Deviation (user-approved 1-3-1)**: `us.eventDirectSwing` is **not** authored as a plan template. The engine requires every template to bind ≥1 role+step to a concrete microturn decision (`compile-agent-plan-templates.ts:69`), but FITL events share the single `event` action with heterogeneous, card-specific decisions and no uniform bindable `decisionPath`. The doctrine is already encoded by the bound `shared.eventDirectSwing` strategy module. Excluded with rationale (mirroring `us.airLiftTrain`), recorded in spec §4.1/§11; propagates to 005 (5 not 6 template bindings) and 006 (no dedicated witness; architectural witness covers `shared.eventDirectSwing`). Reversible.
+
+**Note**: the now-orphaned `us.patrolEconLoc` selector is left in place (removal is ARVN-style selector cleanup, Spec 205 scope; it remains a valid library entry).
+
+**Verification**:
+- FITL compiles with **0 errors**; all 5 templates + 7 selectors + new candidateFeature present in the compiled GameDef.
+- Recompile is **byte-identical** (sha256 match) — determinism invariant holds.
+- `policy-profile-quality` suite: **identical** fail set with vs. without these changes (60 pass / 9 fail) — the 9 are pre-existing stale convergence witnesses on branch `implemented-spec-206` (verified via clean-baseline rebuild), unrelated to spec 202; my changes add **zero** new failures.
+- Bootstrap fixture (`packages/runner/src/bootstrap/fitl-game-def.json`) regenerated; `bootstrap-fixtures check`, `schema:artifacts:check`, and `pnpm turbo build` all green.
+- `reachable`/`distinctOriginDestination` route bindings compile against `fitl.routeGraph` (same authored form as the working `arvn.trainTransport`/`arvn.assaultTransportAssault`).

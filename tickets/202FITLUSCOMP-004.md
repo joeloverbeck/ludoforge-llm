@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
-**Deps**: `tickets/202FITLUSCOMP-002.md`
+**Deps**: `archive/tickets/202FITLUSCOMP-002.md`
 
 ## Problem
 

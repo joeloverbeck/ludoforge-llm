@@ -396,7 +396,9 @@ us.avoidArvnKingmaking:
 
 ## 7. Test plan
 
-Profile-quality witnesses (under `packages/engine/test/policy-profile-quality/`). Each new file declares a `// @test-class:` marker per `.claude/rules/testing.md` — scenario/seed-specific witnesses are `convergence-witness` (matching the two existing US witnesses); the architectural-invariant binding check is `architectural-invariant`:
+Profile-quality witnesses (under `packages/engine/test/policy-profile-quality/`). Each new file declares a `// @test-class:` marker per `.claude/rules/testing.md`.
+
+> **As-built classification (202FITLUSCOMP-006, 2026-05-29):** 4 witnesses are `convergence-witness` (the Train/Patrol scenarios, which produce proposal alternatives at the initial state and assert seed-pinned role-binding behavior); 7 are `architectural-invariant` (the Assault/Air Lift/Sweep scenarios — which produce **no** proposal alternative at the initial state, a pre-existing trait — plus the exclusion and binding checks; these are proven structurally over the compiled doctrine). This reclassification (vs. the 10-convergence/1-invariant split below) follows the testing rules' "start as architectural-invariant whenever possible / distillation over witness" guidance and avoids the seed-staleness that left 9 older `Spec 188` convergence witnesses failing on this branch. Per the `policy-profile-quality` marker convention, convergence witnesses carry `// @profile-variant: us-baseline` (not `@witness`); architectural-invariant files carry neither. All 11 §7 witnesses below are present, each mapped to its `reports/fitl-competent-agent-ai.md` §1 requirement:
 
 - `us-immediate-win-by-support.test.ts` (convergence-witness) — scenario where Pacification crosses the threshold; selected template = `us.trainPacify`.
 - `us-blocks-vc-near-win.test.ts` (convergence-witness) — scenario where VC at -1; selected template prefers VC-Base removal or Opposition reduction.

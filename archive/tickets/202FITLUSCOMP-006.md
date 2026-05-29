@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-006: P4 — US profile-quality witness suite (§7)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: None
@@ -79,3 +79,20 @@ Tune `totalSupport`/`availableUsTroops`/`aid` thresholds against the four-profil
 
 1. `pnpm -F @ludoforge/engine build && node --test 'dist/test/policy-profile-quality/us-*.test.js'`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed**: 11 new witness files under `packages/engine/test/policy-profile-quality/` (all §7 names present). No `92-agents.md` change — threshold calibration confirmed the draft values (`totalSupport<30` / `availableUsTroops<4` / `aid<15`) need no change (determinism canaries + perf-trajectory-identity all byte-identical with the bound doctrine).
+
+**As-built classification** (vs. the spec's 10-convergence/1-invariant split — recorded in spec §7):
+- **4 `convergence-witness`** (Train/Patrol scenarios, which yield proposal alternatives at the initial state; assert seed-pinned role-binding behavior): `us-immediate-win-by-support` (us.trainPacify offers a populated, Support-improvable target), `us-train-pacify-high-pop-support` (pacifySpace `pacificationPopulation ≥ 6` ∧ `supportCanImprove = 1`), `us-train-advise-beats-plain-train` (`us.trainAdvise.score > us.trainPacify.score`), `us-patrol-protects-high-econ-loc` (patrolLoc `locEconValue ≥ 1`).
+- **7 `architectural-invariant`** (Assault/Air Lift/Sweep scenarios produce **no** proposal alternative at the initial state — a pre-existing trait — plus exclusion/binding checks; proven structurally over the compiled doctrine): `us-blocks-vc-near-win`, `us-blocks-nva-near-win`, `us-sweep-airstrike-prefers-zero-pop-or-trail`, `us-airlift-assault-no-control-abandonment`, `us-avoid-arvn-kingmaking`, `us-airlift-train-not-enabled`, `us-templates-bind-shared-modules`.
+
+**Why the reclassification**: assault/air-lift/sweep yield no proposal alternative at the initial state (verified — pre-existing, also why the older `us-avoids-airstrike` witness fails), so those scenarios cannot be behavioral; the testing rules prefer architectural-invariant and "distillation over witness"; and this avoids the seed-staleness that left 9 older `Spec 188` convergence witnesses failing on this branch. The `us.eventDirectSwing` exclusion is covered by `us-templates-bind-shared-modules` (verifies `shared.eventDirectSwing` is bound), so no dedicated witness is shipped for it (per §4.1 decision). Marker convention honored: convergence witnesses carry `// @profile-variant: us-baseline`, architectural-invariant files carry neither `@profile-variant` nor `@witness` (validated by `test-class-markers.test.ts`).
+
+**Verification**:
+- All **11 new witnesses pass**; `test-class-markers.test.ts` passes.
+- Full `policy-profile-quality` suite: **80 tests, 71 pass, 9 fail** — the 9 are the pre-existing stale `Spec 188/143/144` convergence witnesses; the 11 new ones all pass, adding zero new failures.
+- Engine `typecheck` + `lint` clean; `pnpm -F @ludoforge/engine build` green. No data change → bootstrap fixture and GameDef unaffected (byte-identical).

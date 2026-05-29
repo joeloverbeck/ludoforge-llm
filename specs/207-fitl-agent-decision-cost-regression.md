@@ -139,6 +139,8 @@ This is a diagnosis-first spec: Phase 2/3 scope is gated on Phase 1 evidence, so
 
 ## Tickets
 
-Decomposed via `/spec-to-tickets` on 2026-05-29 (scoped to Phase 1 per §8; Phase 2/3 deferred until Phase 1 evidence lands):
+Decomposed via `/spec-to-tickets` on 2026-05-29 (Phase 1 first; Phase 2/3 decomposed 2026-05-29 once Phase 1 localized the root cause):
 
 - [`archive/tickets/207AGEDECCOS-001.md`](../archive/tickets/207AGEDECCOS-001.md) — Phase 1 — Diagnose the within-game per-decision cost-accumulation root cause (covers §8 Phase 1, Acceptance #1) — ✅ COMPLETED 2026-05-29 (root cause: Spec 191; see §3)
+- [`tickets/207AGEDECCOS-002.md`](../tickets/207AGEDECCOS-002.md) — Phase 2 — Bound the chooseNStep continuedDeepening per-decision enumeration (covers §8 Phase 2, Acceptance #2–#3)
+- [`tickets/207AGEDECCOS-003.md`](../tickets/207AGEDECCOS-003.md) — Phase 3 — Un-skip the four quarantined witnesses + full acceptance verification (covers §8 Phase 3, Acceptance #2–#4)

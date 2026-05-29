@@ -20,6 +20,12 @@
         "featureExprFingerprint": "19e5a2212ca4c605"
       },
       {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
         "id": "projectedCurrentLeaderMargin",
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
@@ -48,6 +54,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
       },
       {
         "id": "projectedTrailDelta",
@@ -94,6 +106,12 @@
         "featureExprFingerprint": "19e5a2212ca4c605"
       },
       {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
         "id": "projectedCurrentLeaderMargin",
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
@@ -122,6 +140,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
       },
       {
         "id": "projectedTrailDelta",
@@ -162,6 +186,12 @@
         "featureExprFingerprint": "19e5a2212ca4c605"
       },
       {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
         "id": "projectedCurrentLeaderMargin",
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
@@ -190,6 +220,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
       },
       {
         "id": "projectedTrailDelta",
@@ -236,6 +272,12 @@
         "featureExprFingerprint": "19e5a2212ca4c605"
       },
       {
+        "id": "projectedArvnMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "d1d86b2c9c15e77f"
+      },
+      {
         "id": "projectedCapabilityGain",
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
@@ -270,6 +312,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "3459fbaecca303fa"
+      },
+      {
+        "id": "projectedSupportDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "f98e959f9c3266ef"
       },
       {
         "id": "projectedTrailDelta",

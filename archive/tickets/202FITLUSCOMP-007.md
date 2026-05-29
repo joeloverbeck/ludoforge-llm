@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-007: P5 — replay-identity reattestation
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None
@@ -64,3 +64,19 @@ If a canary shifts, evaluate legitimacy: distill to an architectural invariant o
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:all`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**Reattestation results** (US baseline doctrine from 002–006 folded in):
+- **Determinism lane**: 99/99 pass.
+- **Canaries byte-identical**: `fitl-policy-agent-canary-determinism`, ARVN `fitl-variant-arvn-baseline-seed-1000-draw-space-convergence` + `arvn-seed-1000-deep-recovery` + `spec-162-arvn-seed-1000-witness`, FITL `fitl-seed-2057-regression`, four-profile `fitl-variant-all-baselines-convergence`, `fitl-variant-arvn-baseline-convergence`, `fitl-variant-campaign-seat-mapping-seed-1000-convergence` — all pass (17 canary/seed tests across two runs).
+- **`pnpm -F @ludoforge/engine test:all`**: **8195/8195 pass, 0 fail, 1 skipped** (architectural-invariant 9618, convergence-witness 14, golden-trace 79 — all green).
+- **Engine default lane**: 189/189 files pass. **`pnpm turbo build`**: green; FITL GameDef recompile byte-identical (sha256 match).
+
+**One golden re-bless** (justified): `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` — the new `feature.projectedArvnMarginDelta` candidate feature (002) and the now-reachable `feature.projectedSupportDelta` (referenced by the bound `us.buildSupport` / strengthened posture) were added to the per-profile coverage manifest. The diff is **purely additive (+48, −0)** and **both features classify as `coverage: "wasm-row"`** — fully WASM-covered, so Spec 206's candidate-feature WASM-parity is preserved (no `ts-oracle` fallback introduced). Re-blessed via `UPDATE_GOLDEN=1`.
+
+**Out-of-scope pre-existing state**: the separate `policy-profile-quality` lane carries 9 pre-existing failing `Spec 188/143/144` convergence witnesses (verified failing on the clean baseline before any 202 change). They are unrelated to spec 202, were not softened, and are not part of `test:all`. Spec 202's 11 new witnesses all pass.
+
+**No source/data authoring** in this ticket beyond the justified golden re-bless — it is a verification deliverable.

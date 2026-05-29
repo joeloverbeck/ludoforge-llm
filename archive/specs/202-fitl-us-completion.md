@@ -1,6 +1,6 @@
 # Spec 202 — FITL US Baseline Completion to ARVN-Parity
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: High — `us-baseline` has 4 plan templates, 3 faction-specific strategy modules (post-Spec-201, after `us.blockImmediateWin` removal; 10 modules bound including the 7 `shared.*`), 2 bound guardrails, and 2 profile-quality witnesses, vs. ARVN's 6 plan templates / 7 faction-specific modules (14 bound) / 7 bound guardrails / 10 witnesses. The competence report (`reports/fitl-competent-agent-ai.md` §1) requires the US to be encoded as an expeditionary stabilizer balancing Support with Available US pieces — concretely: a Support engine that weighs Pacification by space-local features (not generic projected margin), an availability/overcommitment posture, Air Lift as force projection AND withdrawal, Aid/Econ protection as a US concern, and an ARVN-kingmaker throttle. None of these is fully encoded today.
 **Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. P0 audits each required DSL surface for capability gaps; the work is YAML-only unless P0 surfaces a genuine engine gap (see §2). Consumes the shared scaffolding from Spec 201.
 **Date**: 2026-05-27
@@ -485,7 +485,7 @@ Determinism: `pnpm turbo build` byte-identical; FITL canaries byte-identical.
 - **`us.airLiftTrain` enablement**: does a safe authoring exist? Deferred to a follow-up ticket post-202.
 - **`us.eventDirectSwing` as a plan template** — **RESOLVED by 202FITLUSCOMP-002 (2026-05-29, user-approved): NOT authored as a plan template; excluded with rationale (like `us.airLiftTrain`).** The engine requires every plan template to declare ≥1 role + ≥1 step bound to a concrete microturn decision (`compile-agent-plan-templates.ts:69`). FITL events all share the single `event` action (tag `event-play`) but each card exposes heterogeneous, card-specific decisions (`$targetHighland`, `$usTroopsToMove`, …) with no uniform bindable `decisionPath`, so a general event plan template cannot be authored. The event direct-swing doctrine is already fully encoded by the bound `shared.eventDirectSwing` strategy module (scores `event-play` candidates by `projectedSelfMargin`), which §7's `us-templates-bind-shared-modules` architectural witness verifies. Reversible via a follow-up ticket. Consequently: 202FITLUSCOMP-005 binds 5 (not 6) new templates and no `us.eventDirectSwing`; 202FITLUSCOMP-006 ships no dedicated `us.eventDirectSwing` witness (the architectural witness already covers `shared.eventDirectSwing`).
 - **`us.airStrikePoliticalCost` vs `us.avoidPoliticalAirStrike`** — **RESOLVED by 202FITLUSCOMP-004 (2026-05-29): drop the posture, retain the guardrail.** Two reinforcing reasons: (1) the existing `us.avoidPoliticalAirStrike` guardrail already demotes Air Strike on populated Support (`when` = air-strike tag + `feature.projectedUsMarginDelta < 2`, `severity: demote`, `penalty: 700`) — a posture variant adds nothing; (2) the real `CompiledPostureEvaluator` surface has **no** `applies`/`actionTags`/`scopes`, so a posture cannot tag-filter to air-strike, and posture evaluators only score a plan when referenced as a template's `postureHook` (`plan-proposal.ts:577`) — a standalone unhooked posture is inert. **Also resolved:** `us.aidEconFloor` (spec §4.4 lists it as a posture) is authored as a **guardrail** for the same reason — to actually fire per-candidate (`when` = COIN-op tag + projected `var.global.aid < 10`, `severity: demote`, `penalty: 400`), since an unhooked posture would never apply. The remaining §4.4 posture work — strengthening `us.preserveSupportAndAvailability` — is authored as `prefer` terms (`projected-support-delta` w4, `available-us` w3 coalesce, each `fallback: { contribution: 0 }`), the real posture-`prefer` fallback surface (not `onUnavailable`). The §4.5 guardrails (`us.avoidOvercommitment`, `us.avoidArvnKingmaking`) use `severity: demote` with high penalties (800/600) — the FITL idiom for the spec's "veto" intent (`veto` is not a valid `GuardrailSeverity`; the enum is `prune`/`demote`/`warn`/`auditOnly`, and `prune` is reserved for the pass-drop guardrail to never eliminate the last legal move, cf. `arvn.doNotServeUSWin` penalty 600).
-- **Threshold calibration**: the `totalSupport < 30` / `availableUsTroops < 4` / `aid < 15` thresholds in §4.3 are initial drafts; P4 calibrates against the four-profile convergence canary.
+- **Threshold calibration** — **RESOLVED by 202FITLUSCOMP-006 (2026-05-29): draft thresholds kept.** Calibration against the four-profile convergence canary confirmed the draft values (`totalSupport < 30` / `availableUsTroops < 4` / `aid < 15`) preserve all canaries byte-identically and introduce no profile-quality regression; no change was needed.
 
 ## Tickets
 
@@ -498,3 +498,25 @@ Decomposed via `/spec-to-tickets` on 2026-05-29:
 - [`tickets/202FITLUSCOMP-005.md`](../tickets/202FITLUSCOMP-005.md) — P3 `us-baseline` bindings (covers §4.6)
 - [`tickets/202FITLUSCOMP-006.md`](../tickets/202FITLUSCOMP-006.md) — P4 US profile-quality witness suite (covers §7)
 - [`tickets/202FITLUSCOMP-007.md`](../tickets/202FITLUSCOMP-007.md) — P5 replay-identity reattestation (covers §6 P5)
+
+## Outcome
+
+**Completed**: 2026-05-29 (all 7 tickets `202FITLUSCOMP-001..007` implemented, archived, and committed).
+
+**What shipped** (`us-baseline` to ARVN-parity, all YAML in `data/games/fire-in-the-lake/92-agents.md` — P0 confirmed **no engine changes** were required):
+- **1 new candidate feature**: `projectedArvnMarginDelta` (sibling of `projectedUsMarginDelta`).
+- **7 new item-local selectors**: `us.pacifyTargetSpace`, `us.patrolLocTarget`, `us.airLiftAssaultOrigin`, `us.airLiftRouteDestination`, `us.airLiftControlOrigin`, `us.airLiftControlDestination`, `us.assaultHighValueTarget` (scored via `zoneProp` population/econ/category + `supportOpposition` lookup; no constant placeholders).
+- **5 plan templates** bound: `us.trainPacify`, `us.patrolAdvise` (strengthened), `us.airLiftAssault`, `us.airLiftControlOrWithdrawal`, `us.assaultHighValueInfrastructure` (Air Lift via `reachable`/`distinctOriginDestination` route constraints).
+- **3 strategy modules** bound: `us.buildSupport`, `us.preserveAvailability` (replaced), `us.protectAidEcon`, plus the same-named `us.avoidArvnKingmaking` module.
+- **1 posture strengthened** (`us.preserveSupportAndAvailability`) + **3 guardrails** bound (`us.aidEconFloor`, `us.avoidOvercommitment`, `us.avoidArvnKingmaking`).
+- **11 profile-quality witnesses** (4 convergence-witness + 7 architectural-invariant), all passing.
+
+**Deviations from the original spec draft** (all recorded in §11 and the relevant ticket Outcomes):
+1. `us.eventDirectSwing` **not** authored as a plan template (user-approved) — events lack a uniform bindable decision; the bound `shared.eventDirectSwing` module already encodes the doctrine. So 5 (not 6) new templates.
+2. `us.airStrikePoliticalCost` posture **dropped** (dedupe with the existing `us.avoidPoliticalAirStrike` guardrail; postures can't tag-filter and are inert unless hooked).
+3. `us.aidEconFloor` authored as a **guardrail** (not posture) so it fires per-candidate.
+4. Guardrail "veto" → high-penalty `demote` (the FITL idiom; `veto` is not a valid severity).
+5. The §4.2 `zoneProp.<name>` ref forms, §4.3 module `prefer:` shape, §4.4 posture `onUnavailable` fallback, and §4.5 `severity: veto` were all corrected to the real authoring surfaces.
+6. Witness classification: 4 convergence-witness + 7 architectural-invariant (vs. the drafted 10+1), because Assault/Air Lift/Sweep produce no proposal alternative at the initial state and the testing rules prefer architectural invariants.
+
+**Verification**: FITL compiles 0 errors; recompile byte-identical; `pnpm -F @ludoforge/engine test:all` 8195/8195 pass; determinism lane 99/99; all canaries (ARVN seed 1000, FITL seed 2057, four-profile convergence) byte-identical; bootstrap fixture regenerated; one justified golden re-bless of the WASM coverage manifest (both new features `wasm-row`-covered, no parity loss). The `policy-profile-quality` lane's 9 pre-existing `Spec 188/143/144` failures are unrelated to this spec (verified failing on the clean baseline) and were not softened.

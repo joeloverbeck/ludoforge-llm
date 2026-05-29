@@ -1,6 +1,6 @@
 # 202FITLUSCOMP-003: P2a — US strategy modules (§4.3)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None
@@ -73,3 +73,17 @@ Gate on `condition.arvnNearWin.satisfied`; `suppressesPlanTemplates: [us.trainPa
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+**Completed**: 2026-05-29
+
+**What changed** (`data/games/fire-in-the-lake/92-agents.md`, `strategyModules`):
+- **`us.buildSupport`** — `when lt(feature.totalSupport, 30)`; `applies` scopes `[move]` tags `[train, patrol]`; tier 40; `enablesPlanTemplates: [us.trainPacify, us.patrolAdvise, us.trainAdvise]`; scoreGroup term `weight 5 · feature.projectedSupportDelta`.
+- **`us.preserveAvailability`** (replaced existing) — `when lt(feature.availableUsTroops, 4)`; scopes `[move]`; tier 35; `suppressesPlanTemplates: [us.airLiftAssault]`; term `weight -3 · coalesce(preview.feature.availableUsTroops, feature.availableUsTroops)` (explicit preview→state fallback, Foundation 20).
+- **`us.protectAidEcon`** — `when lt(var.global.aid, 15)`; tags `[patrol, train]`; tier 30; `enablesPlanTemplates: [us.patrolAdvise, us.trainAdvise]`; term `weight 4 · feature.projectedAidDelta`.
+- **`us.avoidArvnKingmaking`** — `when condition.arvnNearWin.satisfied`; tier 60; `suppressesPlanTemplates: [us.trainPacify, us.patrolAdvise]`; term `weight -5 · feature.projectedArvnMarginDelta`. Pairs with the already-bound `shared.allyRivalThrottle` for the rival-throttle doctrine.
+
+**Reassessment correction**: the spec §4.3 `scoreGroups: [{ prefer: [...] }]` shape is not the real module surface — `StrategyModuleDef` uses `scoreGroups: [{ id, summary: sum, terms: [{ id, weight, value }] }]` (verified against `shared.allyRivalThrottle`, `arvn.protectAidEcon`). Authored with the real shape. `enablesPlanTemplates`/`suppressesPlanTemplates` placed after the standard fields (per the arvn module at `92-agents.md:2072`). Initial draft thresholds (30/4/15) per spec — calibrated in ticket 006.
+
+**Verification**: FITL compiles **0 errors**; all 4 modules present with `enablesPlanTemplates`/`suppressesPlanTemplates` resolving to the 002-authored templates (`us.trainPacify`, `us.patrolAdvise`, `us.airLiftAssault`, `us.trainAdvise`). Byte-identical recompile (determinism). Bootstrap fixture regenerated; `schema:artifacts:check` clean; passing US witness still passes; PQ fail set unchanged (9 pre-existing). Modules are authored but not yet bound (ticket 005), so us-baseline behavior is unchanged.

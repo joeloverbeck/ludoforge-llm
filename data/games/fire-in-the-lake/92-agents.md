@@ -2226,24 +2226,95 @@ agents:
               - { id: airLiftValue, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
-      us.preserveAvailability:
-        traceLabel: "US preserve availability"
-        when: true
+      # --- Spec 202 (US completion) strategy modules. Score via prefer-style terms
+      # over existing/authored features; no new tunable parameters. ---
+      us.buildSupport:
+        traceLabel: "US build Support engine"
+        when:
+          lt:
+            - { ref: feature.totalSupport }
+            - 30
         applies:
           scopes: [move]
-          actionTags: [train, air-lift, assault]
+          actionTags: [train, patrol]
         priority:
-          tier: 60
-        selectors:
-          - { role: airLiftOrigin, selectorId: us.airLiftOrigin }
-          - { role: trainTarget, selectorId: us.trainSupportSpace }
+          tier: 40
+        scoreGroups:
+          - id: supportYield
+            summary: sum
+            terms:
+              - { id: projectedSupportGain, weight: 5, value: { ref: feature.projectedSupportDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - us.trainPacify
+          - us.patrolAdvise
+          - us.trainAdvise
+      us.preserveAvailability:
+        traceLabel: "US preserve availability"
+        when:
+          lt:
+            - { ref: feature.availableUsTroops }
+            - 4
+        applies:
+          scopes: [move]
+        priority:
+          tier: 35
         scoreGroups:
           - id: availability
             summary: sum
             terms:
-              - { id: temporaryDeployment, weight: 5, value: 1 }
+              - id: preserveAvailableUs
+                weight: -3
+                value:
+                  coalesce:
+                    - { ref: preview.feature.availableUsTroops }
+                    - { ref: feature.availableUsTroops }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - us.airLiftAssault
+      us.protectAidEcon:
+        traceLabel: "US protect Aid and Econ"
+        when:
+          lt:
+            - { ref: var.global.aid }
+            - 15
+        applies:
+          scopes: [move]
+          actionTags: [patrol, train]
+        priority:
+          tier: 30
+        scoreGroups:
+          - id: aidProtection
+            summary: sum
+            terms:
+              - { id: projectedAidGain, weight: 4, value: { ref: feature.projectedAidDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - us.patrolAdvise
+          - us.trainAdvise
+      us.avoidArvnKingmaking:
+        traceLabel: "US throttle Support gains that help ARVN near win"
+        when:
+          ref: condition.arvnNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 60
+        scoreGroups:
+          - id: arvnKingmakerRisk
+            summary: sum
+            terms:
+              - id: arvnMarginRisk
+                weight: -5
+                value: { ref: feature.projectedArvnMarginDelta }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - us.trainPacify
+          - us.patrolAdvise
       nva.logisticsAndTrail:
         traceLabel: "NVA maintain Trail and logistics"
         when: true

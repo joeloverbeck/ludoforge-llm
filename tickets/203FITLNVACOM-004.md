@@ -8,7 +8,7 @@
 
 ## Problem
 
-Tickets 002 and 003 authored the new NVA plan templates, selectors, strategy modules, postures, and guardrails — but none of these artifacts are active until they are bound into the `nva-baseline` profile's `use:` block. Spec 203 §4.5 specifies the bindings update.
+Tickets 002 and 003 authored the new NVA plan templates, selectors, strategy modules, postures, and guardrails — but the plan templates, strategy modules, and guardrails are not active until they are bound into the `nva-baseline` profile's `use:` block. Spec 203 §4.5 specifies the bindings update.
 
 The current `nva-baseline.use` block (at `92-agents.md:3088-3109`) lists 10 strategy modules (7 shared from Spec 201 + 3 faction-specific), 5 plan templates, and 3 guardrails (+ shared `dropPassWhenOtherMovesExist`). This ticket adds the new entries from §§4.1, 4.3, 4.4.
 
@@ -17,6 +17,7 @@ The current `nva-baseline.use` block (at `92-agents.md:3088-3109`) lists 10 stra
 1. The binding block at `92-agents.md:3088-3109` uses `use: { guardrails, strategyModules, planTemplates }` (confirmed during reassessment). Postures are NOT bound in the profile's `use:` block — they are referenced per-template via `postureHook`, so this ticket does not bind `nva.preserveTrail` or `nva.avoidVcKingmaking` directly.
 2. Profile binding is purely additive — no removal or reordering of existing entries.
 3. Spec 201 has shipped (archived COMPLETED), and 7 shared modules are already bound in `nva-baseline.use.strategyModules`.
+4. Boundary reset approved on 2026-05-31: do not bind `nva.eventLogisticsOrControlSwing`, because no such event plan template is authored. Event doctrine remains covered by the already-bound `shared.eventDirectSwing` strategy module.
 
 ## Architecture Check
 
@@ -32,9 +33,9 @@ Append (after the existing `nva.vcRivalLeverage` entry): `nva.baseNetwork`, `nva
 
 ### 2. Add new plan templates to `nva-baseline.use.planTemplates`
 
-Append (after the existing `nva.locOccupationBeforeCoup` entry) all 9 new templates from ticket 002: `nva.rallyTrail`, `nva.marchControl`, `nva.marchInfiltrateControl`, `nva.infiltrateVcOnlyWhenRational`, `nva.marchAmbush`, `nva.attackAmbush`, `nva.bombardCoinStack`, `nva.terrorSupportReduction`, `nva.eventLogisticsOrControlSwing`.
+Append (after the existing `nva.locOccupationBeforeCoup` entry) the new templates from ticket 002: `nva.rallyTrail`, `nva.marchControl`, `nva.marchInfiltrateControl`, `nva.infiltrateVcOnlyWhenRational`, `nva.bombardCoinStack`, `nva.terrorSupportReduction`.
 
-(Note: `nva.marchAmbush` and `nva.attackAmbush` are already-existing template names; verify against the existing binding list to avoid duplicate entries. If they are already bound, do not re-add — the ticket 002 stanzas for these templates are content-strengthening rewrites, not new bindings.)
+`nva.marchAmbush` and `nva.attackAmbush` are already-existing, already-bound template names; do not re-add duplicate entries. `nva.eventLogisticsOrControlSwing` is not authored or bound; keep event doctrine under `shared.eventDirectSwing`.
 
 ### 3. Add new guardrails to `nva-baseline.use.guardrails`
 

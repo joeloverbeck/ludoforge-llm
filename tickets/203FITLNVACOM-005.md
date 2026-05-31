@@ -19,6 +19,7 @@ Per Step 3's spec-bundled test suite exception, this ticket bundles all 9 tests 
 3. The 9th witness (`nva-templates-bind-shared-modules.test.ts`) is also `@test-class: architectural-invariant` but tests binding-list contents, not policy decisions.
 4. Spec 201 has shipped (status COMPLETED, archived) — the architectural invariant can be authored now without gating.
 5. The `policy-profile-quality` lane is a blocking CI lane (per Foundation Appendix amendment 2026-05-29). Failing witnesses block CI.
+6. Boundary reset approved on 2026-05-31: `nva.eventLogisticsOrControlSwing` is not a plan template. Event doctrine remains covered by `shared.eventDirectSwing`, so binding-count assertions must expect the 5 existing NVA templates plus the 6 new ticket-002 templates.
 
 ## Architecture Check
 
@@ -64,7 +65,7 @@ Authored fixture: Infiltrate target is a VC Base; neither NVA-margin gain nor VC
 
 ### 9. `nva-templates-bind-shared-modules.test.ts`
 
-Architectural invariant. Authored as a direct YAML/compiled-profile inspection: load the compiled `nva-baseline` profile, assert that `use.strategyModules` includes all 7 shared modules from Spec 201 (`shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.resourceLogistics`, `shared.eventDirectSwing`, `shared.allyRivalThrottle`, `shared.monsoonOperationalRestriction`) + the 3 existing faction modules (`nva.logisticsAndTrail`, `nva.controlAndBases`, `nva.vcRivalLeverage`) + the 4 new faction modules from ticket 003 (`nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, `nva.vcRivalRisk`) — 14 total. Assert `use.planTemplates` includes the 5 existing + 9 new from ticket 002. No state simulation needed.
+Architectural invariant. Authored as a direct YAML/compiled-profile inspection: load the compiled `nva-baseline` profile, assert that `use.strategyModules` includes all 7 shared modules from Spec 201 (`shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.resourceLogistics`, `shared.eventDirectSwing`, `shared.allyRivalThrottle`, `shared.monsoonOperationalRestriction`) + the 3 existing faction modules (`nva.logisticsAndTrail`, `nva.controlAndBases`, `nva.vcRivalLeverage`) + the 4 new faction modules from ticket 003 (`nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, `nva.vcRivalRisk`) — 14 total. Assert `use.planTemplates` includes the 5 existing + 6 new from ticket 002, with no `nva.eventLogisticsOrControlSwing` binding. No state simulation needed.
 
 ## Files to Touch
 

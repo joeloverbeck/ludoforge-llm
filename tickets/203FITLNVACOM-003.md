@@ -4,17 +4,17 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data authoring in `92-agents.md`
-**Deps**: `tickets/203FITLNVACOM-002.md`
+**Deps**: `archive/tickets/203FITLNVACOM-002.md`
 
 ## Problem
 
-With the 9 new NVA plan templates and their selectors authored (ticket 002), Spec 203 §§4.3–4.4 layer the doctrine gating + scoring + guardrail behaviors:
+With the new compile-valid NVA plan templates and their selectors authored (ticket 002), Spec 203 §§4.3–4.4 layer the doctrine gating + scoring + guardrail behaviors:
 
 - §4.3 introduces 4 new strategy modules (`nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, `nva.vcRivalRisk`) that gate the new templates via Spec 197's `enablesPlanTemplates` / `suppressesPlanTemplates` surface.
-- §4.4 introduces a new posture (`nva.preserveTrail`) used by `nva.marchControl` and `nva.infiltrateVcOnlyWhenRational`, plus a second posture (`nva.avoidVcKingmaking`) for VC-near-win demotion. `nva.protectLogisticsAndBases` is the existing posture, reused by other templates.
+- §4.4 introduces `nva.avoidVcKingmaking` for VC-near-win demotion. `nva.preserveTrail` moved upstream into ticket 002 because ticket 002's templates reference it and intermediate artifacts must compile. `nva.protectLogisticsAndBases` is the existing posture, reused by other templates.
 - §4.4 also introduces 2 new guardrails (`nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial`, `nva.avoidLowYieldBombard`).
 
-This ticket authors all three artifact types together because they share the same file and overlapping consumer set (modules' `enablesPlanTemplates` references template names from ticket 002; postures are referenced by templates via `postureHook`; guardrails fire on `candidate.tag.*` and `roleTarget.*` refs whose availability was surveyed in ticket 001).
+This ticket authors strategy modules, `nva.avoidVcKingmaking`, and guardrails together because they share the same file and overlapping consumer set (modules' `enablesPlanTemplates` references template names from ticket 002; guardrails fire on `candidate.tag.*` and `roleTarget.*` refs whose availability was surveyed in ticket 001).
 
 ## Assumption Reassessment (2026-05-31)
 
@@ -24,11 +24,12 @@ This ticket authors all three artifact types together because they share the sam
 4. Guardrail shape: `scopes: [move]`, `when: { and: [...] }`, `severity: demote|prune`, `penalty: N`, `onUnavailable: noFire`. **`severity: veto` and `effect: veto` do not exist** in the authored surface. Sibling reference: `nva.doNotServeVcWin@2645`.
 5. `condition.X.satisfied` IS the authored form (`92-agents.md:1915, 1930, 1948, 1965, 1997, 2012, 2056, 2057, 2132, 2317, 2634, 2635`).
 6. `feature.nvaTroopCount` and `feature.projectedVcMarginDelta` availability are P0 deliverables from ticket 001; this ticket consumes the inventory and adopts the documented fallback paths if either is unavailable.
+7. Boundary reset approved on 2026-05-31: `nva.preserveTrail` is no longer a ticket 003 deliverable. Ticket 002 authors it so the templates that reference it compile in the same slice.
 
 ## Architecture Check
 
 1. **Foundation 1 (Engine Agnosticism)**: All authoring lands in `data/games/fire-in-the-lake/92-agents.md`. No engine changes — Spec 197 surface and Foundation 20 fallback declarations were established by prior shipped specs.
-2. **Decomposer-grouped coherent unit**: Modules + postures + guardrails are tightly coupled — modules' `enablesPlanTemplates` references templates (ticket 002), guardrails reference templates and roles (ticket 002), postures are referenced by templates (`postureHook`). Authoring as one ticket avoids dangling mid-chain references. Medium effort is appropriate given the bounded artifact count (4+2+2=8 artifacts) and the spec-defined structure of each.
+2. **Decomposer-grouped coherent unit**: Modules + one remaining posture + guardrails are tightly coupled — modules' `enablesPlanTemplates` references templates (ticket 002), and guardrails reference templates and roles (ticket 002). Medium effort is appropriate given the bounded artifact count (4+1+2=7 artifacts) and the spec-defined structure of each.
 3. **Foundation 20 (Preview Signal Integrity)**: All postures' preview-derived `prefer` terms declare `fallback: { contribution: 0 }`. The `nva.avoidVcKingmaking` posture gates the term with `when: { ref: condition.vcNearWin.satisfied }` so the negative weight only applies when the condition fires.
 4. **Foundation 14 (No Backwards Compatibility)**: New artifacts are authored inline alongside the existing NVA module / posture / guardrail blocks — no `_legacy` shims, no aliased compatibility paths.
 
@@ -45,9 +46,8 @@ Append 4 new modules to the NVA strategy-module block of `92-agents.md` (current
 
 ### 2. Postures
 
-Append 2 new postures to the NVA posture block of `92-agents.md` (currently `:1802` for `nva.protectLogisticsAndBases`):
+Append 1 new posture to the NVA posture block of `92-agents.md`:
 
-- **`nva.preserveTrail`** — `prefer: [{ id: trailDelta, value: { coalesce: [{ ref: feature.projectedTrailDelta }, 0] }, weight: 4, fallback: { contribution: 0 } }]`. No `applies` block.
 - **`nva.avoidVcKingmaking`** — `prefer: [{ id: vcKingmakingPenalty, when: { ref: condition.vcNearWin.satisfied }, value: { coalesce: [{ ref: preview.feature.projectedVcMarginDelta }, 0] }, weight: -6, fallback: { contribution: 0 } }]`. Use ticket 001's fallback path for `preview.feature.projectedVcMarginDelta` if unavailable.
 
 ### 3. Guardrails

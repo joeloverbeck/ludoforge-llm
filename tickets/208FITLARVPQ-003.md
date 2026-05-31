@@ -3,8 +3,8 @@
 **Status**: PENDING
 **Priority**: MEDIUM
 **Effort**: Medium
-**Engine Changes**: TBD — refined against the verdicts in `archive/tickets/208FITLARVPQ-001.md` and `tickets/208FITLARVPQ-002.md`. Likely surface: engine source under `packages/engine/src/agents/` (plan-controller / grant-flow preview) OR YAML doctrine in `data/games/fire-in-the-lake/92-agents.md` OR test-file distillation rewrites. None of the three is committed in advance.
-**Deps**: `archive/tickets/208FITLARVPQ-001.md`, `tickets/208FITLARVPQ-002.md`
+**Engine Changes**: TBD — refined against the verdicts in `archive/tickets/208FITLARVPQ-001.md` and `archive/tickets/208FITLARVPQ-002.md`. Likely surface: engine source under `packages/engine/src/agents/` (plan-controller / grant-flow preview) OR YAML doctrine in `data/games/fire-in-the-lake/92-agents.md` OR test-file distillation rewrites. None of the three is committed in advance.
+**Deps**: `archive/tickets/208FITLARVPQ-001.md`, `archive/tickets/208FITLARVPQ-002.md`
 
 ## Problem
 

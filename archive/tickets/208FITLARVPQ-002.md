@@ -1,6 +1,6 @@
 # 208FITLARVPQ-002: Diagnose Witness 3 (grant-flow opponent-margin preview reachability)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — read-only audit producing a diagnostic script + report
@@ -101,3 +101,36 @@ Add `reports/spec-208-witness-3-diagnosis.md` containing:
 1. `node campaigns/fitl-arvn-agent-evolution/diagnose-grant-flow-opponent-margin.mjs` — primary verification; expected output: per-candidate cap-exhaustion aggregates with explicit verdict-supporting numbers.
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck` — confirm no regressions from adding the campaign script.
 3. `pnpm -F @ludoforge/engine test:all` — confirm baseline pass count unchanged.
+
+## Outcome
+
+Completed: 2026-05-31
+
+What changed:
+
+- Added `campaigns/fitl-arvn-agent-evolution/diagnose-grant-flow-opponent-margin.mjs`, a deterministic diagnostic that reconstructs the skipped May-17 opponent-preview probe against the compiled `dist` probe runner and reports candidate/ref/cap aggregates.
+- Added `reports/spec-208-witness-3-diagnosis.md`, recording Witness 3's verdict as legitimate post-Spec-191 trajectory drift requiring distillation in `tickets/208FITLARVPQ-003.md`.
+- Kept engine source, FITL YAML, probe source, replay-window fixtures, and quarantine state unchanged.
+
+Diagnostic results:
+
+- The current replay window matched 100 ARVN main-phase decisions, all selected `patrol`.
+- The policy trace emitted 0 scalar candidate rows, 0 candidates requesting NVA/VC opponent-margin refs, 0 ready opponent-margin candidates, and no `grantFlowContinuation` exit-count trace.
+- The draft hypothesis that NVA/VC refs currently land `unknown` through `postGrant16` / `grantFlow16` cap exhaustion was corrected: the current window does not exercise grant-flow preview at all because plan-root selection returns before scalar preview evaluation.
+- Verdict: **L - legitimate post-Spec-191 trajectory drift / distill**. Ticket 003 should replace the seed-pinned ready-candidate assertion with a decision-source-aware bounded-preview invariant, not coerce non-ready statuses to `ready` or retune caps for this window.
+
+Deviations from original plan:
+
+- The ticket asked for per-candidate cap-exhaustion distribution. Live evidence showed there are no candidate rows or requested NVA/VC refs in the current replay window, so the report records an empty cap distribution as the truthful result instead of inventing a cap owner.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-grant-flow-opponent-margin.mjs` — passed and emitted verdict-supporting aggregates.
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-grant-flow-opponent-margin.mjs > /tmp/spec208-witness-3-a.txt` — passed.
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-grant-flow-opponent-margin.mjs > /tmp/spec208-witness-3-b.txt` — passed.
+- `diff -u /tmp/spec208-witness-3-a.txt /tmp/spec208-witness-3-b.txt` — passed with empty diff.
+- `pnpm turbo build` — passed, cache replay only.
+- `pnpm turbo lint` — passed, cache replay only.
+- `pnpm turbo typecheck` — passed, cache replay only.
+- `pnpm -F @ludoforge/engine test:all` — passed: 999 tests, 999 pass, 0 fail.

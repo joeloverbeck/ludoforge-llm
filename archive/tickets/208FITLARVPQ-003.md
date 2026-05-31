@@ -91,7 +91,7 @@ Refined actual surface after reassessment:
 
 ## Out of Scope
 
-- Un-skipping the witnesses from `SPEC_208_QUARANTINED_PROBE_IDS` and the May-17 `skip` option — owned by `tickets/208FITLARVPQ-004.md`. This ticket leaves the witnesses passing un-skipped *locally* (run via direct path) but does NOT mutate the quarantine constants. Ticket 004's role is the final un-skip + lane gate.
+- Un-skipping the witnesses from `SPEC_208_QUARANTINED_PROBE_IDS` and the May-17 `skip` option — owned by `archive/tickets/208FITLARVPQ-004.md`. This ticket leaves the witnesses passing un-skipped *locally* (run via direct path) but does NOT mutate the quarantine constants. Ticket 004's role is the final un-skip + lane gate.
 - Modifying ARVN preview budget config (cap classes / depth) as a generic optimization — Spec 207's history (`project_spec207_root_cause.md`) shows this approach was tried and reverted; only invoke it here if Witness 3's diagnosis verdict R explicitly points to a cap-configuration regression.
 - Any witness not in Spec 208's three (Witnesses 1, 2, 3). Pre-existing baseline PQ failures unrelated to Spec 208 are out of scope and remain owned by the broader `project_spec202_preexisting_pq_failures.md` follow-up work.
 - Relaxing the `0.60` family-share threshold or any assertion bound to mask a regression (forbidden by Spec 208 §4 Non-Goals).

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — read-only audit producing a diagnostic script + report
-**Deps**: `specs/208-fitl-arvn-baseline-pq-witness-failures.md`
+**Deps**: `archive/specs/208-fitl-arvn-baseline-pq-witness-failures.md`
 
 ## Problem
 
@@ -70,7 +70,7 @@ Add `reports/spec-208-witness-3-diagnosis.md` containing:
 
 - Any *fix* (engine source edit, grant-flow cap retune, witness distillation rewrite). All resolution work belongs to `tickets/208FITLARVPQ-003.md`.
 - Witnesses 1–2 (plan-controller domination / turn-shape readiness) — owned by `archive/tickets/208FITLARVPQ-001.md`.
-- Un-skipping the witness — owned by `tickets/208FITLARVPQ-004.md`.
+- Un-skipping the witness — owned by `archive/tickets/208FITLARVPQ-004.md`.
 - Reducing the ARVN preview budget (cap classes / depth) to make margins reachable — per `project_spec207_root_cause.md` (Spec 207 UPDATE §) this was tried, broke the may-17 witness in the opposite direction, and was reverted. Treat the existing cap configuration as the baseline for this diagnosis.
 - Coercing `unknown` opponent-margin refs to `ready` to make the witness pass (forbidden by Foundation #20 and Spec 208 §4 Non-Goals).
 

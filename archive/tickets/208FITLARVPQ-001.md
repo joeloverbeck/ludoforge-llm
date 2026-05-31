@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — read-only audit producing a diagnostic script + report
-**Deps**: `specs/208-fitl-arvn-baseline-pq-witness-failures.md`
+**Deps**: `archive/specs/208-fitl-arvn-baseline-pq-witness-failures.md`
 
 ## Problem
 
@@ -79,7 +79,7 @@ Add `reports/spec-208-witnesses-1-2-diagnosis.md` containing:
 
 - Any *fix* (engine source edit, YAML doctrine edit, or witness distillation). All resolution work belongs to `tickets/208FITLARVPQ-003.md`.
 - Witness 3 (grant-flow opponent-margin preview) — owned by `archive/tickets/208FITLARVPQ-002.md`.
-- Un-skipping the witnesses — owned by `tickets/208FITLARVPQ-004.md`.
+- Un-skipping the witnesses — owned by `archive/tickets/208FITLARVPQ-004.md`.
 - Modifying the replay-windows fixture or adding seeds 1012–1014; if the fixture's seed coverage is itself the root cause for one of the verdicts, flag it in the report but do not change the fixture in this ticket.
 - Relaxing the 0.60 threshold or coercing `unknown`→`ready` for the turn-shape evaluator (forbidden by Foundation #20 and Spec 208 §4 Non-Goals).
 

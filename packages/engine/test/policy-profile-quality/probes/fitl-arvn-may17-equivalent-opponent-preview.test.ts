@@ -52,12 +52,10 @@ const loadFitlGame = (): ProbeLoadedGame => {
 };
 
 describe('FITL ARVN decision-source-aware opponent preview witness', () => {
-  // QUARANTINED pending ticket 208FITLARVPQ-004. Ticket 003 distilled the old
-  // seed-pinned ready-candidate assertion after the diagnostics proved this
-  // window is plan-root selected and does not exercise scalar grant-flow preview.
-  it('keeps plan-root source explicit and scalar opponent/standing preview statuses lossless', {
-    skip: 'Spec 208 ticket 004 owns final quarantine removal',
-  }, () => {
+  // Ticket 003 distilled the old seed-pinned ready-candidate assertion after
+  // the diagnostics proved this window is plan-root selected and does not
+  // exercise scalar grant-flow preview.
+  it('keeps plan-root source explicit and scalar opponent/standing preview statuses lossless', () => {
     const result = runProbe(arvnOpponentPreviewProbe, {
       loadGame: loadFitlGame,
       traceLevel: 'verbose',

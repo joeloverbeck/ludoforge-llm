@@ -1,6 +1,6 @@
 # 208FITLARVPQ-004: Un-skip gate — remove quarantine, verify acceptance
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-source quarantine removal + lane verification
@@ -103,3 +103,27 @@ No new tests authored here — coverage additions belong to ticket 003's distill
 3. Full PQ lane: `pnpm -F @ludoforge/engine test:policy-profile-quality` (or project-canonical equivalent — verify via `package.json` scripts during implementation).
 4. Determinism + canaries: `pnpm -F @ludoforge/engine test:e2e` (or project-canonical equivalents).
 5. Full verification: `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`.
+
+## Outcome
+
+Completed: 2026-05-31
+
+What changed:
+
+- Removed the `SPEC_208_QUARANTINED_PROBE_IDS` set and its skip-option dispatch from `packages/engine/test/policy-profile-quality/probes/probe-budget.test.ts`.
+- Removed the May-17 witness `skip` option from `packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts`.
+- Left the ticket 003 distilled assertion bodies unchanged.
+
+Verification:
+
+- `rg -n "SPEC_208_QUARANTINED_PROBE_IDS|Spec 208 ticket 004 owns final quarantine removal|pre-existing plan-controller action domination|skip: 'Spec 208|skip: \"Spec 208\"" packages/engine/test/policy-profile-quality/probes/probe-budget.test.ts packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — no matches.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/probes/probe-budget.test.js` — passed: 3 tests, 3 pass, 0 skipped. It emitted nonterminal `POLICY_PROFILE_QUALITY_REGRESSION` budget warnings for the two ARVN probes, but both remained below the hard budget and exited 0.
+- `node --test dist/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.js` — passed: 1 test, 1 pass, 0 skipped.
+- `pnpm -F @ludoforge/engine test:policy-profile-quality` — passed: 94/94 files, including the previously skipped Spec 208 probes.
+- `pnpm -F @ludoforge/engine test:e2e` — passed: 6 tests, 6 pass, 0 fail.
+- `pnpm -F @ludoforge/engine test:all` — passed: 999 tests, 999 pass, 0 fail.
+- `pnpm turbo build` — passed: 3/3 tasks successful.
+- `pnpm turbo lint` — passed: 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed: 3/3 tasks successful.
+- `pnpm turbo test` — passed: 5/5 tasks successful; engine default lane reported 189/189 files passed.

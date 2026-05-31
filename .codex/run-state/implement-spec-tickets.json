@@ -1,18 +1,17 @@
 {
   "originating_spec": "specs/203-fitl-nva-completion.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/203FITLNVACOM-004.md",
+  "last_ticket": "archive/tickets/203FITLNVACOM-005.md",
   "last_result": "completed_archived",
-  "last_work_commit": "1d379de1eae73f1c9bcdd7fa957db7ff5ef1550a",
+  "last_work_commit": "391715056e3010f03e5dbda501ac6db48d2d47f5",
   "last_state_commit": "self",
-  "next_target": "tickets/203FITLNVACOM-005.md",
+  "next_target": "tickets/203FITLNVACOM-006.md",
   "queue": [
-    "tickets/203FITLNVACOM-005.md",
     "tickets/203FITLNVACOM-006.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 203 ticket 004 completed and archived in work commit 1d379de1eae73f1c9bcdd7fa957db7ff5ef1550a; ticket 005 is the next active target. Post-state-commit worktree expected clean.",
+  "owned_dirty_summary": "Spec 203 ticket 005 completed and archived in work commit 391715056e3010f03e5dbda501ac6db48d2d47f5; ticket 006 is the next active target. Post-state-commit worktree expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

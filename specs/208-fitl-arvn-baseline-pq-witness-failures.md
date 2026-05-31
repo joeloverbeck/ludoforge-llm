@@ -3,12 +3,21 @@
 **Status**: PROPOSED
 **Priority**: Medium — three `policy-profile-quality` witnesses fail on the branch baseline for distinct ARVN-baseline behavioral / preview-richness reasons; they were originally mis-filed under the Spec 207 preview-cost regression.
 **Complexity**: M (diagnosis-first; each witness needs its own root-cause call: regression-fix vs distill)
-**Dependencies**: None. Split from `specs/207-fitl-agent-decision-cost-regression.md` (whose cost-drift core was resolved by distilling `fitl-spec-143`).
+**Dependencies**:
+- `archive/specs/207-fitl-agent-decision-cost-regression.md` (COMPLETED) — split source; Spec 208 inherits the three witnesses re-pointed from Spec 207 after `fitl-spec-143-cost-stability` was distilled to its retained-state-leak invariant
+- `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED) — plan-role rework (PR merged 2026-05-23) reshaped ARVN's plan-controlled trajectory; suspected origin for Witnesses 1–2
+- `archive/specs/190-plan-primary-root-selection.md` (COMPLETED) — plan-primary root authority; co-suspected with Spec 191 for the `arvn.patrolGovern` domination
+- `archive/specs/185-grant-flow-preview-integrity.md` (COMPLETED) — owns `grantFlowContinuation` / `postGrant16` / `grantFlow16` caps; Witness 3's `unknown` opponent-margin refs originate in this preview boundary
+- `archive/specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md` (COMPLETED) — owns the `currentTurnImpact` turn-shape evaluator that Witness 2 asserts on
+- `archive/specs/181-structured-strategy-policy-layer-probes-and-selectors.md` — owns the `actionFamilyDistributionBelow` probe that Witness 1 asserts on
+
+**Ticket namespace**: `208FITLARVPQ`
+
 **Date**: 2026-05-29
 
 ## 1. Problem
 
-Three `policy-profile-quality` witnesses were quarantined under Spec 207 and **mis-attributed there to the preview overhead budget / cost regression**. They in fact fail on the **unmodified branch baseline** for three *distinct* reasons, none of which is the `chooseNStep` per-decision cost-drift that Spec 207 addressed (resolved by distilling `fitl-spec-143-cost-stability` to a retained-state-leak invariant). All three are ARVN-`baseline`, all replay the `fitl-arvn-action-distribution-windows.json` windows (seeds 1000–1014), and all were calibrated 2026-05-17/18 (Spec 181/182/185 era) **before** Spec 190/191's plan-root / plan-role rework (2026-05-23) reshaped ARVN's trajectory. Each needs its own root-cause call: **fix a genuine regression**, or — when the behavior is a legitimate evolution and the seed-pinned assertion has merely drifted — **distill / re-bless** per `.claude/rules/testing.md` (never relax to the regressed number).
+Three `policy-profile-quality` witnesses were quarantined under Spec 207 and **mis-attributed there to the preview overhead budget / cost regression**. They in fact fail on the **unmodified branch baseline** for three *distinct* reasons, none of which is the `chooseNStep` per-decision cost-drift that Spec 207 addressed (resolved by distilling `fitl-spec-143-cost-stability` to a retained-state-leak invariant). All three are ARVN-`baseline`, all replay the `fitl-arvn-action-distribution-windows.json` windows (seeds 1000–1011), and all were calibrated 2026-05-17/18 (Spec 181/182/185 era) **before** Spec 190/191's plan-root / plan-role rework (2026-05-23) reshaped ARVN's trajectory. Each needs its own root-cause call: **fix a genuine regression**, or — when the behavior is a legitimate evolution and the seed-pinned assertion has merely drifted — **distill / re-bless** per `.claude/rules/testing.md` (never relax to the regressed number).
 
 ### Witness 1 — `arvn-action-distribution-not-dominated` (plan-controller domination)
 
@@ -71,3 +80,12 @@ Diagnosis-first. Decompose via `/spec-to-tickets` once prioritized:
 2. **Diagnose Witness 3** — whether NVA/VC opponent margins are reachable within the grant-flow caps on the current replay windows; regression vs legitimately-bounded.
 3. **Fix / distill** per the diagnoses.
 4. **Un-skip gate** — remove the quarantine from all three; verify acceptance.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-31:
+
+- [`archive/tickets/208FITLARVPQ-001.md`](../archive/tickets/208FITLARVPQ-001.md) — Diagnose Witnesses 1–2 (plan-controller domination + turn-shape readiness) — COMPLETED 2026-05-31 (covers §8 item 1)
+- [`tickets/208FITLARVPQ-002.md`](../tickets/208FITLARVPQ-002.md) — Diagnose Witness 3 (grant-flow opponent-margin preview reachability) (covers §8 item 2)
+- [`tickets/208FITLARVPQ-003.md`](../tickets/208FITLARVPQ-003.md) — Resolve per diagnosis — fix regression or distill assertion (covers §8 item 3)
+- [`tickets/208FITLARVPQ-004.md`](../tickets/208FITLARVPQ-004.md) — Un-skip gate — remove quarantine, verify acceptance (covers §8 item 4)

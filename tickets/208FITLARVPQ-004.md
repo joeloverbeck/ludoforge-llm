@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-source quarantine removal + lane verification
-**Deps**: `tickets/208FITLARVPQ-003.md`
+**Deps**: `archive/tickets/208FITLARVPQ-003.md`
 
 ## Problem
 

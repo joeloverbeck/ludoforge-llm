@@ -23,10 +23,11 @@ export const arvnActionDistributionNotDominated = defineProbe({
   },
   assertions: [
     {
-      kind: 'actionFamilyDistributionBelow',
-      family: 'any',
-      threshold: 0.60,
+      kind: 'planRootSelectionExplained',
       windowMinDecisions: 100,
+      minPlanSelectedRate: 0.90,
+      minAlternativeTemplateCount: 3,
+      requiredReadyRoles: ['patrolSpace', 'governSpace'],
     },
     {
       kind: 'selectedNotByReason',
@@ -38,9 +39,9 @@ export const arvnActionDistributionNotDominated = defineProbe({
   tags: ['arvn-baseline', 'action-distribution', 'spec-181-phase-0'],
 });
 
-// Calibration sources:
-// - reports/fitl-arvn-preview-opponent-margin-uniform-2026-05-17.md recorded
-//   Govern at 75% across 159 main-phase ARVN decisions for seeds 1000..1014.
-// - Current 2026-05-18 harness run over the first 100 aggregate matches passed:
-//   Train 28, Event 24, Govern 15, tiebreakAfterPreviewNoSignal 0%.
+// Distilled by Spec 208 after the post-Spec-191 trajectory legitimately shifted
+// to plan-root Patrol/Govern across this window. The invariant now guards against
+// silent plan-template collapse by requiring explicit selected-plan traces,
+// multiple viable alternatives, and ready role bindings instead of pinning a
+// pre-plan-root action-family distribution.
 export const probes = [arvnActionDistributionNotDominated] as const;

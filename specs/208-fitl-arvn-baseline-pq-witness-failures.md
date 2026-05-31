@@ -87,5 +87,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-31:
 
 - [`archive/tickets/208FITLARVPQ-001.md`](../archive/tickets/208FITLARVPQ-001.md) — Diagnose Witnesses 1–2 (plan-controller domination + turn-shape readiness) — COMPLETED 2026-05-31 (covers §8 item 1)
 - [`archive/tickets/208FITLARVPQ-002.md`](../archive/tickets/208FITLARVPQ-002.md) — Diagnose Witness 3 (grant-flow opponent-margin preview reachability) — COMPLETED 2026-05-31 (covers §8 item 2)
-- [`tickets/208FITLARVPQ-003.md`](../tickets/208FITLARVPQ-003.md) — Resolve per diagnosis — fix regression or distill assertion (covers §8 item 3)
+- [`archive/tickets/208FITLARVPQ-003.md`](../archive/tickets/208FITLARVPQ-003.md) — Resolve per diagnosis — fix regression or distill assertion — COMPLETED 2026-05-31 (covers §8 item 3)
 - [`tickets/208FITLARVPQ-004.md`](../tickets/208FITLARVPQ-004.md) — Un-skip gate — remove quarantine, verify acceptance (covers §8 item 4)

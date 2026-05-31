@@ -6,6 +6,8 @@ import { evaluateGuardrailFired } from './guardrail-fired.js';
 import { evaluateGuardrailFiresUniformAcross } from './guardrail-fires-uniform-across.js';
 import { evaluateGuardrailNotFired } from './guardrail-not-fired.js';
 import { evaluateModuleActiveContributionRateAtLeast } from './module-active-contribution-rate-at-least.js';
+import { evaluateDecisionSourceAwareTurnShapeCoverage } from './decision-source-aware-turn-shape-coverage.js';
+import { evaluatePlanRootSelectionExplained } from './plan-root-selection-explained.js';
 import { evaluatePreviewRefStatusIn } from './preview-ref-status-in.js';
 import { evaluatePublishedFrontierConstructible } from './published-frontier-constructible.js';
 import { evaluateSelectedCandidateHasTag } from './selected-candidate-has-tag.js';
@@ -64,6 +66,10 @@ export const dispatchAssertion = (
       return evaluateGuardrailFiresUniformAcross({ ...context, assertion });
     case 'turnShapeMinimumImpactObservedBoth':
       return evaluateTurnShapeMinimumImpactObserved({ ...context, assertion });
+    case 'planRootSelectionExplained':
+      return evaluatePlanRootSelectionExplained({ ...context, assertion });
+    case 'decisionSourceAwareTurnShapeCoverage':
+      return evaluateDecisionSourceAwareTurnShapeCoverage({ ...context, assertion });
     case 'turnShapeNoAdditionalPreviewDrive':
       return evaluateTurnShapeNoAdditionalPreviewDrive({ ...context, assertion });
     default:

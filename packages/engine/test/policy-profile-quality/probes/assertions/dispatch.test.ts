@@ -25,6 +25,14 @@ describe('probe assertion dispatcher', () => {
       { kind: 'guardrailNotFired', guardrail: 'avoid-blunder' },
       { kind: 'guardrailFiresUniformAcross', guardrail: 'avoid-blunder', threshold: 1, windowMinDecisions: 1 },
       { kind: 'turnShapeMinimumImpactObservedBoth', evaluatorId: 'impact', windowMinDecisions: 1 },
+      {
+        kind: 'planRootSelectionExplained',
+        windowMinDecisions: 1,
+        minPlanSelectedRate: 1,
+        minAlternativeTemplateCount: 1,
+        requiredReadyRoles: [],
+      },
+      { kind: 'decisionSourceAwareTurnShapeCoverage', evaluatorId: 'impact', windowMinDecisions: 1 },
       { kind: 'turnShapeNoAdditionalPreviewDrive' },
     ];
     for (const assertion of assertions) {
@@ -32,6 +40,8 @@ describe('probe assertion dispatcher', () => {
         assertion.kind === 'actionFamilyDistributionBelow'
         || assertion.kind === 'guardrailFiresUniformAcross'
         || assertion.kind === 'turnShapeMinimumImpactObservedBoth'
+        || assertion.kind === 'planRootSelectionExplained'
+        || assertion.kind === 'decisionSourceAwareTurnShapeCoverage'
       ) ? 'every' : 'first';
       assert.match(dispatchAssertion(assertion, { probe: testProbe(assertion, occurrence), matches: [match()] }).kind, /^(pass|fail|error)$/u);
     }

@@ -1,9 +1,9 @@
 # 208FITLARVPQ-003: Resolve per diagnosis — fix regression or distill assertion
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
-**Engine Changes**: TBD — refined against the verdicts in `archive/tickets/208FITLARVPQ-001.md` and `archive/tickets/208FITLARVPQ-002.md`. Likely surface: engine source under `packages/engine/src/agents/` (plan-controller / grant-flow preview) OR YAML doctrine in `data/games/fire-in-the-lake/92-agents.md` OR test-file distillation rewrites. None of the three is committed in advance.
+**Engine Changes**: None — refined verdicts were all legitimate trajectory drift, so this ticket distills test/probe assertions only.
 **Deps**: `archive/tickets/208FITLARVPQ-001.md`, `archive/tickets/208FITLARVPQ-002.md`
 
 ## Problem
@@ -20,10 +20,11 @@ This is a **deferred-execution ticket**: the spec mandates the deliverable as a 
 
 ## Assumption Reassessment (2026-05-31)
 
-1. At authoring time, the verdicts from 001 and 002 are not yet known. The reassessment phase for THIS ticket (per the standard `/implement-ticket` Phase 2 reassessment) must re-read the two upstream reports and refine this ticket's scope, files-to-touch, and effort rating accordingly.
-2. Foundation #20 forbids coercing `unknown` opponent-margin refs to `ready` to satisfy Witness 3 — this constraint is reaffirmed in Spec 208 §4 Non-Goals. Any distillation path must respect this; any "fix" path must restore reachability through legitimate engine/data changes, not through resolution-status recoding.
-3. `.claude/rules/testing.md` "Distillation over re-bless" is the canonical guidance — re-blessing is permitted only if distillation is attempted, loses defect-class coverage, and the rejection rationale is recorded in the commit body.
-4. The three witnesses may resolve via three different paths (e.g., Witness 1 fix, Witness 2 distill, Witness 3 fix) — do not assume uniform resolution.
+1. `archive/tickets/208FITLARVPQ-001.md` and `reports/spec-208-witnesses-1-2-diagnosis.md` classify Witnesses 1 and 2 as **L - legitimate post-Spec-191 trajectory drift**. The current 100-decision window is plan-root selected as `arvn.patrolGovern`, with viable alternative templates visible in the plan trace; `currentTurnImpact` is absent because the scalar fallback path is not entered.
+2. `archive/tickets/208FITLARVPQ-002.md` and `reports/spec-208-witness-3-diagnosis.md` classify Witness 3 as **L - legitimate post-Spec-191 trajectory drift**. The current window emits no scalar candidate rows and no requested NVA/VC opponent-margin refs because plan-root selection returns before scalar preview evaluation.
+3. The execution path is therefore test/probe distillation only: no engine source, no FITL YAML doctrine, and no preview cap retune are in scope for this ticket.
+4. Foundation #20 remains binding: the replacement Witness 3 assertion preserves ready/non-ready status distinction and plan-root disabled-preview semantics; it does not coerce missing/unknown refs into `ready`.
+5. `.claude/rules/testing.md` "Distillation over re-bless" is the canonical guidance. Re-blessing was not needed because the defect classes can be restated as source-aware architectural invariants.
 
 ## Architecture Check
 
@@ -78,6 +79,16 @@ Refined against the upstream diagnoses' findings during this ticket's Phase 2 re
 
 The actual files modified depend on each witness's verdict — exact scope is refined against `reports/spec-208-witnesses-1-2-diagnosis.md` and `reports/spec-208-witness-3-diagnosis.md` outputs during Phase 2 reassessment.
 
+Refined actual surface after reassessment:
+
+- `packages/engine/test/policy-profile-quality/probes/probe-types.ts` — added generic assertion kinds for source-aware distillation.
+- `packages/engine/test/policy-profile-quality/probes/assertions/plan-root-selection-explained.ts` and `.test.ts` — new architectural invariant for plan-root domination with explicit alternatives and ready role bindings.
+- `packages/engine/test/policy-profile-quality/probes/assertions/decision-source-aware-turn-shape-coverage.ts` and `.test.ts` — new architectural invariant for plan-root vs fallback scalar turn-shape coverage.
+- `packages/engine/test/policy-profile-quality/probes/assertions/index.ts`, `dispatch.test.ts`, and `probe-runner.ts` — assertion dispatch and aggregate-window support.
+- `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/arvn-action-distribution.probe.ts` — Witness 1 distilled from the old 0.60 dominant-family bound to the plan-root explanation invariant.
+- `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/turn-shape-minimum-impact.probe.ts` — Witness 2 distilled to decision-source-aware turn-shape coverage.
+- `packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — Witness 3 body distilled to a plan-root/scalar-preview source-aware invariant while retaining the ticket-004 quarantine marker.
+
 ## Out of Scope
 
 - Un-skipping the witnesses from `SPEC_208_QUARANTINED_PROBE_IDS` and the May-17 `skip` option — owned by `tickets/208FITLARVPQ-004.md`. This ticket leaves the witnesses passing un-skipped *locally* (run via direct path) but does NOT mutate the quarantine constants. Ticket 004's role is the final un-skip + lane gate.
@@ -112,11 +123,11 @@ The actual files modified depend on each witness's verdict — exact scope is re
 
 ### New/Modified Tests
 
-Refined against the diagnosis verdicts. Likely paths:
-
-1. `packages/engine/test/policy-profile-quality/probes/probe-budget.test.ts` — distillation rewrites for Witnesses 1/2 (if L verdicts).
-2. `packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — distillation rewrite for Witness 3 (if L verdict).
-3. (If R verdicts) new architectural-invariant tests covering the fixed behavior — paths determined by the regression's location.
+1. `packages/engine/test/policy-profile-quality/probes/assertions/plan-root-selection-explained.test.ts` — proves the new Witness 1 assertion passes with explicit plan alternatives and fails on silent template collapse / missing ready role bindings.
+2. `packages/engine/test/policy-profile-quality/probes/assertions/decision-source-aware-turn-shape-coverage.test.ts` — proves the new Witness 2 assertion accepts explicit plan-root decisions, requires fallback turn-shape traces when scalar fallback is used, and fails on missing evaluator coverage.
+3. `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/arvn-action-distribution.probe.ts` — modified Witness 1 assertion body.
+4. `packages/engine/test/policy-profile-quality/probes/fire-in-the-lake/turn-shape-minimum-impact.probe.ts` — modified Witness 2 assertion body.
+5. `packages/engine/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.ts` — modified Witness 3 assertion body and test class marker.
 
 ### Commands
 
@@ -125,3 +136,35 @@ Refined against the diagnosis verdicts. Likely paths:
 3. Four-profile convergence canaries: project-canonical command (look up in `package.json` scripts during Phase 2 reassessment).
 4. Full PQ lane: `pnpm -F @ludoforge/engine test:policy-profile-quality` (verify via `package.json` scripts during Phase 2).
 5. Full verification: `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`.
+
+## Outcome
+
+Completed: 2026-05-31
+
+What changed:
+
+- Distilled Witness 1 from a pre-Spec-191 seed-window action-family distribution bound to `planRootSelectionExplained`, an architectural invariant requiring plan-root selection to expose explicit selected-plan traces, multiple viable template alternatives, and ready `patrolSpace` / `governSpace` bindings.
+- Distilled Witness 2 from `turnShapeMinimumImpactObservedBoth` on every sampled decision to `decisionSourceAwareTurnShapeCoverage`, which accepts explicit plan-root decisions and requires `currentTurnImpact` coverage when fallback scalar evaluation is the decision source.
+- Distilled Witness 3's test body to a decision-source-aware preview invariant: plan-root decisions must expose disabled preview and empty scalar candidates, while scalar preview traces must preserve ready/non-ready opponent/standing ref accounting without `ready` coercion.
+- Added focused assertion unit tests for the two reusable distilled assertion kinds.
+- Left `SPEC_208_QUARANTINED_PROBE_IDS` and the May-17 `skip` option in place because ticket `208FITLARVPQ-004` explicitly owns final quarantine removal.
+
+Deviations from original plan:
+
+- All upstream verdicts were legitimate trajectory drift, so no engine source, FITL YAML, preview-cap configuration, or re-bless path was used.
+- The ticket's older "un-skipped locally" wording conflicts with its explicit out-of-scope quarantine-removal boundary. This ticket verifies the distilled probe bodies through direct affected probe runs and the full policy-profile-quality lane while preserving the quarantine markers for ticket 004.
+- The pre-Spec-191 baseline sanity check was not run because this ticket did not create or use a temporary historical checkout. The distilled invariants are proven against current HEAD and target the defect classes identified in the archived diagnosis reports.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/probes/assertions/plan-root-selection-explained.test.js dist/test/policy-profile-quality/probes/assertions/decision-source-aware-turn-shape-coverage.test.js dist/test/policy-profile-quality/probes/assertions/dispatch.test.js` — passed: 7 tests, 7 pass.
+- `node --test dist/test/policy-profile-quality/probes/fire-in-the-lake.probes.test.js` — passed: 3 tests, 3 pass. It emitted a pre-existing profile-quality warning for `arvn-module-activation`; the file treats that as nonterminal profile-quality telemetry and exited 0.
+- `node --test dist/test/policy-profile-quality/probes/probe-budget.test.js` — passed with the two ticket-004 quarantine skips still present.
+- `node --test dist/test/policy-profile-quality/probes/fitl-arvn-may17-equivalent-opponent-preview.test.js` — passed with the ticket-004 quarantine skip still present.
+- `pnpm -F @ludoforge/engine test:policy-profile-quality` — passed: 94/94 files.
+- `pnpm -F @ludoforge/engine test:all` — passed: 999 tests, 999 pass, 0 fail.
+- `pnpm turbo build` — passed: 3/3 tasks successful.
+- `pnpm turbo lint` — passed: 2/2 tasks successful.
+- `pnpm turbo typecheck` — passed: 3/3 tasks successful.
+- `pnpm turbo test` — passed: 5/5 tasks successful; engine default lane reported 189/189 files passed.

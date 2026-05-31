@@ -431,6 +431,8 @@ const aggregateWindowSize = (probe: Probe): number | null => {
     assertion.kind === 'actionFamilyDistributionBelow'
       || assertion.kind === 'moduleActiveContributionRateAtLeast'
       || assertion.kind === 'turnShapeMinimumImpactObservedBoth'
+      || assertion.kind === 'planRootSelectionExplained'
+      || assertion.kind === 'decisionSourceAwareTurnShapeCoverage'
       ? [assertion.windowMinDecisions]
       : []
   ));

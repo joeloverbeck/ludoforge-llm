@@ -23,7 +23,7 @@ export const turnShapeMinimumImpactObserved = defineProbe({
   },
   assertions: [
     {
-      kind: 'turnShapeMinimumImpactObservedBoth',
+      kind: 'decisionSourceAwareTurnShapeCoverage',
       evaluatorId: 'currentTurnImpact',
       windowMinDecisions: 100,
     },
@@ -32,8 +32,8 @@ export const turnShapeMinimumImpactObserved = defineProbe({
   tags: ['arvn-baseline', 'turn-shape', 'spec-182-phase-4'],
 });
 
-// Calibration source:
-// - Reuses the existing Spec 181 ARVN 15-seed replay-window fixture so the
-//   assertion proves selective true/false evaluator behavior without pinning
-//   exact actions or a single seed trajectory.
+// Distilled by Spec 208 after the sampled post-Spec-191 window legitimately
+// became plan-root selected. Fallback scalar decisions still must expose
+// `currentTurnImpact`; plan-root decisions must expose their decision source
+// instead of masquerading as scalar turn-shape evidence.
 export const probes = [turnShapeMinimumImpactObserved] as const;

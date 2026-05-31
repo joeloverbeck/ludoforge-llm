@@ -42,25 +42,9 @@ const loadGame = (request: ProbeLoadGameRequest): ProbeLoadedGame => {
   throw new Error(`No probe budget loader registered for game ${request.game}`);
 };
 
-// QUARANTINED pending Spec 208 (specs/208-fitl-arvn-baseline-pq-witness-failures.md):
-// re-attributed 2026-05-29 (Spec 207 §5 was wrong). These two probes do NOT fail on the
-// overhead budget — they fail BEHAVIORALLY on the branch baseline, independent of preview
-// cost: `arvn-action-distribution-not-dominated` sees ARVN's plan controller select
-// `arvn.patrolGovern` 100% of the time (action family rate 1.000 >= 0.60), and
-// `turn-shape-minimum-impact-observed` sees `currentTurnImpact` never ready. Un-skip as the
-// Spec 208 acceptance gate (fix the plan/doctrine selection, or distill the assertions per
-// .claude/rules/testing.md — do NOT relax to the regressed numbers).
-const SPEC_208_QUARANTINED_PROBE_IDS = new Set([
-  'arvn-action-distribution-not-dominated',
-  'turn-shape-minimum-impact-observed',
-]);
-
 describe('policy probe budget', () => {
   for (const probe of registeredProbes) {
-    const itOptions = SPEC_208_QUARANTINED_PROBE_IDS.has(probe.id)
-      ? { skip: 'Spec 208: pre-existing plan-controller action domination / turn-shape evaluator readiness — not a preview-cost failure' }
-      : {};
-    it(`${probe.id} stays inside the hard probe overhead budget`, itOptions, () => {
+    it(`${probe.id} stays inside the hard probe overhead budget`, () => {
       const result = runProbe(probe, {
         loadGame,
         ...(probe.id === 'every-published-candidate-is-constructible' ? { maxDecisionSteps: 8 } : {}),

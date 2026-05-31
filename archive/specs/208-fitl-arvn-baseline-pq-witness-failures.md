@@ -1,14 +1,23 @@
 # Spec 208 — FITL ARVN Baseline Profile-Quality Witness Failures (post-Spec-191 baseline)
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium — three `policy-profile-quality` witnesses fail on the branch baseline for distinct ARVN-baseline behavioral / preview-richness reasons; they were originally mis-filed under the Spec 207 preview-cost regression.
 **Complexity**: M (diagnosis-first; each witness needs its own root-cause call: regression-fix vs distill)
-**Dependencies**: None. Split from `specs/207-fitl-agent-decision-cost-regression.md` (whose cost-drift core was resolved by distilling `fitl-spec-143`).
+**Dependencies**:
+- `archive/specs/207-fitl-agent-decision-cost-regression.md` (COMPLETED) — split source; Spec 208 inherits the three witnesses re-pointed from Spec 207 after `fitl-spec-143-cost-stability` was distilled to its retained-state-leak invariant
+- `archive/specs/191-plan-role-semantic-integrity.md` (COMPLETED) — plan-role rework (PR merged 2026-05-23) reshaped ARVN's plan-controlled trajectory; suspected origin for Witnesses 1–2
+- `archive/specs/190-plan-primary-root-selection.md` (COMPLETED) — plan-primary root authority; co-suspected with Spec 191 for the `arvn.patrolGovern` domination
+- `archive/specs/185-grant-flow-preview-integrity.md` (COMPLETED) — owns `grantFlowContinuation` / `postGrant16` / `grantFlow16` caps; Witness 3's `unknown` opponent-margin refs originate in this preview boundary
+- `archive/specs/182-structured-strategy-policy-layer-modules-guardrails-and-turn-shape.md` (COMPLETED) — owns the `currentTurnImpact` turn-shape evaluator that Witness 2 asserts on
+- `archive/specs/181-structured-strategy-policy-layer-probes-and-selectors.md` — owns the `actionFamilyDistributionBelow` probe that Witness 1 asserts on
+
+**Ticket namespace**: `208FITLARVPQ`
+
 **Date**: 2026-05-29
 
 ## 1. Problem
 
-Three `policy-profile-quality` witnesses were quarantined under Spec 207 and **mis-attributed there to the preview overhead budget / cost regression**. They in fact fail on the **unmodified branch baseline** for three *distinct* reasons, none of which is the `chooseNStep` per-decision cost-drift that Spec 207 addressed (resolved by distilling `fitl-spec-143-cost-stability` to a retained-state-leak invariant). All three are ARVN-`baseline`, all replay the `fitl-arvn-action-distribution-windows.json` windows (seeds 1000–1014), and all were calibrated 2026-05-17/18 (Spec 181/182/185 era) **before** Spec 190/191's plan-root / plan-role rework (2026-05-23) reshaped ARVN's trajectory. Each needs its own root-cause call: **fix a genuine regression**, or — when the behavior is a legitimate evolution and the seed-pinned assertion has merely drifted — **distill / re-bless** per `.claude/rules/testing.md` (never relax to the regressed number).
+Three `policy-profile-quality` witnesses were quarantined under Spec 207 and **mis-attributed there to the preview overhead budget / cost regression**. They in fact fail on the **unmodified branch baseline** for three *distinct* reasons, none of which is the `chooseNStep` per-decision cost-drift that Spec 207 addressed (resolved by distilling `fitl-spec-143-cost-stability` to a retained-state-leak invariant). All three are ARVN-`baseline`, all replay the `fitl-arvn-action-distribution-windows.json` windows (seeds 1000–1011), and all were calibrated 2026-05-17/18 (Spec 181/182/185 era) **before** Spec 190/191's plan-root / plan-role rework (2026-05-23) reshaped ARVN's trajectory. Each needs its own root-cause call: **fix a genuine regression**, or — when the behavior is a legitimate evolution and the seed-pinned assertion has merely drifted — **distill / re-bless** per `.claude/rules/testing.md` (never relax to the regressed number).
 
 ### Witness 1 — `arvn-action-distribution-not-dominated` (plan-controller domination)
 
@@ -46,7 +55,7 @@ None changes when the `chooseNStep` preview cost is reduced or sped up (verified
 
 ## 5. Quarantine
 
-All three remain `skip`ped referencing **this spec** (re-pointed from Spec 207): the two probe-budget probes via `SPEC_208_QUARANTINED_PROBE_IDS` in `probe-budget.test.ts`; the May-17 witness via its `skip` option. Un-skipping all three (passing at original or distilled bounds, justified by diagnosis) is the acceptance gate.
+All three witnesses were un-skipped by `archive/tickets/208FITLARVPQ-004.md` after tickets 001/002 diagnosed legitimate post-Spec-191 trajectory drift and ticket 003 distilled the assertions into source-aware architectural invariants. The old `SPEC_208_QUARANTINED_PROBE_IDS` set and May-17 `skip` option were deleted.
 
 ## 6. Acceptance criteria
 
@@ -71,3 +80,21 @@ Diagnosis-first. Decompose via `/spec-to-tickets` once prioritized:
 2. **Diagnose Witness 3** — whether NVA/VC opponent margins are reachable within the grant-flow caps on the current replay windows; regression vs legitimately-bounded.
 3. **Fix / distill** per the diagnoses.
 4. **Un-skip gate** — remove the quarantine from all three; verify acceptance.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-31:
+
+- [`archive/tickets/208FITLARVPQ-001.md`](../archive/tickets/208FITLARVPQ-001.md) — Diagnose Witnesses 1–2 (plan-controller domination + turn-shape readiness) — COMPLETED 2026-05-31 (covers §8 item 1)
+- [`archive/tickets/208FITLARVPQ-002.md`](../archive/tickets/208FITLARVPQ-002.md) — Diagnose Witness 3 (grant-flow opponent-margin preview reachability) — COMPLETED 2026-05-31 (covers §8 item 2)
+- [`archive/tickets/208FITLARVPQ-003.md`](../archive/tickets/208FITLARVPQ-003.md) — Resolve per diagnosis — fix regression or distill assertion — COMPLETED 2026-05-31 (covers §8 item 3)
+- [`archive/tickets/208FITLARVPQ-004.md`](../archive/tickets/208FITLARVPQ-004.md) — Un-skip gate — remove quarantine, verify acceptance — COMPLETED 2026-05-31 (covers §8 item 4)
+
+## Outcome
+
+Completed: 2026-05-31
+
+- Witnesses 1 and 2 were diagnosed as legitimate post-Spec-191 plan-root trajectory drift, then distilled to architectural invariants that require explicit plan-root selection evidence and source-aware turn-shape coverage.
+- Witness 3 was diagnosed as legitimate plan-root trajectory drift that bypasses scalar grant-flow preview in the sampled window, then distilled to preserve plan-root disabled-preview semantics and ready/non-ready preview-status integrity without `unknown` to `ready` coercion.
+- The final un-skip gate removed the two probe-budget quarantine entries and the May-17 `skip` option.
+- Verification passed: direct unskipped probe files, full `policy-profile-quality` lane (94/94 files), `test:e2e`, `test:all` (999/999 tests), and root `pnpm turbo build`, `lint`, `typecheck`, and `test`.

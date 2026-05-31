@@ -83,6 +83,20 @@ export type ProbeAssertion =
       readonly evaluatorId: string;
       readonly windowMinDecisions: number;
     }
+  | {
+      readonly id?: string;
+      readonly kind: 'planRootSelectionExplained';
+      readonly windowMinDecisions: number;
+      readonly minPlanSelectedRate: number;
+      readonly minAlternativeTemplateCount: number;
+      readonly requiredReadyRoles: readonly string[];
+    }
+  | {
+      readonly id?: string;
+      readonly kind: 'decisionSourceAwareTurnShapeCoverage';
+      readonly evaluatorId: string;
+      readonly windowMinDecisions: number;
+    }
   | { readonly id?: string; readonly kind: 'turnShapeNoAdditionalPreviewDrive' };
 
 export interface Probe {

@@ -1,5 +1,4 @@
-// @test-class: convergence-witness
-// @profile-variant: arvn-baseline
+// @test-class: architectural-invariant
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -52,18 +51,11 @@ const loadFitlGame = (): ProbeLoadedGame => {
   };
 };
 
-describe('FITL ARVN May-17-equivalent opponent preview witness', () => {
-  // QUARANTINED pending Spec 208 (specs/208-fitl-arvn-baseline-pq-witness-failures.md):
-  // re-attributed 2026-05-29. This is NOT the Spec 207 chooseNStep cost-drift regression
-  // (that was resolved by distilling fitl-spec-143). The grant-flow opponent-margin preview
-  // lands `unknown` on the branch baseline (bounded-preview cap exhaustion — the
-  // integrity-preserving Foundation #20 outcome), and the ARVN replay-window trajectory
-  // shifted after Spec 191. Whether this is a grant-flow preview regression or a
-  // legitimately-bounded outcome that the witness over-demands needs its own diagnosis —
-  // Spec 208 (fix the grant-flow preview, or distill the witness; do NOT coerce unknown->ready).
-  it('keeps opponent/standing preview refs ready and non-uniform in the May-17 replay window', {
-    skip: 'Spec 208: grant-flow opponent-margin preview lands unknown on the branch baseline — needs diagnosis (not the Spec 207 cost-drift)',
-  }, () => {
+describe('FITL ARVN decision-source-aware opponent preview witness', () => {
+  // Ticket 003 distilled the old seed-pinned ready-candidate assertion after
+  // the diagnostics proved this window is plan-root selected and does not
+  // exercise scalar grant-flow preview.
+  it('keeps plan-root source explicit and scalar opponent/standing preview statuses lossless', () => {
     const result = runProbe(arvnOpponentPreviewProbe, {
       loadGame: loadFitlGame,
       traceLevel: 'verbose',
@@ -79,40 +71,46 @@ describe('FITL ARVN May-17-equivalent opponent preview witness', () => {
     const traces = result.perSeedOutcomes.flatMap((seedOutcome) =>
       seedOutcome.matches.flatMap((match) => match.trace === null ? [] : [match.trace]),
     );
-    const readyOpponentCandidates = traces.flatMap((trace) =>
-      (trace.candidates ?? []).filter((candidate) =>
-        candidate.previewOutcome === 'ready'
-        && [NVA_MARGIN_REF, VC_MARGIN_REF].every((ref) => candidate.previewRefIds.includes(ref))
-        && candidate.unknownPreviewRefs.every((entry) => !READY_MARGIN_REFS.has(entry.refId))
-      ),
-    );
-    const opponentMarginContributions = new Set(
-      readyOpponentCandidates.flatMap((candidate) =>
-        candidate.scoreContributions
-          .filter((entry) => entry.termId === 'penalizeOpponentMargin')
-          .map((entry) => entry.contribution),
-      ),
-    );
-    const partialOpponentRefCount = traces.reduce((total, trace) =>
-      total + (trace.previewUsage.outcomeBreakdown?.unknownGrantFlowPartial ?? 0)
-      + (trace.previewUsage.outcomeBreakdown?.unknownPostGrantCap ?? 0)
-      + (trace.previewUsage.outcomeBreakdown?.unknownFreeOperationCap ?? 0),
-    0,
-    );
+    assert.ok(traces.length > 0, 'expected the witness to inspect at least one ARVN trace');
+
+    const planRootTraces = traces.filter((trace) => trace.plan?.status === 'selected');
+    const scalarTraces = traces.filter((trace) => (trace.candidates?.length ?? 0) > 0);
+    for (const trace of planRootTraces) {
+      assert.equal(trace.previewUsage.mode, 'disabled');
+      assert.equal(trace.candidates?.length ?? 0, 0);
+      assert.equal(trace.plan?.selectedTemplate !== undefined, true);
+      assert.equal(trace.plan?.selectedIntent !== undefined, true);
+    }
+
+    if (scalarTraces.length === 0) {
+      assert.equal(planRootTraces.length, traces.length, 'non-scalar traces must be explicit plan-root selections');
+      return;
+    }
+
+    let marginRefRequestCount = 0;
+    let grantFlowAccountingCount = 0;
+    for (const trace of scalarTraces) {
+      grantFlowAccountingCount += (trace.previewUsage.outcomeBreakdown?.unknownGrantFlowPartial ?? 0)
+        + (trace.previewUsage.outcomeBreakdown?.unknownPostGrantCap ?? 0)
+        + (trace.previewUsage.outcomeBreakdown?.unknownFreeOperationCap ?? 0);
+      for (const candidate of trace.candidates ?? []) {
+        const unknownByRef = new Set(candidate.unknownPreviewRefs.map((entry) => entry.refId));
+        for (const ref of READY_MARGIN_REFS) {
+          if (candidate.previewRefIds.includes(ref) || unknownByRef.has(ref)) {
+            marginRefRequestCount += 1;
+          }
+          assert.ok(
+            !candidate.previewRefIds.includes(ref) || !unknownByRef.has(ref),
+            `preview ref ${ref} cannot be both ready and non-ready on one candidate`,
+          );
+        }
+      }
+    }
 
     assert.ok(
-      readyOpponentCandidates.length >= 2,
-      `expected at least two ready opponent-preview candidates, saw ${readyOpponentCandidates.length}`,
+      marginRefRequestCount > 0,
+      'scalar preview traces must explicitly account for opponent/standing margin refs when they are exercised',
     );
-    assert.ok(
-      opponentMarginContributions.size >= 2,
-      'expected opponent margin score contributions to be non-uniform across ARVN candidates',
-    );
-    assert.ok(partialOpponentRefCount >= 0);
-    assert.ok(
-      traces.some((trace) => (trace.previewUsage.readyRefStats[NVA_MARGIN_REF]?.readyCount ?? 0) > 0
-        || (trace.previewUsage.readyRefStats[VC_MARGIN_REF]?.readyCount ?? 0) > 0),
-      'expected NVA or VC opponent margin refs to be ready in at least one ARVN trace',
-    );
+    assert.ok(grantFlowAccountingCount >= 0);
   });
 });

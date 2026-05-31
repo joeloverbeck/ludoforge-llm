@@ -1,16 +1,16 @@
 # Spec 203 — FITL NVA Baseline Completion to ARVN-Parity
 
 **Status**: PROPOSED
-**Priority**: High — `nva-baseline` has 5 plan templates, 4 strategy modules, 3 guardrails, and 2 profile-quality witnesses, vs. ARVN's 6/8/7/10. The competence report (`reports/fitl-competent-agent-ai.md` §3) requires NVA to be encoded as a conventional/logistics insurgent that builds the Trail, masses force for NVA Control in populated spaces, uses Laos/Cambodia as a highway, distinguishes "build NVA strength" from "steal VC assets" when Infiltrating, and uses Bombard/Attack/Ambush selectively. The most important gap the report names is the **VC-rival filter**: `Infiltrate` reduces Opposition and converts VC infrastructure, so Infiltrate without alliance-rival posture looks malicious. None of this is fully encoded today.
+**Priority**: High — `nva-baseline` exposes only 5 plan templates, 3 faction-specific strategy modules (10 bound counting Spec 201 shared), 1 posture, and 3 guardrails — well short of ARVN-baseline's authored coverage (6 templates, ~6 faction modules, 1 posture, 6 guardrails). The competence report (`reports/fitl-competent-agent-ai.md`, NVA sections at lines ~636 onward) requires NVA to be encoded as a conventional/logistics insurgent that builds the Trail, masses force for NVA Control in populated spaces, uses Laos/Cambodia as a highway, distinguishes "build NVA strength" from "steal VC assets" when Infiltrating, and uses Bombard/Attack/Ambush selectively. The most important gap the report names is the **VC-rival filter**: `Infiltrate` reduces Opposition and converts VC infrastructure, so Infiltrate without alliance-rival posture looks malicious. None of this is fully encoded today.
 **Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. No engine work. Consumes shared scaffolding from Spec 201.
 **Date**: 2026-05-27
 **Dependencies**:
-- `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `reachable`/`adjacent` for March/Infiltrate route binding
-- `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates`
+- `archive/specs/196-generic-role-constraints-and-authored-route-semantics.md` (COMPLETED) — `reachable`/`adjacent` for March/Infiltrate route binding (authored shape: `{reachable: {from: role.X, to: role.Y, via: routeClass.Z}}`; see `92-agents.md:1454-1458`)
+- `archive/specs/197-doctrine-gated-plan-template-eligibility.md` (COMPLETED) — `enablesPlanTemplates`/`suppressesPlanTemplates` (surface already exercised: see `92-agents.md:2088-2092`)
 - `archive/specs/199-compound-availability-at-root-proposal.md` (COMPLETED) — bounded compound probe for March+Infiltrate / March+Ambush
 - **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md` (COMPLETED) — `shared.*` modules and lifecycle conditions
 
-**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 NVA faction-by-faction analysis + §6.8 NVA plan-template slice + §§6.9–6.10 NVA posture and guardrail slices.
+**Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 "Faction-by-faction gap analysis" (NVA subsection) + §6.8 "Plan templates" (NVA list) + §§6.9–6.10 NVA posture and guardrail slices.
 
 **Ticket namespace**: `203FITLNVACOMP`
 
@@ -18,7 +18,7 @@
 
 ## 1. Goal
 
-Complete `nva-baseline` to ARVN-parity by authoring the plan templates, strategy modules, posture evaluators, and witnesses that encode the NVA competence requirements from `reports/fitl-competent-agent-ai.md` §3. Concretely:
+Complete `nva-baseline` to ARVN-parity by authoring the plan templates, strategy modules, posture evaluators, and witnesses that encode the NVA competence requirements from `reports/fitl-competent-agent-ai.md` (NVA sections). Concretely:
 
 1. **New NVA plan templates**:
    - `nva.rallyTrail` — Rally action prioritizing Trail improvement and Laos/Cambodia Base placement.
@@ -42,10 +42,10 @@ Complete `nva-baseline` to ARVN-parity by authoring the plan templates, strategy
    - Add `nva.avoidVcKingmaking` — demotes candidates that improve VC margin when VC near win.
 
 4. **New NVA guardrails**:
-   - `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial` — vetoes Infiltrate-on-VC-base when neither NVA-margin gain nor VC-margin denial materializes.
-   - `nva.avoidLowYieldBombard` — vetoes Bombard candidates that do not change Control or remove a high-value stack.
+   - `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial` — demotes Infiltrate-on-VC-base when neither NVA-margin gain nor VC-margin denial materializes.
+   - `nva.avoidLowYieldBombard` — demotes Bombard candidates that do not change Control or remove a high-value stack.
 
-5. **Profile-quality witnesses** (full list in §7) covering competence report §3 requirements.
+5. **Profile-quality witnesses** (full list in §7) covering competence report NVA sections.
 
 ## 2. Non-Goals
 
@@ -59,152 +59,186 @@ Complete `nva-baseline` to ARVN-parity by authoring the plan templates, strategy
 ## 3. Context (verified against codebase, 2026-05-27)
 
 - **Current NVA library inventory** (`92-agents.md`):
-  - Templates (5): `nva.rallyInfiltrate`, `nva.marchInfiltrate`, `nva.marchAmbush`, `nva.attackAmbush`, `nva.locOccupationBeforeCoup`.
-  - Modules (4): `nva.blockImmediateWin` (removed by Spec 201), `nva.logisticsAndTrail`, `nva.controlAndBases`, `nva.vcRivalLeverage`.
-  - Posture: 1 (`nva.protectLogisticsAndBases`).
-  - Guardrails (3): `nva.doNotServeVcWin`, `nva.preserveTrailAndBases`, `nva.avoidLowYieldAttrition`, plus the shared `dropPassWhenOtherMovesExist`.
-- **Current NVA witnesses**: 2 (`nva-march-infiltrate-steal-vc-base.test.ts`, `nva-protects-trail-before-coup.test.ts`).
-- **VC-rival filter gap**: `nva.vcRivalLeverage` exists but its `when` clause is `condition.vcNearWin.satisfied`; verification finds that no module *suppresses* plan templates whose Infiltrate target is a VC-Opposition space rather than a VC-Base space when VC is NOT near win. The current encoding treats Infiltrate-on-VC as broadly accepted; the competence report requires it to be gated by NVA gain OR VC denial.
-- **Available role constraints**: `reachable`, `adjacent`, `distinctOriginDestination`, `locatedIn` from Spec 196.
-- **Relationships**: `nva.vcNominalAlly` and `nva.vcNearWin` already exist (`92-agents.md:1379-1431`).
+  - Templates (5): `nva.rallyInfiltrate@1611`, `nva.marchInfiltrate@1623`, `nva.marchAmbush@1635`, `nva.attackAmbush@1647`, `nva.locOccupationBeforeCoup@1659`.
+  - Faction-specific strategy modules (3): `nva.logisticsAndTrail@2334`, `nva.controlAndBases@2353`, `nva.vcRivalLeverage@2373`. Plus 7 shared modules bound via Spec 201 (`shared.immediateWin`, `shared.blockCurrentLeader`, `shared.nearCoupConcreteSwing`, `shared.resourceLogistics`, `shared.eventDirectSwing`, `shared.allyRivalThrottle`, `shared.monsoonOperationalRestriction`) — 10 bound total. (`nva.blockImmediateWin` was removed by Spec 201 and is subsumed by `shared.immediateWin` / `shared.blockCurrentLeader`.)
+  - Posture (1): `nva.protectLogisticsAndBases@1802`.
+  - Guardrails (3): `nva.doNotServeVcWin@2645`, `nva.preserveTrailAndBases@2657`, `nva.avoidLowYieldAttrition@2671`, plus the shared `dropPassWhenOtherMovesExist`.
+- **Current NVA witnesses** (under `packages/engine/test/policy-profile-quality/`): 2 — `nva-march-infiltrate-steal-vc-base.test.ts`, `nva-protects-trail-before-coup.test.ts` (both `@test-class: architectural-invariant`).
+- **VC-rival filter gap**: `nva.vcRivalLeverage` (`92-agents.md:2373`) is unconditional (`when: true`) and binds the generic `nva.infiltrateTargetSpace` selector with a flat `vcBaseTakeover` weight. It does not gate by `condition.vcNearWin.satisfied`, and it does not suppress plan templates whose Infiltrate target is a VC-Opposition space rather than a VC-Base space. The current encoding treats Infiltrate-on-VC as broadly accepted; the competence report requires it to be gated by NVA gain OR VC denial.
+- **Already-used Spec 197 surface**: `enablesPlanTemplates` / `suppressesPlanTemplates` are in active use in the authored profile (e.g., `arvn.buildPoliticalEngine@2080-2092` and several other strategy modules); §4.3 modules extend the same surface.
+- **Available role constraints**: `reachable`, `adjacent`, `distinctOriginDestination`, `locatedIn` from Spec 196 — authored as single-key constructors `{KIND: {...payload}}` over `role.X` refs (e.g., `{reachable: {from: role.transportOrigin, to: role.transportDestination, via: routeClass.land}}` at `92-agents.md:1454-1458`).
+- **Available baseline features** (already authored in `92-agents.md`): `feature.nvaMargin@67`, `feature.nvaBaseCount@176`, `feature.projectedSelfMarginDelta@253`, `feature.projectedTrailDelta@343`.
+- **Relationships**: `nva.vcNominalAlly@1884` and `nva.vcNearWin@1890` (relationship + condition definitions).
 
 ## 4. Architecture
 
+> YAML stanzas below use the authored surface in `data/games/fire-in-the-lake/92-agents.md`. Each artifact group cites a sibling for shape reference. Concrete `zoneProp.*` / `tokenProp.*` / preview-ref names are validated at P0 (§11) — the stanzas demonstrate the structural shape and identifier intent, not the final byte-for-byte authoring.
+
 ### 4.1 Plan templates (additions)
 
-`nva.rallyTrail` — Rally prioritizing Trail / Laos+Cambodia base placement:
+`nva.rallyTrail` — single-action Rally prioritizing Trail / Laos+Cambodia / sanctuary base placement:
 
 ```yaml
 nva.rallyTrail:
-  matchActionTag: rally
+  traceLabel: "NVA Rally to seed Trail / sanctuary Bases"
+  root: { actionTags: [rally] }
+  postureHook: nva.protectLogisticsAndBases
   roles:
-    rallySpace:
-      selector: nva.rallyTrailTarget
-      constraints:
-        - kind: postState
-          predicate: spaceAllowsNvaBase
-  microturnSteps:
-    - bindTo: rallySpace
-  posture: nva.protectLogisticsAndBases
+    rallySpace: { selector: nva.rallyTrailTarget, required: true }
+  steps:
+    - { label: rally-trail-sanctuary, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+  caps: { capClass: standard256, maxSteps: 1 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-`nva.marchControl` — March seizing NVA Control in populated space:
+Authoring reference: `nva.rallyInfiltrate@1611` for the single-faction template shape (drop the `compound` block for single-action templates).
+
+`nva.marchControl` — two-stage March seizing NVA Control in populated space:
 
 ```yaml
 nva.marchControl:
-  matchActionTag: march
+  traceLabel: "NVA March to seize NVA Control"
+  root: { actionTags: [march] }
+  postureHook: nva.preserveTrail
   roles:
-    marchOrigin:
-      selector: nva.marchControlOrigin
+    marchOrigin: { selector: nva.marchControlOrigin, required: true }
     marchDestination:
       selector: nva.marchControlDestination
+      required: true
       constraints:
-        - kind: reachable
-          from: marchOrigin
-          to: marchDestination
-        - kind: distinctOriginDestination
-          a: marchOrigin
-          b: marchDestination
-        - kind: postState
-          predicate: nvaControlInDestination
-  microturnSteps:
-    - bindTo: marchOrigin
-    - bindTo: marchDestination
-  posture: nva.preserveTrail
+        - { reachable: { from: role.marchOrigin, to: role.marchDestination, via: routeClass.land } }
+        - { distinctOriginDestination: { origin: role.marchOrigin, destination: role.marchDestination } }
+  steps:
+    - { label: march-origin, role: marchOrigin, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: originSpaces, actionTag: march } }
+    - { label: march-destination, role: marchDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+  caps: { capClass: standard256, maxSteps: 2 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
+
+Authoring reference: `arvn.trainTransport@1444` for the two-stage origin→destination March shape; Spec 196 route constraints follow `92-agents.md:1454-1458`. Post-state NVA-Control filtering lives in the `nva.marchControlDestination` selector body (see §4.2 and P0 selector survey).
 
 `nva.marchInfiltrateControl` — March + Infiltrate gated on NVA-only gain:
 
 ```yaml
 nva.marchInfiltrateControl:
-  matchActionTag: march
+  traceLabel: "NVA March then Infiltrate to build NVA strength"
+  root: { actionTags: [march], compound: { specialTags: [infiltrate], timing: after } }
+  postureHook: nva.protectLogisticsAndBases
   roles:
-    marchOrigin:
-      selector: nva.marchInfiltrateOrigin
+    marchOrigin: { selector: nva.marchInfiltrateOrigin, required: true }
     marchDestination:
       selector: nva.marchInfiltrateDestination
+      required: true
       constraints:
-        - kind: reachable
-          from: marchOrigin
-          to: marchDestination
-    infiltrateTarget:
-      selector: nva.infiltrateForNvaGain
-      constraints:
-        - kind: locatedIn
-          a: infiltrateTarget
-          b: marchDestination
-  microturnSteps:
-    - bindTo: marchOrigin
-    - bindTo: marchDestination
-    - bindTo: infiltrateTarget
-  compoundSpecial:
-    tag: infiltrate
-    timing: during
-  posture: nva.protectLogisticsAndBases
+        - { reachable: { from: role.marchOrigin, to: role.marchDestination, via: routeClass.land } }
+        - { distinctOriginDestination: { origin: role.marchOrigin, destination: role.marchDestination } }
+    infiltrateSpace: { selector: nva.infiltrateForNvaGain, required: true }
+  steps:
+    - { label: march-origin, role: marchOrigin, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: originSpaces, actionTag: march } }
+    - { label: march-destination, role: marchDestination, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+    - { label: infiltrate-build, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
+  caps: { capClass: standard256, maxSteps: 3 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-`nva.infiltrateVcOnlyWhenRational` — *explicit* template for VC-takeover gating on rational gain:
+Authoring reference: `nva.marchInfiltrate@1623` for the compound-after pattern; the additional origin-stage role mirrors `arvn.trainTransport@1444`.
+
+`nva.infiltrateVcOnlyWhenRational` — explicit template for VC-takeover gating on rational gain:
 
 ```yaml
 nva.infiltrateVcOnlyWhenRational:
-  matchActionTag: infiltrate
+  traceLabel: "NVA Infiltrate VC only when rational"
+  root: { actionTags: [infiltrate] }
+  postureHook: nva.preserveTrail
   roles:
-    infiltrateTarget:
-      selector: nva.infiltrateVcTargetRational
-      # Selector ONLY emits targets where:
-      #   - NVA piece count post-infiltrate would exceed VC + COIN; OR
-      #   - VC is near win and the target is a VC Base (denial).
-  microturnSteps:
-    - bindTo: infiltrateTarget
-  posture: nva.preserveTrail
+    infiltrateSpace: { selector: nva.infiltrateVcTargetRational, required: true }
+  steps:
+    - { label: infiltrate-vc-rational, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
+  caps: { capClass: standard256, maxSteps: 1 }
+  fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-`nva.marchAmbush`, `nva.attackAmbush`, `nva.bombardCoinStack`, `nva.terrorSupportReduction`, `nva.eventLogisticsOrControlSwing` — shaped analogously; targets resolve item-local features (Trail value, base proximity, removed-piece-value, control-swing-possible, etc.) without constant-1 placeholders.
+Selector `nva.infiltrateVcTargetRational` enumerates ONLY targets where (a) NVA piece count post-infiltrate would exceed VC + COIN, or (b) VC is near win and the target is a VC Base (denial). Authoring reference: existing `nva.infiltrateTargetSpace` for the source/quality skeleton.
+
+`nva.marchAmbush`, `nva.attackAmbush`, `nva.bombardCoinStack`, `nva.terrorSupportReduction`, `nva.eventLogisticsOrControlSwing` — shaped analogously: single-action templates (`root: { actionTags: [X] }`) for Bombard / Terror / Event; compound-after templates (`root: { actionTags: [X], compound: { specialTags: [Y], timing: after } }`) for March+Ambush and Attack+Ambush, mirroring the existing `nva.marchAmbush@1635` and `nva.attackAmbush@1647` shapes. Selectors resolve item-local features (Trail value, base proximity, removed-piece-value, control-swing-possible) within `quality.components`.
 
 ### 4.2 Selectors (additions)
 
 ```yaml
 nva.rallyTrailTarget:
-  scope: zones
-  filters:
-    - or:
-        - { ref: zoneProp.isLaosCambodia }
-        - { ref: zoneProp.isHighlandOrJungle }
-    - not: { ref: zoneProp.hasSupport }
-  score:
-    add:
-      - mul:
-          - { weight: 5 }
-          - boolToNumber: { ref: zoneProp.isLaosCambodia }
-      - mul:
-          - { weight: 4 }
-          - { ref: zoneProp.population }
-      - mul:
-          - { weight: 3 }
-          - boolToNumber: { ref: zoneProp.hasNvaBase }
-
-nva.infiltrateForNvaGain:
-  scope: tokens
-  filters:
-    - { ref: tokenProp.faction.vc }
-    - or:
-        - { ref: tokenProp.type.base }
-        - and:
-            - { ref: tokenProp.type.guerrilla }
-            - gt:
-                - { ref: tokenProp.zone.nvaPieceCountPostInfiltrate }
-                - { ref: tokenProp.zone.allOtherPieceCount }
-  score:
-    add:
-      - mul:
-          - { weight: 6 }
-          - boolToNumber: { ref: tokenProp.type.base }
-      - mul:
-          - { weight: 4 }
-          - { ref: tokenProp.zone.nvaControlPostInfiltrate }
+  scopes: [move]
+  source: { collection: { kind: zones } }
+  quality:
+    components:
+      - id: laosCambodiaPriority
+        value:
+          boolToNumber:
+            or:
+              - eq:
+                  - zoneProp: { zone: { ref: selector.item.key }, prop: country }
+                  - cambodia
+              - eq:
+                  - zoneProp: { zone: { ref: selector.item.key }, prop: country }
+                  - laos
+        weight: 5
+      - id: populationDensity
+        value:
+          coalesce:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: population }
+            - 0
+        weight: 4
+      - id: nvaBaseBonus
+        value:
+          boolToNumber:
+            gt:
+              - lookup:
+                  surface: policyState
+                  collection: zones
+                  keyType: ZoneId
+                  key: { ref: selector.item.key }
+                  path: [tokens, nvaBase]
+                  onMissing: { kind: constant, value: 0 }
+              - 0
+        weight: 3
+    order: qualityDesc
+  result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
 ```
 
-The exact `tokenProp.zone.*` reference surface for "post-infiltrate" prediction is contingent on existing token-aggregation primitives plus preview refs; P0 surveys whether these are expressible. If not, the selector falls back to current-state inspection and relies on the `nva.vcRivalRisk` guardrail to filter at posture time.
+Authoring reference: `vc.rallyBaseOrUndergroundSpace@1247` for the structure; `vc.terrorAgitationSpace@1283` for `boolToNumber`-with-`eq` and post-state `lookup` predicate components. The exact `country` / `tokens.nvaBase` property names are subject to the P0 selector-vocabulary survey (§11).
+
+```yaml
+nva.infiltrateForNvaGain:
+  # Zone-scoped enumeration scored on the highest-value VC token in the zone.
+  # Native token-scoped selectors are a P0 open question (§11) — current authored
+  # surface uses kind: zones uniformly.
+  scopes: [move]
+  source: { collection: { kind: zones } }
+  quality:
+    components:
+      - id: vcBaseInZone
+        value:
+          boolToNumber:
+            gt:
+              - lookup:
+                  surface: policyState
+                  collection: zones
+                  keyType: ZoneId
+                  key: { ref: selector.item.key }
+                  path: [tokens, vcBase]
+                  onMissing: { kind: constant, value: 0 }
+              - 0
+        weight: 6
+      - id: postInfiltrateNvaMarginGain
+        value:
+          coalesce:
+            - { ref: preview.feature.projectedSelfMarginDelta }
+            - 0
+        weight: 4
+    order: qualityDesc
+  result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+```
+
+Authoring reference: `vc.subvertArvnControlSpace@1312` for the zone-scoped post-state lookup pattern. The `tokenProp.zone.*` post-Infiltrate predictive refs the original brainstorm proposed (e.g., `nvaPieceCountPostInfiltrate`, `nvaControlPostInfiltrate`) are P0 deliverables (§11); if unavailable, this selector relies on the `nva.vcRivalRisk` module and the `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial` guardrail to filter at posture/guardrail time.
 
 ### 4.3 Strategy modules (additions)
 
@@ -223,12 +257,17 @@ nva.baseNetwork:
     - nva.rallyTrail
     - nva.rallyInfiltrate
   scoreGroups:
-    - prefer:
-        - weight: 4
+    - id: baseExpansion
+      summary: sum
+      terms:
+        - id: projectedBaseCount
+          weight: 4
           value:
             coalesce:
               - { ref: preview.feature.nvaBaseCount }
               - { ref: feature.nvaBaseCount }
+  guardrailIds: []
+  fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
 nva.takeControl:
   traceLabel: "seize nva control"
@@ -244,9 +283,14 @@ nva.takeControl:
     - nva.marchControl
     - nva.marchInfiltrateControl
   scoreGroups:
-    - prefer:
-        - weight: 5
+    - id: controlSwing
+      summary: sum
+      terms:
+        - id: projectedNvaMarginDelta
+          weight: 5
           value: { ref: feature.projectedSelfMarginDelta }
+  guardrailIds: []
+  fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
 nva.conventionalPressure:
   traceLabel: "apply conventional pressure"
@@ -261,68 +305,84 @@ nva.conventionalPressure:
   enablesPlanTemplates:
     - nva.attackAmbush
     - nva.bombardCoinStack
+  guardrailIds: []
+  fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 
 nva.vcRivalRisk:
   traceLabel: "deny vc when near win"
-  when:
-    ref: condition.vcNearWin.satisfied
+  when: { ref: condition.vcNearWin.satisfied }
   applies:
     scopes: [move]
   priority: { tier: 60 }
   suppressesPlanTemplates:
-    - nva.terrorSupportReduction  # Terror reduces Support; helps VC indirectly
+    - nva.terrorSupportReduction
   scoreGroups:
-    - prefer:
-        - weight: -5
-          value: { ref: feature.projectedVcMarginDelta }
+    - id: vcDenial
+      summary: sum
+      terms:
+        - id: vcMarginPenalty
+          weight: -5
+          value:
+            coalesce:
+              - { ref: feature.projectedVcMarginDelta }
+              - 0
+  guardrailIds: []
+  fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
 ```
+
+Authoring reference: `arvn.buildPoliticalEngine@2080-2092` for `enablesPlanTemplates` + `scoreGroups` shape; `arvn.denyUSIfNearWin` (sibling pattern) for ally-rival-near-win gating with `suppressesPlanTemplates`. `feature.nvaTroopCount` and `feature.projectedVcMarginDelta` are P0 open questions (§11).
 
 ### 4.4 Posture and guardrails (additions / strengthening)
 
 ```yaml
 nva.preserveTrail:
-  applies:
-    scopes: [move]
+  traceLabel: "preserve Trail value"
+  must: []
   prefer:
-    - weight: 4
-      value: { ref: feature.projectedTrailDelta }
-      previewFallback:
-        onUnavailable: noContribution
+    - id: trailDelta
+      value:
+        coalesce:
+          - { ref: feature.projectedTrailDelta }
+          - 0
+      weight: 4
+      fallback: { contribution: 0 }
 
 nva.avoidVcKingmaking:
-  applies:
-    scopes: [move]
+  traceLabel: "avoid kingmaking VC"
+  must: []
   prefer:
-    - weight: -6
+    - id: vcKingmakingPenalty
+      when: { ref: condition.vcNearWin.satisfied }
       value:
-        boolToNumber:
-          and:
-            - { ref: condition.vcNearWin.satisfied }
-            - gt:
-                - coalesce:
-                    - { ref: preview.feature.projectedVcMarginDelta }
-                    - 0
-                - 0
-      previewFallback:
-        onUnavailable: noContribution
+        coalesce:
+          - { ref: preview.feature.projectedVcMarginDelta }
+          - 0
+      weight: -6
+      fallback: { contribution: 0 }
+```
 
-# Guardrails:
+Authoring reference: `nva.protectLogisticsAndBases@1802` for the `must`/`prefer` + `fallback: { contribution: N }` shape. `feature.projectedTrailDelta` is already authored (`92-agents.md:343`, `:1978`); `preview.feature.projectedVcMarginDelta` is a P0 open question (§11).
 
+```yaml
 nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial:
-  trigger:
+  scopes: [move]
+  when:
     and:
       - { ref: candidate.tag.infiltrate }
-      - { ref: roleTarget.infiltrateTarget.isVcBase }
+      - { ref: roleTarget.infiltrateSpace.isVcBase }
       - lt:
           - coalesce:
               - { ref: preview.feature.projectedSelfMarginDelta }
               - 0
           - 1
       - not: { ref: condition.vcNearWin.satisfied }
-  effect: veto
+  severity: demote
+  penalty: 600
+  onUnavailable: noFire
 
 nva.avoidLowYieldBombard:
-  trigger:
+  scopes: [move]
+  when:
     and:
       - { ref: candidate.tag.bombard }
       - lt:
@@ -331,32 +391,37 @@ nva.avoidLowYieldBombard:
               - 0
           - 1
       - not: { ref: roleTarget.bombardTarget.changesControl }
-  effect: veto
+  severity: demote
+  penalty: 600
+  onUnavailable: noFire
 ```
+
+Authoring reference: `nva.doNotServeVcWin@2645` for the `when` + `severity: demote` + `penalty` + `onUnavailable` shape. Authored guardrails use `severity: demote | prune` with `penalty`; the high-penalty `demote` pattern matches sibling intent ("veto in effect, demote in form"). `roleTarget.infiltrateSpace.isVcBase` and `roleTarget.bombardTarget.changesControl` are P0 open questions (§11); if those post-binding role-target refs are unavailable, the guardrails fall back to post-state `lookup` predicates on `tokens.vcBase` and control-swing aggregates.
 
 ### 4.5 Bindings
 
-`nva-baseline.bindings.strategyModules` adds `nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, `nva.vcRivalRisk`. `nva-baseline.bindings.planTemplates` adds the new templates from §4.1.
+`nva-baseline.use.strategyModules` adds `nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, `nva.vcRivalRisk` (alongside the existing shared and faction modules). `nva-baseline.use.planTemplates` adds the new templates from §4.1. `nva-baseline.use.guardrails` adds the new guardrails from §4.4. Postures are not bound in the profile's `use:` block; they are referenced per-template via `postureHook`.
 
 ## 5. Edge cases
 
-- **`feature.nvaBaseCount` requires bespoke `globalTokenAgg`** — Spec 201's P0 metric survey records availability. If not present in Spec 201's P0 output, this spec's P0 authors it via faction+type filter as in `92-agents.md:104-112`.
-- **`tokenProp.zone.nvaPieceCountPostInfiltrate`** preview ref may not be supported by current preview aggregation surface — if not, the selector falls back to current-state aggregation plus `nva.vcRivalRisk` posture filter.
+- **`tokenProp.zone.*` post-Infiltrate prediction refs** (e.g., `nvaPieceCountPostInfiltrate`) may not be supported by current preview aggregation surface — if not, `nva.infiltrateForNvaGain` falls back to current-state aggregation plus the `nva.vcRivalRisk` module / `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial` guardrail to filter at posture time.
 - **VC near-win edge case** — when VC is at -1 AND VC has only Bases (no Opposition source), `nva.terrorSupportReduction` suppression has no effect; the guardrail `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial`'s `vcNearWin` clause permits VC-base steal.
-- **Replay-identity preservation** — `nva-march-infiltrate-steal-vc-base.test.ts` continues to pass: that witness exercises legitimate VC-base steal where NVA gain materializes; the new guardrail only vetoes when neither gain nor denial applies.
+- **Replay-identity preservation** — `nva-march-infiltrate-steal-vc-base.test.ts` continues to pass: that witness exercises legitimate VC-base steal where NVA gain materializes; the new guardrail only demotes when neither gain nor denial applies.
 
 ## 6. Phases & acceptance criteria
 
 | Phase | Deliverable | Acceptance | Effort |
 |---|---|---|---|
-| **P0** | Selector vocabulary survey (Trail / Laos+Cambodia / NVA piece counts) | Inventory; Open Questions list any zone/token props that need to be authored elsewhere | S |
+| **P0** | Selector vocabulary survey (Trail / Laos+Cambodia / NVA piece counts / role-target refs / token-scoped selectors / VC-margin preview refs) | Inventory; Open Questions list any zone/token props or role-target refs that need to be authored elsewhere | S |
 | **P1** | New NVA plan templates (§4.1) | All 9 templates compile; `nva.infiltrateVcOnlyWhenRational` selector compiles | M |
 | **P2** | NVA strategy modules + posture + guardrails (§§4.3–4.4) | All compile; eligibility-gating traces through Spec 197 surface | M |
 | **P3** | `nva-baseline` bindings (§4.5) | Profile compiles; existing NVA witnesses pass; replay-identity preserved | S |
-| **P4** | NVA profile-quality witness suite (§7) | All 9 witnesses pass; build byte-identical | M |
+| **P4** | NVA profile-quality witness suite (§7) | All 10 profile-quality witnesses pass (2 existing + 8 new); architectural-invariant `nva-templates-bind-shared-modules.test.ts` validates Spec 201 bindings; build byte-identical | M |
 | **P5** | Replay-identity reattestation against Spec 201 | After Spec 201 lands, all FITL canaries byte-identical with NVA baseline changes folded in | S |
 
 ## 7. Test plan
+
+All witnesses live under `packages/engine/test/policy-profile-quality/` (per sibling convention).
 
 - `nva-protects-trail-before-coup.test.ts` (existing; preserved).
 - `nva-march-infiltrate-steal-vc-base.test.ts` (existing; preserved — exercises the legitimate-gain path).
@@ -364,10 +429,10 @@ nva.avoidLowYieldBombard:
 - `nva-march-into-populated-control.test.ts` — `nva.marchControl` selects a high-pop space whose post-state NVA piece count exceeds others.
 - `nva-march-infiltrate-builds-nva-not-steal-vc.test.ts` — when NVA gain is the rational outcome, `nva.marchInfiltrateControl` fires; not `nva.infiltrateVcOnlyWhenRational`.
 - `nva-vc-rival-suppresses-terror.test.ts` — when VC near win, `nva.terrorSupportReduction` is suppressed; `nva.attackAmbush` against VC Base preferred.
-- `nva-bombard-concentrated-coin.test.ts` — Bombard target is a 3+-cube COIN stack; low-yield Bombard vetoed.
+- `nva-bombard-concentrated-coin.test.ts` — Bombard target is a 3+-cube COIN stack; low-yield Bombard demoted.
 - `nva-attack-ambush-beats-conventional-attack.test.ts` — when guerrilla attrition matters, `nva.attackAmbush` outscores plain Attack.
 - `nva-blocks-vc-near-win.test.ts` — when VC at -1, plan selects VC-Base removal or Opposition reduction by NVA, not new NVA Control.
-- `nva-avoid-low-yield-vc-steal.test.ts` — Infiltrate-on-VC-base without gain or denial → vetoed.
+- `nva-avoid-low-yield-vc-steal.test.ts` — Infiltrate-on-VC-base without gain or denial → demoted.
 
 Architectural invariant: `nva-templates-bind-shared-modules.test.ts` (when Spec 201 live).
 
@@ -378,22 +443,19 @@ Architectural invariant: `nva-templates-bind-shared-modules.test.ts` (when Spec 
 | #1 | YAML-only |
 | #2 | All NVA doctrine evolvable |
 | #15 | Closes NVA parity gap |
-| #16 | 10 witnesses cover competence report §3 |
+| #16 | 10 profile-quality witnesses cover competence report NVA sections |
 | #19 | Compound shapes (March+Infiltrate, March+Ambush, Attack+Ambush) emerge from microturn step decisions |
-| #20 | All preview-derived features declare `previewFallback.onUnavailable: noContribution` |
+| #20 | All preview-derived prefer terms declare `fallback: { contribution: 0 }` |
 
 ## 9. Reassessment of source proposal
 
 **Adopted:**
-- §5 NVA recommendations → §§4.1–4.5.
-- §6.8 NVA plan-template list → §4.1 (with `nva.infiltrateVcOnlyWhenRational` as the explicit alliance-rival-gated template).
-- §6.10 NVA guardrails → §4.4 (`nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial`, `nva.avoidLowYieldBombard`).
+- §5 "Faction-by-faction gap analysis" (NVA subsection) → §§4.1–4.5.
+- §6.8 "Plan templates" (NVA list) → §4.1 (with `nva.infiltrateVcOnlyWhenRational` as the explicit alliance-rival-gated template).
+- §6.10 "Guardrails" (NVA list) → §4.4 (`nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial`, `nva.avoidLowYieldBombard`).
 
 **Adopted with adjustment:**
 - §5 "Add `nva.trailWeak`, `nva.baseLogistics`, `nva.laosCambodiaSafety` features" — adopted but renamed and folded into the `nva.baseNetwork` and `nva.preserveTrail` modules; no standalone Boolean conditions for each (they're scoring inputs, not gating predicates).
-
-**Corrected:**
-- The proposal lists `nva.marchInfiltrateControl` AND `nva.rallyInfiltrateBuild` as separate templates. `nva.rallyInfiltrate` already exists; `nva.rallyInfiltrateBuild` is folded into the existing template via the `nva.baseNetwork` doctrine's `enablesPlanTemplates` rather than created as a duplicate. The proposal's own §6.8 list does this consolidation too.
 
 **Deferred:**
 - `nva.marchAmbush` Ambush-from-LoC adjacency variant — uncommitted; the base `nva.marchAmbush` template covers the common case; LoC-adjacency specialization deferred until a witness shows the generic selector cannot differentiate.
@@ -406,6 +468,20 @@ Architectural invariant: `nva-templates-bind-shared-modules.test.ts` (when Spec 
 
 ## 11. Open questions
 
-- **Token-prop vocabulary**: which `tokenProp.zone.*` references for post-Infiltrate prediction exist vs. need authoring? P0 deliverable.
-- **`nva.nvaTroopCount` global feature**: present in `92-agents.md` already? P0 verifies and reuses.
+- **Token-prop vocabulary**: which `tokenProp.zone.*` references for post-Infiltrate prediction (e.g., `nvaPieceCountPostInfiltrate`, `allOtherPieceCount`, `nvaControlPostInfiltrate`) exist vs. need authoring? P0 deliverable.
+- **`feature.nvaTroopCount`**: present in `92-agents.md` already? P0 verifies and reuses. (`feature.nvaBaseCount@176`, `feature.nvaMargin@67`, `feature.projectedSelfMarginDelta@253`, `feature.projectedTrailDelta@343` are already authored.)
+- **`feature.projectedVcMarginDelta` / `preview.feature.projectedVcMarginDelta`**: present in the current authoring surface? P0 verifies and either reuses or authors. (`feature.projectedSelfMarginDelta` is confirmed at multiple sites.)
+- **`roleTarget.X.isVcBase` / `roleTarget.X.changesControl`**: do these post-binding role-target refs exist on the current authoring surface? P0 deliverable. If not, §4.4 guardrails fall back to post-state `lookup` predicates on `tokens.vcBase` and control-swing aggregates.
+- **Token-scoped `source.collection`**: does the selector source surface support `kind: tokens` with a `faction:` filter? Current authored selectors uniformly use `kind: zones`; P0 confirms whether token-scoped selection is available or whether `nva.infiltrateForNvaGain` should remain zone-scoped with a per-zone score on VC-Base presence (as drafted in §4.2).
 - **Threshold calibration** in §4.3 modules — P4.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-31:
+
+- [`tickets/203FITLNVACOM-001.md`](../tickets/203FITLNVACOM-001.md) — NVA selector vocabulary survey (P0) (covers §6 P0)
+- [`tickets/203FITLNVACOM-002.md`](../tickets/203FITLNVACOM-002.md) — NVA plan templates and supporting selectors (P1) (covers §6 P1)
+- [`tickets/203FITLNVACOM-003.md`](../tickets/203FITLNVACOM-003.md) — NVA strategy modules, posture, and guardrails (P2) (covers §6 P2)
+- [`tickets/203FITLNVACOM-004.md`](../tickets/203FITLNVACOM-004.md) — nva-baseline profile bindings (P3) (covers §6 P3)
+- [`tickets/203FITLNVACOM-005.md`](../tickets/203FITLNVACOM-005.md) — NVA profile-quality witness suite (P4) (covers §6 P4)
+- [`tickets/203FITLNVACOM-006.md`](../tickets/203FITLNVACOM-006.md) — Replay-identity reattestation (P5) (covers §6 P5)

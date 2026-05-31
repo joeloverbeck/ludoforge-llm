@@ -182,6 +182,15 @@ agents:
               props:
                 faction: { eq: NVA }
                 type: { eq: base }
+      nvaTroopCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: NVA }
+                type: { eq: troops }
       availableUsTroops:
         type: number
         expr:
@@ -268,6 +277,12 @@ agents:
           sub:
             - { ref: feature.projectedArvnMargin }
             - { ref: feature.arvnMargin }
+      projectedVcMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedVcMargin }
+            - { ref: feature.vcMargin }
       projectedCapabilityGain:
         type: number
         expr:
@@ -2110,6 +2125,19 @@ agents:
             weight: 4
             fallback:
               contribution: 0
+      nva.avoidVcKingmaking:
+        traceLabel: "NVA avoid king-making VC"
+        prefer:
+          - id: vc-kingmaking-penalty
+            when:
+              ref: condition.vcNearWin.satisfied
+            value:
+              coalesce:
+                - { ref: feature.projectedVcMarginDelta }
+                - 0
+            weight: -6
+            fallback:
+              contribution: 0
       vc.protectOppositionAndBases:
         traceLabel: "VC protect Opposition, Bases, and NVA ally-rival leverage"
         must:
@@ -2671,6 +2699,96 @@ agents:
               - { id: vcBaseTakeover, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      nva.baseNetwork:
+        traceLabel: "NVA build Base network"
+        when:
+          lt:
+            - { ref: feature.nvaBaseCount }
+            - 6
+        applies:
+          scopes: [move]
+          actionTags: [rally, infiltrate]
+        priority:
+          tier: 40
+        scoreGroups:
+          - id: baseExpansion
+            summary: sum
+            terms:
+              - id: projectedBaseCount
+                weight: 4
+                value:
+                  coalesce:
+                    - { ref: preview.feature.nvaBaseCount }
+                    - { ref: feature.nvaBaseCount }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.rallyTrail
+          - nva.rallyInfiltrate
+      nva.takeControl:
+        traceLabel: "NVA seize Control"
+        when:
+          lt:
+            - { ref: feature.nvaMargin }
+            - -3
+        applies:
+          scopes: [move]
+          actionTags: [march, attack]
+        priority:
+          tier: 45
+        scoreGroups:
+          - id: controlSwing
+            summary: sum
+            terms:
+              - { id: projectedNvaMarginDelta, weight: 5, value: { ref: feature.projectedSelfMarginDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.marchControl
+          - nva.marchInfiltrateControl
+      nva.conventionalPressure:
+        traceLabel: "NVA apply conventional pressure"
+        when:
+          gt:
+            - { ref: feature.nvaTroopCount }
+            - 8
+        applies:
+          scopes: [move]
+          actionTags: [attack, bombard]
+        priority:
+          tier: 35
+        scoreGroups:
+          - id: pressure
+            summary: sum
+            terms:
+              - { id: projectedNvaMarginDelta, weight: 4, value: { ref: feature.projectedSelfMarginDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.attackAmbush
+          - nva.bombardCoinStack
+      nva.vcRivalRisk:
+        traceLabel: "NVA deny VC when near win"
+        when:
+          ref: condition.vcNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 60
+        scoreGroups:
+          - id: vcDenial
+            summary: sum
+            terms:
+              - id: vcMarginPenalty
+                weight: -5
+                value:
+                  coalesce:
+                    - { ref: feature.projectedVcMarginDelta }
+                    - 0
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - nva.terrorSupportReduction
       vc.buildPoliticalNetwork:
         traceLabel: "VC build hidden political network"
         when: true
@@ -2965,6 +3083,35 @@ agents:
                 - 0
         severity: demote
         penalty: 350
+        onUnavailable: noFire
+      nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial:
+        traceLabel: "NVA avoid low-yield VC Infiltrate outside denial"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.infiltrate }
+            - lt:
+                - coalesce:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - 0
+                - 1
+            - not: { ref: condition.vcNearWin.satisfied }
+        severity: demote
+        penalty: 600
+        onUnavailable: noFire
+      nva.avoidLowYieldBombard:
+        traceLabel: "NVA avoid low-yield Bombard"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.bombard }
+            - lt:
+                - coalesce:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - 0
+                - 1
+        severity: demote
+        penalty: 600
         onUnavailable: noFire
       vc.avoidConventionalAttackWithoutAmbush:
         traceLabel: "VC avoid conventional Attack without Ambush payoff"

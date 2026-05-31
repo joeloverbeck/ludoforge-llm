@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data authoring in `92-agents.md`
-**Deps**: `tickets/203FITLNVACOM-003.md`
+**Deps**: `archive/tickets/203FITLNVACOM-003.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 203FITLNVACOM-003: NVA strategy modules, posture, and guardrails (P2)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data authoring in `92-agents.md`
@@ -95,3 +95,41 @@ None — witnesses land in ticket 005.
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo test --force`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed 2026-05-31.
+
+Implemented the ticket-003 NVA doctrine layer in `data/games/fire-in-the-lake/92-agents.md`:
+
+1. Added support signals `feature.nvaTroopCount` and `candidate.feature.projectedVcMarginDelta`.
+2. Added strategy modules `nva.baseNetwork`, `nva.takeControl`, `nva.conventionalPressure`, and `nva.vcRivalRisk`.
+3. Added posture `nva.avoidVcKingmaking`.
+4. Added guardrails `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial` and `nva.avoidLowYieldBombard`.
+
+Implementation notes:
+
+1. `nva.preserveTrail` remained owned by ticket 002, matching the approved boundary reset recorded there.
+2. The king-making posture uses `feature.projectedVcMarginDelta`, not `preview.feature.projectedVcMarginDelta`, because the compiler does not accept the preview candidate-feature ref on posture evaluation. The value still has an explicit `coalesce` fallback and gates on `condition.vcNearWin.satisfied`.
+3. The VC-base-steal and low-yield Bombard guardrails use the ticket-001 fallback path because the originally drafted `roleTarget.*` refs are not authored in the live surface. They demote low projected NVA-margin gain outside the VC-near-win denial case.
+4. No profile bindings were changed; ticket 004 owns activation in `nva-baseline.use`.
+5. No witness tests were added; ticket 005 owns new witness authoring.
+
+Generated artifact provenance:
+
+1. Artifact: `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`.
+2. Generator command: `UPDATE_GOLDEN=1 node --test packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js`.
+3. Canonical inputs: production FITL agent catalog from `data/games/fire-in-the-lake/*.md` plus the retained coverage classifier in `packages/engine/test/architecture/policy-wasm-coverage-manifest.test.ts`.
+4. Refresh reason: the production candidate feature set now includes `projectedVcMarginDelta`.
+5. Durability witness: the retained generator test passed with and without `UPDATE_GOLDEN=1`.
+
+Verification:
+
+1. `pnpm turbo build --force` — passed; 3/3 tasks successful.
+2. `node --test packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-steal-vc-base.test.js packages/engine/dist/test/policy-profile-quality/nva-protects-trail-before-coup.test.js` — passed; 2/2 suites passed.
+3. `UPDATE_GOLDEN=1 node --test packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js` — passed and regenerated the coverage fixture.
+4. `node --test packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js` — passed; 4/4 tests passed.
+5. `pnpm -F @ludoforge/engine test:unit` — passed; 6107/6107 tests passed.
+6. `pnpm turbo test --force` — passed; 5/5 tasks successful, engine default lane 189/189 compiled test files passed.
+
+Source-size ledger: not applicable. This ticket changed authored FITL data and a generated JSON fixture; no TypeScript/source module crossed a source-size threshold.

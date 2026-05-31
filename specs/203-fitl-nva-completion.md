@@ -469,7 +469,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-31:
 
 - [`archive/tickets/203FITLNVACOM-001.md`](../archive/tickets/203FITLNVACOM-001.md) — NVA selector vocabulary survey (P0) (covers §6 P0)
 - [`archive/tickets/203FITLNVACOM-002.md`](../archive/tickets/203FITLNVACOM-002.md) — NVA plan templates and supporting selectors (P1) (covers §6 P1)
-- [`tickets/203FITLNVACOM-003.md`](../tickets/203FITLNVACOM-003.md) — NVA strategy modules, posture, and guardrails (P2) (covers §6 P2)
+- [`archive/tickets/203FITLNVACOM-003.md`](../archive/tickets/203FITLNVACOM-003.md) — NVA strategy modules, posture, and guardrails (P2) (covers §6 P2)
 - [`tickets/203FITLNVACOM-004.md`](../tickets/203FITLNVACOM-004.md) — nva-baseline profile bindings (P3) (covers §6 P3)
 - [`tickets/203FITLNVACOM-005.md`](../tickets/203FITLNVACOM-005.md) — NVA profile-quality witness suite (P4) (covers §6 P4)
 - [`tickets/203FITLNVACOM-006.md`](../tickets/203FITLNVACOM-006.md) — Replay-identity reattestation (P5) (covers §6 P5)

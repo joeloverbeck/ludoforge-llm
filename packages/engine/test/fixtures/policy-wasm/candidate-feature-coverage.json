@@ -84,6 +84,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      },
+      {
+        "id": "projectedVcMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "5cbb90ef534112b7"
       }
     ],
     "nva-baseline": [
@@ -164,6 +170,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      },
+      {
+        "id": "projectedVcMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "5cbb90ef534112b7"
       }
     ],
     "us-baseline": [
@@ -250,6 +262,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      },
+      {
+        "id": "projectedVcMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "5cbb90ef534112b7"
       }
     ],
     "vc-baseline": [
@@ -336,6 +354,12 @@
         "coverage": "wasm-row",
         "reason": "all leaves materialize on the WASM score-row path",
         "featureExprFingerprint": "fcb1ed9881c0c2f6"
+      },
+      {
+        "id": "projectedVcMarginDelta",
+        "coverage": "wasm-row",
+        "reason": "all leaves materialize on the WASM score-row path",
+        "featureExprFingerprint": "5cbb90ef534112b7"
       }
     ]
   },

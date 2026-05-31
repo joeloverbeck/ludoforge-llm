@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test authoring
-**Deps**: `tickets/203FITLNVACOM-004.md`
+**Deps**: `archive/tickets/203FITLNVACOM-004.md`
 
 ## Problem
 

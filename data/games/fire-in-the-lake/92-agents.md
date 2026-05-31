@@ -2334,6 +2334,8 @@ agents:
           - arvn.sweepRaid
           - us.sweepAirStrike
           - nva.marchInfiltrate
+          - nva.marchControl
+          - nva.marchInfiltrateControl
           - nva.marchAmbush
           - nva.locOccupationBeforeCoup
           - vc.marchSubvert
@@ -3521,6 +3523,8 @@ agents:
           - nva.doNotServeVcWin
           - nva.preserveTrailAndBases
           - nva.avoidLowYieldAttrition
+          - nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial
+          - nva.avoidLowYieldBombard
         strategyModules:
           - shared.immediateWin
           - shared.blockCurrentLeader
@@ -3532,12 +3536,22 @@ agents:
           - nva.logisticsAndTrail
           - nva.controlAndBases
           - nva.vcRivalLeverage
+          - nva.baseNetwork
+          - nva.takeControl
+          - nva.conventionalPressure
+          - nva.vcRivalRisk
         planTemplates:
           - nva.rallyInfiltrate
           - nva.marchInfiltrate
           - nva.marchAmbush
           - nva.attackAmbush
           - nva.locOccupationBeforeCoup
+          - nva.rallyTrail
+          - nva.marchControl
+          - nva.marchInfiltrateControl
+          - nva.infiltrateVcOnlyWhenRational
+          - nva.bombardCoinStack
+          - nva.terrorSupportReduction
         considerations:
           - preferProjectedSelfMargin
           - preserveResources

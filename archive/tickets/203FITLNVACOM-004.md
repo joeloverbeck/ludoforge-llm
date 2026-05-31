@@ -1,6 +1,6 @@
 # 203FITLNVACOM-004: nva-baseline profile bindings (P3)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data authoring in `92-agents.md`
@@ -18,6 +18,7 @@ The current `nva-baseline.use` block (at `92-agents.md:3088-3109`) lists 10 stra
 2. Profile binding is purely additive — no removal or reordering of existing entries.
 3. Spec 201 has shipped (archived COMPLETED), and 7 shared modules are already bound in `nva-baseline.use.strategyModules`.
 4. Boundary reset approved on 2026-05-31: do not bind `nva.eventLogisticsOrControlSwing`, because no such event plan template is authored. Event doctrine remains covered by the already-bound `shared.eventDirectSwing` strategy module.
+5. Boundary reset approved on 2026-05-31 after `pnpm -F @ludoforge/engine test:unit` exposed ARVN golden-trace drift: continue under this ticket and fix the binding-induced drift rather than weakening proof or retargeting to ticket 006. Focused isolation showed the newly bound NVA March templates must be included in the existing `shared.monsoonOperationalRestriction` suppression list, matching the old NVA March templates it already suppresses.
 
 ## Architecture Check
 
@@ -41,9 +42,14 @@ Append (after the existing `nva.locOccupationBeforeCoup` entry) the new template
 
 Append (after the existing NVA guardrail entries): `nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial`, `nva.avoidLowYieldBombard`.
 
+### 4. Extend Monsoon suppression to new NVA March templates
+
+Add `nva.marchControl` and `nva.marchInfiltrateControl` to `shared.monsoonOperationalRestriction.suppressesPlanTemplates`, alongside the existing suppressed NVA March templates. This preserves the existing Monsoon doctrine after the new templates are bound.
+
 ## Files to Touch
 
-- `data/games/fire-in-the-lake/92-agents.md` (modify — `nva-baseline.use` block at `:3088-3109`)
+- `data/games/fire-in-the-lake/92-agents.md` (modify — `nva-baseline.use` block at `:3088-3109`; Monsoon suppression list for new NVA March templates)
+- `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` (modify — regenerated static coverage manifest after `nva-baseline` binds the new NVA modules)
 
 ## Out of Scope
 
@@ -65,6 +71,7 @@ Append (after the existing NVA guardrail entries): `nva.avoidStealingVcBaseWitho
 1. Every binding entry resolves to an artifact authored in tickets 002 or 003, or to a pre-existing artifact (no dangling binding references).
 2. The `nva-baseline.use` block keeps its `guardrails`, `strategyModules`, `planTemplates` field structure unchanged (additive only).
 3. No duplicate binding entries (e.g., `nva.marchAmbush` listed twice if already bound).
+4. `shared.monsoonOperationalRestriction` suppresses the newly bound NVA March templates under Monsoon, matching the existing NVA March-template suppression behavior.
 
 ## Test Plan
 
@@ -78,3 +85,34 @@ None — witnesses authored in ticket 005.
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo test --force`
 4. `pnpm run check:ticket-deps`
+
+## Outcome (2026-05-31)
+
+Completed the P3 `nva-baseline` binding update from Spec 203 §4.5:
+
+- Added the new NVA guardrails, strategy modules, and plan templates to `nva-baseline.use` without removing, reordering, or duplicating existing profile entries.
+- Kept `nva.eventLogisticsOrControlSwing` unbound because no such event template is authored; event doctrine remains covered by `shared.eventDirectSwing`.
+- Fixed binding-induced ARVN golden-trace drift by extending `shared.monsoonOperationalRestriction.suppressesPlanTemplates` to include the newly bound NVA March templates (`nva.marchControl`, `nva.marchInfiltrateControl`), preserving the existing Monsoon doctrine for the expanded NVA template set.
+- Regenerated `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json` because the newly bound `nva-baseline` modules now statically cover `projectedUsMarginDelta`.
+
+Generated artifact provenance:
+
+- Artifact: `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`
+- Generation command: `env UPDATE_GOLDEN=1 node --test packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js`
+- Canonical inputs: the compiled conformance corpus and production FITL profile data, including `data/games/fire-in-the-lake/92-agents.md` / `nva-baseline`
+- Refresh reason: new bound NVA modules add the `projectedUsMarginDelta` WASM-row entry for `fire-in-the-lake.nva-baseline`
+- Generator retained: `packages/engine/test/architecture/policy-wasm-coverage-manifest.test.ts`
+
+Verification:
+
+- `pnpm turbo build` — passed (cached)
+- `node --test packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-steal-vc-base.test.js packages/engine/dist/test/policy-profile-quality/nva-protects-trail-before-coup.test.js` — passed
+- `node --test packages/engine/dist/test/architecture/policy-preview-inner-outcome-parity.test.js` — passed after Monsoon suppression repair
+- `node --test packages/engine/dist/test/architecture/policy-wasm-coverage-manifest.test.js` — passed after manifest refresh
+- `pnpm -F @ludoforge/engine test:unit` — passed (6107 tests, 0 failures)
+- `pnpm turbo test --force` — passed (5/5 tasks, 0 cached; engine default lane 189/189 files passed)
+- `pnpm run check:ticket-deps` — passed
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md tickets/203FITLNVACOM-004.md packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json .codex/run-state/implement-spec-tickets.json` — passed
+- `rg -n "takeControlOnlyWhenTrailing" data/games/fire-in-the-lake/92-agents.md tickets specs` — no hits
+
+Deviation from original plan: the ticket stayed data-only for product behavior, but the proof boundary required one generated manifest refresh and one Monsoon suppression-list addition after live golden-trace evidence showed the new bound March templates could otherwise bypass established Monsoon doctrine.

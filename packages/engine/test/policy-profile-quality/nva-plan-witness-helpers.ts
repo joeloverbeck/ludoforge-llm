@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_PLAYER_COUNT = 4;
@@ -67,4 +68,52 @@ export const requireAlternative = (
   const alternative = result.alternatives.find((entry) => entry.templateId === templateId);
   assert.ok(alternative, `expected ${templateId} proposal alternative`);
   return alternative;
+};
+
+export const emitNvaPolicyQualityRecord = (input: {
+  readonly file: string;
+  readonly seed: number;
+  readonly passed: boolean;
+  readonly decisions: number;
+  readonly stopReason?: string;
+}): void => {
+  emitPolicyProfileQualityRecord({
+    file: input.file,
+    variantId: NVA_PROFILE_ID,
+    seed: input.seed,
+    passed: input.passed,
+    stopReason: input.stopReason ?? 'architectural-invariant',
+    decisions: input.decisions,
+  });
+};
+
+export const assertIncludesAll = (
+  actual: readonly string[] | undefined,
+  expected: readonly string[],
+  label: string,
+): void => {
+  const missing = expected.filter((id) => !(actual ?? []).includes(id));
+  assert.deepEqual(missing, [], `${label} missing: ${missing.join(', ')}`);
+};
+
+export const assertExcludesAll = (
+  actual: readonly string[] | undefined,
+  unexpected: readonly string[],
+  label: string,
+): void => {
+  const present = unexpected.filter((id) => (actual ?? []).includes(id));
+  assert.deepEqual(present, [], `${label} unexpectedly present: ${present.join(', ')}`);
+};
+
+export const assertTemplateRole = (
+  fixture: NvaPlanFixture,
+  templateId: string,
+  role: string,
+  selectorId: string,
+): void => {
+  assert.equal(
+    fixture.def.agents?.library.planTemplates?.[templateId]?.roles[role]?.selectorId,
+    selectorId,
+    `${templateId}.${role} selector`,
+  );
 };

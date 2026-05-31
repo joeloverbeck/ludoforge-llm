@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — verification
-**Deps**: `tickets/203FITLNVACOM-005.md`
+**Deps**: `archive/tickets/203FITLNVACOM-005.md`
 
 ## Problem
 

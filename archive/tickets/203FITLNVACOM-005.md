@@ -1,6 +1,6 @@
 # 203FITLNVACOM-005: NVA profile-quality witness suite (P4)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test authoring
@@ -120,3 +120,22 @@ Architectural invariant. Authored as a direct YAML/compiled-profile inspection: 
 1. `pnpm turbo build && node --test packages/engine/dist/test/policy-profile-quality/nva-*.test.js` (targeted new witnesses)
 2. `pnpm turbo test --force` (full suite, bypassing Turbo cache)
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-31.
+
+Implemented the full Spec 203 P4 witness file set under `packages/engine/test/policy-profile-quality/`:
+
+- Added 8 NVA doctrine witnesses for Rally Trail, March Control, March+Infiltrate NVA build, VC-rival Terror suppression, Bombard pressure, Attack+Ambush, VC near-win blocking, and low-yield VC-steal demotion.
+- Added `nva-templates-bind-shared-modules.test.ts` to assert the corrected `nva-baseline` shared-module and plan-template binding set: 7 shared modules, 7 NVA faction modules, 11 NVA plan templates, and no `nva.eventLogisticsOrControlSwing`.
+- Extended `nva-plan-witness-helpers.ts` with small shared structural assertion and profile-quality record helpers to avoid repeating boilerplate across the new witnesses.
+
+Deviation from the draft fixture language: the new witnesses are structural architectural invariants over the compiled production doctrine, matching the existing distilled NVA witness style in `nva-march-infiltrate-steal-vc-base.test.ts` and `nva-protects-trail-before-coup.test.ts`. They do not create synthetic NVA mid-game state fixtures or assert selected runtime candidates. This keeps the proof on stable compiled doctrine surfaces while preserving deterministic profile-quality records.
+
+Verification:
+
+- `pnpm turbo build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/nva-*.test.js` — passed, 11 suites / 11 tests including the 9 new witnesses plus the 2 existing NVA witnesses.
+- `pnpm turbo test --force` — passed, 5 Turbo tasks successful in 3m28.808s, including the blocking `policy-profile-quality` lane.
+- Source-size check: every new NVA witness file is below 250 lines; `nva-plan-witness-helpers.ts` is 119 lines after the helper additions.

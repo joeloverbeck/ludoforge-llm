@@ -12,7 +12,7 @@
 
 **Trigger report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration, 2026-05-27). This spec adopts the proposal's §5 "Faction-by-faction gap analysis" (VC subsection) + §6.8 "Plan templates" (VC list) + §§6.9–6.10 VC posture/guardrail slices. The proposal's YAML used a fictional authoring surface (`matchActionTag`, `microturnSteps`/`bindTo`, `compoundSpecial`, `posture:`, `previewFallback`); §4 reauthors against the verified surface, matching the correction Specs 202 and 203 already applied (see §9 Corrected).
 
-**Ticket namespace**: `204FITLVCCOMP`
+**Ticket namespace**: `204FITLVCCOM`
 
 ---
 
@@ -635,9 +635,13 @@ All witnesses use `@test-class: architectural-invariant` per the `.claude/rules/
 
 ## Tickets
 
-Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covers P0a/P0b/P1 only — P2a/P2b/P3/P4/P5 tickets are deferred until P0a/P0b close so they author against actual audit results rather than hypothetical refs. Re-run `/spec-to-tickets specs/204-fitl-vc-completion.md 204FITLVCCOM` after 001 and 002 close to author the remaining phases (numbering will continue from 005).
+Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covered P0a/P0b/P1 only so P2a/P2b/P3/P4/P5 could author against the actual audit results rather than hypothetical refs. Remaining phases were decomposed after 001-004 closed.
 
 - [`archive/tickets/204FITLVCCOM-001.md`](../archive/tickets/204FITLVCCOM-001.md) — P0a Capability / vocabulary re-expression audit (covers §6 P0a)
 - [`archive/tickets/204FITLVCCOM-002.md`](../archive/tickets/204FITLVCCOM-002.md) — P0b Agitation action-tag investigation (covers §6 P0b)
 - [`archive/tickets/204FITLVCCOM-003.md`](../archive/tickets/204FITLVCCOM-003.md) — P1 VC candidateFeatures and new selectors (covers §6 P1, §4.2)
 - [`archive/tickets/204FITLVCCOM-004.md`](../archive/tickets/204FITLVCCOM-004.md) — P1 VC plan templates and terrorTax / terrorSubvert selector rebinding (covers §6 P1, §4.1)
+- [`tickets/204FITLVCCOM-005.md`](../tickets/204FITLVCCOM-005.md) — P2a VC strategy modules (covers §6 P2a, §4.3)
+- [`tickets/204FITLVCCOM-006.md`](../tickets/204FITLVCCOM-006.md) — P2b VC posture evaluators and guardrails (covers §6 P2b, §4.4, §4.5)
+- [`tickets/204FITLVCCOM-007.md`](../tickets/204FITLVCCOM-007.md) — P3 `vc-baseline` bindings update (covers §6 P3, §4.6)
+- [`tickets/204FITLVCCOM-008.md`](../tickets/204FITLVCCOM-008.md) — P4-P5 witness suite and final reattestation (covers §6 P4/P5, §7)

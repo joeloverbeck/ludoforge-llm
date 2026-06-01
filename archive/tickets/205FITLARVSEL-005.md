@@ -1,6 +1,6 @@
 # 205FITLARVSEL-005: Faction-agnostic no-placeholder-value-one invariant (§7)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
@@ -81,3 +81,19 @@ After 205FITLARVSEL-007 lands, the scan should pass clean. If any selector-libra
 2. `node --test dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js`
 3. `pnpm turbo test`
 4. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-06-01.
+
+Added `packages/engine/test/policy-profile-quality/no-placeholder-value-one-selectors.test.ts`, an architectural invariant that recursively scans all `data/games/**/*-agents.md` files, parses fenced YAML structurally, discovers every `library.selectors` block without hard-coding game or faction names, and fails with `file:line:selector:component` details if any selector `quality.components[]` uses scalar `value: 1`.
+
+The scanner ignores comments and unrelated raw-text `value: 1` occurrences because it only evaluates parsed YAML selector component objects.
+
+Proof:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js`
+3. `pnpm turbo lint`
+4. `pnpm turbo typecheck`
+5. `pnpm turbo test` — 5 turbo tasks successful; engine default lane reported `summary 189/189 files passed`; runner Vitest reported `205 passed (205)`.

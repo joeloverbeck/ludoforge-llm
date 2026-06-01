@@ -1,6 +1,6 @@
 # 204FITLVCCOM-001: P0a — Capability / vocabulary re-expression audit
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — audit only
@@ -98,3 +98,29 @@ Read-only references for the audit (no edits):
 1. `pnpm run check:ticket-deps` — validates this ticket's Deps field.
 2. `pnpm -F @ludoforge/engine build` — sanity-check that spec modifications don't break the spec→engine flow.
 3. Manual review of `specs/204-fitl-vc-completion.md` §11 — confirm audit-table classifications.
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Appended the P0a capability/vocabulary audit table to `specs/204-fitl-vc-completion.md` §11.
+- Resolved the `vc.subvertHighValueTarget` ARVN-Patronage signal as an authorable proxy over item-local `population`, `supportOpposition`, and `feature.projectedArvnMarginDelta`.
+- Resolved `feature.vcUndergroundGuerrillaCount` as authorable via `globalTokenAgg.tokenFilter.props` over `faction: VC`, `type: guerrilla`, and `activity: underground`.
+- Confirmed `feature.projectedNvaMarginDelta` is authorable as `sub(feature.projectedNvaMargin, feature.nvaMargin)`.
+- Classified item-local static zone reads, dynamic `supportOpposition` lookup, and per-zone faction-token needs so downstream P1 authoring can avoid unsupported `zoneTokenAgg` faction filtering.
+
+**Deviations from plan**:
+- None. The ticket remained audit-only; no YAML authoring or engine code changes landed.
+
+**Verification**:
+- `pnpm run check:ticket-deps` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `git diff --check -- specs/204-fitl-vc-completion.md` — passed.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: not triggered; markdown-only edit.
+- Untracked/touched-file hygiene: worktree contained only `specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
+- Proof lane classification: required lanes green; no red or substituted lanes.
+- Terminal status allowed: every named audit deliverable is recorded in Spec 204 §11, with no class (c) engine-prerequisite rows remaining.

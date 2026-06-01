@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
-**Deps**: `tickets/204FITLVCCOM-001.md`
+**Deps**: `archive/tickets/204FITLVCCOM-001.md`
 
 ## Problem
 
@@ -16,7 +16,7 @@ The exact authoring shape of the Underground-Guerrilla feature and the `vc.subve
 
 ## Assumption Reassessment (2026-06-01)
 
-1. The verified authoring surface for candidateFeatures uses the existing `candidateFeatures:` block in `data/games/fire-in-the-lake/92-agents.md` — reference shape: `projectedArvnMarginDelta@274` as `sub(feature.projectedArvnMargin, feature.arvnMargin)`. `feature.projectedNvaMargin` and `feature.nvaMargin` must both exist; confirmed pending ticket 001's verification.
+1. The verified authoring surface for candidateFeatures uses the existing `candidateFeatures:` block in `data/games/fire-in-the-lake/92-agents.md` — reference shape: `projectedArvnMarginDelta@274` as `sub(feature.projectedArvnMargin, feature.arvnMargin)`. `feature.projectedNvaMargin` and `feature.nvaMargin` both exist; confirmed by `archive/tickets/204FITLVCCOM-001.md`.
 2. The verified authoring surface for selectors uses `scopes`/`source`/`quality`/`result` per `vc.terrorAgitationSpace@1509` and `vc.taxFundingSpace@1555`. Item-local zone-prop reads use nested `zoneProp: { zone: { ref: selector.item.key }, prop: <name> }` for static attrs (population/econ/category); `lookup` for dynamic markers (supportOpposition); proxies for faction-specific per-zone token reads per Spec 202's §11 audit.
 3. The trigger-report's fictional schema (`scope: zones`, flat `{ ref: zoneProp.X }` filters, separate `filters`/`score` keys) was caught in the reassessment — do NOT use it. Reference `archive/specs/202-fitl-us-completion.md:444` and Spec 204 §9 Corrected if implementation drifts.
 4. The audit table in spec §11 (resolved by 001) supersedes any alternative listed in spec §4.2 — implement the classified path.

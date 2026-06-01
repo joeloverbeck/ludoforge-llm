@@ -641,7 +641,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covered P0a/P0b/P1 o
 - [`archive/tickets/204FITLVCCOM-002.md`](../archive/tickets/204FITLVCCOM-002.md) — P0b Agitation action-tag investigation (covers §6 P0b)
 - [`archive/tickets/204FITLVCCOM-003.md`](../archive/tickets/204FITLVCCOM-003.md) — P1 VC candidateFeatures and new selectors (covers §6 P1, §4.2)
 - [`archive/tickets/204FITLVCCOM-004.md`](../archive/tickets/204FITLVCCOM-004.md) — P1 VC plan templates and terrorTax / terrorSubvert selector rebinding (covers §6 P1, §4.1)
-- [`tickets/204FITLVCCOM-005.md`](../tickets/204FITLVCCOM-005.md) — P2a VC strategy modules (covers §6 P2a, §4.3)
+- [`archive/tickets/204FITLVCCOM-005.md`](../archive/tickets/204FITLVCCOM-005.md) — P2a VC strategy modules (covers §6 P2a, §4.3)
 - [`tickets/204FITLVCCOM-006.md`](../tickets/204FITLVCCOM-006.md) — P2b VC posture evaluators and guardrails (covers §6 P2b, §4.4, §4.5)
 - [`tickets/204FITLVCCOM-007.md`](../tickets/204FITLVCCOM-007.md) — P3 `vc-baseline` bindings update (covers §6 P3, §4.6)
 - [`tickets/204FITLVCCOM-008.md`](../tickets/204FITLVCCOM-008.md) — P4-P5 witness suite and final reattestation (covers §6 P4/P5, §7)

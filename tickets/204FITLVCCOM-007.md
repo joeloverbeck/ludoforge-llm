@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None - YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
-**Deps**: `archive/tickets/204FITLVCCOM-004.md`, `tickets/204FITLVCCOM-005.md`, `tickets/204FITLVCCOM-006.md`
+**Deps**: `archive/tickets/204FITLVCCOM-004.md`, `archive/tickets/204FITLVCCOM-005.md`, `tickets/204FITLVCCOM-006.md`
 
 ## Problem
 

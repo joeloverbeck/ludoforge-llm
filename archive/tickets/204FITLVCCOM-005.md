@@ -1,6 +1,6 @@
 # 204FITLVCCOM-005: P2a - VC strategy modules
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None - YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
@@ -75,3 +75,25 @@ Do not edit or remove `vc.buildPoliticalNetwork`, `vc.subvertRegimeSecurity`, `v
 1. `pnpm -F @ludoforge/engine build`
 2. `cd packages/engine && node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js`
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Added five additive VC strategy-module library entries in `data/games/fire-in-the-lake/92-agents.md`: `vc.oppositionEngine`, `vc.baseNetwork`, `vc.subvertPatronage`, `vc.agitationReadiness`, and `vc.nvaRivalRisk`.
+- Preserved the existing VC modules (`vc.buildPoliticalNetwork`, `vc.subvertRegimeSecurity`, `vc.fundAndAmbushCarefully`, and `vc.denyNvaIfNearWin`) unchanged.
+- Kept the new modules unbound from `vc-baseline.use.strategyModules`; activation remains owned by `tickets/204FITLVCCOM-007.md`.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` from `packages/engine` after build — passed, 2/2 tests.
+- `pnpm run check:ticket-deps` — passed for 4 active tickets and 2579 archived tickets.
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md archive/tickets/204FITLVCCOM-005.md` — passed before outcome edit; final whitespace check rerun after outcome edit.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: `data/games/fire-in-the-lake/92-agents.md` is a preexisting large GameSpecDoc authoring file, not a source-file extraction target for this YAML-only ticket. It grew from 3976 to 4097 lines (`+121/-0`) because the required modules belong in the existing strategy-module library; splitting would widen the ticket and obscure the canonical data seam. Residual extraction owner: none for this ticket.
+- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md` before this Outcome edit.
+- Proof lane classification: required lanes green; no red or substituted lanes.
+- Terminal status allowed: every named module deliverable is present, buildable, unbound from `vc-baseline`, and covered by the required existing-witness regression.

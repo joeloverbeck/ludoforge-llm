@@ -3226,6 +3226,127 @@ agents:
               - { id: avoidNvaDominance, weight: 6, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.oppositionEngine:
+        traceLabel: "VC build opposition engine"
+        when:
+          lt:
+            - { ref: feature.totalOpposition }
+            - 20
+        applies:
+          scopes: [move]
+          actionTags: [terror, rally]
+        priority:
+          tier: 45
+        selectors:
+          - { role: terrorTarget, selectorId: vc.terrorHighPopTarget }
+          - { role: rallyTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: oppositionDrive
+            summary: sum
+            terms:
+              - { id: oppositionDelta, weight: 5, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.terrorTax
+          - vc.terrorSubvert
+          - vc.rallyBaseNetwork
+      vc.baseNetwork:
+        traceLabel: "VC build Base network"
+        when:
+          lt:
+            - { ref: feature.vcBaseCount }
+            - 5
+        applies:
+          scopes: [move]
+          actionTags: [rally]
+        priority:
+          tier: 40
+        selectors:
+          - { role: rallyTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: baseSeed
+            summary: sum
+            terms:
+              - { id: baseProtectionDrive, weight: 6, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallyBaseNetwork
+      vc.subvertPatronage:
+        traceLabel: "VC subvert ARVN patronage when ARVN near win"
+        when:
+          ref: condition.arvnNearWin.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [rally, march, terror]
+        priority:
+          tier: 55
+        selectors:
+          - { role: subvertTarget, selectorId: vc.subvertHighValueTarget }
+        scoreGroups:
+          - id: patronageDenial
+            summary: sum
+            terms:
+              - id: arvnMarginDenial
+                weight: 5
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedArvnMarginDelta }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallySubvert
+          - vc.marchSubvert
+          - vc.terrorSubvert
+      vc.agitationReadiness:
+        traceLabel: "VC prepare Agitation-ready spaces"
+        when:
+          ref: condition.coupImminent.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [tax, rally, march]
+        priority:
+          tier: 65
+        selectors:
+          - { role: prepTarget, selectorId: vc.agitationReadinessTarget }
+        scoreGroups:
+          - id: agitationPrep
+            summary: sum
+            terms:
+              - { id: agitationReadyDrive, weight: 7, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.agitationPrep
+          - vc.rallyTax
+          - vc.marchSpread
+      vc.nvaRivalRisk:
+        traceLabel: "VC suppress NVA-helping patterns when NVA near win"
+        when:
+          ref: condition.nvaNearWin.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [rally, march]
+        priority:
+          tier: 60
+        selectors:
+          - { role: protectTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: nvaDenial
+            summary: sum
+            terms:
+              - id: nvaMarginDenial
+                weight: 5
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedNvaMarginDelta }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - vc.rallyBaseNetwork
 
     guardrails:
       dropPassWhenOtherMovesExist:

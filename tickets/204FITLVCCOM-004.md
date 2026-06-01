@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
-**Deps**: `tickets/204FITLVCCOM-003.md`, `archive/tickets/204FITLVCCOM-002.md`
+**Deps**: `archive/tickets/204FITLVCCOM-003.md`, `archive/tickets/204FITLVCCOM-002.md`
 
 ## Problem
 
@@ -18,7 +18,7 @@ This ticket lands the template surface that ties ticket 003's selectors to the F
 2. Existing `vc.terrorTax@1995-2006` and `vc.terrorSubvert@1983-1994` are fully authored under the verified schema — this ticket modifies ONLY the `roles.<role>.selector` field on each (selector rebinding), leaving the template structure untouched.
 3. The trigger-report's fictional schema (`matchActionTag`, `microturnSteps`/`bindTo`, `compoundSpecial`, `posture:`) was caught in the reassessment — do NOT use it. Reference `archive/specs/202-fitl-us-completion.md:444` and Spec 204 §9 Corrected if implementation drifts.
 4. `vc.agitationPrep` authoring uses ticket 002's resolved Outcome A: author the template with `root.actionTags: [agitate]` and step `actionTag: agitate`. The tag is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`.
-5. New selectors (`vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`) authored in ticket 003 are available; this ticket binds them.
+5. New selectors (`vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`, `vc.agitationReadinessTarget`) authored in ticket 003 are available; this ticket binds them.
 
 ## Architecture Check
 

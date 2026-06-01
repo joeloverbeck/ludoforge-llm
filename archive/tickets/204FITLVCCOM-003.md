@@ -1,6 +1,6 @@
 # 204FITLVCCOM-003: P1 — VC candidateFeatures and new selectors
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
@@ -114,3 +114,31 @@ Both witnesses must pass — the new selectors must not collide with existing se
 2. `pnpm -F @ludoforge/engine build && node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` — existing-witness regression.
 3. `pnpm turbo test` — full-suite verification at session close.
 4. `pnpm run check:ticket-deps` — Deps validation.
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Added `feature.projectedNvaMarginDelta` as `sub(feature.projectedNvaMargin, feature.nvaMargin)`.
+- Added `feature.vcUndergroundGuerrillaCount` with `globalTokenAgg` over `faction: VC`, `type: guerrilla`, and `activity: underground`, matching the P0a resolution in `archive/tickets/204FITLVCCOM-001.md`.
+- Added eight VC selectors in `data/games/fire-in-the-lake/92-agents.md`: `vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`, and `vc.agitationReadinessTarget`.
+- Kept faction-specific per-zone needs expressed through population, Support/Opposition markers, and projected-margin proxies; no `zoneTokenAgg` faction filter or engine ref extension was introduced.
+- Post-review cleanup retargeted Spec 204's ticket list to this archived path and clarified `tickets/204FITLVCCOM-004.md`'s selector-availability handoff to include `vc.agitationReadinessTarget`.
+
+**Deviations from plan**:
+- `vc.rallyBaseTarget` uses verified scalar/item-local proxies (`category`, Support/Opposition marker, projected VC margin) rather than reading `terrainTags` directly; `terrainTags` is an array and was not part of the audited selector-safe scalar surface.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` from `packages/engine` after build — passed, 2/2 tests.
+- `pnpm run check:ticket-deps` — passed.
+- `grep -nE '^\\s+(scope|filters|score):' data/games/fire-in-the-lake/92-agents.md` — no matches.
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md` — passed.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: not triggered as a source-file extraction; `92-agents.md` is a preexisting large GameSpecDoc authoring file, and this ticket's required YAML additions belong in that existing data block.
+- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md` before this Outcome edit; whitespace check passed for the YAML edit.
+- Proof lane classification: required lanes green; no red or substituted lanes.
+- Terminal status allowed: every named candidateFeature and selector deliverable is present, buildable, and covered by the required existing-witness regression.

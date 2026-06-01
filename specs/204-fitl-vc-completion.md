@@ -639,5 +639,5 @@ Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covers P0a/P0b/P1 on
 
 - [`archive/tickets/204FITLVCCOM-001.md`](../archive/tickets/204FITLVCCOM-001.md) — P0a Capability / vocabulary re-expression audit (covers §6 P0a)
 - [`archive/tickets/204FITLVCCOM-002.md`](../archive/tickets/204FITLVCCOM-002.md) — P0b Agitation action-tag investigation (covers §6 P0b)
-- [`tickets/204FITLVCCOM-003.md`](../tickets/204FITLVCCOM-003.md) — P1 VC candidateFeatures and new selectors (covers §6 P1, §4.2)
+- [`archive/tickets/204FITLVCCOM-003.md`](../archive/tickets/204FITLVCCOM-003.md) — P1 VC candidateFeatures and new selectors (covers §6 P1, §4.2)
 - [`tickets/204FITLVCCOM-004.md`](../tickets/204FITLVCCOM-004.md) — P1 VC plan templates and terrorTax / terrorSubvert selector rebinding (covers §6 P1, §4.1)

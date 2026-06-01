@@ -2291,8 +2291,8 @@ agents:
         root: { actionTags: [terror], compound: { specialTags: [subvert], timing: after } }
         postureHook: vc.protectOppositionAndBases
         roles:
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-          subvertSpace: { selector: vc.subvertArvnControlSpace, required: true }
+          terrorSpace: { selector: vc.terrorHighPopTarget, required: true }
+          subvertSpace: { selector: vc.subvertHighValueTarget, required: true }
         steps:
           - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
           - { label: subvert-arvn-control, role: subvertSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: subvert } }
@@ -2303,12 +2303,65 @@ agents:
         root: { actionTags: [terror], compound: { specialTags: [tax], timing: after } }
         postureHook: vc.protectOppositionAndBases
         roles:
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-          taxSpace: { selector: vc.taxFundingSpace, required: true }
+          terrorSpace: { selector: vc.terrorHighPopTarget, required: true }
+          taxSpace: { selector: vc.taxLocTarget, required: true }
         steps:
           - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
           - { label: tax-safe-funding, role: taxSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: tax } }
         caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallyBaseNetwork:
+        traceLabel: "VC Rally to seed VC Base and Underground network"
+        root: { actionTags: [rally] }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          rallySpace: { selector: vc.rallyBaseTarget, required: true }
+        steps:
+          - { label: rally-base-network, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallyTax:
+        traceLabel: "VC Rally then Tax to fund future ops"
+        root: { actionTags: [rally], compound: { specialTags: [tax], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          rallySpace: { selector: vc.rallySpaceForFutureOps, required: true }
+          taxSpace: { selector: vc.taxLocTarget, required: true }
+        steps:
+          - { label: rally-future-ops, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+          - { label: tax-loc-funding, role: taxSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: tax } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.marchSpread:
+        traceLabel: "VC March to spread Underground into Opposition / Neutral"
+        root: { actionTags: [march] }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          marchSpace: { selector: vc.marchSpreadDestination, required: true }
+        steps:
+          - { label: march-spread-underground, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.attackAmbush:
+        traceLabel: "VC Attack then Ambush for surgical removal"
+        root: { actionTags: [attack], compound: { specialTags: [ambush-vc], timing: after } }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          attackSpace: { selector: vc.attackAmbushTarget, required: true }
+        steps:
+          - { label: attack-ambush-position, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: attack } }
+          - { label: ambush-surgical-removal, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-vc } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.agitationPrep:
+        traceLabel: "VC prepare Agitation-ready spaces before Coup"
+        root: { actionTags: [agitate] }
+        postureHook: vc.protectOppositionAndBases
+        roles:
+          prepSpace: { selector: vc.agitationReadinessTarget, required: true }
+        steps:
+          - { label: agitation-prep, role: prepSpace, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: targetSpace, actionTag: agitate } }
+        caps: { capClass: standard256, maxSteps: 1 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       vc.marchAmbushFromLoc:
         traceLabel: "VC March then Ambush from LoC"

@@ -1,6 +1,6 @@
 # 204FITLVCCOM-004: P1 — VC plan templates and terrorTax / terrorSubvert selector rebinding
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
@@ -17,7 +17,7 @@ This ticket lands the template surface that ties ticket 003's selectors to the F
 1. The verified authoring surface for plan templates uses `root: { actionTags: [...], compound: { specialTags: [...], timing: after|during } }` + `postureHook:` + `roles: { X: { selector: Y, required: true } }` + `steps: [{ label, role, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: X } }]` + `caps: { capClass: standard256, maxSteps: N }` + `fallback: { ifRoleTargetUnavailable: primitivePolicy }`. Reference shapes: `vc.rallySubvert@1959`, `vc.terrorTax@1995`, `nva.attackAmbush@1918`.
 2. Existing `vc.terrorTax@1995-2006` and `vc.terrorSubvert@1983-1994` are fully authored under the verified schema — this ticket modifies ONLY the `roles.<role>.selector` field on each (selector rebinding), leaving the template structure untouched.
 3. The trigger-report's fictional schema (`matchActionTag`, `microturnSteps`/`bindTo`, `compoundSpecial`, `posture:`) was caught in the reassessment — do NOT use it. Reference `archive/specs/202-fitl-us-completion.md:444` and Spec 204 §9 Corrected if implementation drifts.
-4. `vc.agitationPrep` authoring uses ticket 002's resolved Outcome A: author the template with `root.actionTags: [agitate]` and step `actionTag: agitate`. The tag is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`.
+4. `vc.agitationPrep` authoring uses ticket 002's resolved Outcome A: author the template with `root.actionTags: [agitate]` and step `decisionKind: chooseOne`, `decisionPath: targetSpace`, `actionTag: agitate`. The tag is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`, and its target surface is singular.
 5. New selectors (`vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`, `vc.agitationReadinessTarget`) authored in ticket 003 are available; this ticket binds them.
 
 ## Architecture Check
@@ -98,7 +98,7 @@ vc.attackAmbush:
   fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-**`vc.agitationPrep`** — author per spec §4.1 with `root.actionTags: [agitate]` and step `actionTag: agitate`, resolved by ticket 002.
+**`vc.agitationPrep`** — author per spec §4.1 with `root.actionTags: [agitate]` and step `decisionKind: chooseOne`, `decisionPath: targetSpace`, `actionTag: agitate`, resolved by ticket 002 and verified against the live action surface.
 
 ### 2. Rebind selectors on existing templates
 
@@ -197,3 +197,33 @@ Expected: ≥1 non-`vc.terrorTax`/`vc.terrorSubvert` reference each — confirms
 4. `grep -nE '(matchActionTag|microturnSteps|compoundSpecial|bindTo:|previewFallback)' data/games/fire-in-the-lake/92-agents.md` — fictional-schema sentinel; must return no new authored matches under the changes.
 5. `pnpm turbo test` — full-suite verification at session close.
 6. `pnpm run check:ticket-deps` — Deps validation.
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Added five VC plan templates in `data/games/fire-in-the-lake/92-agents.md`: `vc.rallyBaseNetwork`, `vc.rallyTax`, `vc.marchSpread`, `vc.attackAmbush`, and `vc.agitationPrep`.
+- Rebound `vc.terrorSubvert` role selectors to `vc.terrorHighPopTarget` and `vc.subvertHighValueTarget`.
+- Rebound `vc.terrorTax` role selectors to `vc.terrorHighPopTarget` and `vc.taxLocTarget`.
+- Preserved the old selectors (`vc.terrorAgitationSpace`, `vc.taxFundingSpace`, `vc.subvertArvnControlSpace`) because they remain referenced by other templates/modules.
+- Updated Spec 204 to record the live `vc.agitationPrep` step surface as `decisionKind: chooseOne`, `decisionPath: targetSpace`, `actionTag: agitate`.
+
+**Deviations from plan**:
+- `vc.agitationPrep` could not use the drafted `chooseNStep` / `targetSpaces` surface. The live `coupAgitateVC` action publishes a singular `targetSpace` decision surface, so the template uses `chooseOne` / `targetSpace`.
+- New templates use the existing transitional `vc.protectOppositionAndBases` posture hook, as planned, until the deferred P2b posture ticket authors the new hooks.
+
+**Verification**:
+- `grep -nE 'vc\\.(terrorAgitationSpace|taxFundingSpace|subvertArvnControlSpace)' data/games/fire-in-the-lake/92-agents.md` — confirmed old selectors remain referenced outside the rebound templates.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` from `packages/engine` after build — passed, 2/2 tests.
+- `pnpm run check:ticket-deps` — passed.
+- `grep -nE '(matchActionTag|microturnSteps|compoundSpecial|bindTo:|previewFallback)' data/games/fire-in-the-lake/92-agents.md` — only pre-existing `previewFallback` entries outside the new templates; no new forbidden template fields.
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md specs/204-fitl-vc-completion.md archive/tickets/204FITLVCCOM-004.md` — passed.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: not triggered as a source-file extraction; `92-agents.md` is a preexisting large GameSpecDoc authoring file, and this ticket's required YAML additions belong in that existing data block.
+- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md`, `specs/204-fitl-vc-completion.md`, and this ticket before this Outcome edit; whitespace check passed.
+- Proof lane classification: required lanes green; no remaining red or substituted lanes.
+- Terminal status allowed: every named template/rebinding deliverable is present, buildable, and covered by the required existing-witness regression.

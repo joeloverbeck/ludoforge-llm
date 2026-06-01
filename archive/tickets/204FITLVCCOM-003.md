@@ -124,7 +124,7 @@ Both witnesses must pass — the new selectors must not collide with existing se
 - Added `feature.vcUndergroundGuerrillaCount` with `globalTokenAgg` over `faction: VC`, `type: guerrilla`, and `activity: underground`, matching the P0a resolution in `archive/tickets/204FITLVCCOM-001.md`.
 - Added eight VC selectors in `data/games/fire-in-the-lake/92-agents.md`: `vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`, and `vc.agitationReadinessTarget`.
 - Kept faction-specific per-zone needs expressed through population, Support/Opposition markers, and projected-margin proxies; no `zoneTokenAgg` faction filter or engine ref extension was introduced.
-- Post-review cleanup retargeted Spec 204's ticket list to this archived path and clarified `tickets/204FITLVCCOM-004.md`'s selector-availability handoff to include `vc.agitationReadinessTarget`.
+- Post-review cleanup retargeted Spec 204's ticket list to this archived path and clarified `archive/tickets/204FITLVCCOM-004.md`'s selector-availability handoff to include `vc.agitationReadinessTarget`.
 
 **Deviations from plan**:
 - `vc.rallyBaseTarget` uses verified scalar/item-local proxies (`category`, Support/Opposition marker, projected VC margin) rather than reading `terrainTags` directly; `terrainTags` is an array and was not part of the audited selector-safe scalar surface.

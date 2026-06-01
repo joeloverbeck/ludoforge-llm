@@ -98,7 +98,7 @@ Read-only references for the investigation:
 - Recorded Outcome A in `specs/204-fitl-vc-completion.md` §11: the resolved action tag is `agitate`.
 - Updated Spec 204's `vc.agitationPrep` examples and acceptance prose to use `root.actionTags: [agitate]` and step `actionTag: agitate`.
 - Clarified that `agitate` is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`; card-phase preparation remains encoded by `vc.rallyTax`, `vc.marchSpread`, and `vc.terrorTax` under the future `vc.agitationReadiness` doctrine.
-- Post-review cleanup clarified `tickets/204FITLVCCOM-004.md` so its template instructions consume the resolved `agitate` tag directly instead of treating `vc.agitationPrep` as conditional.
+- Post-review cleanup clarified `archive/tickets/204FITLVCCOM-004.md` so its template instructions consume the resolved `agitate` tag directly instead of treating `vc.agitationPrep` as conditional.
 
 **Evidence**:
 - `rg -n -i 'agitat|agitate|coupPrep|coup prep|prepare.*coup|coup.*prepare' data/games/fire-in-the-lake packages/engine/src` found `data/games/fire-in-the-lake/30-rules-actions.md` `coupAgitateVC` with `tags: [agitate]` and `phase: [coupSupport]`.

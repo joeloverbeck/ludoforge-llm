@@ -59,7 +59,7 @@ Verified placeholder selectors and their exact lines:
 | 667 | `arvn.transportOrigin` | `overstackedSafeOrigin` | `value: 1` flag |
 | 741 | `arvn.pieceRemovalPriority` | `baseAndControlThreat` | `value: 1` flag |
 
-The same pattern at `us.adviseTargetSpace:846` (`indigenousForceMultiplier` with `value: 1`) is owned by Spec 202 (COMPLETED); §10 documents the cross-spec coordination.
+Post-002 reassessment found the same pattern still present in additional selector-library rows outside the five ARVN selectors above. 205FITLARVSEL-007 completed that prerequisite cleanup before the §7 faction-agnostic invariant lands.
 
 **Selector authoring shape (verified)**: every existing selector uses `quality: { components: [{id, value, weight}], order: qualityDesc, result: {...} }` where `value` is a policy expression composed from `boolToNumber`, `coalesce`, `zoneProp: { zone, prop }`, `lookup`, `aggregate`, `ref: <namespace>.<id>`, and comparison/arithmetic operators. The new §4 blocks adopt this shape verbatim; exemplars cited per sub-section.
 
@@ -475,7 +475,7 @@ If any witness becomes trajectory-sensitive under the new selectors, distill per
 ## 10. Out of scope (named follow-on / sibling)
 
 - **Specs 201, 202, 203, 204** (sibling, all COMPLETED).
-- **US-side placeholder cleanup** (`us.adviseTargetSpace:846`, `indigenousForceMultiplier` with `value: 1`) — owned by Spec 202 (COMPLETED). P0 verifies Spec 202 cleaned this row; if not, a follow-up against `202FITLUS*` is opened.
+- **Existing non-ARVN selector placeholder cleanup** — live post-002 reassessment found remaining selector-library `value: 1` constants across US/NVA/VC rows plus one zero-weight ARVN destination row. 205FITLARVSEL-007 completed that prerequisite so the §7 invariant can stay strict and faction-agnostic.
 - **Sweep+Raid preview-derived posture composition** — the proposal recommended scoring Sweep targets by post-Sweep Raid-availability via a `preview.role.sweepSpace.raidRemovalAvailable` term. The `preview.role.*` namespace does not exist in the current engine (available namespaces: `preview.option.*`, `preview.feature.*`, `preview.var.*`, `preview.victory.*`, `preview.inner.*`, `preview.relationship.*`), and `previewFallback` support in plan-template posture `prefer` terms is unverified. A follow-up spec authoring per-role preview refs (or a per-step preview avenue) would unblock this composition. Until then, §4.2 (Sweep) and §4.3 (Raid) selectors each carry item-local features that approximate the doctrine independently.
 - **Compiler-level enforcement of "no `value: 1` standalone constants in selectors"** — uncommitted; the §7 faction-agnostic fixture invariant test covers the spot-check.
 
@@ -501,5 +501,6 @@ Decomposed via `/spec-to-tickets` on 2026-06-01:
 - [`archive/tickets/205FITLARVSEL-002.md`](../archive/tickets/205FITLARVSEL-002.md) — P1 — Replace placeholder selector bodies (covers §§4.1–4.4, 4.7)
 - [`tickets/205FITLARVSEL-003.md`](../tickets/205FITLARVSEL-003.md) — P2 — Transport postState origin-control constraint (covers §4.5)
 - [`archive/tickets/205FITLARVSEL-004.md`](../archive/tickets/205FITLARVSEL-004.md) — P3 — Govern Patronage-availability term (covers §4.6)
+- [`archive/tickets/205FITLARVSEL-007.md`](../archive/tickets/205FITLARVSEL-007.md) — Prerequisite cleanup for selector value-one invariant
 - [`tickets/205FITLARVSEL-005.md`](../tickets/205FITLARVSEL-005.md) — Faction-agnostic no-placeholder-value-one invariant (covers §7 last bullet)
 - [`tickets/205FITLARVSEL-006.md`](../tickets/205FITLARVSEL-006.md) — P4 — Regression re-attestation (covers §6 P4)

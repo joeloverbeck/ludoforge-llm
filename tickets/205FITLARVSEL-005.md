@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/205FITLARVSEL-002.md`
+**Deps**: `archive/tickets/205FITLARVSEL-002.md`, `archive/tickets/205FITLARVSEL-007.md`
 
 ## Problem
 
@@ -13,7 +13,7 @@ Per spec §7 last bullet, add a forward-protection invariant test that scans eve
 ## Assumption Reassessment (2026-06-01)
 
 1. After 205FITLARVSEL-002 lands, no `value: 1` standalone components remain in the five ARVN placeholder selectors (`arvn.trainSpaceForControlOrPacification`, `arvn.sweepToExposeSpace`, `arvn.raidRemovalTarget`, `arvn.transportOrigin`, `arvn.pieceRemovalPriority`).
-2. The same pattern at `us.adviseTargetSpace:846` (`indigenousForceMultiplier` with `value: 1`) is owned by Spec 202 (COMPLETED). The faction-agnostic scan must either pass against the current Spec-202-cleaned state OR fail and signal a follow-up against `202FITLUS*` to clean the row. **Verify Spec 202's actual cleanup at implementation time** — the reassessment did not confirm.
+2. Live reassessment after 002/004 found existing selector-library scalar `value: 1` components outside those five selectors. 205FITLARVSEL-007 now owns the prerequisite cleanup so this ticket can remain a strict invariant test rather than carrying an allowlist.
 3. Existing test placement convention: `packages/engine/test/policy-profile-quality/` for profile-quality witnesses. Faction-agnostic invariants are acceptable here per `.claude/rules/testing.md`; `packages/engine/test/determinism/` is reserved for engine-level invariants (replay identity, bounded execution). The proposed faction-agnostic placeholder scan is profile-quality forward-protection, not an engine invariant, so `policy-profile-quality/` is the correct directory.
 4. The scan parses YAML; permissive regex on raw text would false-positive on commented `# value: 1` lines.
 
@@ -40,7 +40,7 @@ The test file's header comment must state explicitly that the test is faction-ag
 
 ### 3. Verify against the post-002 codebase
 
-After 205FITLARVSEL-002 lands, the scan should pass clean. If 002 left any ARVN residue, the test will fail until 002's cleanup is complete — that is the correct behavior.
+After 205FITLARVSEL-007 lands, the scan should pass clean. If any selector-library scalar `value: 1` residue remains, the test will fail until the cleanup is complete — that is the correct behavior.
 
 ## Files to Touch
 
@@ -50,7 +50,7 @@ After 205FITLARVSEL-002 lands, the scan should pass clean. If 002 left any ARVN 
 ## Out of Scope
 
 - Compiler-level enforcement of the same invariant (spec §10 explicitly defers this — a `Schema-error: standalone value-1 component` compile-time check is a separate spec).
-- Fixing US-row `us.adviseTargetSpace:846` — owned by Spec 202 (COMPLETED); if 202 left the row, file a follow-up against `202FITLUS*` rather than fixing here.
+- Fixing existing selector bodies — owned by 205FITLARVSEL-007 before this invariant lands.
 - Modifying any selector body (those are 205FITLARVSEL-002, -003, -004).
 - Cross-game checks beyond the `value: 1` standalone pattern (e.g., redundant component IDs, weight-zero components) — out of scope for this ticket.
 

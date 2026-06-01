@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/208-fitl-arvn-baseline-pq-witness-failures.md",
-  "archived_spec": "archive/specs/208-fitl-arvn-baseline-pq-witness-failures.md",
-  "last_ticket": "archive/tickets/208FITLARVPQ-004.md",
+  "originating_spec": "archive/specs/203-fitl-nva-completion.md",
+  "archived_spec": "archive/specs/203-fitl-nva-completion.md",
+  "last_ticket": "archive/tickets/203FITLNVACOM-006.md",
   "last_result": "completed_archived",
-  "last_work_commit": "f4427520e597df72ddedfd14232bdd111ae3a071",
+  "last_work_commit": "f55d9ea246568d582b2de07078e1121ca1e12c9f",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 208 ticket 004 completed and archived; originating spec archived; state-only commit records the finalized work commit and leaves the worktree clean.",
+  "owned_dirty_summary": "Spec 203 ticket 006 and originating spec completed and archived in work commit f55d9ea246568d582b2de07078e1121ca1e12c9f. Post-state-commit worktree expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-05-31"
+  "updated_at": "2026-06-01"
 }

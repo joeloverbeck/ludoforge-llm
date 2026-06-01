@@ -182,6 +182,15 @@ agents:
               props:
                 faction: { eq: NVA }
                 type: { eq: base }
+      nvaTroopCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: NVA }
+                type: { eq: troops }
       availableUsTroops:
         type: number
         expr:
@@ -268,6 +277,12 @@ agents:
           sub:
             - { ref: feature.projectedArvnMargin }
             - { ref: feature.arvnMargin }
+      projectedVcMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedVcMargin }
+            - { ref: feature.vcMargin }
       projectedCapabilityGain:
         type: number
         expr:
@@ -1133,6 +1148,37 @@ agents:
               weight: 6
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.rallyTrailTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: laosCambodiaPriority
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: country
+                    - laosCambodia
+              weight: 8
+            - id: trailRepair
+              value:
+                coalesce:
+                  - { ref: feature.projectedTrailDelta }
+                  - 0
+              weight: 4
+            - id: populationDensity
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.marchExpansionSpace:
         scopes: [move]
         source:
@@ -1153,6 +1199,72 @@ agents:
               weight: 1
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.marchControlDestination:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: populationControl
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 6
+            - id: projectedNvaGain
+              value:
+                coalesce:
+                  - { ref: feature.projectedSelfMarginDelta }
+                  - 0
+              weight: 5
+            - id: oppositionPressure
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.marchInfiltrateDestination:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: populationBuild
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+            - id: projectedNvaStrength
+              value:
+                coalesce:
+                  - { ref: feature.projectedNvaMargin }
+                  - 0
+              weight: 3
+            - id: trailAccess
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: country
+                    - laosCambodia
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.infiltrateTargetSpace:
         scopes: [move]
         source:
@@ -1166,6 +1278,60 @@ agents:
               value:
                 ref: feature.projectedNvaMargin
               weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.infiltrateForNvaGain:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: projectedNvaGain
+              value:
+                coalesce:
+                  - { ref: feature.projectedSelfMarginDelta }
+                  - 0
+              weight: 6
+            - id: nvaMarginPosition
+              value:
+                coalesce:
+                  - { ref: feature.projectedNvaMargin }
+                  - 0
+              weight: 2
+            - id: logisticsSpace
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: country
+                    - laosCambodia
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.infiltrateVcTargetRational:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: projectedNvaGain
+              value:
+                coalesce:
+                  - { ref: feature.projectedSelfMarginDelta }
+                  - 0
+              weight: 6
+            - id: vcDenial
+              value:
+                boolToNumber:
+                  ref: condition.vcNearWin.satisfied
+              weight: 5
+            - id: avoidVcHelp
+              value:
+                coalesce:
+                  - { ref: feature.projectedVcMargin }
+                  - 0
+              weight: -2
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.ambushTargetSpace:
@@ -1200,6 +1366,34 @@ agents:
               weight: -1
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.bombardCoinStackTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: coinStackPressure
+              value:
+                coalesce:
+                  - { ref: feature.projectedUsMarginDelta }
+                  - 0
+              weight: -4
+            - id: nvaControlSwing
+              value:
+                coalesce:
+                  - { ref: feature.projectedSelfMarginDelta }
+                  - 0
+              weight: 5
+            - id: populationStakes
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.terrorSupportDenialSpace:
         scopes: [move]
         source:
@@ -1217,6 +1411,38 @@ agents:
             - id: rallyPreparation
               value: 1
               weight: 4
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      nva.terrorSupportReductionTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: supportDenialPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: activeSupportTarget
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 5
+            - id: rallyPreparation
+              value: 1
+              weight: 2
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       nva.locOccupationSpace:
@@ -1620,6 +1846,26 @@ agents:
           - { label: infiltrate-build-or-takeover, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.rallyTrail:
+        traceLabel: "NVA Rally to seed Trail and sanctuary Bases"
+        root: { actionTags: [rally] }
+        postureHook: nva.protectLogisticsAndBases
+        roles:
+          rallySpace: { selector: nva.rallyTrailTarget, required: true }
+        steps:
+          - { label: rally-trail-sanctuary, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.marchControl:
+        traceLabel: "NVA March to seize NVA Control"
+        root: { actionTags: [march] }
+        postureHook: nva.preserveTrail
+        roles:
+          marchSpace: { selector: nva.marchControlDestination, required: true }
+        steps:
+          - { label: march-control-space, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.marchInfiltrate:
         traceLabel: "NVA March then Infiltrate"
         root: { actionTags: [march], compound: { specialTags: [infiltrate], timing: after } }
@@ -1631,6 +1877,28 @@ agents:
           - { label: march-expansion-space, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
           - { label: infiltrate-vc-base-or-build, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
         caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.marchInfiltrateControl:
+        traceLabel: "NVA March then Infiltrate to build NVA strength"
+        root: { actionTags: [march], compound: { specialTags: [infiltrate], timing: after } }
+        postureHook: nva.protectLogisticsAndBases
+        roles:
+          marchSpace: { selector: nva.marchInfiltrateDestination, required: true }
+          infiltrateSpace: { selector: nva.infiltrateForNvaGain, required: true }
+        steps:
+          - { label: march-build-space, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+          - { label: infiltrate-build, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.infiltrateVcOnlyWhenRational:
+        traceLabel: "NVA Infiltrate VC only when rational"
+        root: { actionTags: [infiltrate] }
+        postureHook: nva.preserveTrail
+        roles:
+          infiltrateSpace: { selector: nva.infiltrateVcTargetRational, required: true }
+        steps:
+          - { label: infiltrate-vc-rational, role: infiltrateSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: infiltrate } }
+        caps: { capClass: standard256, maxSteps: 1 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.marchAmbush:
         traceLabel: "NVA March then Ambush"
@@ -1655,6 +1923,26 @@ agents:
           - { label: attack-control-space, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: attack } }
           - { label: ambush-high-leverage-piece, role: ambushSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-nva } }
         caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.bombardCoinStack:
+        traceLabel: "NVA Bombard concentrated COIN stacks"
+        root: { actionTags: [bombard] }
+        postureHook: nva.protectLogisticsAndBases
+        roles:
+          bombardSpace: { selector: nva.bombardCoinStackTarget, required: true }
+        steps:
+          - { label: bombard-coin-stack, role: bombardSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: bombard } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      nva.terrorSupportReduction:
+        traceLabel: "NVA Terror for Support denial"
+        root: { actionTags: [terror] }
+        postureHook: nva.protectLogisticsAndBases
+        roles:
+          terrorSpace: { selector: nva.terrorSupportReductionTarget, required: true }
+        steps:
+          - { label: terror-support-reduction, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
+        caps: { capClass: standard256, maxSteps: 1 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.locOccupationBeforeCoup:
         traceLabel: "NVA occupy LoCs before Coup"
@@ -1824,6 +2112,30 @@ agents:
             value:
               ref: relationship.nominalAlly.gainValue
             weight: -20
+            fallback:
+              contribution: 0
+      nva.preserveTrail:
+        traceLabel: "NVA preserve Trail value"
+        prefer:
+          - id: trail-delta
+            value:
+              coalesce:
+                - { ref: feature.projectedTrailDelta }
+                - 0
+            weight: 4
+            fallback:
+              contribution: 0
+      nva.avoidVcKingmaking:
+        traceLabel: "NVA avoid king-making VC"
+        prefer:
+          - id: vc-kingmaking-penalty
+            when:
+              ref: condition.vcNearWin.satisfied
+            value:
+              coalesce:
+                - { ref: feature.projectedVcMarginDelta }
+                - 0
+            weight: -6
             fallback:
               contribution: 0
       vc.protectOppositionAndBases:
@@ -2022,6 +2334,8 @@ agents:
           - arvn.sweepRaid
           - us.sweepAirStrike
           - nva.marchInfiltrate
+          - nva.marchControl
+          - nva.marchInfiltrateControl
           - nva.marchAmbush
           - nva.locOccupationBeforeCoup
           - vc.marchSubvert
@@ -2387,6 +2701,96 @@ agents:
               - { id: vcBaseTakeover, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      nva.baseNetwork:
+        traceLabel: "NVA build Base network"
+        when:
+          lt:
+            - { ref: feature.nvaBaseCount }
+            - 6
+        applies:
+          scopes: [move]
+          actionTags: [rally, infiltrate]
+        priority:
+          tier: 40
+        scoreGroups:
+          - id: baseExpansion
+            summary: sum
+            terms:
+              - id: projectedBaseCount
+                weight: 4
+                value:
+                  coalesce:
+                    - { ref: preview.feature.nvaBaseCount }
+                    - { ref: feature.nvaBaseCount }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.rallyTrail
+          - nva.rallyInfiltrate
+      nva.takeControl:
+        traceLabel: "NVA seize Control"
+        when:
+          lt:
+            - { ref: feature.nvaMargin }
+            - -3
+        applies:
+          scopes: [move]
+          actionTags: [march, attack]
+        priority:
+          tier: 45
+        scoreGroups:
+          - id: controlSwing
+            summary: sum
+            terms:
+              - { id: projectedNvaMarginDelta, weight: 5, value: { ref: feature.projectedSelfMarginDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.marchControl
+          - nva.marchInfiltrateControl
+      nva.conventionalPressure:
+        traceLabel: "NVA apply conventional pressure"
+        when:
+          gt:
+            - { ref: feature.nvaTroopCount }
+            - 8
+        applies:
+          scopes: [move]
+          actionTags: [attack, bombard]
+        priority:
+          tier: 35
+        scoreGroups:
+          - id: pressure
+            summary: sum
+            terms:
+              - { id: projectedNvaMarginDelta, weight: 4, value: { ref: feature.projectedSelfMarginDelta } }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - nva.attackAmbush
+          - nva.bombardCoinStack
+      nva.vcRivalRisk:
+        traceLabel: "NVA deny VC when near win"
+        when:
+          ref: condition.vcNearWin.satisfied
+        applies:
+          scopes: [move]
+        priority:
+          tier: 60
+        scoreGroups:
+          - id: vcDenial
+            summary: sum
+            terms:
+              - id: vcMarginPenalty
+                weight: -5
+                value:
+                  coalesce:
+                    - { ref: feature.projectedVcMarginDelta }
+                    - 0
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - nva.terrorSupportReduction
       vc.buildPoliticalNetwork:
         traceLabel: "VC build hidden political network"
         when: true
@@ -2681,6 +3085,35 @@ agents:
                 - 0
         severity: demote
         penalty: 350
+        onUnavailable: noFire
+      nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial:
+        traceLabel: "NVA avoid low-yield VC Infiltrate outside denial"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.infiltrate }
+            - lt:
+                - coalesce:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - 0
+                - 1
+            - not: { ref: condition.vcNearWin.satisfied }
+        severity: demote
+        penalty: 600
+        onUnavailable: noFire
+      nva.avoidLowYieldBombard:
+        traceLabel: "NVA avoid low-yield Bombard"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.bombard }
+            - lt:
+                - coalesce:
+                    - { ref: feature.projectedSelfMarginDelta }
+                    - 0
+                - 1
+        severity: demote
+        penalty: 600
         onUnavailable: noFire
       vc.avoidConventionalAttackWithoutAmbush:
         traceLabel: "VC avoid conventional Attack without Ambush payoff"
@@ -3090,6 +3523,8 @@ agents:
           - nva.doNotServeVcWin
           - nva.preserveTrailAndBases
           - nva.avoidLowYieldAttrition
+          - nva.avoidStealingVcBaseWithoutNvaGainOrVcDenial
+          - nva.avoidLowYieldBombard
         strategyModules:
           - shared.immediateWin
           - shared.blockCurrentLeader
@@ -3101,12 +3536,22 @@ agents:
           - nva.logisticsAndTrail
           - nva.controlAndBases
           - nva.vcRivalLeverage
+          - nva.baseNetwork
+          - nva.takeControl
+          - nva.conventionalPressure
+          - nva.vcRivalRisk
         planTemplates:
           - nva.rallyInfiltrate
           - nva.marchInfiltrate
           - nva.marchAmbush
           - nva.attackAmbush
           - nva.locOccupationBeforeCoup
+          - nva.rallyTrail
+          - nva.marchControl
+          - nva.marchInfiltrateControl
+          - nva.infiltrateVcOnlyWhenRational
+          - nva.bombardCoinStack
+          - nva.terrorSupportReduction
         considerations:
           - preferProjectedSelfMargin
           - preserveResources

@@ -51,7 +51,7 @@ The five specs are **NOT fully independent** (unlike 196–199, which were mutua
    Authors `us.trainPacify`, `us.patrolAdvise`, `us.airLiftAssault`, `us.airLiftControlOrWithdrawal`, `us.assaultHighValueInfrastructure`, `us.eventDirectSwing` plan templates; adds `us.buildSupport`, `us.preserveAvailability`, `us.protectAidEcon`, `us.avoidArvnKingmaking` modules; explicit `us.airLiftTrain` decision (defaults to excluded with documented rationale). 10 profile-quality witnesses.
 
 3. **Spec 203 — FITL NVA Baseline Completion to ARVN-Parity**
-   (`specs/203-fitl-nva-completion.md`)
+   (`archive/specs/203-fitl-nva-completion.md`)
    Authors NVA `rallyTrail`, `marchControl`, `marchInfiltrateControl`, `infiltrateVcOnlyWhenRational`, `marchAmbush`, `attackAmbush`, `bombardCoinStack`, `terrorSupportReduction`, `eventLogisticsOrControlSwing` templates; adds `baseNetwork`, `takeControl`, `conventionalPressure`, `vcRivalRisk` modules; closes the VC-rival filter gap (Infiltrate only when rational). 10 witnesses.
 
 4. **Spec 204 — FITL VC Baseline Completion to ARVN-Parity**

@@ -1,6 +1,6 @@
 # 205FITLARVSEL-001: P0 — Selector vocabulary baseline for ARVN cleanup
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — vocabulary audit only
@@ -96,3 +96,24 @@ The report is consumed by 205FITLARVSEL-002 and 205FITLARVSEL-004.
 
 1. `ls reports/205-fitl-arvn-selector-vocabulary-baseline.md` — confirm the report exists.
 2. `pnpm turbo build` — verify no source files changed and the build remains byte-deterministic.
+
+## Outcome
+
+Completed: 2026-06-01
+
+What changed:
+- Added `reports/205-fitl-arvn-selector-vocabulary-baseline.md`.
+- Classified every Spec 205 §§4.1-4.7 placeholder into the required vocabulary buckets.
+- Confirmed that selector-scope `lookup` and `zoneProp` are shipped and cited existing authoring examples.
+- Confirmed that posture `prefer` terms use `fallback.contribution`, not `previewFallback`.
+
+Deviations and reassessment:
+- The baseline found that Spec 205's inline `aggregate.query.tokensInZone` examples are condition/value-expression syntax, not selector `quality.components[].value` syntax.
+- The live selector policy-expression surface exposes `zoneTokenAgg`, but it does not support `faction`/`type`/`activity` token filters. Therefore filtered item-local token counts such as `hasInsurgentBase`, `undergroundGuerrillaCount`, `arvnTroopCount`, and `arvnCubesExceedUsCubes` are classified as `(d)` derived-metric/compiler-surface gaps rather than currently authorable `(c)` expressions.
+- Downstream tickets 205FITLARVSEL-002 and 205FITLARVSEL-004 must not author synthetic zeroes or unfiltered counts for these fields; they need a boundary reset or a generic filtered local-token-count surface before exact implementation.
+
+Verification:
+- `ls reports/205-fitl-arvn-selector-vocabulary-baseline.md` — passed; report exists.
+- `pnpm turbo build` — passed.
+- `pnpm run check:ticket-deps` — passed for 6 active tickets and 2583 archived tickets.
+- `git diff --check -- tickets/205FITLARVSEL-001.md reports/205-fitl-arvn-selector-vocabulary-baseline.md .codex/run-state/implement-spec-tickets.json` — passed before archival.

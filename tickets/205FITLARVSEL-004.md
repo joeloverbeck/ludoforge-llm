@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — YAML game-data only
-**Deps**: `tickets/205FITLARVSEL-001.md`
+**Deps**: `archive/tickets/205FITLARVSEL-001.md`
 
 ## Problem
 

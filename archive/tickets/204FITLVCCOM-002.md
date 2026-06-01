@@ -1,6 +1,6 @@
 # 204FITLVCCOM-002: P0b — Agitation action-tag investigation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — investigation only
@@ -89,3 +89,34 @@ Read-only references for the investigation:
 2. `grep -nF 'vc.agitationPrep' specs/204-fitl-vc-completion.md` — enumerate occurrences for cascading updates under Outcome B.
 3. `pnpm run check:ticket-deps` — validates this ticket's Deps field.
 4. `pnpm -F @ludoforge/engine build` — sanity.
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Recorded Outcome A in `specs/204-fitl-vc-completion.md` §11: the resolved action tag is `agitate`.
+- Updated Spec 204's `vc.agitationPrep` examples and acceptance prose to use `root.actionTags: [agitate]` and step `actionTag: agitate`.
+- Clarified that `agitate` is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`; card-phase preparation remains encoded by `vc.rallyTax`, `vc.marchSpread`, and `vc.terrorTax` under the future `vc.agitationReadiness` doctrine.
+- Post-review cleanup clarified `tickets/204FITLVCCOM-004.md` so its template instructions consume the resolved `agitate` tag directly instead of treating `vc.agitationPrep` as conditional.
+
+**Evidence**:
+- `rg -n -i 'agitat|agitate|coupPrep|coup prep|prepare.*coup|coup.*prepare' data/games/fire-in-the-lake packages/engine/src` found `data/games/fire-in-the-lake/30-rules-actions.md` `coupAgitateVC` with `tags: [agitate]` and `phase: [coupSupport]`.
+- `rg -n "actionTags: \\[(agitate|coupAgitateVC)|specialTags: \\[(agitate|coupAgitateVC)|actionTag: (agitate|coupAgitateVC)|tags: \\[(agitate|coupAgitateVC)" data/games/fire-in-the-lake/92-agents.md data/games/fire-in-the-lake/30-rules-actions.md` found only the authored `tags: [agitate]` action and no existing agent template binding.
+- The same grep over `packages/engine/src` found no engine-side hardcoded Agitation tag.
+
+**Deviations from plan**:
+- The ticket expected a likely negative case, but live data proved a valid authored `agitate` tag exists. Outcome B cleanup was not applied.
+
+**Verification**:
+- `pnpm run check:ticket-deps` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `git diff --check -- specs/204-fitl-vc-completion.md` — passed.
+- `rg -n "<P0b|pending P0b|conditionally included|if P0b drops|when authored" specs/204-fitl-vc-completion.md` — no matches.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: not triggered; markdown-only edit.
+- Untracked/touched-file hygiene: worktree contained only `specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
+- Proof lane classification: required lanes green; no red or substituted lanes.
+- Terminal status allowed: the Outcome A decision is recorded with grep evidence, and Outcome B-only `vc.agitationPrep` removal was not triggered.

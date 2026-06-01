@@ -25,7 +25,7 @@ Complete `vc-baseline` to ARVN-parity by authoring plan templates, selectors, st
    - `vc.rallyTax` — Rally + Tax compound where Tax funds future Terror/Rally.
    - `vc.marchSpread` — March to spread Underground network into Opposition / Neutral spaces.
    - `vc.attackAmbush` — Attack with Ambush selector for surgical removal.
-   - `vc.agitationPrep` — pre-Coup template that consolidates VC pieces and Resources in non-COIN-Controlled spaces (action tag pending P0b).
+   - `vc.agitationPrep` — Coup-support template that consolidates VC pieces and Resources in non-COIN-Controlled spaces through the resolved `agitate` action tag (P0b).
    - **Selector rebinding** on existing `vc.terrorTax` and `vc.terrorSubvert`: shift `terrorSpace` from `vc.terrorAgitationSpace` to a high-pop non-COIN-Controlled selector and `taxSpace` from `vc.taxFundingSpace` to a LoC-targeted selector (the existing templates are fully authored at `@1995-2006` and `@1983-1994`; the change is the selector binding, not the template structure).
    - Event Opposition/Resource swings continue to be encoded by the already-bound `shared.eventDirectSwing` strategy module (no dedicated VC event plan template — same conclusion Spec 202 reached for `us.eventDirectSwing` at §11).
 
@@ -192,22 +192,22 @@ vc.attackAmbush:
 
 Authoring reference: existing `vc.marchAmbushFromLoc@2007` for the VC `ambush-vc` compound pattern; `nva.attackAmbush@1918` for the Attack+Ambush template shape.
 
-**`vc.agitationPrep`** — pre-Coup template that consolidates VC pieces and Resources in non-COIN-Controlled spaces:
+**`vc.agitationPrep`** — Coup-support Agitation template that consolidates VC pieces and Resources in non-COIN-Controlled spaces:
 
 ```yaml
 vc.agitationPrep:
   traceLabel: "VC prepare Agitation-ready spaces before Coup"
-  root: { actionTags: [<P0b-resolved>] }  # candidate tags: tax | rally | march — P0b resolves
+  root: { actionTags: [agitate] }  # resolved by 204FITLVCCOM-002; Coup-support phase
   postureHook: vc.preserveAgitationResources
   roles:
     prepSpace: { selector: vc.agitationReadinessTarget, required: true }
   steps:
-    - { label: agitation-prep, role: prepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: <P0b-resolved> } }
+    - { label: agitation-prep, role: prepSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: agitate } }
   caps: { capClass: standard256, maxSteps: 1 }
   fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-P0b decides the action tag: VC Agitation is a Coup-phase Operation, not a card-phase action. If the engine publishes no Agitation tag during card-phase preparation, the deliverable collapses into `vc.rallyTax` + `vc.marchSpread` + `vc.terrorTax` rebinding under the `vc.agitationReadiness` doctrine (see §4.3) and `vc.agitationPrep` itself is dropped. P0b records the decision in the §11 Open Questions resolution log.
+P0b resolved the action tag as `agitate` on the authored `coupAgitateVC` action (`phase: [coupSupport]`). The template therefore represents direct Coup-support Agitation selection; card-phase Agitation preparation remains encoded by `vc.rallyTax` + `vc.marchSpread` + `vc.terrorTax` rebinding under the `vc.agitationReadiness` doctrine (see §4.3).
 
 ### 4.2 Selectors (additions — item-local features)
 
@@ -377,7 +377,7 @@ vc.agitationReadiness:
   guardrailIds: []
   fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
   enablesPlanTemplates:
-    # vc.agitationPrep is conditionally included; resolved by P0b
+    - vc.agitationPrep
     - vc.rallyTax
     - vc.marchSpread
 
@@ -459,7 +459,7 @@ vc.avoidNvaKingmaking:
       fallback: { contribution: 0 }
 ```
 
-`vc.preserveUndergroundAndBases` is attached as `postureHook` on `vc.rallyBaseNetwork`, `vc.attackAmbush`, and `vc.marchSpread` (§4.1). `vc.preserveAgitationResources` is attached on `vc.rallyTax` and `vc.agitationPrep` (when authored). `vc.avoidNvaKingmaking` is bound via the `vc.nvaRivalRisk` strategy module rather than a `postureHook` because no single template carries it (per Spec 202 §11's resolution that unhooked postures are inert; an alternative is to attach it as a second `prefer` term on `vc.protectOppositionAndBases` — P2b decides).
+`vc.preserveUndergroundAndBases` is attached as `postureHook` on `vc.rallyBaseNetwork`, `vc.attackAmbush`, and `vc.marchSpread` (§4.1). `vc.preserveAgitationResources` is attached on `vc.rallyTax` and `vc.agitationPrep`. `vc.avoidNvaKingmaking` is bound via the `vc.nvaRivalRisk` strategy module rather than a `postureHook` because no single template carries it (per Spec 202 §11's resolution that unhooked postures are inert; an alternative is to attach it as a second `prefer` term on `vc.protectOppositionAndBases` — P2b decides).
 
 ### 4.5 Guardrails (additions and strengthening)
 
@@ -528,14 +528,14 @@ vc-baseline:
       - vc.rallyTax
       - vc.marchSpread
       - vc.attackAmbush
-      # vc.agitationPrep added conditionally if P0b resolves the action tag
+      - vc.agitationPrep
 ```
 
 Postures `vc.preserveUndergroundAndBases`, `vc.preserveAgitationResources`, and (if applicable) `vc.avoidNvaKingmaking` are wired through `postureHook` on the listed templates rather than directly in `vc-baseline.use` (consistent with the existing `vc.protectOppositionAndBases` pattern).
 
 ## 5. Edge cases and prerequisites
 
-- **`vc.agitationPrep` action tag (P0b)**: VC Agitation is a Coup-phase Operation, not a card-phase Operation. The template's `root.actionTags` is contingent on what tag the engine publishes for Agitation-readiness actions during card-phase preparation. If no such tag exists, the template is dropped and the doctrine is encoded entirely through `vc.rallyTax` + `vc.marchSpread` + the `vc.agitationReadiness` strategy module's `enablesPlanTemplates`. P0b records the decision.
+- **`vc.agitationPrep` action tag (P0b)**: resolved by 204FITLVCCOM-002 as `agitate` on the authored `coupAgitateVC` action. The tag is published in `phase: [coupSupport]`, not during card-phase Operations, so `vc.agitationPrep` covers direct Coup-support Agitation selection while card-phase preparation remains encoded through `vc.rallyTax` + `vc.marchSpread` + the `vc.agitationReadiness` strategy module's non-Agitation template gates.
 - **`feature.projectedNvaMarginDelta` (P1)**: missing — only `projectedArvnMarginDelta@274` and `projectedVcMarginDelta@280` exist. Author as a new candidateFeature `sub(feature.projectedNvaMargin, feature.nvaMargin)` per the Spec 202 pattern (`archive/specs/202-fitl-us-completion.md:466-478`); P0a confirms both operands exist.
 - **`feature.vcUndergroundGuerrillaCount` (P0a → P1)**: missing — only `feature.vcGuerrillaCount@95` (unfiltered) exists. P0a resolution path: (a) author via `globalTokenAgg` with a token-active-state filter (verify the operator supports an `isUnderground`/`active` predicate against an existing `globalTokenAgg@<ref>` for shape), (b) re-express the posture via per-zone `lookup` for the Underground marker, or (c) use the coarser `vcGuerrillaCount` as the posture's `prefer` value (draft in §4.4 already uses this fallback).
 - **`vc.subvertHighValueTarget` vocabulary (P0a)**: pre-resolve the per-zone ARVN-Patronage proxy (likely a combination of `population` + `supportOpposition: passiveSupport` marker + a `feature.projectedArvnMarginDelta` sign filter) before P1 authoring. The template `vc.terrorSubvert` and module `vc.subvertPatronage` both bind to this selector.
@@ -547,7 +547,7 @@ Postures `vc.preserveUndergroundAndBases`, `vc.preserveAgitationResources`, and 
 | Phase | Deliverable | Acceptance | Effort |
 |---|---|---|---|
 | **P0a** | Capability/vocabulary re-expression audit — produce a table classifying every `zoneProp.*`/feature-ref/condition the spec uses into (a) authorable, (b) authorable via proxy, (c) requires engine work. Mirror `archive/specs/202-fitl-us-completion.md:466-478`. Includes `vc.subvertHighValueTarget` zone-prop vocabulary and the `vcUndergroundGuerrillaCount`-vs-proxy decision. | Audit table merged into §11 Open Questions resolution log; all signals classified (a) or (b); no (c) entries remaining without an engine-prerequisite spec. | S |
-| **P0b** | Agitation action-tag investigation — verify whether the engine publishes an Agitation tag during card-phase preparation, or if VC Agitation is purely Coup-phase resolution. | Decision recorded in §11; `vc.agitationPrep` either authored under the resolved tag or dropped (doctrine routes through `vc.agitationReadiness.enablesPlanTemplates`). | S |
+| **P0b** | Agitation action-tag investigation — verify whether the engine publishes an Agitation tag during card-phase preparation, or if VC Agitation is purely Coup-phase resolution. | Resolved in §11: `vc.agitationPrep` is authored under the Coup-support `agitate` tag; card-phase preparation routes through `vc.agitationReadiness` gates on `vc.rallyTax` / `vc.marchSpread` / `vc.terrorTax`. | S |
 | **P1** | New candidateFeatures (`feature.projectedNvaMarginDelta` + Underground-Guerrilla feature/proxy per P0a) AND new VC plan templates (§4.1) AND selector rebinding on `vc.terrorTax`/`vc.terrorSubvert`. | All compile; `92-agents.md` builds byte-identical to a reference run with the additions folded in. | M |
 | **P2a** | VC strategy modules (§4.3) | All compile; `enablesPlanTemplates`/`suppressesPlanTemplates` references all resolve to authored templates. | S |
 | **P2b** | VC posture evaluators + guardrails (§4.4, §4.5) | All compile; `severity` values are valid `GuardrailSeverity` enum members. | S |
@@ -569,7 +569,7 @@ All witnesses live FLAT under `packages/engine/test/policy-profile-quality/` (no
 - `vc-subvert-drops-arvn-patronage.test.ts` — when `condition.arvnNearWin.satisfied`, `vc.terrorSubvert` or `vc.rallySubvert` chosen over plain Terror/Rally.
 - `vc-march-spreads-underground.test.ts` — `vc.marchSpread` chooses destinations that keep guerrillas Underground.
 - `vc-attack-only-with-ambush.test.ts` — `vc.attackAmbush` preferred over conventional Attack (existing `vc.avoidConventionalAttackWithoutAmbush` guardrail still fires).
-- `vc-agitation-prep-before-coup.test.ts` — when `condition.coupImminent.satisfied`, plan selects `vc.agitationPrep` / `vc.rallyTax` / `vc.marchSpread` over speculative setup. (If P0b drops `vc.agitationPrep`, witness asserts over the remaining two.)
+- `vc-agitation-prep-before-coup.test.ts` — when `condition.coupImminent.satisfied`, plan selects `vc.agitationPrep` / `vc.rallyTax` / `vc.marchSpread` over speculative setup.
 - `vc-blocks-nva-near-win.test.ts` — when `condition.nvaNearWin.satisfied`, plan selects NVA-Control-denial or VC-Base-protection (`vc.nvaRivalRisk` suppresses Infiltrate-vulnerable Base templates).
 - `vc-tax-on-populated-support-vetoed.test.ts` — `vc.avoidTaxWhenSupportShiftIsTooCostly` fires on Tax+populated-Support unless `resourcesLow`.
 
@@ -629,7 +629,7 @@ All witnesses use `@test-class: architectural-invariant` per the `.claude/rules/
   | `terrain` / Highland / Jungle targeting | No static `terrain` property is needed for P1; use existing zone categories/static attrs and legal-move enumeration. If a future selector needs Highland/Jungle-specific ranking, it should first verify the exact authored static property in `40-content-data-assets.md` instead of inventing `terrain`. | (b) re-expressed by avoiding unverified prop |
   | Dynamic `supportOpposition` marker | `lookup: { surface: policyState, collection: zones, keyType: ZoneId, key: { ref: selector.item.key }, path: [markers, supportOpposition], onMissing: { kind: constant, value: neutral } }`, already used by existing FITL selectors. | (a) authorable |
   | Per-zone faction-token needs such as `hasVcPiece`, `hasCoinPiece`, NVA-Infiltrate vulnerability, or COIN-control filters | Keep the Spec 202 correction: `zoneTokenAgg.owner` resolves owner-relative zones and does not filter token faction for an item-local zone. P1 selectors use legal-move enumeration plus proxies (`population`, `supportOpposition`, and global projected margin deltas) rather than hypothetical per-zone faction-token filters. | (b) authorable via proxy |
-- **Agitation action tag** — **P0b.** Does the engine publish a tag for Agitation-readiness Operations during card-phase, or is Agitation purely Coup-phase resolution? Informs whether `vc.agitationPrep` is authored or dropped.
+- **Agitation action tag** — **RESOLVED by 204FITLVCCOM-002 (2026-06-01): Outcome A, use `agitate`.** Grep evidence found the authored Coup-support action `coupAgitateVC` in `data/games/fire-in-the-lake/30-rules-actions.md` with `tags: [agitate]`, `actor: active`, `phase: [coupSupport]`, and target/action parameters for VC Agitation. No engine hardcoding was found under `packages/engine/src/`; the tag is GameSpecDoc-authored. Ticket 004 should author `vc.agitationPrep` with `root.actionTags: [agitate]` and a matching step `actionTag: agitate`. Caveat: this is a Coup-support-phase tag, not a card-phase Operation tag, so the template represents direct Agitation selection when the Coup-support microturn is published; card-phase preparation remains encoded through `vc.rallyTax`, `vc.marchSpread`, and `vc.terrorTax` under the future `vc.agitationReadiness` doctrine.
 - **Threshold calibration** — **P4.** Draft thresholds (`totalOpposition < 20`, `vcBaseCount < 5`, `resources < 5`) calibrated against the four-profile convergence canary, mirroring Spec 202 P6's `totalSupport < 30` / `availableUsTroops < 4` / `aid < 15` resolution.
 - **`vc.avoidNvaKingmaking` attachment surface** — **P2b.** Author as a standalone posture wired via the `vc.nvaRivalRisk` strategy module's reference (consistent with Spec 202's `us.avoidArvnKingmaking` as a guardrail), or extend `vc.protectOppositionAndBases@2141` with a second `prefer` term. Decide during posture authoring.
 
@@ -638,6 +638,6 @@ All witnesses use `@test-class: architectural-invariant` per the `.claude/rules/
 Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covers P0a/P0b/P1 only — P2a/P2b/P3/P4/P5 tickets are deferred until P0a/P0b close so they author against actual audit results rather than hypothetical refs. Re-run `/spec-to-tickets specs/204-fitl-vc-completion.md 204FITLVCCOM` after 001 and 002 close to author the remaining phases (numbering will continue from 005).
 
 - [`archive/tickets/204FITLVCCOM-001.md`](../archive/tickets/204FITLVCCOM-001.md) — P0a Capability / vocabulary re-expression audit (covers §6 P0a)
-- [`tickets/204FITLVCCOM-002.md`](../tickets/204FITLVCCOM-002.md) — P0b Agitation action-tag investigation (covers §6 P0b)
+- [`archive/tickets/204FITLVCCOM-002.md`](../archive/tickets/204FITLVCCOM-002.md) — P0b Agitation action-tag investigation (covers §6 P0b)
 - [`tickets/204FITLVCCOM-003.md`](../tickets/204FITLVCCOM-003.md) — P1 VC candidateFeatures and new selectors (covers §6 P1, §4.2)
 - [`tickets/204FITLVCCOM-004.md`](../tickets/204FITLVCCOM-004.md) — P1 VC plan templates and terrorTax / terrorSubvert selector rebinding (covers §6 P1, §4.1)

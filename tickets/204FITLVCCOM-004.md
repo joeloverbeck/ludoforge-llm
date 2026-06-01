@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
-**Deps**: `tickets/204FITLVCCOM-003.md`, `tickets/204FITLVCCOM-002.md`
+**Deps**: `tickets/204FITLVCCOM-003.md`, `archive/tickets/204FITLVCCOM-002.md`
 
 ## Problem
 
-Spec 204 §4.1 authors new VC plan templates (`vc.rallyBaseNetwork`, `vc.rallyTax`, `vc.marchSpread`, `vc.attackAmbush`, conditionally `vc.agitationPrep` per ticket 002's resolution) and rebinds selectors on the existing `vc.terrorTax@1995` and `vc.terrorSubvert@1983` templates. Without these templates, the new selectors authored in ticket 003 are unbound and the VC competence doctrine encoded by Spec 204 §4 is incomplete — the agent can't actually act on the new doctrine.
+Spec 204 §4.1 authors new VC plan templates (`vc.rallyBaseNetwork`, `vc.rallyTax`, `vc.marchSpread`, `vc.attackAmbush`, `vc.agitationPrep`) and rebinds selectors on the existing `vc.terrorTax@1995` and `vc.terrorSubvert@1983` templates. Without these templates, the new selectors authored in ticket 003 are unbound and the VC competence doctrine encoded by Spec 204 §4 is incomplete — the agent can't actually act on the new doctrine.
 
 This ticket lands the template surface that ties ticket 003's selectors to the FITL turn-flow. P2a strategy modules (deferred), P2b postures/guardrails (deferred), and P3 bindings (deferred) all depend on the templates existing.
 
@@ -17,7 +17,7 @@ This ticket lands the template surface that ties ticket 003's selectors to the F
 1. The verified authoring surface for plan templates uses `root: { actionTags: [...], compound: { specialTags: [...], timing: after|during } }` + `postureHook:` + `roles: { X: { selector: Y, required: true } }` + `steps: [{ label, role, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: X } }]` + `caps: { capClass: standard256, maxSteps: N }` + `fallback: { ifRoleTargetUnavailable: primitivePolicy }`. Reference shapes: `vc.rallySubvert@1959`, `vc.terrorTax@1995`, `nva.attackAmbush@1918`.
 2. Existing `vc.terrorTax@1995-2006` and `vc.terrorSubvert@1983-1994` are fully authored under the verified schema — this ticket modifies ONLY the `roles.<role>.selector` field on each (selector rebinding), leaving the template structure untouched.
 3. The trigger-report's fictional schema (`matchActionTag`, `microturnSteps`/`bindTo`, `compoundSpecial`, `posture:`) was caught in the reassessment — do NOT use it. Reference `archive/specs/202-fitl-us-completion.md:444` and Spec 204 §9 Corrected if implementation drifts.
-4. `vc.agitationPrep` authoring is conditional on ticket 002's Agitation tag investigation: under Outcome A (tag exists) author the template; under Outcome B (tag doesn't exist) skip the template entirely and the doctrine routes through `vc.rallyTax` + `vc.marchSpread` + the rebound `vc.terrorTax` per `vc.agitationReadiness.enablesPlanTemplates` (deferred to future P2a ticket).
+4. `vc.agitationPrep` authoring uses ticket 002's resolved Outcome A: author the template with `root.actionTags: [agitate]` and step `actionTag: agitate`. The tag is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`.
 5. New selectors (`vc.rallyBaseTarget`, `vc.rallySpaceForFutureOps`, `vc.taxLocTarget`, `vc.terrorHighPopTarget`, `vc.subvertHighValueTarget`, `vc.marchSpreadDestination`, `vc.attackAmbushTarget`) authored in ticket 003 are available; this ticket binds them.
 
 ## Architecture Check
@@ -98,7 +98,7 @@ vc.attackAmbush:
   fallback: { ifRoleTargetUnavailable: primitivePolicy }
 ```
 
-**`vc.agitationPrep`** — conditional on ticket 002. Under Outcome A (tag resolved), author per spec §4.1 with the resolved tag. Under Outcome B (no tag), SKIP this template entirely.
+**`vc.agitationPrep`** — author per spec §4.1 with `root.actionTags: [agitate]` and step `actionTag: agitate`, resolved by ticket 002.
 
 ### 2. Rebind selectors on existing templates
 
@@ -156,7 +156,7 @@ Expected: ≥1 non-`vc.terrorTax`/`vc.terrorSubvert` reference each — confirms
 
 ## Files to Touch
 
-- `data/games/fire-in-the-lake/92-agents.md` (modify — add 4-5 new templates under `planTemplates:`; rebind 2 existing templates' role selectors)
+- `data/games/fire-in-the-lake/92-agents.md` (modify — add 5 new templates under `planTemplates:`; rebind 2 existing templates' role selectors)
 
 ## Out of Scope
 

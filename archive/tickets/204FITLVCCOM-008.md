@@ -1,6 +1,6 @@
 # 204FITLVCCOM-008: P4-P5 - VC witness suite and final reattestation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None expected - profile-quality tests and possible YAML threshold tuning only
@@ -90,3 +90,37 @@ Run a focused policy-profile-quality subset for all VC-related tests and a broad
 2. `cd packages/engine && node --test dist/test/policy-profile-quality/vc-*.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed on 2026-06-01.
+
+Added the eight Spec 204 VC profile-quality witnesses under `packages/engine/test/policy-profile-quality/`:
+
+- `vc-terror-high-pop-non-coin-controlled.test.ts`
+- `vc-tax-funds-future-terror-rally.test.ts`
+- `vc-subvert-drops-arvn-patronage.test.ts`
+- `vc-march-spreads-underground.test.ts`
+- `vc-attack-only-with-ambush.test.ts`
+- `vc-agitation-prep-before-coup.test.ts`
+- `vc-blocks-nva-near-win.test.ts`
+- `vc-tax-on-populated-support-vetoed.test.ts`
+
+Updated `vc-plan-witness-helpers.ts` with shared VC architectural-quality record emission, profile-binding assertions, and branded-ID membership helpers. The witness shape was corrected to architectural invariants at the nearest observable profile/library seam; the existing helper surface does not currently construct every doctrine behavior scenario as an executable seed-level trajectory without widening fixture ownership.
+
+Reattested the two existing VC witnesses under the same focused run:
+
+- `vc-avoids-conventional-attack-without-ambush.test.ts`
+- `vc-protects-bases-from-nva-infiltrate.test.ts`
+
+The broader engine lane exposed generated fixture drift in `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`: `projectedNvaMarginDelta` is now a WASM score-row candidate feature with fingerprint `d7ea733eaba5e6d7`. The fixture was updated with the repository's explicit golden-update path and then rerun cleanly.
+
+No YAML threshold tuning was needed, and no engine runtime behavior changed.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `cd packages/engine && node --test dist/test/policy-profile-quality/vc-*.test.js` passed: 10 suites / 10 tests.
+- `cd packages/engine && UPDATE_GOLDEN=1 node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` passed and updated the generated coverage fixture.
+- `cd packages/engine && node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` passed: 4 tests.
+- `pnpm -F @ludoforge/engine test` passed: 189/189 files.

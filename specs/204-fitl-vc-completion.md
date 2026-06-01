@@ -1,6 +1,6 @@
 # Spec 204 — FITL VC Baseline Completion to ARVN-Parity
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — `vc-baseline` has 5 plan templates, 4 faction-specific strategy modules (11 bound counting Spec 201 shared), 1 posture, and 3 faction-specific guardrails (4 bound counting shared), vs. ARVN's 6 templates / 7 faction-specific modules / 1 posture / 7 faction-specific guardrails. Profile-quality witnesses: VC has 2, ARVN has ~10. The competence report (`reports/fitl-competent-agent-ai.md` §4) requires VC to be encoded as a clandestine political-insurgent network that builds Opposition + VC Bases, stays Underground, uses Terror/Tax/Subvert/Agitation intelligently, Taxes LoCs preferentially over populated spaces, protects VC Bases from NVA Infiltrate, and prepares Agitation before each Coup. The most under-encoded competence area today is **Coup-support-phase Agitation preparation** — VC's Terror turn is half the story, the agent must also value Tax/March/Rally that create Agitation-ready spaces.
 **Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. No engine work. Authors two missing candidateFeatures (`feature.projectedNvaMarginDelta`, an Underground-Guerrilla aggregate or proxy). Consumes shared scaffolding from Spec 201; reuses the verified authoring surface Specs 202 (US) and 203 (NVA) reauthored against.
 **Date**: 2026-05-27
@@ -630,8 +630,22 @@ All witnesses use `@test-class: architectural-invariant` per the `.claude/rules/
   | Dynamic `supportOpposition` marker | `lookup: { surface: policyState, collection: zones, keyType: ZoneId, key: { ref: selector.item.key }, path: [markers, supportOpposition], onMissing: { kind: constant, value: neutral } }`, already used by existing FITL selectors. | (a) authorable |
   | Per-zone faction-token needs such as `hasVcPiece`, `hasCoinPiece`, NVA-Infiltrate vulnerability, or COIN-control filters | Keep the Spec 202 correction: `zoneTokenAgg.owner` resolves owner-relative zones and does not filter token faction for an item-local zone. P1 selectors use legal-move enumeration plus proxies (`population`, `supportOpposition`, and global projected margin deltas) rather than hypothetical per-zone faction-token filters. | (b) authorable via proxy |
 - **Agitation action tag** — **RESOLVED by 204FITLVCCOM-002 (2026-06-01), refined by 204FITLVCCOM-004: use `agitate` with `chooseOne` / `targetSpace`.** Grep evidence found the authored Coup-support action `coupAgitateVC` in `data/games/fire-in-the-lake/30-rules-actions.md` with `tags: [agitate]`, `actor: active`, `phase: [coupSupport]`, and singular `targetSpace` / `action` parameters for VC Agitation. No engine hardcoding was found under `packages/engine/src/`; the tag is GameSpecDoc-authored. Ticket 004 authored `vc.agitationPrep` with `root.actionTags: [agitate]` and a matching step `decisionKind: chooseOne`, `decisionPath: targetSpace`, `actionTag: agitate`. Caveat: this is a Coup-support-phase tag, not a card-phase Operation tag, so the template represents direct Agitation selection when the Coup-support microturn is published; card-phase preparation remains encoded through `vc.rallyTax`, `vc.marchSpread`, and `vc.terrorTax` under the future `vc.agitationReadiness` doctrine.
-- **Threshold calibration** — **P4.** Draft thresholds (`totalOpposition < 20`, `vcBaseCount < 5`, `resources < 5`) calibrated against the four-profile convergence canary, mirroring Spec 202 P6's `totalSupport < 30` / `availableUsTroops < 4` / `aid < 15` resolution.
-- **`vc.avoidNvaKingmaking` attachment surface** — **P2b.** Author as a standalone posture wired via the `vc.nvaRivalRisk` strategy module's reference (consistent with Spec 202's `us.avoidArvnKingmaking` as a guardrail), or extend `vc.protectOppositionAndBases@2141` with a second `prefer` term. Decide during posture authoring.
+- **Threshold calibration** — **RESOLVED by 204FITLVCCOM-008 (2026-06-01).** The completed VC witness suite passed without YAML threshold tuning. Draft thresholds from the authored doctrine remained sufficient under the focused VC witness lane and broad engine reattestation.
+- **`vc.avoidNvaKingmaking` attachment surface** — **RESOLVED by 204FITLVCCOM-006 / 204FITLVCCOM-007 (2026-06-01).** Authored as standalone posture `vc.avoidNvaKingmaking`, referenced by strategy module `vc.nvaRivalRisk`, and activated through `vc-baseline.use.strategyModules`.
+
+## 12. Completion evidence
+
+Completed on 2026-06-01 across tickets `204FITLVCCOM-001` through `204FITLVCCOM-008`. Final implementation authored the missing VC candidate features, selectors, plan templates, strategy modules, posture evaluators, guardrail, and `vc-baseline` bindings in `data/games/fire-in-the-lake/92-agents.md`, then added the eight requested VC profile-quality witnesses while preserving the two pre-existing VC witnesses.
+
+Final verification for `204FITLVCCOM-008`:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `cd packages/engine && node --test dist/test/policy-profile-quality/vc-*.test.js` passed: 10 suites / 10 tests.
+- `cd packages/engine && UPDATE_GOLDEN=1 node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` passed and updated `packages/engine/test/fixtures/policy-wasm/candidate-feature-coverage.json`.
+- `cd packages/engine && node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` passed: 4 tests.
+- `pnpm -F @ludoforge/engine test` passed: 189/189 files.
+
+The generated WASM coverage fixture now records `projectedNvaMarginDelta` as `wasm-row` coverage with fingerprint `d7ea733eaba5e6d7`, matching the candidate feature added by this spec family.
 
 ## Tickets
 
@@ -644,4 +658,4 @@ Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covered P0a/P0b/P1 o
 - [`archive/tickets/204FITLVCCOM-005.md`](../archive/tickets/204FITLVCCOM-005.md) — P2a VC strategy modules (covers §6 P2a, §4.3)
 - [`archive/tickets/204FITLVCCOM-006.md`](../archive/tickets/204FITLVCCOM-006.md) — P2b VC posture evaluators and guardrails (covers §6 P2b, §4.4, §4.5)
 - [`archive/tickets/204FITLVCCOM-007.md`](../archive/tickets/204FITLVCCOM-007.md) — P3 `vc-baseline` bindings update (covers §6 P3, §4.6)
-- [`tickets/204FITLVCCOM-008.md`](../tickets/204FITLVCCOM-008.md) — P4-P5 witness suite and final reattestation (covers §6 P4/P5, §7)
+- [`archive/tickets/204FITLVCCOM-008.md`](../archive/tickets/204FITLVCCOM-008.md) — P4-P5 witness suite and final reattestation (covers §6 P4/P5, §7)

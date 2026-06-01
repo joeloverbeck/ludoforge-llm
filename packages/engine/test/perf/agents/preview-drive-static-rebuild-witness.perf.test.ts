@@ -10,6 +10,11 @@
 // Each is compiled exactly once via the shared runtime bytecode cache (no
 // duplicates), raising the first-touch static budget from 4 to 8. The hard
 // invariant — duplicateEncodedStateRebuilds === 0 — remains unchanged.
+//
+// Spec 204 retarget: FITL VC commitment mechanics add one additional unique
+// evaluator expression to the four-profile workload, raising the first-touch
+// static budget from 8 to 9. Each new expression still compiles exactly once
+// via the shared runtime bytecode cache, so the hard invariant remains intact.
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -36,7 +41,7 @@ const WORKLOAD = {
   profiles: ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
 } as const;
 
-const FIRST_TOUCH_ONLY_STATIC_REBUILD_THRESHOLD = 8;
+const FIRST_TOUCH_ONLY_STATIC_REBUILD_THRESHOLD = 9;
 const DUPLICATE_ENCODED_STATE_REBUILD_THRESHOLD = 0;
 
 describe('172POLEVASTA-001 preview-drive static rebuild witness', () => {

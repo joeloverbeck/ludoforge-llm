@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_PLAYER_COUNT = 4;
@@ -68,3 +69,43 @@ export const requireAlternative = (
   assert.ok(alternative, `expected ${templateId} proposal alternative`);
   return alternative;
 };
+
+export const emitVcArchitecturalRecord = (
+  file: string,
+  seed: number,
+  passed: boolean,
+  decisions = 1,
+): void => {
+  emitPolicyProfileQualityRecord({
+    file,
+    variantId: VC_PROFILE_ID,
+    seed,
+    passed,
+    stopReason: 'architectural-invariant',
+    decisions,
+  });
+};
+
+export const assertProfileBinds = (
+  fixture: VcPlanFixture,
+  expected: {
+    readonly guardrails?: readonly string[];
+    readonly strategyModules?: readonly string[];
+    readonly planTemplates?: readonly string[];
+  },
+): void => {
+  for (const id of expected.guardrails ?? []) {
+    assert.equal((fixture.profile.use.guardrails ?? []).includes(id), true, `expected vc-baseline to bind guardrail ${id}`);
+  }
+
+  for (const id of expected.strategyModules ?? []) {
+    assert.equal((fixture.profile.plan.strategyModules ?? []).includes(id), true, `expected vc-baseline to bind strategy module ${id}`);
+  }
+
+  for (const id of expected.planTemplates ?? []) {
+    assert.equal((fixture.profile.plan.planTemplates ?? []).includes(id), true, `expected vc-baseline to bind plan template ${id}`);
+  }
+};
+
+export const includesId = (values: readonly unknown[] | undefined, id: string): boolean =>
+  (values ?? []).some((value) => String(value) === id);

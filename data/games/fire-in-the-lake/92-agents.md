@@ -277,12 +277,28 @@ agents:
           sub:
             - { ref: feature.projectedArvnMargin }
             - { ref: feature.arvnMargin }
+      projectedNvaMarginDelta:
+        type: number
+        expr:
+          sub:
+            - { ref: feature.projectedNvaMargin }
+            - { ref: feature.nvaMargin }
       projectedVcMarginDelta:
         type: number
         expr:
           sub:
             - { ref: feature.projectedVcMargin }
             - { ref: feature.vcMargin }
+      vcUndergroundGuerrillaCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: VC }
+                type: { eq: guerrilla }
+                activity: { eq: underground }
       projectedCapabilityGain:
         type: number
         expr:
@@ -1487,6 +1503,79 @@ agents:
               weight: 6
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.rallyBaseTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: provinceBaseNetwork
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - province
+              weight: 5
+            - id: nonSupportBuild
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeSupport
+              weight: 4
+            - id: basePressure
+              value:
+                coalesce:
+                  - { ref: feature.projectedVcMargin }
+                  - 0
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.rallySpaceForFutureOps:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: futureOpsPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 3
+            - id: oppositionOrNeutralSetup
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeSupport
+              weight: 5
+            - id: undergroundFutureOps
+              value:
+                coalesce:
+                  - { ref: feature.vcUndergroundGuerrillaCount }
+                  - 0
+              weight: 1
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.marchPoliticalCellSpace:
         scopes: [move]
         source:
@@ -1504,6 +1593,48 @@ agents:
             - id: undergroundCellSpread
               value: 1
               weight: 5
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.marchSpreadDestination:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: oppositionNetwork
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 5
+            - id: neutralSpread
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - neutral
+              weight: 3
+            - id: populationReach
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 2
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.terrorAgitationSpace:
@@ -1535,6 +1666,43 @@ agents:
               weight: 6
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.terrorHighPopTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: populationLeverage
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: supportTarget
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 4
+            - id: nonCoinControlled
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.subvertArvnControlSpace:
         scopes: [move]
         source:
@@ -1550,6 +1718,41 @@ agents:
             - id: controlBreak
               value: 1
               weight: 7
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.subvertHighValueTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: patronagePopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 5
+            - id: supportRegimeTarget
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 4
+            - id: projectedArvnDamage
+              value:
+                coalesce:
+                  - { ref: feature.projectedArvnMarginDelta }
+                  - 0
+              weight: -4
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.taxFundingSpace:
@@ -1580,6 +1783,31 @@ agents:
               weight: 3
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.taxLocTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: locFunding
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - loc
+              weight: 8
+            - id: econYield
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: econ
+                  - 0
+              weight: 3
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.ambushSurgicalTargetSpace:
         scopes: [move]
         source:
@@ -1593,6 +1821,41 @@ agents:
             - id: coinPieceThreat
               value: 1
               weight: 6
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.attackAmbushTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: coinRemovalLeverage
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+            - id: supportStrongholdAmbush
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeSupport
+              weight: 5
+            - id: vcMarginSwing
+              value:
+                coalesce:
+                  - { ref: feature.projectedVcMarginDelta }
+                  - 0
+              weight: 3
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       vc.locAmbushPlatform:
@@ -1613,6 +1876,49 @@ agents:
             - id: adjacentPoliticalThreat
               value: 1
               weight: 4
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
+      vc.agitationReadinessTarget:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: oppositionReady
+              value:
+                boolToNumber:
+                  eq:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [markers, supportOpposition]
+                        onMissing: { kind: constant, value: neutral }
+                    - activeOpposition
+              weight: 5
+            - id: nonCoinControlProxy
+              value:
+                boolToNumber:
+                  not:
+                    eq:
+                      - lookup:
+                          surface: policyState
+                          collection: zones
+                          keyType: ZoneId
+                          key: { ref: selector.item.key }
+                          path: [markers, supportOpposition]
+                          onMissing: { kind: constant, value: neutral }
+                      - activeSupport
+              weight: 4
+            - id: populationAgitationValue
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 3
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
 
@@ -1985,8 +2291,8 @@ agents:
         root: { actionTags: [terror], compound: { specialTags: [subvert], timing: after } }
         postureHook: vc.protectOppositionAndBases
         roles:
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-          subvertSpace: { selector: vc.subvertArvnControlSpace, required: true }
+          terrorSpace: { selector: vc.terrorHighPopTarget, required: true }
+          subvertSpace: { selector: vc.subvertHighValueTarget, required: true }
         steps:
           - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
           - { label: subvert-arvn-control, role: subvertSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: subvert } }
@@ -1997,12 +2303,65 @@ agents:
         root: { actionTags: [terror], compound: { specialTags: [tax], timing: after } }
         postureHook: vc.protectOppositionAndBases
         roles:
-          terrorSpace: { selector: vc.terrorAgitationSpace, required: true }
-          taxSpace: { selector: vc.taxFundingSpace, required: true }
+          terrorSpace: { selector: vc.terrorHighPopTarget, required: true }
+          taxSpace: { selector: vc.taxLocTarget, required: true }
         steps:
           - { label: terror-political-space, role: terrorSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: terror } }
           - { label: tax-safe-funding, role: taxSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: tax } }
         caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallyBaseNetwork:
+        traceLabel: "VC Rally to seed VC Base and Underground network"
+        root: { actionTags: [rally] }
+        postureHook: vc.preserveUndergroundAndBases
+        roles:
+          rallySpace: { selector: vc.rallyBaseTarget, required: true }
+        steps:
+          - { label: rally-base-network, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.rallyTax:
+        traceLabel: "VC Rally then Tax to fund future ops"
+        root: { actionTags: [rally], compound: { specialTags: [tax], timing: after } }
+        postureHook: vc.preserveAgitationResources
+        roles:
+          rallySpace: { selector: vc.rallySpaceForFutureOps, required: true }
+          taxSpace: { selector: vc.taxLocTarget, required: true }
+        steps:
+          - { label: rally-future-ops, role: rallySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: rally } }
+          - { label: tax-loc-funding, role: taxSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: tax } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.marchSpread:
+        traceLabel: "VC March to spread Underground into Opposition / Neutral"
+        root: { actionTags: [march] }
+        postureHook: vc.preserveUndergroundAndBases
+        roles:
+          marchSpace: { selector: vc.marchSpreadDestination, required: true }
+        steps:
+          - { label: march-spread-underground, role: marchSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: march } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.attackAmbush:
+        traceLabel: "VC Attack then Ambush for surgical removal"
+        root: { actionTags: [attack], compound: { specialTags: [ambush-vc], timing: after } }
+        postureHook: vc.preserveUndergroundAndBases
+        roles:
+          attackSpace: { selector: vc.attackAmbushTarget, required: true }
+        steps:
+          - { label: attack-ambush-position, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: attack } }
+          - { label: ambush-surgical-removal, role: attackSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: ambush-vc } }
+        caps: { capClass: standard256, maxSteps: 2 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      vc.agitationPrep:
+        traceLabel: "VC prepare Agitation-ready spaces before Coup"
+        root: { actionTags: [agitate] }
+        postureHook: vc.preserveAgitationResources
+        roles:
+          prepSpace: { selector: vc.agitationReadinessTarget, required: true }
+        steps:
+          - { label: agitation-prep, role: prepSpace, match: { decisionKind: chooseOne, targetKind: zone, decisionPath: targetSpace, actionTag: agitate } }
+        caps: { capClass: standard256, maxSteps: 1 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       vc.marchAmbushFromLoc:
         traceLabel: "VC March then Ambush from LoC"
@@ -2163,6 +2522,50 @@ agents:
             value:
               ref: relationship.nominalAlly.gainValue
             weight: -20
+            fallback:
+              contribution: 0
+      vc.preserveUndergroundAndBases:
+        traceLabel: "VC preserve Underground guerrillas and VC Bases"
+        prefer:
+          - id: underground-network
+            value:
+              ref: feature.vcUndergroundGuerrillaCount
+            weight: 5
+            fallback:
+              contribution: 0
+          - id: base-network
+            value:
+              coalesce:
+                - { ref: preview.feature.vcBaseCount }
+                - { ref: feature.vcBaseCount }
+            weight: 4
+            fallback:
+              contribution: 0
+      vc.preserveAgitationResources:
+        traceLabel: "VC preserve Resources for Coup-phase Agitation"
+        prefer:
+          - id: coup-resource-floor
+            when:
+              ref: condition.coupImminent.satisfied
+            value:
+              boolToNumber:
+                lt:
+                  - coalesce:
+                      - { ref: preview.var.player.self.resources }
+                      - { ref: var.player.self.resources }
+                  - 5
+            weight: -4
+            fallback:
+              contribution: 0
+      vc.avoidNvaKingmaking:
+        traceLabel: "VC avoid improving NVA margin when NVA near win"
+        prefer:
+          - id: nva-kingmaking
+            when:
+              ref: condition.nvaNearWin.satisfied
+            value:
+              ref: feature.projectedNvaMarginDelta
+            weight: -5
             fallback:
               contribution: 0
 
@@ -2867,6 +3270,127 @@ agents:
               - { id: avoidNvaDominance, weight: 6, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+      vc.oppositionEngine:
+        traceLabel: "VC build opposition engine"
+        when:
+          lt:
+            - { ref: feature.totalOpposition }
+            - 20
+        applies:
+          scopes: [move]
+          actionTags: [terror, rally]
+        priority:
+          tier: 45
+        selectors:
+          - { role: terrorTarget, selectorId: vc.terrorHighPopTarget }
+          - { role: rallyTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: oppositionDrive
+            summary: sum
+            terms:
+              - { id: oppositionDelta, weight: 5, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.terrorTax
+          - vc.terrorSubvert
+          - vc.rallyBaseNetwork
+      vc.baseNetwork:
+        traceLabel: "VC build Base network"
+        when:
+          lt:
+            - { ref: feature.vcBaseCount }
+            - 5
+        applies:
+          scopes: [move]
+          actionTags: [rally]
+        priority:
+          tier: 40
+        selectors:
+          - { role: rallyTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: baseSeed
+            summary: sum
+            terms:
+              - { id: baseProtectionDrive, weight: 6, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallyBaseNetwork
+      vc.subvertPatronage:
+        traceLabel: "VC subvert ARVN patronage when ARVN near win"
+        when:
+          ref: condition.arvnNearWin.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [rally, march, terror]
+        priority:
+          tier: 55
+        selectors:
+          - { role: subvertTarget, selectorId: vc.subvertHighValueTarget }
+        scoreGroups:
+          - id: patronageDenial
+            summary: sum
+            terms:
+              - id: arvnMarginDenial
+                weight: 5
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedArvnMarginDelta }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallySubvert
+          - vc.marchSubvert
+          - vc.terrorSubvert
+      vc.agitationReadiness:
+        traceLabel: "VC prepare Agitation-ready spaces"
+        when:
+          ref: condition.coupImminent.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [tax, rally, march]
+        priority:
+          tier: 65
+        selectors:
+          - { role: prepTarget, selectorId: vc.agitationReadinessTarget }
+        scoreGroups:
+          - id: agitationPrep
+            summary: sum
+            terms:
+              - { id: agitationReadyDrive, weight: 7, value: 1 }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.agitationPrep
+          - vc.rallyTax
+          - vc.marchSpread
+      vc.nvaRivalRisk:
+        traceLabel: "VC suppress NVA-helping patterns when NVA near win"
+        when:
+          ref: condition.nvaNearWin.satisfied
+        applies:
+          scopes: [move]
+          actionTags: [rally, march]
+        priority:
+          tier: 60
+        selectors:
+          - { role: protectTarget, selectorId: vc.rallyBaseTarget }
+        scoreGroups:
+          - id: nvaDenial
+            summary: sum
+            terms:
+              - id: nvaMarginDenial
+                weight: 5
+                value:
+                  sub:
+                    - 0
+                    - { ref: feature.projectedNvaMarginDelta }
+        guardrailIds: []
+        fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        suppressesPlanTemplates:
+          - vc.rallyBaseNetwork
 
     guardrails:
       dropPassWhenOtherMovesExist:
@@ -3135,9 +3659,11 @@ agents:
             - or:
                 - { ref: candidate.tag.rally }
                 - { ref: candidate.tag.march }
-            - gte:
-                - { ref: feature.nvaMargin }
-                - -2
+            - or:
+                - gte:
+                    - { ref: feature.nvaMargin }
+                    - -2
+                - { ref: condition.nvaNearWin.satisfied }
         severity: demote
         penalty: 400
         onUnavailable: noFire
@@ -3152,6 +3678,20 @@ agents:
                 - 1
         severity: demote
         penalty: 350
+        onUnavailable: noFire
+      vc.avoidTaxWhenSupportShiftIsTooCostly:
+        traceLabel: "VC avoid Tax on populated Support unless resources critical"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.tax }
+            - lt:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 1
+            - not:
+                ref: condition.resourcesLow.satisfied
+        severity: demote
+        penalty: 400
         onUnavailable: noFire
 
     turnShapeEvaluators:
@@ -3579,6 +4119,7 @@ agents:
           - vc.avoidConventionalAttackWithoutAmbush
           - vc.protectBasesFromNvaInfiltrate
           - vc.avoidHighPopTaxWithoutPoliticalPlan
+          - vc.avoidTaxWhenSupportShiftIsTooCostly
         strategyModules:
           - shared.immediateWin
           - shared.blockCurrentLeader
@@ -3591,12 +4132,22 @@ agents:
           - vc.subvertRegimeSecurity
           - vc.fundAndAmbushCarefully
           - vc.denyNvaIfNearWin
+          - vc.oppositionEngine
+          - vc.baseNetwork
+          - vc.subvertPatronage
+          - vc.agitationReadiness
+          - vc.nvaRivalRisk
         planTemplates:
           - vc.rallySubvert
           - vc.marchSubvert
           - vc.terrorSubvert
           - vc.terrorTax
           - vc.marchAmbushFromLoc
+          - vc.rallyBaseNetwork
+          - vc.rallyTax
+          - vc.marchSpread
+          - vc.attackAmbush
+          - vc.agitationPrep
         considerations:
           - preferNormalizedMargin
           - preferRallyWeighted

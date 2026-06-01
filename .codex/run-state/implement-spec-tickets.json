@@ -1,9 +1,9 @@
 {
   "originating_spec": "specs/205-fitl-arvn-selector-cleanup.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/205FITLARVSEL-004.md",
+  "last_ticket": "archive/tickets/205FITLARVSEL-007.md",
   "last_result": "completed_archived",
-  "last_work_commit": "c71fa43d43b56bcb090bf300ba0d4871199e8622",
+  "last_work_commit": "242a55610a78453769170b70d7b6facf79051086",
   "last_state_commit": "self",
   "next_target": "tickets/205FITLARVSEL-005.md",
   "queue": [
@@ -13,7 +13,7 @@
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "205FITLARVSEL-002 and 205FITLARVSEL-004 completed and archived in work commit c71fa43d43b56bcb090bf300ba0d4871199e8622. Generic filtered zoneTokenAgg/tokenProp selector-expression support landed with the selector data changes. 205FITLARVSEL-003 remains pending user-confirmed resolution from the 1-3-1 reassessment; 205FITLARVSEL-005 is the next independent target.",
+  "owned_dirty_summary": "205FITLARVSEL-007 completed and archived in work commit 242a55610a78453769170b70d7b6facf79051086. Structural selector-library value:1 inventory is now clean across the current agents files, so 205FITLARVSEL-005 is next. 205FITLARVSEL-003 remains pending user-confirmed resolution from the 1-3-1 reassessment.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

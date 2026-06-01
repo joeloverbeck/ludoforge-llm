@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — audit only
-**Deps**: `specs/204-fitl-vc-completion.md`
+**Deps**: `archive/specs/204-fitl-vc-completion.md`
 
 ## Problem
 
@@ -51,7 +51,7 @@ Minimum signals to classify (cross-check against spec §4 to ensure completeness
 
 ### 2. Record outcomes in spec §11
 
-Append the audit table to `specs/204-fitl-vc-completion.md` §11 (Open Questions). Each prior P0a question line becomes a "Resolved by 204FITLVCCOM-001 (YYYY-MM-DD): <classification>" line. Preserve P0b's question (it's owned by ticket 002).
+Append the audit table to `archive/specs/204-fitl-vc-completion.md` §11 (Open Questions). Each prior P0a question line becomes a "Resolved by 204FITLVCCOM-001 (YYYY-MM-DD): <classification>" line. Preserve P0b's question (it's owned by ticket 002).
 
 ### 3. Build verification
 
@@ -59,7 +59,7 @@ Run `pnpm -F @ludoforge/engine build` to confirm the spec changes do not regress
 
 ## Files to Touch
 
-- `specs/204-fitl-vc-completion.md` (modify — append audit table to §11)
+- `archive/specs/204-fitl-vc-completion.md` (modify — append audit table to §11)
 
 Read-only references for the audit (no edits):
 - `data/games/fire-in-the-lake/92-agents.md` (engine vocab, existing selectors/features)
@@ -97,14 +97,14 @@ Read-only references for the audit (no edits):
 
 1. `pnpm run check:ticket-deps` — validates this ticket's Deps field.
 2. `pnpm -F @ludoforge/engine build` — sanity-check that spec modifications don't break the spec→engine flow.
-3. Manual review of `specs/204-fitl-vc-completion.md` §11 — confirm audit-table classifications.
+3. Manual review of `archive/specs/204-fitl-vc-completion.md` §11 — confirm audit-table classifications.
 
 ## Outcome
 
 **Completed**: 2026-06-01
 
 **What changed**:
-- Appended the P0a capability/vocabulary audit table to `specs/204-fitl-vc-completion.md` §11.
+- Appended the P0a capability/vocabulary audit table to `archive/specs/204-fitl-vc-completion.md` §11.
 - Resolved the `vc.subvertHighValueTarget` ARVN-Patronage signal as an authorable proxy over item-local `population`, `supportOpposition`, and `feature.projectedArvnMarginDelta`.
 - Resolved `feature.vcUndergroundGuerrillaCount` as authorable via `globalTokenAgg.tokenFilter.props` over `faction: VC`, `type: guerrilla`, and `activity: underground`.
 - Confirmed `feature.projectedNvaMarginDelta` is authorable as `sub(feature.projectedNvaMargin, feature.nvaMargin)`.
@@ -116,11 +116,11 @@ Read-only references for the audit (no edits):
 **Verification**:
 - `pnpm run check:ticket-deps` — passed.
 - `pnpm -F @ludoforge/engine build` — passed.
-- `git diff --check -- specs/204-fitl-vc-completion.md` — passed.
+- `git diff --check -- archive/specs/204-fitl-vc-completion.md` — passed.
 
 **Terminal closeout**:
 - Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
 - Source-size decision: not triggered; markdown-only edit.
-- Untracked/touched-file hygiene: worktree contained only `specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
+- Untracked/touched-file hygiene: worktree contained only `archive/specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
 - Proof lane classification: required lanes green; no red or substituted lanes.
 - Terminal status allowed: every named audit deliverable is recorded in Spec 204 §11, with no class (c) engine-prerequisite rows remaining.

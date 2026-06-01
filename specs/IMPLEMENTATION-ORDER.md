@@ -1,6 +1,6 @@
 # Implementation Order — FITL Base-Game AI Agent Competence Encoding
 
-**Status**: PROPOSED
+**Status**: ACTIVE
 **Date**: 2026-05-27
 **Source report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration of FITL AI encoding)
 **Prior context**: `archive/specs/IMPLEMENTATION-ORDER-2026-05-27.md` (closed the four-faction AI architecture overhaul: Specs 196–199 landed 2026-05-27). The current series follows that one and operationalizes the *encoding* phase the architecture work was the prerequisite for.
@@ -47,16 +47,16 @@ The five specs are **NOT fully independent** (unlike 196–199, which were mutua
    Introduces `shared.*` strategy modules (immediateWin, blockCurrentLeader, nearCoupConcreteSwing, resourceLogistics, eventDirectSwing, allyRivalThrottle, monsoonOperationalRestriction); adds monsoon/coup/event lifecycle features as YAML primitives; replaces the three per-faction `blockImmediateWin` duplicates (ARVN, US, NVA — VC's `vc.denyNvaIfNearWin` is preserved as faction-specific nuance per Spec 201 §2). Foundation for four-faction parity; removes duplicated doctrine and gives the per-faction completions a consistent base. Completed and archived on 2026-05-28.
 
 2. **Spec 202 — FITL US Baseline Completion to ARVN-Parity**
-   (`specs/202-fitl-us-completion.md`)
-   Authors `us.trainPacify`, `us.patrolAdvise`, `us.airLiftAssault`, `us.airLiftControlOrWithdrawal`, `us.assaultHighValueInfrastructure`, `us.eventDirectSwing` plan templates; adds `us.buildSupport`, `us.preserveAvailability`, `us.protectAidEcon`, `us.avoidArvnKingmaking` modules; explicit `us.airLiftTrain` decision (defaults to excluded with documented rationale). 10 profile-quality witnesses.
+   (`archive/specs/202-fitl-us-completion.md`)
+   Authors `us.trainPacify`, `us.patrolAdvise`, `us.airLiftAssault`, `us.airLiftControlOrWithdrawal`, `us.assaultHighValueInfrastructure`, `us.eventDirectSwing` plan templates; adds `us.buildSupport`, `us.preserveAvailability`, `us.protectAidEcon`, `us.avoidArvnKingmaking` modules; explicit `us.airLiftTrain` decision (defaults to excluded with documented rationale). Completed and archived on 2026-05-31.
 
 3. **Spec 203 — FITL NVA Baseline Completion to ARVN-Parity**
    (`archive/specs/203-fitl-nva-completion.md`)
    Authors NVA `rallyTrail`, `marchControl`, `marchInfiltrateControl`, `infiltrateVcOnlyWhenRational`, `marchAmbush`, `attackAmbush`, `bombardCoinStack`, `terrorSupportReduction`, `eventLogisticsOrControlSwing` templates; adds `baseNetwork`, `takeControl`, `conventionalPressure`, `vcRivalRisk` modules; closes the VC-rival filter gap (Infiltrate only when rational). 10 witnesses.
 
 4. **Spec 204 — FITL VC Baseline Completion to ARVN-Parity**
-   (`specs/204-fitl-vc-completion.md`)
-   Authors VC `rallyBaseNetwork`, `rallyTax`, `terrorTax`, `terrorSubvert`, `marchSpread`, `attackAmbush`, `agitationPrep`, `eventOppositionOrResourceSwing` templates; adds `oppositionEngine`, `baseNetwork`, `subvertPatronage`, `agitationReadiness`, `nvaRivalRisk` modules; closes the Coup-Agitation-preparation gap. 10 witnesses.
+   (`archive/specs/204-fitl-vc-completion.md`)
+   Authors VC `rallyBaseNetwork`, `rallyTax`, `terrorTax`, `terrorSubvert`, `marchSpread`, `attackAmbush`, `agitationPrep` templates; keeps event handling on already-bound `shared.eventDirectSwing`; adds `oppositionEngine`, `baseNetwork`, `subvertPatronage`, `agitationReadiness`, `nvaRivalRisk` modules; closes the Coup-Agitation-preparation gap. Completed and archived on 2026-06-01 with 10 VC witnesses.
 
 5. **Spec 205 — FITL ARVN Selector Cleanup and Placeholder Replacement**
    (`specs/205-fitl-arvn-selector-cleanup.md`)
@@ -135,4 +135,8 @@ The audit's macro recommendations and per-section findings are operationalized a
 
 ## Outcome
 
-(Status: PROPOSED. Outcome section to be filled in upon completion.)
+Status update on 2026-06-01:
+
+- Specs 201, 202, 203, and 204 are completed and archived.
+- Spec 204 closed the VC baseline parity slice with all `204FITLVCCOM-*` tickets archived, `pnpm -F @ludoforge/engine test` passing 189/189 files, and the focused VC policy-quality lane passing 10/10 tests.
+- Spec 205 remains the only active spec in this implementation-order series.

@@ -219,11 +219,11 @@ Expected: ≥1 non-`vc.terrorTax`/`vc.terrorSubvert` reference each — confirms
 - `node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` from `packages/engine` after build — passed, 2/2 tests.
 - `pnpm run check:ticket-deps` — passed.
 - `grep -nE '(matchActionTag|microturnSteps|compoundSpecial|bindTo:|previewFallback)' data/games/fire-in-the-lake/92-agents.md` — only pre-existing `previewFallback` entries outside the new templates; no new forbidden template fields.
-- `git diff --check -- data/games/fire-in-the-lake/92-agents.md specs/204-fitl-vc-completion.md archive/tickets/204FITLVCCOM-004.md` — passed.
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md archive/specs/204-fitl-vc-completion.md archive/tickets/204FITLVCCOM-004.md` — passed.
 
 **Terminal closeout**:
 - Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
 - Source-size decision: not triggered as a source-file extraction; `92-agents.md` is a preexisting large GameSpecDoc authoring file, and this ticket's required YAML additions belong in that existing data block.
-- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md`, `specs/204-fitl-vc-completion.md`, and this ticket before this Outcome edit; whitespace check passed.
+- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md`, `archive/specs/204-fitl-vc-completion.md`, and this ticket before this Outcome edit; whitespace check passed.
 - Proof lane classification: required lanes green; no remaining red or substituted lanes.
 - Terminal status allowed: every named template/rebinding deliverable is present, buildable, and covered by the required existing-witness regression.

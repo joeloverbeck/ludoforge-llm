@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — investigation only
-**Deps**: `specs/204-fitl-vc-completion.md`
+**Deps**: `archive/specs/204-fitl-vc-completion.md`
 
 ## Problem
 
@@ -50,7 +50,7 @@ Per the spec's cascading-corrections discipline: `vc.agitationPrep` is reference
 
 ## Files to Touch
 
-- `specs/204-fitl-vc-completion.md` (modify — §11 records the decision; if Outcome B, also §1, §4.1, §4.3, §4.4, §4.6, §6, §7).
+- `archive/specs/204-fitl-vc-completion.md` (modify — §11 records the decision; if Outcome B, also §1, §4.1, §4.3, §4.4, §4.6, §6, §7).
 
 Read-only references for the investigation:
 - `data/games/fire-in-the-lake/91-rules.md` (or equivalent FITL rules file — locate via `ls data/games/fire-in-the-lake/`)
@@ -62,7 +62,7 @@ Read-only references for the investigation:
 - No YAML authoring — outcome may shrink ticket 004's scope, but no `92-agents.md` edits land here.
 - No new action tag introduction — if Outcome B, adding a new `agitation` tag would be a separate FITL data-authoring spec.
 - No changes to ticket 001's audit table (P0a vocab resolution is independent).
-- **Same-file collision with ticket 001**: both modify `specs/204-fitl-vc-completion.md` §11. Recommend serializing — 001 first, then 002.
+- **Same-file collision with ticket 001**: both modify `archive/specs/204-fitl-vc-completion.md` §11. Recommend serializing — 001 first, then 002.
 
 ## Acceptance Criteria
 
@@ -86,7 +86,7 @@ Read-only references for the investigation:
 ### Commands
 
 1. `grep -rni 'agitat' data/games/fire-in-the-lake/` — locate any existing Agitation tag.
-2. `grep -nF 'vc.agitationPrep' specs/204-fitl-vc-completion.md` — enumerate occurrences for cascading updates under Outcome B.
+2. `grep -nF 'vc.agitationPrep' archive/specs/204-fitl-vc-completion.md` — enumerate occurrences for cascading updates under Outcome B.
 3. `pnpm run check:ticket-deps` — validates this ticket's Deps field.
 4. `pnpm -F @ludoforge/engine build` — sanity.
 
@@ -95,7 +95,7 @@ Read-only references for the investigation:
 **Completed**: 2026-06-01
 
 **What changed**:
-- Recorded Outcome A in `specs/204-fitl-vc-completion.md` §11: the resolved action tag is `agitate`.
+- Recorded Outcome A in `archive/specs/204-fitl-vc-completion.md` §11: the resolved action tag is `agitate`.
 - Updated Spec 204's `vc.agitationPrep` examples and acceptance prose to use `root.actionTags: [agitate]` and step `actionTag: agitate`.
 - Clarified that `agitate` is published by the authored `coupAgitateVC` action during `phase: [coupSupport]`; card-phase preparation remains encoded by `vc.rallyTax`, `vc.marchSpread`, and `vc.terrorTax` under the future `vc.agitationReadiness` doctrine.
 - Post-review cleanup clarified `archive/tickets/204FITLVCCOM-004.md` so its template instructions consume the resolved `agitate` tag directly instead of treating `vc.agitationPrep` as conditional.
@@ -111,12 +111,12 @@ Read-only references for the investigation:
 **Verification**:
 - `pnpm run check:ticket-deps` — passed.
 - `pnpm -F @ludoforge/engine build` — passed.
-- `git diff --check -- specs/204-fitl-vc-completion.md` — passed.
-- `rg -n "<P0b|pending P0b|conditionally included|if P0b drops|when authored" specs/204-fitl-vc-completion.md` — no matches.
+- `git diff --check -- archive/specs/204-fitl-vc-completion.md` — passed.
+- `rg -n "<P0b|pending P0b|conditionally included|if P0b drops|when authored" archive/specs/204-fitl-vc-completion.md` — no matches.
 
 **Terminal closeout**:
 - Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
 - Source-size decision: not triggered; markdown-only edit.
-- Untracked/touched-file hygiene: worktree contained only `specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
+- Untracked/touched-file hygiene: worktree contained only `archive/specs/204-fitl-vc-completion.md` before this Outcome edit; whitespace check passed for the spec edit.
 - Proof lane classification: required lanes green; no red or substituted lanes.
 - Terminal status allowed: the Outcome A decision is recorded with grep evidence, and Outcome B-only `vc.agitationPrep` removal was not triggered.

@@ -55,7 +55,7 @@ Run a focused policy-profile-quality subset for all VC-related tests and a broad
 - `packages/engine/test/policy-profile-quality/*.test.ts` (add/modify)
 - `packages/engine/test/policy-profile-quality/vc-plan-witness-helpers.ts` (modify only if needed)
 - `data/games/fire-in-the-lake/92-agents.md` (modify only for threshold tuning or witness-driven YAML correction)
-- `specs/204-fitl-vc-completion.md` (modify to record final evidence and close remaining open-question/status details)
+- `archive/specs/204-fitl-vc-completion.md` (modify to record final evidence and close remaining open-question/status details)
 
 ## Out of Scope
 

@@ -659,3 +659,23 @@ Decomposed via `/spec-to-tickets` on 2026-06-01. First wave covered P0a/P0b/P1 o
 - [`archive/tickets/204FITLVCCOM-006.md`](../archive/tickets/204FITLVCCOM-006.md) — P2b VC posture evaluators and guardrails (covers §6 P2b, §4.4, §4.5)
 - [`archive/tickets/204FITLVCCOM-007.md`](../archive/tickets/204FITLVCCOM-007.md) — P3 `vc-baseline` bindings update (covers §6 P3, §4.6)
 - [`archive/tickets/204FITLVCCOM-008.md`](../archive/tickets/204FITLVCCOM-008.md) — P4-P5 witness suite and final reattestation (covers §6 P4/P5, §7)
+
+## Outcome
+
+Completed on 2026-06-01.
+
+Spec 204 landed through archived tickets `204FITLVCCOM-001` through `204FITLVCCOM-008`. The implementation completed VC baseline parity by adding the VC candidate features, selectors, plan templates, strategy modules, posture evaluators, guardrail, `vc-baseline` bindings, and the full VC witness reattestation suite.
+
+Deviations from the original plan:
+
+- The final witnesses use architectural invariants at the nearest observable profile/library seam where the existing helper surface cannot construct every doctrine behavior as a seed-level trajectory without widening fixture ownership.
+- No YAML threshold tuning was needed.
+- No engine runtime behavior changed.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `cd packages/engine && node --test dist/test/policy-profile-quality/vc-*.test.js` passed: 10 suites / 10 tests.
+- `cd packages/engine && node --test dist/test/architecture/policy-wasm-coverage-manifest.test.js` passed: 4 tests.
+- `pnpm -F @ludoforge/engine test` passed: 189/189 files.
+- `pnpm run check:ticket-deps` passed with 0 active tickets and 2583 archived tickets before and after spec archival.

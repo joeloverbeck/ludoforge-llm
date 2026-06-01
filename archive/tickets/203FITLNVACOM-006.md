@@ -1,6 +1,6 @@
 # 203FITLNVACOM-006: Replay-identity reattestation (P5)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — verification
@@ -81,3 +81,29 @@ None new; this ticket verifies existing tests under the new doctrine. Any re-ble
 1. `pnpm turbo build && pnpm -F @ludoforge/engine test:unit`
 2. `pnpm turbo test --force`
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed 2026-06-01.
+
+### Verification
+
+1. `pnpm turbo build` — passed.
+2. `pnpm -F @ludoforge/engine test:unit` — passed (`6107` tests passed, `0` failed).
+3. `pnpm turbo test --force` — passed (`5/5` tasks successful).
+4. `pnpm -F @ludoforge/engine test:policy-profile-quality` — passed after surgical witness refresh / invariant update (`103/103` files passed).
+5. `pnpm -F @ludoforge/engine test:determinism` — passed (`32/32` files passed).
+
+### Canary Triage
+
+The initial `policy-profile-quality` run exposed two Spec 203-owned canary deltas:
+
+1. `packages/engine/test/policy-profile-quality/fitl-march-dead-end-recovery.test.ts` failed its retained convergence witness because the compiled FITL GameDef hash and deterministic seed-1001 NVA march trajectory changed under the completed Spec 203 NVA doctrine. The fixture was refreshed with the retained generator:
+   - `packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/regenerate.mjs`
+   - Updated artifacts: `game-def-hash.txt`, `decision-sequence.json`
+   - Rationale: intentional Spec 203 NVA doctrine changes altered the compiled FITL GameDef and deterministic prefix; the refreshed witness remains terminal and replay-identical.
+2. `packages/engine/test/policy-profile-quality/shared-monsoon-awareness-nva.test.ts` failed because the NVA monsoon-suppression architectural invariant still named the pre-Spec-203 March template set. The invariant helper now expects the new NVA March templates (`nva.marchControl`, `nva.marchInfiltrateControl`) to be suppressed by the shared monsoon module. No production code changed.
+
+No convergence witness was downgraded or softened. The changed convergence fixture was regenerated from the retained generator, and the architectural invariant was strengthened to include the new Spec 203 templates.
+
+All FITL canaries are green at close.

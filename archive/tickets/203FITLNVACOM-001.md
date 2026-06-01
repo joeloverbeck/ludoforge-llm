@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — audit only
-**Deps**: `specs/203-fitl-nva-completion.md`
+**Deps**: `archive/specs/203-fitl-nva-completion.md`
 
 ## Problem
 

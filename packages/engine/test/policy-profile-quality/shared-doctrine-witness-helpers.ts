@@ -481,7 +481,13 @@ function expectedMonsoonSuppressedTemplates(profile: FitlProfile): readonly stri
     case 'arvn':
       return ['arvn.sweepRaid'];
     case 'nva':
-      return ['nva.locOccupationBeforeCoup', 'nva.marchAmbush', 'nva.marchInfiltrate'];
+      return [
+        'nva.locOccupationBeforeCoup',
+        'nva.marchAmbush',
+        'nva.marchControl',
+        'nva.marchInfiltrate',
+        'nva.marchInfiltrateControl',
+      ];
     case 'vc':
       return ['vc.marchAmbushFromLoc', 'vc.marchSubvert'];
   }

@@ -1,6 +1,6 @@
 # Spec 203 — FITL NVA Baseline Completion to ARVN-Parity
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — `nva-baseline` exposes only 5 plan templates, 3 faction-specific strategy modules (10 bound counting Spec 201 shared), 1 posture, and 3 guardrails — well short of ARVN-baseline's authored coverage (6 templates, ~6 faction modules, 1 posture, 6 guardrails). The competence report (`reports/fitl-competent-agent-ai.md`, NVA sections at lines ~636 onward) requires NVA to be encoded as a conventional/logistics insurgent that builds the Trail, masses force for NVA Control in populated spaces, uses Laos/Cambodia as a highway, distinguishes "build NVA strength" from "steal VC assets" when Infiltrating, and uses Bombard/Attack/Ambush selectively. The most important gap the report names is the **VC-rival filter**: `Infiltrate` reduces Opposition and converts VC infrastructure, so Infiltrate without alliance-rival posture looks malicious. None of this is fully encoded today.
 **Complexity**: M — YAML authoring in `data/games/fire-in-the-lake/92-agents.md` plus profile-quality witnesses. No engine work. Consumes shared scaffolding from Spec 201.
 **Date**: 2026-05-27
@@ -472,4 +472,21 @@ Decomposed via `/spec-to-tickets` on 2026-05-31:
 - [`archive/tickets/203FITLNVACOM-003.md`](../archive/tickets/203FITLNVACOM-003.md) — NVA strategy modules, posture, and guardrails (P2) (covers §6 P2)
 - [`archive/tickets/203FITLNVACOM-004.md`](../archive/tickets/203FITLNVACOM-004.md) — nva-baseline profile bindings (P3) (covers §6 P3)
 - [`archive/tickets/203FITLNVACOM-005.md`](../archive/tickets/203FITLNVACOM-005.md) — NVA profile-quality witness suite (P4) (covers §6 P4)
-- [`tickets/203FITLNVACOM-006.md`](../tickets/203FITLNVACOM-006.md) — Replay-identity reattestation (P5) (covers §6 P5)
+- [`archive/tickets/203FITLNVACOM-006.md`](../archive/tickets/203FITLNVACOM-006.md) — Replay-identity reattestation (P5) (covers §6 P5)
+
+## Outcome
+
+Completed 2026-06-01.
+
+Spec 203 closed the FITL NVA baseline parity gap by landing the selector survey, NVA plan-template and selector authoring, strategy module / posture / guardrail authoring, `nva-baseline` profile bindings, profile-quality witness suite, and replay-identity reattestation across tickets 001-006.
+
+Final verification completed under ticket 006:
+
+1. `pnpm turbo build` — passed.
+2. `pnpm -F @ludoforge/engine test:unit` — passed (`6107` tests passed, `0` failed).
+3. `pnpm turbo test --force` — passed (`5/5` tasks successful).
+4. `pnpm -F @ludoforge/engine test:policy-profile-quality` — passed (`103/103` files passed).
+5. `pnpm -F @ludoforge/engine test:determinism` — passed (`32/32` files passed).
+6. `pnpm run check:ticket-deps` — passed before ticket archive.
+
+The final canary reattestation regenerated the retained Spec 144 seed-1001 NVA March dead-end witness fixture after the intentional Spec 203 doctrine changes shifted the compiled FITL GameDef and deterministic trajectory. The NVA monsoon-suppression invariant was also updated to cover the new Spec 203 March templates. No convergence witness was softened or downgraded.

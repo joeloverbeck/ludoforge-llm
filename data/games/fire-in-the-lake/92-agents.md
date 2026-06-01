@@ -2313,7 +2313,7 @@ agents:
       vc.rallyBaseNetwork:
         traceLabel: "VC Rally to seed VC Base and Underground network"
         root: { actionTags: [rally] }
-        postureHook: vc.protectOppositionAndBases
+        postureHook: vc.preserveUndergroundAndBases
         roles:
           rallySpace: { selector: vc.rallyBaseTarget, required: true }
         steps:
@@ -2323,7 +2323,7 @@ agents:
       vc.rallyTax:
         traceLabel: "VC Rally then Tax to fund future ops"
         root: { actionTags: [rally], compound: { specialTags: [tax], timing: after } }
-        postureHook: vc.protectOppositionAndBases
+        postureHook: vc.preserveAgitationResources
         roles:
           rallySpace: { selector: vc.rallySpaceForFutureOps, required: true }
           taxSpace: { selector: vc.taxLocTarget, required: true }
@@ -2335,7 +2335,7 @@ agents:
       vc.marchSpread:
         traceLabel: "VC March to spread Underground into Opposition / Neutral"
         root: { actionTags: [march] }
-        postureHook: vc.protectOppositionAndBases
+        postureHook: vc.preserveUndergroundAndBases
         roles:
           marchSpace: { selector: vc.marchSpreadDestination, required: true }
         steps:
@@ -2345,7 +2345,7 @@ agents:
       vc.attackAmbush:
         traceLabel: "VC Attack then Ambush for surgical removal"
         root: { actionTags: [attack], compound: { specialTags: [ambush-vc], timing: after } }
-        postureHook: vc.protectOppositionAndBases
+        postureHook: vc.preserveUndergroundAndBases
         roles:
           attackSpace: { selector: vc.attackAmbushTarget, required: true }
         steps:
@@ -2356,7 +2356,7 @@ agents:
       vc.agitationPrep:
         traceLabel: "VC prepare Agitation-ready spaces before Coup"
         root: { actionTags: [agitate] }
-        postureHook: vc.protectOppositionAndBases
+        postureHook: vc.preserveAgitationResources
         roles:
           prepSpace: { selector: vc.agitationReadinessTarget, required: true }
         steps:
@@ -2522,6 +2522,50 @@ agents:
             value:
               ref: relationship.nominalAlly.gainValue
             weight: -20
+            fallback:
+              contribution: 0
+      vc.preserveUndergroundAndBases:
+        traceLabel: "VC preserve Underground guerrillas and VC Bases"
+        prefer:
+          - id: underground-network
+            value:
+              ref: feature.vcUndergroundGuerrillaCount
+            weight: 5
+            fallback:
+              contribution: 0
+          - id: base-network
+            value:
+              coalesce:
+                - { ref: preview.feature.vcBaseCount }
+                - { ref: feature.vcBaseCount }
+            weight: 4
+            fallback:
+              contribution: 0
+      vc.preserveAgitationResources:
+        traceLabel: "VC preserve Resources for Coup-phase Agitation"
+        prefer:
+          - id: coup-resource-floor
+            when:
+              ref: condition.coupImminent.satisfied
+            value:
+              boolToNumber:
+                lt:
+                  - coalesce:
+                      - { ref: preview.var.player.self.resources }
+                      - { ref: var.player.self.resources }
+                  - 5
+            weight: -4
+            fallback:
+              contribution: 0
+      vc.avoidNvaKingmaking:
+        traceLabel: "VC avoid improving NVA margin when NVA near win"
+        prefer:
+          - id: nva-kingmaking
+            when:
+              ref: condition.nvaNearWin.satisfied
+            value:
+              ref: feature.projectedNvaMarginDelta
+            weight: -5
             fallback:
               contribution: 0
 
@@ -3615,9 +3659,11 @@ agents:
             - or:
                 - { ref: candidate.tag.rally }
                 - { ref: candidate.tag.march }
-            - gte:
-                - { ref: feature.nvaMargin }
-                - -2
+            - or:
+                - gte:
+                    - { ref: feature.nvaMargin }
+                    - -2
+                - { ref: condition.nvaNearWin.satisfied }
         severity: demote
         penalty: 400
         onUnavailable: noFire
@@ -3632,6 +3678,20 @@ agents:
                 - 1
         severity: demote
         penalty: 350
+        onUnavailable: noFire
+      vc.avoidTaxWhenSupportShiftIsTooCostly:
+        traceLabel: "VC avoid Tax on populated Support unless resources critical"
+        scopes: [move]
+        when:
+          and:
+            - { ref: candidate.tag.tax }
+            - lt:
+                - { ref: feature.projectedSelfMarginDelta }
+                - 1
+            - not:
+                ref: condition.resourcesLow.satisfied
+        severity: demote
+        penalty: 400
         onUnavailable: noFire
 
     turnShapeEvaluators:

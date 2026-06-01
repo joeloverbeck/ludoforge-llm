@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `tickets/205FITLARVSEL-002.md`
+**Deps**: `archive/tickets/205FITLARVSEL-002.md`
 
 ## Problem
 

@@ -566,7 +566,66 @@ agents:
           maxItems: 8
           order: [qualityDesc, stableKeyAsc]
           onEmpty: noContribution
-      arvn.trainSpaceForControlOrPacification: { scopes: [move], source: { collection: { kind: zones } }, quality: { components: [{ id: controlOrPacificationOpportunity, value: 1, weight: 1 }], order: qualityDesc }, result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution } }
+      arvn.trainSpaceForControlOrPacification:
+        scopes: [move]
+        source:
+          collection: { kind: zones }
+        quality:
+          components:
+            - id: trainPopulation
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone: { ref: selector.item.key }
+                      prop: population
+                  - 0
+              weight: 4
+            - id: terrorMarkerPresent
+              value:
+                boolToNumber:
+                  gt:
+                    - lookup:
+                        surface: policyState
+                        collection: zones
+                        keyType: ZoneId
+                        key: { ref: selector.item.key }
+                        path: [variables, terrorCount]
+                        onMissing: { kind: constant, value: 0 }
+                    - 0
+              weight: 3
+            - id: pacificationEligible
+              value:
+                boolToNumber:
+                  and:
+                    - gt:
+                        - coalesce:
+                            - zoneProp:
+                                zone: { ref: selector.item.key }
+                                prop: population
+                            - 0
+                        - 0
+                    - not:
+                        eq:
+                          - lookup:
+                              surface: policyState
+                              collection: zones
+                              keyType: ZoneId
+                              key: { ref: selector.item.key }
+                              path: [markers, supportOpposition]
+                              onMissing: { kind: constant, value: neutral }
+                          - activeSupport
+              weight: 3
+            - id: cityTrainTarget
+              value:
+                boolToNumber:
+                  eq:
+                    - zoneProp:
+                        zone: { ref: selector.item.key }
+                        prop: category
+                    - city
+              weight: 2
+          order: qualityDesc
+        result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       arvn.governPatronageSpace:
         scopes: [move]
         source:
@@ -607,6 +666,36 @@ agents:
                       prop: population
                   - 0
               weight: 4
+            - id: arvnCubesExceedUsCubes
+              value:
+                boolToNumber:
+                  gt:
+                    - add:
+                        - zoneTokenAgg:
+                            zone: { ref: selector.item.key }
+                            owner: none
+                            tokenFilter:
+                              props:
+                                type: { eq: troops }
+                                faction: { eq: ARVN }
+                            op: count
+                        - zoneTokenAgg:
+                            zone: { ref: selector.item.key }
+                            owner: none
+                            tokenFilter:
+                              props:
+                                type: { eq: police }
+                                faction: { eq: ARVN }
+                            op: count
+                    - zoneTokenAgg:
+                        zone: { ref: selector.item.key }
+                        owner: none
+                        tokenFilter:
+                          props:
+                            type: { eq: troops }
+                            faction: { eq: US }
+                        op: count
+              weight: 6
           order: qualityDesc
         result: { maxItems: 8, order: [qualityDesc, stableKeyAsc], onEmpty: noContribution }
       arvn.patrolLocOrCity:
@@ -641,7 +730,49 @@ agents:
         quality:
           components:
             - id: exposeUndergroundThreat
-              value: 1
+              value:
+                add:
+                  - zoneTokenAgg:
+                      zone: { ref: selector.item.key }
+                      owner: none
+                      tokenFilter:
+                        props:
+                          type: { eq: guerrilla }
+                          faction: { eq: NVA }
+                          activity: { eq: underground }
+                      op: count
+                  - zoneTokenAgg:
+                      zone: { ref: selector.item.key }
+                      owner: none
+                      tokenFilter:
+                        props:
+                          type: { eq: guerrilla }
+                          faction: { eq: VC }
+                          activity: { eq: underground }
+                      op: count
+              weight: 5
+            - id: insurgentBasePresent
+              value:
+                boolToNumber:
+                  gt:
+                    - add:
+                        - zoneTokenAgg:
+                            zone: { ref: selector.item.key }
+                            owner: none
+                            tokenFilter:
+                              props:
+                                type: { eq: base }
+                                faction: { eq: NVA }
+                            op: count
+                        - zoneTokenAgg:
+                            zone: { ref: selector.item.key }
+                            owner: none
+                            tokenFilter:
+                              props:
+                                type: { eq: base }
+                                faction: { eq: VC }
+                            op: count
+                    - 0
               weight: 4
             - id: highPopControlSetup
               value:
@@ -655,9 +786,30 @@ agents:
           collection: { kind: zones }
         quality:
           components:
-            - id: baseOrUndergroundRemoval
-              value: 1
-              weight: 5
+            - id: removableBasePresent
+              value:
+                boolToNumber:
+                  eq:
+                    - tokenProp:
+                        token: { ref: selector.item.key }
+                        prop: type
+                    - base
+              weight: 6
+            - id: undergroundGuerrillaCount
+              value:
+                boolToNumber:
+                  and:
+                    - eq:
+                        - tokenProp:
+                            token: { ref: selector.item.key }
+                            prop: type
+                        - guerrilla
+                    - eq:
+                        - tokenProp:
+                            token: { ref: selector.item.key }
+                            prop: activity
+                        - underground
+              weight: 4
             - id: controlSwing
               value:
                 ref: feature.projectedSelfMargin
@@ -682,8 +834,16 @@ agents:
                           - none
                       - none
               weight: 5
-            - id: overstackedSafeOrigin
-              value: 1
+            - id: arvnTroopOverstack
+              value:
+                zoneTokenAgg:
+                  zone: { ref: selector.item.key }
+                  owner: none
+                  tokenFilter:
+                    props:
+                      type: { eq: troops }
+                      faction: { eq: ARVN }
+                  op: count
               weight: 3
             - id: preserveOriginControl
               value:
@@ -744,9 +904,30 @@ agents:
           collection: { kind: tokens }
         quality:
           components:
-            - id: baseAndControlThreat
-              value: 1
+            - id: removableBasePresent
+              value:
+                boolToNumber:
+                  eq:
+                    - tokenProp:
+                        token: { ref: selector.item.key }
+                        prop: type
+                    - base
               weight: 5
+            - id: controlSwingFromRemoval
+              value:
+                ref: feature.projectedSelfMargin
+              weight: 4
+            - id: populationWeight
+              value:
+                coalesce:
+                  - zoneProp:
+                      zone:
+                        tokenProp:
+                          token: { ref: selector.item.key }
+                          prop: zone
+                      prop: population
+                  - 0
+              weight: 3
             - id: leaderDenial
               value:
                 ref: feature.projectedCurrentLeaderMargin

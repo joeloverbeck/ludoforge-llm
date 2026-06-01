@@ -35,6 +35,7 @@ const opcodesForAgentPolicyExpr = (expr: AgentPolicyExpr): readonly Opcode[] => 
     case 'globalZoneAgg':
     case 'adjacentTokenAgg':
     case 'seatAgg':
+    case 'tokenProp':
       return [Opcode.LOAD_FEATURE, Opcode.AGGREGATE_COUNT, Opcode.AGGREGATE_SUM, Opcode.AGGREGATE_MIN, Opcode.AGGREGATE_MAX];
     case 'zoneProp':
       return [Opcode.LOAD_FEATURE];
@@ -57,6 +58,7 @@ const opcodesForCompiledPolicyExpr = (expr: CompiledPolicyExpr): readonly Opcode
     case 'globalZoneAgg':
     case 'adjacentTokenAgg':
     case 'seatAgg':
+    case 'tokenProp':
       return [Opcode.LOAD_FEATURE, Opcode.AGGREGATE_COUNT, Opcode.AGGREGATE_SUM, Opcode.AGGREGATE_MIN, Opcode.AGGREGATE_MAX];
     case 'zoneProp':
       return [Opcode.LOAD_FEATURE];

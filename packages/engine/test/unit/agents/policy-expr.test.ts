@@ -282,6 +282,93 @@ describe('policy-expr analysis', () => {
     assert.equal(analysis?.costClass, 'state');
   });
 
+  it('analyzes filtered zoneTokenAgg counts without a numeric token prop', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const baseContext = createContext();
+    const analysis = analyzePolicyExpr(
+      {
+        zoneTokenAgg: {
+          zone: { ref: 'selector.item.key' },
+          owner: 'none',
+          tokenFilter: {
+            type: 'troops',
+            props: {
+              faction: { eq: 'ARVN' },
+            },
+          },
+          op: 'count',
+        },
+      },
+      {
+        ...createContext(),
+        resolveRef(refPath: string) {
+          if (refPath === 'selector.item.key') {
+            return {
+              type: 'id' as const,
+              costClass: 'candidate' as const,
+              ref: candidateParamRef('selectorItemKey'),
+            };
+          }
+          return baseContext.resolveRef(refPath);
+        },
+      },
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'zoneTokenAgg',
+      zone: refExpr(candidateParamRef('selectorItemKey')),
+      owner: 'none',
+      tokenFilter: {
+        type: 'troops',
+        props: {
+          faction: { eq: 'ARVN' },
+        },
+      },
+      aggOp: 'count',
+    });
+    assert.equal(analysis?.valueType, 'number');
+    assert.equal(analysis?.costClass, 'candidate');
+  });
+
+  it('analyzes tokenProp expressions over selector item tokens', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const baseContext = createContext();
+    const analysis = analyzePolicyExpr(
+      {
+        tokenProp: {
+          token: { ref: 'selector.item.key' },
+          prop: 'zone',
+        },
+      },
+      {
+        ...baseContext,
+        resolveRef(refPath: string) {
+          if (refPath === 'selector.item.key') {
+            return {
+              type: 'id' as const,
+              costClass: 'state' as const,
+              ref: { kind: 'selectorItemIntrinsic' as const, intrinsic: 'key' as const },
+            };
+          }
+          return baseContext.resolveRef(refPath);
+        },
+      },
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.deepEqual(analysis?.expr, {
+      kind: 'tokenProp',
+      token: refExpr({ kind: 'selectorItemIntrinsic', intrinsic: 'key' }),
+      prop: 'zone',
+    });
+    assert.equal(analysis?.valueType, 'id');
+  });
+
   it('analyzes zoneProp with static and dynamic zone expressions through the shared path', () => {
     const staticDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const staticAnalysis = analyzePolicyExpr(

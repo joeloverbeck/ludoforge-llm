@@ -179,6 +179,8 @@ export function computePolicyExprReadFootprint(expr: CompiledPolicyExpr): Effect
       return unionFootprints([touchTokens('unknown'), zoneSourceFootprint(expr.anchorZone), touchZones('unknown')]);
     case 'seatAgg':
       return computePolicyExprReadFootprint(expr.expr);
+    case 'tokenProp':
+      return unionFootprints([touchTokens('unknown'), computePolicyExprReadFootprint(expr.token)]);
     case 'zoneProp':
       return zoneSourceFootprint(expr.zone);
   }

@@ -498,8 +498,8 @@ If any witness becomes trajectory-sensitive under the new selectors, distill per
 Decomposed via `/spec-to-tickets` on 2026-06-01:
 
 - [`archive/tickets/205FITLARVSEL-001.md`](../archive/tickets/205FITLARVSEL-001.md) — P0 — Selector vocabulary baseline for ARVN cleanup (covers §6 P0 / §11)
-- [`tickets/205FITLARVSEL-002.md`](../tickets/205FITLARVSEL-002.md) — P1 — Replace placeholder selector bodies (covers §§4.1–4.4, 4.7)
+- [`archive/tickets/205FITLARVSEL-002.md`](../archive/tickets/205FITLARVSEL-002.md) — P1 — Replace placeholder selector bodies (covers §§4.1–4.4, 4.7)
 - [`tickets/205FITLARVSEL-003.md`](../tickets/205FITLARVSEL-003.md) — P2 — Transport postState origin-control constraint (covers §4.5)
-- [`tickets/205FITLARVSEL-004.md`](../tickets/205FITLARVSEL-004.md) — P3 — Govern Patronage-availability term (covers §4.6)
+- [`archive/tickets/205FITLARVSEL-004.md`](../archive/tickets/205FITLARVSEL-004.md) — P3 — Govern Patronage-availability term (covers §4.6)
 - [`tickets/205FITLARVSEL-005.md`](../tickets/205FITLARVSEL-005.md) — Faction-agnostic no-placeholder-value-one invariant (covers §7 last bullet)
 - [`tickets/205FITLARVSEL-006.md`](../tickets/205FITLARVSEL-006.md) — P4 — Regression re-attestation (covers §6 P4)

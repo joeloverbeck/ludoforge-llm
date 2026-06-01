@@ -242,6 +242,10 @@ export function collectFeatureRefsFromCompiledPolicyExpr(
           aux: [aggOpCode(current.aggOp), stablePayloadCode(current.over), stablePayloadCode(current.availability ?? 'skipUnavailable')],
         });
         return;
+      case 'tokenProp':
+        visit(current.token);
+        refs.push(dynamicExprRef(current));
+        return;
       case 'zoneProp':
         visitZoneSource(current.zone);
         refs.push(zonePropFeatureRef(current, layout));
@@ -445,7 +449,7 @@ function zoneTokenAggFeatureRef(
   expr: Extract<CompiledPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
   layout: EncodedStateLayout,
 ): FeatureRef {
-  if (typeof expr.zone !== 'string') {
+  if (typeof expr.zone !== 'string' || expr.tokenFilter !== undefined || expr.prop === undefined) {
     return dynamicExprRef(expr);
   }
   const zoneIndex = indexOf(layout.zoneIds.map(String), expr.zone);

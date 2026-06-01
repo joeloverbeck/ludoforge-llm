@@ -9,6 +9,7 @@ import {
   loadArvnPlanFixture,
   proposeArvnPlan,
   requireSelectedTemplate,
+  withEveryZoneSupportMarker,
   withZoneSupportMarkers,
 } from './arvn-plan-witness-helpers.js';
 
@@ -16,21 +17,22 @@ const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 188_007_01;
 
 describe('Spec 188 ARVN Govern active-support priority witness', () => {
-  it('selects the high-pop Active Support Govern role target ahead of low-pop Passive Support alternatives', () => {
+  it('selects an Active Support Govern role target ahead of low-pop Passive Support alternatives', () => {
     const fixture = loadArvnPlanFixture(SEED);
-    const state = withZoneSupportMarkers(fixture.state, {
-      'saigon:none': 'activeSupport',
-      'can-tho:none': 'passiveSupport',
+    const neutralState = withEveryZoneSupportMarker(fixture.def, fixture.state, 'neutral');
+    const state = withZoneSupportMarkers(neutralState, {
+      'can-tho:none': 'activeSupport',
       'qui-nhon:none': 'passiveSupport',
     });
 
     const result = proposeArvnPlan(fixture, ['train'], state);
     const selected = requireSelectedTemplate(result, 'arvn.trainGovern');
     const govern = selected.roleBindings.governSpace;
-    const passed = govern?.selectedId === 'saigon:none'
+    const passed = govern?.selectedId === 'can-tho:none'
       && govern.components.activeSupportGovern === 1
       && govern.components.passiveSupportGovern === 0
-      && govern.components.governPopulation === 6;
+      && govern.components.governPopulation === 1
+      && govern.components.arvnCubesExceedUsCubes === 1;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -41,9 +43,10 @@ describe('Spec 188 ARVN Govern active-support priority witness', () => {
       decisions: result.alternatives.length,
     });
 
-    assert.equal(govern?.selectedId, 'saigon:none');
+    assert.equal(govern?.selectedId, 'can-tho:none');
     assert.equal(govern.components.activeSupportGovern, 1);
     assert.equal(govern.components.passiveSupportGovern, 0);
-    assert.equal(govern.components.governPopulation, 6);
+    assert.equal(govern.components.governPopulation, 1);
+    assert.equal(govern.components.arvnCubesExceedUsCubes, 1);
   });
 });

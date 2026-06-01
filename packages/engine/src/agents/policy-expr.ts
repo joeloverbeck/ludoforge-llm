@@ -88,6 +88,7 @@ type KnownOperator =
   | 'globalZoneAgg'
   | 'adjacentTokenAgg'
   | 'seatAgg'
+  | 'tokenProp'
   | 'zoneProp'
   | 'zoneTokenAgg';
 
@@ -123,6 +124,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'globalZoneAgg',
   'adjacentTokenAgg',
   'seatAgg',
+  'tokenProp',
   'zoneProp',
   'zoneTokenAgg',
 ]);
@@ -258,6 +260,8 @@ export function analyzePolicyExpr(
       return analyzeAdjacentTokenAggOperator(value, context, diagnostics, path);
     case 'seatAgg':
       return analyzeSeatAggOperator(value, context, diagnostics, path);
+    case 'tokenProp':
+      return analyzeTokenPropOperator(value, context, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -756,6 +760,8 @@ function containsScheduleDistanceRef(expr: AgentPolicyExpr): boolean {
       return typeof expr.anchorZone === 'string' ? false : containsScheduleDistanceRef(expr.anchorZone);
     case 'seatAgg':
       return containsScheduleDistanceRef(expr.expr);
+    case 'tokenProp':
+      return containsScheduleDistanceRef(expr.token);
     case 'zoneProp':
       return typeof expr.zone === 'string' ? false : containsScheduleDistanceRef(expr.zone);
     case 'literal':
@@ -1077,6 +1083,64 @@ function analyzeZonePropOperator(
   };
 }
 
+function analyzeTokenPropOperator(
+  expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'tokenProp requires an object with token and prop fields.',
+      suggestion: 'Use { tokenProp: { token: { ref: "selector.item.key" }, prop: "type" } }.',
+    });
+    return null;
+  }
+  const obj = expr as Readonly<Record<string, unknown>>;
+  const token = obj['token'];
+  const prop = obj['prop'];
+  if (typeof prop !== 'string' || prop.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.tokenProp.prop`,
+      severity: 'error',
+      message: 'tokenProp.prop must be a non-empty token property name, "type", or "zone".',
+      suggestion: 'Set prop to "type", "zone", or a scalar runtime token property name.',
+    });
+    return null;
+  }
+
+  const tokenAnalysis = analyzePolicyExpr(token as GameSpecPolicyExpr, context, diagnostics, `${path}.tokenProp.token`);
+  if (tokenAnalysis === null) {
+    return null;
+  }
+  if (!matchesType(tokenAnalysis.valueType, 'id')) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+      path: `${path}.tokenProp.token`,
+      severity: 'error',
+      message: 'tokenProp.token expressions must resolve to an id value.',
+      suggestion: 'Use an id-valued ref such as { ref: "selector.item.key" }.',
+    });
+    return null;
+  }
+
+  return {
+    expr: {
+      kind: 'tokenProp',
+      token: tokenAnalysis.expr,
+      prop,
+    },
+    valueType: prop === 'zone' ? 'id' : 'unknown',
+    costClass: tokenAnalysis.costClass,
+    dependencies: tokenAnalysis.dependencies,
+    isStaticallyZero: false,
+  };
+}
+
 function analyzeZoneTokenAggOperator(
   expr: GameSpecPolicyExpr,
   context: AnalyzePolicyExprContext,
@@ -1088,7 +1152,7 @@ function analyzeZoneTokenAggOperator(
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path,
       severity: 'error',
-      message: 'zoneTokenAgg requires an object with zone, owner, prop, and op fields.',
+      message: 'zoneTokenAgg requires an object with zone, owner, op, and optional tokenFilter and prop fields.',
       suggestion: 'Use { zoneTokenAgg: { zone: "hand", owner: "self", prop: "rank", op: "sum" } }.',
     });
     return null;
@@ -1098,6 +1162,7 @@ function analyzeZoneTokenAggOperator(
   const owner = obj['owner'];
   const prop = obj['prop'];
   const op = obj['op'];
+  const tokenFilter = analyzeGlobalTokenAggTokenFilter(obj['tokenFilter'], diagnostics, `${path}.zoneTokenAgg.tokenFilter`);
   if (typeof owner !== 'string' || !isAgentPolicyZoneTokenAggOwner(owner)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
@@ -1108,12 +1173,12 @@ function analyzeZoneTokenAggOperator(
     });
     return null;
   }
-  if (typeof prop !== 'string' || prop.length === 0) {
+  if (prop !== undefined && (typeof prop !== 'string' || prop.length === 0)) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
       path: `${path}.zoneTokenAgg.prop`,
       severity: 'error',
-      message: 'zoneTokenAgg.prop must be a non-empty string token property name.',
+      message: 'zoneTokenAgg.prop must be a non-empty string token property name when provided.',
       suggestion: 'Set prop to a token property name (e.g., "rank").',
     });
     return null;
@@ -1128,8 +1193,18 @@ function analyzeZoneTokenAggOperator(
     });
     return null;
   }
+  if (op !== 'count' && prop === undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.zoneTokenAgg.prop`,
+      severity: 'error',
+      message: `zoneTokenAgg.prop is required when op is "${op}".`,
+      suggestion: 'Set prop to the numeric token property to aggregate.',
+    });
+    return null;
+  }
   const zoneSource = analyzeZoneSource(zone, context, diagnostics, `${path}.zoneTokenAgg.zone`, 'zoneTokenAgg');
-  if (zoneSource === null) {
+  if (tokenFilter === null || zoneSource === null) {
     return null;
   }
   return {
@@ -1137,7 +1212,8 @@ function analyzeZoneTokenAggOperator(
       kind: 'zoneTokenAgg',
       zone: zoneSource.zoneExpr,
       owner,
-      prop,
+      ...(tokenFilter === undefined ? {} : { tokenFilter }),
+      ...(prop === undefined ? {} : { prop }),
       aggOp: op as AgentPolicyZoneTokenAggOp,
     },
     valueType: 'number',

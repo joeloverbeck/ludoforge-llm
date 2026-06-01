@@ -707,6 +707,8 @@ const exprReadsScheduleDistance = (expr: CompiledPolicyExpr | undefined): boolea
       return typeof expr.zone === 'string' ? false : exprReadsScheduleDistance(expr.zone);
     case 'adjacentTokenAgg':
       return typeof expr.anchorZone === 'string' ? false : exprReadsScheduleDistance(expr.anchorZone);
+    case 'tokenProp':
+      return exprReadsScheduleDistance(expr.token);
     case 'globalTokenAgg':
     case 'globalZoneAgg':
     case 'zoneProp':
@@ -738,6 +740,8 @@ const exprReadsTopNVisibleScheduleDistance = (def: GameDef, expr: CompiledPolicy
       return typeof expr.anchorZone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.anchorZone);
     case 'seatAgg':
       return exprReadsTopNVisibleScheduleDistance(def, expr.expr);
+    case 'tokenProp':
+      return exprReadsTopNVisibleScheduleDistance(def, expr.token);
     case 'zoneProp':
       return typeof expr.zone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.zone);
     case 'literal':
@@ -783,6 +787,8 @@ const firstTopNVisibleSchedulePartial = (
       return typeof expr.anchorZone === 'string' ? undefined : firstTopNVisibleSchedulePartial(expr.anchorZone, context);
     case 'seatAgg':
       return firstTopNVisibleSchedulePartial(expr.expr, context);
+    case 'tokenProp':
+      return firstTopNVisibleSchedulePartial(expr.token, context);
     case 'zoneProp':
       return typeof expr.zone === 'string' ? undefined : firstTopNVisibleSchedulePartial(expr.zone, context);
     case 'literal':

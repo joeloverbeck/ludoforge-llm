@@ -1,9 +1,9 @@
 # 205FITLARVSEL-004: P3 — Govern Patronage-availability term (§4.6)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: None — YAML game-data only
+**Engine Changes**: Yes — reused the generic filtered local token-count selector support added with 205FITLARVSEL-002
 **Deps**: `archive/tickets/205FITLARVSEL-001.md`
 
 ## Problem
@@ -20,7 +20,7 @@ The existing `arvn.governPatronageSpace` already encodes the Active-vs-Passive S
 ## Architecture Check
 
 1. Single additive component to an existing well-authored selector — minimum-impact change (Foundation #15).
-2. Uses existing operators only (`boolToNumber`, `aggregate`, `gt`); no new authoring constructs (Foundation #1, #7).
+2. Uses generic selector expressions (`boolToNumber`, `gt`, filtered `zoneTokenAgg` counts); no FITL-specific compiler/runtime hardcoding (Foundation #1, #7).
 3. Preserves existing components verbatim — no churn (Foundation #14, no aliases).
 4. The new witness asserts the Patronage-unavailable demotion as an architectural property (Foundation #16).
 
@@ -91,7 +91,7 @@ Use existing test helpers in `packages/engine/test/policy-profile-quality/arvn-p
 ### Invariants
 
 1. Existing `arvn.governPatronageSpace` components (`activeSupportGovern`, `passiveSupportGovern`, `governPopulation`) are untouched (append-only).
-2. Foundation #1 — no engine code changes.
+2. Foundation #1 — engine changes are generic selector-expression support shared with 205FITLARVSEL-002.
 3. The new component's `weight: 6` is calibrated below `activeSupportGovern` (weight 20) so Active Support priority is not inverted.
 
 ## Test Plan
@@ -110,3 +110,29 @@ Use existing test helpers in `packages/engine/test/policy-profile-quality/arvn-p
 6. `node --test dist/test/policy-profile-quality/arvn-train-govern-separation.test.js`
 7. `pnpm turbo test`
 8. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-06-01
+
+What changed:
+
+- Appended `arvnCubesExceedUsCubes` to `arvn.governPatronageSpace` with `weight: 6`.
+- The component compares local ARVN troop/police counts against local US troop counts using filtered `zoneTokenAgg` counts.
+- Added `packages/engine/test/policy-profile-quality/arvn-govern-patronage-unavailable-demotes.test.ts`.
+- Updated the existing Active Support Govern witness so it still asserts the Active Support and Patronage terms under the new selector trajectory.
+
+Deviation from original plan:
+
+- The ticket assumed YAML-only work. The implementation uses the generic filtered local token-count selector support added for 205FITLARVSEL-002 because the original aggregate sketch was not available in the live selector-expression surface.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/policy-profile-quality/arvn-govern-patronage-unavailable-demotes.test.js`
+- `node --test dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js`
+- Focused ARVN policy-profile witnesses
+- `pnpm turbo build`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

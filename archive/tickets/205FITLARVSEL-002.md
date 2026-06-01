@@ -1,9 +1,9 @@
 # 205FITLARVSEL-002: P1 — Replace placeholder selector bodies (§§4.1–4.4, 4.7)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: None — YAML game-data only
+**Engine Changes**: Yes — generic selector-expression support for filtered local token counts and token-local properties
 **Deps**: `archive/tickets/205FITLARVSEL-001.md`
 
 ## Problem
@@ -20,7 +20,7 @@ Five ARVN selectors carry `value: 1` placeholder components in `data/games/fire-
 
 ## Architecture Check
 
-1. Uses only existing authoring constructs — no engine changes, no new compiler surfaces. Data-asset-only (Foundation #1, #7).
+1. Uses generic selector-expression constructs. Implementation added the missing generic compiler/runtime support for filtered `zoneTokenAgg` counts and `tokenProp` after the P0 baseline showed the target selectors were not expressible with the existing surface (Foundation #1, #7).
 2. Replaces `value: 1` standalone constants with item-local features — closes the quality gap (Foundation #15 Architectural Completeness).
 3. Preserves all selector IDs verbatim; only component `id` / `value` / `weight` change (Foundation #14 — no aliases or shims).
 4. The (d)-classified placeholder names from P0 (if any) flag as follow-up work, not silently degraded — protecting Foundation #20 preview-signal integrity by not synthesizing unavailable features into 0-contributions.
@@ -78,7 +78,7 @@ For each component value expression in §§4.1-4.7, consult `reports/205-fitl-ar
 
 1. Selector IDs unchanged (`arvn.trainSpaceForControlOrPacification`, `arvn.sweepToExposeSpace`, `arvn.raidRemovalTarget`, `arvn.transportOrigin`, `arvn.pieceRemovalPriority`).
 2. Existing item-local components in `arvn.transportOrigin` (`authoredMapSpace`, `preserveOriginControl`) preserved verbatim.
-3. Foundation #1 — no engine code changes.
+3. Foundation #1 — engine changes are generic selector-expression support, not FITL-specific hardcoding.
 4. Foundation #14 — no compatibility shims; the placeholder components are deleted, not aliased.
 
 ## Test Plan
@@ -102,3 +102,28 @@ For each component value expression in §§4.1-4.7, consult `reports/205-fitl-ar
 11. `node --test dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js`
 12. `pnpm turbo test`
 13. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-06-01
+
+What changed:
+
+- Replaced the five named ARVN selector placeholder bodies in `data/games/fire-in-the-lake/92-agents.md`.
+- Added item-local selector expressions for Train, Sweep, Raid, Transport origin, and piece-removal priority.
+- Added generic `zoneTokenAgg.tokenFilter` support for local filtered token counts and `tokenProp` support for token-scoped selectors, with schema/type/compiler/runtime/test coverage.
+- Preserved selector IDs and the existing `arvn.transportOrigin` `authoredMapSpace` and `preserveOriginControl` components.
+
+Deviation from original plan:
+
+- The ticket assumed YAML-only work. The P0 baseline showed the replacement expressions needed filtered local token counts and token-local property access that did not exist in the selector-expression surface, so the implementation added generic engine support instead of reintroducing synthetic constants.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test dist/test/unit/agents/policy-expr.test.js`
+- Focused ARVN policy-profile witnesses, including the shifted/distilled ARVN Patrol+Govern and seed-1000 deep-recovery witnesses
+- `pnpm turbo build`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

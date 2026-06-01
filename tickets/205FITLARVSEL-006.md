@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — verification only
-**Deps**: `tickets/205FITLARVSEL-002.md`, `tickets/205FITLARVSEL-003.md`, `tickets/205FITLARVSEL-004.md`, `tickets/205FITLARVSEL-005.md`
+**Deps**: `archive/tickets/205FITLARVSEL-002.md`, `tickets/205FITLARVSEL-003.md`, `archive/tickets/205FITLARVSEL-004.md`, `tickets/205FITLARVSEL-005.md`
 
 ## Problem
 

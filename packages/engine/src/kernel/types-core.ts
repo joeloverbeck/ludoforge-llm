@@ -676,7 +676,8 @@ export type AgentPolicyExpr =
       readonly kind: 'zoneTokenAgg';
       readonly zone: AgentPolicyZoneSource;
       readonly owner: AgentPolicyZoneTokenAggOwner;
-      readonly prop: string;
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly prop?: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
     }
   | {
@@ -711,6 +712,11 @@ export type AgentPolicyExpr =
       readonly kind: 'zoneProp';
       readonly zone: AgentPolicyZoneSource;
       readonly prop: string;
+    }
+  | {
+      readonly kind: 'tokenProp';
+      readonly token: AgentPolicyExpr;
+      readonly prop: string;
     };
 
 export type CompiledPolicyExpr =
@@ -735,7 +741,8 @@ export type CompiledPolicyExpr =
       readonly kind: 'zoneTokenAgg';
       readonly zone: CompiledPolicyZoneSource;
       readonly owner: AgentPolicyZoneTokenAggOwner;
-      readonly prop: string;
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly prop?: string;
       readonly aggOp: AgentPolicyZoneTokenAggOp;
     }
   | {
@@ -769,6 +776,11 @@ export type CompiledPolicyExpr =
   | {
       readonly kind: 'zoneProp';
       readonly zone: CompiledPolicyZoneSource;
+      readonly prop: string;
+    }
+  | {
+      readonly kind: 'tokenProp';
+      readonly token: CompiledPolicyExpr;
       readonly prop: string;
     };
 

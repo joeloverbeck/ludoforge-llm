@@ -1,6 +1,6 @@
 # 204FITLVCCOM-007: P3 - Bind completed VC doctrine into vc-baseline
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None - YAML authoring in `data/games/fire-in-the-lake/92-agents.md`
@@ -90,3 +90,27 @@ Preserve the existing five VC templates.
 1. `pnpm -F @ludoforge/engine build`
 2. `cd packages/engine && node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js`
 3. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completed**: 2026-06-01
+
+**What changed**:
+- Added `vc.avoidTaxWhenSupportShiftIsTooCostly` to `vc-baseline.use.guardrails`.
+- Added `vc.oppositionEngine`, `vc.baseNetwork`, `vc.subvertPatronage`, `vc.agitationReadiness`, and `vc.nvaRivalRisk` to `vc-baseline.use.strategyModules`.
+- Added `vc.rallyBaseNetwork`, `vc.rallyTax`, `vc.marchSpread`, `vc.attackAmbush`, and `vc.agitationPrep` to `vc-baseline.use.planTemplates`.
+- Preserved all existing shared and VC baseline bindings.
+
+**Verification**:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js dist/test/policy-profile-quality/vc-protects-bases-from-nva-infiltrate.test.js` from `packages/engine` after build — passed, 2/2 tests.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2581 archived tickets.
+- `git diff --check -- data/games/fire-in-the-lake/92-agents.md archive/tickets/204FITLVCCOM-007.md` — passed before outcome edit; final whitespace check rerun after outcome edit.
+- `rg -n -- "- vc\\.(avoidTaxWhenSupportShiftIsTooCostly|oppositionEngine|baseNetwork|subvertPatronage|agitationReadiness|nvaRivalRisk|rallyBaseNetwork|rallyTax|marchSpread|attackAmbush|agitationPrep)$" data/games/fire-in-the-lake/92-agents.md` — confirmed all new IDs are bound in `vc-baseline`; earlier hits are internal module references.
+
+**Terminal closeout**:
+- Ticket graph/status integrity: `pnpm run check:ticket-deps` passed before terminal status.
+- Source-size decision: `data/games/fire-in-the-lake/92-agents.md` is a preexisting large GameSpecDoc authoring file, not a source-file extraction target for this YAML-only ticket. It grew from 4157 to 4168 lines (`+11/-0`) because the required bindings belong in the existing `vc-baseline` profile block; splitting would widen the ticket and obscure the canonical data seam. Residual extraction owner: none for this ticket.
+- Untracked/touched-file hygiene: worktree contained only `data/games/fire-in-the-lake/92-agents.md` before this Outcome edit.
+- Proof lane classification: required lanes green; the malformed first structural `rg` probe was rerun with `--` and is not cited as proof.
+- Terminal status allowed: every named binding deliverable is present, resolves under build, and existing VC witnesses pass under the expanded profile.

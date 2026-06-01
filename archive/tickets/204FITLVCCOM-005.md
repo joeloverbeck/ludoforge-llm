@@ -83,7 +83,7 @@ Do not edit or remove `vc.buildPoliticalNetwork`, `vc.subvertRegimeSecurity`, `v
 **What changed**:
 - Added five additive VC strategy-module library entries in `data/games/fire-in-the-lake/92-agents.md`: `vc.oppositionEngine`, `vc.baseNetwork`, `vc.subvertPatronage`, `vc.agitationReadiness`, and `vc.nvaRivalRisk`.
 - Preserved the existing VC modules (`vc.buildPoliticalNetwork`, `vc.subvertRegimeSecurity`, `vc.fundAndAmbushCarefully`, and `vc.denyNvaIfNearWin`) unchanged.
-- Kept the new modules unbound from `vc-baseline.use.strategyModules`; activation remains owned by `tickets/204FITLVCCOM-007.md`.
+- Kept the new modules unbound from `vc-baseline.use.strategyModules`; activation remains owned by `archive/tickets/204FITLVCCOM-007.md`.
 
 **Verification**:
 - `pnpm -F @ludoforge/engine build` — passed.

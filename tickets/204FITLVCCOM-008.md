@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None expected - profile-quality tests and possible YAML threshold tuning only
-**Deps**: `tickets/204FITLVCCOM-007.md`
+**Deps**: `archive/tickets/204FITLVCCOM-007.md`
 
 ## Problem
 

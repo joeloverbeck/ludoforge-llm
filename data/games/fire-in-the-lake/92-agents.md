@@ -4119,6 +4119,7 @@ agents:
           - vc.avoidConventionalAttackWithoutAmbush
           - vc.protectBasesFromNvaInfiltrate
           - vc.avoidHighPopTaxWithoutPoliticalPlan
+          - vc.avoidTaxWhenSupportShiftIsTooCostly
         strategyModules:
           - shared.immediateWin
           - shared.blockCurrentLeader
@@ -4131,12 +4132,22 @@ agents:
           - vc.subvertRegimeSecurity
           - vc.fundAndAmbushCarefully
           - vc.denyNvaIfNearWin
+          - vc.oppositionEngine
+          - vc.baseNetwork
+          - vc.subvertPatronage
+          - vc.agitationReadiness
+          - vc.nvaRivalRisk
         planTemplates:
           - vc.rallySubvert
           - vc.marchSubvert
           - vc.terrorSubvert
           - vc.terrorTax
           - vc.marchAmbushFromLoc
+          - vc.rallyBaseNetwork
+          - vc.rallyTax
+          - vc.marchSpread
+          - vc.attackAmbush
+          - vc.agitationPrep
         considerations:
           - preferNormalizedMargin
           - preferRallyWeighted

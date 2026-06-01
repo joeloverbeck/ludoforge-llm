@@ -92,7 +92,7 @@ Update the new templates from ticket 004:
 - Replaced the transitional `vc.protectOppositionAndBases` hooks on `vc.rallyBaseNetwork`, `vc.marchSpread`, and `vc.attackAmbush` with `vc.preserveUndergroundAndBases`.
 - Replaced the transitional `vc.protectOppositionAndBases` hooks on `vc.rallyTax` and `vc.agitationPrep` with `vc.preserveAgitationResources`.
 - Strengthened `vc.protectBasesFromNvaInfiltrate` with the `condition.nvaNearWin.satisfied` clause.
-- Added `vc.avoidTaxWhenSupportShiftIsTooCostly` as a library guardrail; binding it to `vc-baseline` remains owned by `tickets/204FITLVCCOM-007.md`.
+- Added `vc.avoidTaxWhenSupportShiftIsTooCostly` as a library guardrail; binding it to `vc-baseline` remains owned by `archive/tickets/204FITLVCCOM-007.md`.
 
 **Live-contract correction**:
 - CandidateFeature-derived posture terms use current `feature.vcUndergroundGuerrillaCount` and `feature.projectedNvaMarginDelta` refs. The focused witness lane rejected the draft `preview.feature.*` forms for these newly authored candidateFeatures; true preview refs retained explicit `fallback: { contribution: 0 }`.

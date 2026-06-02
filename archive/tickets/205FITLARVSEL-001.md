@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — vocabulary audit only
-**Deps**: `specs/205-fitl-arvn-selector-cleanup.md`
+**Deps**: `archive/specs/205-fitl-arvn-selector-cleanup.md`
 
 ## Problem
 

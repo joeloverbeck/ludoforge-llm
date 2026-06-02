@@ -1,6 +1,6 @@
 # Spec 205 — FITL ARVN Selector Cleanup and Placeholder Replacement
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium — `arvn-baseline` is the most mature faction (21 library components: 9 selectors + 6 plan templates + 6 guardrails; plus 8 strategy modules + 1 posture + 2 relationships and 10 profile-quality witnesses), but its maturity grew during the architecture-proving period and several selectors still score with placeholder constants (`value: 1`) or rely on global features (`feature.coinControlPop`) as item-local target quality rather than `zoneProp`/`lookup`/`aggregate`-derived local features. The proposal correctly identifies this as quality-gap, not absence-of-doctrine — and warns against renaming for aesthetics. The fix is targeted replacement of *only* the items where a real local feature is available.
 **Complexity**: S–M — selector body replacements in `data/games/fire-in-the-lake/92-agents.md` plus regression-only witnesses. No engine work. Existing ARVN doctrine, plan templates, modules, posture, guardrails, and witnesses are preserved.
 **Date**: 2026-05-27 (reassessed 2026-06-01)
@@ -506,3 +506,33 @@ Decomposed via `/spec-to-tickets` on 2026-06-01:
 - [`archive/tickets/205FITLARVSEL-007.md`](../archive/tickets/205FITLARVSEL-007.md) — Prerequisite cleanup for selector value-one invariant
 - [`archive/tickets/205FITLARVSEL-005.md`](../archive/tickets/205FITLARVSEL-005.md) — Faction-agnostic no-placeholder-value-one invariant (covers §7 last bullet)
 - [`archive/tickets/205FITLARVSEL-006.md`](../archive/tickets/205FITLARVSEL-006.md) — P4 — Regression re-attestation (covers §6 P4)
+
+## Outcome
+
+Completed on 2026-06-02.
+
+Spec 205 landed through the full `205FITLARVSEL` ticket family:
+
+1. `205FITLARVSEL-001` produced the selector vocabulary baseline report and reset downstream authoring away from unsupported placeholder syntax.
+2. `205FITLARVSEL-002` replaced the five ARVN placeholder selector bodies using the live selector-expression surface and generic filtered local token-count support.
+3. `205FITLARVSEL-004` added the Govern Patronage-availability term while preserving the existing Active/Passive Support components.
+4. `205FITLARVSEL-007` cleaned remaining non-ARVN selector-library `value: 1` constants so the invariant could be faction-agnostic.
+5. `205FITLARVSEL-005` added the faction-agnostic no-placeholder-value-one selector invariant.
+6. `205FITLARVSEL-003` retargeted the draft Transport `postState` work to the live destination-side Spec 196 observer seam and added the constraint-time origin-Control witness.
+7. `205FITLARVSEL-006` re-attested the final regression surface.
+
+Deviations from the original proposal:
+
+1. The draft selector examples were not copied literally where the live selector-expression surface rejected their shape. The implementation used the P0 vocabulary baseline and generic filtered local token-count support instead of synthetic zeroes or unsupported aggregate syntax.
+2. The Transport `postState` work did not add a `transportOrigin` constraint. Live reassessment showed Spec 196 observers must attach to the observed destination role, so the existing destination-side `arvn.trainTransport.transportDestination` constraint was preserved and proven.
+3. The final no-placeholder invariant is broader than the original ARVN-only framing: it scans every game agent library and protects ARVN / US / NVA / VC / future selectors alike.
+
+Verification:
+
+1. `pnpm turbo build` — 3 successful tasks on the final 006 re-attestation.
+2. Two consecutive `pnpm turbo build` runs produced byte-identical SHA-256 manifests for 79 generated GameDef-related artifacts.
+3. Focused final witness lane passed: 15 tests across 13 suites, including existing ARVN policy-profile witnesses, the new Transport `postState` witness, the 4-profile convergence canary, and `no-placeholder-value-one-selectors.test.js`.
+4. `pnpm turbo test` — 5 successful tasks; engine default lane reported `summary 189/189 files passed`.
+5. `pnpm turbo lint` — 2 successful tasks.
+6. `pnpm turbo typecheck` — 3 successful tasks.
+7. `pnpm run check:ticket-deps` — passed with 0 active tickets and 2590 archived tickets after final ticket archival.

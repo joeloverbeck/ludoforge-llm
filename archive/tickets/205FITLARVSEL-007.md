@@ -61,7 +61,7 @@ After edits, rerun a structural YAML inventory over every `data/games/*/*-agents
 - `data/games/fire-in-the-lake/92-agents.md` (modify) — replace current selector-library placeholder constants
 - `tickets/205FITLARVSEL-005.md` (modify) — add dependency on this prerequisite cleanup
 - `archive/tickets/205FITLARVSEL-006.md` (modify) — add dependency on this prerequisite cleanup before final re-attestation
-- `specs/205-fitl-arvn-selector-cleanup.md` (modify) — add this ticket to the series list and clarify the 005 prerequisite
+- `archive/specs/205-fitl-arvn-selector-cleanup.md` (modify) — add this ticket to the series list and clarify the 005 prerequisite
 
 ## Out of Scope
 

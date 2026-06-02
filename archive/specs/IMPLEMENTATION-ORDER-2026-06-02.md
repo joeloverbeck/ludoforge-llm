@@ -1,6 +1,6 @@
 # Implementation Order — FITL Base-Game AI Agent Competence Encoding
 
-**Status**: ACTIVE
+**Status**: COMPLETED
 **Date**: 2026-05-27
 **Source report**: `reports/fitl-ai-encoding-first-iteration.md` (ChatGPT-Pro first iteration of FITL AI encoding)
 **Prior context**: `archive/specs/IMPLEMENTATION-ORDER-2026-05-27.md` (closed the four-faction AI architecture overhaul: Specs 196–199 landed 2026-05-27). The current series follows that one and operationalizes the *encoding* phase the architecture work was the prerequisite for.
@@ -59,8 +59,8 @@ The five specs are **NOT fully independent** (unlike 196–199, which were mutua
    Authors VC `rallyBaseNetwork`, `rallyTax`, `terrorTax`, `terrorSubvert`, `marchSpread`, `attackAmbush`, `agitationPrep` templates; keeps event handling on already-bound `shared.eventDirectSwing`; adds `oppositionEngine`, `baseNetwork`, `subvertPatronage`, `agitationReadiness`, `nvaRivalRisk` modules; closes the Coup-Agitation-preparation gap. Completed and archived on 2026-06-01 with 10 VC witnesses.
 
 5. **Spec 205 — FITL ARVN Selector Cleanup and Placeholder Replacement**
-   (`specs/205-fitl-arvn-selector-cleanup.md`)
-   Replaces five verified placeholder selectors (constant `value: 1`) with item-local `zoneProp`-derived features; adds `postState` origin-control constraint to Transport; strengthens Govern Active-vs-Passive distinction; strengthens Sweep+Raid composition. Preserves all 10 existing ARVN witnesses; adds 3 regression witnesses.
+   (`archive/specs/205-fitl-arvn-selector-cleanup.md`)
+   Replaced the verified ARVN placeholder selectors with item-local/generic selector expressions; preserved and proved the destination-side `postState` origin-control Transport constraint; added the Govern Patronage-availability term; broadened no-placeholder coverage to a faction-agnostic selector invariant; completed final regression re-attestation. Completed and archived on 2026-06-02.
 
 **Dependency direction**: 201 → (202 ‖ 203 ‖ 204); 205 is independent.
 
@@ -135,8 +135,15 @@ The audit's macro recommendations and per-section findings are operationalized a
 
 ## Outcome
 
-Status update on 2026-06-01:
+Completed on 2026-06-02.
 
-- Specs 201, 202, 203, and 204 are completed and archived.
-- Spec 204 closed the VC baseline parity slice with all `204FITLVCCOM-*` tickets archived, `pnpm -F @ludoforge/engine test` passing 189/189 files, and the focused VC policy-quality lane passing 10/10 tests.
-- Spec 205 remains the only active spec in this implementation-order series.
+The FITL Base-Game AI Agent Competence Encoding series is closed:
+
+1. Specs 201, 202, 203, 204, and 205 are completed and archived.
+2. Spec 205 closed the remaining ARVN selector-quality slice with all `205FITLARVSEL-*` tickets archived.
+3. Final Spec 205 re-attestation passed `pnpm turbo build` twice with byte-identical SHA-256 manifests for 79 generated GameDef-related artifacts.
+4. The focused final witness lane passed 15 tests across 13 suites, including ARVN witnesses, the 4-profile convergence canary, the Transport `postState` witness, and `no-placeholder-value-one-selectors.test.js`.
+5. `pnpm turbo test` passed with 5 successful tasks; the engine default lane reported `summary 189/189 files passed`.
+6. `pnpm turbo lint`, `pnpm turbo typecheck`, and `pnpm run check:ticket-deps` passed.
+
+The implementation-order file is archived to `archive/specs/IMPLEMENTATION-ORDER-2026-06-02.md` per the stop criterion above.

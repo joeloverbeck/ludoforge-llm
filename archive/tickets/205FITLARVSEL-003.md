@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test/spec-ticket only; YAML game-data preserved
-**Deps**: `specs/205-fitl-arvn-selector-cleanup.md`
+**Deps**: `archive/specs/205-fitl-arvn-selector-cleanup.md`
 
 ## Problem
 
@@ -67,7 +67,7 @@ Use existing production spec helpers and the ARVN action-distribution fixture ro
 ## Files to Touch
 
 - `tickets/205FITLARVSEL-003.md` (modify) — record this Foundation-aligned boundary reset and final proof
-- `specs/205-fitl-arvn-selector-cleanup.md` (modify) — correct §4.5 and the ticket list to the destination-side constraint
+- `archive/specs/205-fitl-arvn-selector-cleanup.md` (modify) — correct §4.5 and the ticket list to the destination-side constraint
 - `packages/engine/test/policy-profile-quality/arvn-transport-postState-origin-control-constraint-time.test.ts` (new)
 
 ## Out of Scope

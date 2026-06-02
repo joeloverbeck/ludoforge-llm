@@ -1,17 +1,15 @@
 {
   "originating_spec": "specs/205-fitl-arvn-selector-cleanup.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/205FITLARVSEL-003.md",
+  "last_ticket": "archive/tickets/205FITLARVSEL-006.md",
   "last_result": "completed_archived",
-  "last_work_commit": "58f3636f7",
+  "last_work_commit": "d159983cc",
   "last_state_commit": "self",
-  "next_target": "tickets/205FITLARVSEL-006.md",
-  "queue": [
-    "tickets/205FITLARVSEL-006.md"
-  ],
-  "phase": "ready_for_next_ticket",
+  "next_target": "specs/205-fitl-arvn-selector-cleanup.md",
+  "queue": [],
+  "phase": "ready_for_originating_spec_archive",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "205FITLARVSEL-003 completed and archived in work commit 58f3636f7. 205FITLARVSEL-006 is next and owns final regression re-attestation for Spec 205.",
+  "owned_dirty_summary": "All active 205FITLARVSEL tickets are completed and archived. 205FITLARVSEL-006 completed final regression re-attestation in work commit d159983cc; archive the originating Spec 205 next.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

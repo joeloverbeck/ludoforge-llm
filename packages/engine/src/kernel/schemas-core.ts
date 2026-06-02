@@ -974,7 +974,8 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
         z.string().regex(/^[0-9]+$/),
       ]),
-      prop: StringSchema,
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      prop: StringSchema.optional(),
       aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
     }).strict(),
     z.object({
@@ -1009,6 +1010,11 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       kind: z.literal('zoneProp'),
       zone: z.union([StringSchema, AgentPolicyExprSchema]),
+      prop: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('tokenProp'),
+      token: AgentPolicyExprSchema,
       prop: StringSchema,
     }).strict(),
   ]),
@@ -1064,7 +1070,8 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
         z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
         z.string().regex(/^[0-9]+$/),
       ]),
-      prop: StringSchema,
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      prop: StringSchema.optional(),
       aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
     }).strict(),
     z.object({
@@ -1099,6 +1106,11 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       kind: z.literal('zoneProp'),
       zone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      prop: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('tokenProp'),
+      token: CompiledPolicyExprSchema,
       prop: StringSchema,
     }).strict(),
   ]),

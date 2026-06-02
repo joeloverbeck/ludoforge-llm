@@ -102,6 +102,8 @@ export const exprReadsPreviewRelationship = (expr: CompiledPolicyExpr): boolean 
       return typeof expr.zone !== 'string' && exprReadsPreviewRelationship(expr.zone);
     case 'adjacentTokenAgg':
       return typeof expr.anchorZone !== 'string' && exprReadsPreviewRelationship(expr.anchorZone);
+    case 'tokenProp':
+      return exprReadsPreviewRelationship(expr.token);
     case 'zoneProp':
       return typeof expr.zone !== 'string' && exprReadsPreviewRelationship(expr.zone);
     case 'globalTokenAgg':

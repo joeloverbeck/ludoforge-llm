@@ -5635,6 +5635,9 @@ function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
       case 'seatAgg':
         visit(current.expr);
         return;
+      case 'tokenProp':
+        visit(current.token);
+        return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {
           visit(current.zone);
@@ -5685,6 +5688,9 @@ function collectPreviewDerivedRefIds(expr: AgentPolicyExpr): readonly string[] {
       case 'seatAgg':
         visit(current.expr);
         return;
+      case 'tokenProp':
+        visit(current.token);
+        return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {
           visit(current.zone);
@@ -5727,6 +5733,9 @@ function collectLookupRefIds(
         return;
       case 'seatAgg':
         visit(current.expr);
+        return;
+      case 'tokenProp':
+        visit(current.token);
         return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {
@@ -5774,6 +5783,9 @@ function collectCandidateParamRefIds(
       case 'seatAgg':
         visit(current.expr);
         return;
+      case 'tokenProp':
+        visit(current.token);
+        return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {
           visit(current.zone);
@@ -5813,6 +5825,9 @@ function collectScheduleDistanceRefIds(expr: AgentPolicyExpr): readonly string[]
         return;
       case 'seatAgg':
         visit(current.expr);
+        return;
+      case 'tokenProp':
+        visit(current.token);
         return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {
@@ -5864,6 +5879,9 @@ function collectTopNVisibleScheduleDistanceRefIds(
         return;
       case 'seatAgg':
         visit(current.expr);
+        return;
+      case 'tokenProp':
+        visit(current.token);
         return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') {

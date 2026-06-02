@@ -1370,6 +1370,8 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledOpDirect(expr, candidate);
       case 'zoneProp':
         return this.evaluateCompiledZoneProp(expr.zone, expr.prop, candidate);
+      case 'tokenProp':
+        return this.evaluateCompiledTokenProp(expr, candidate);
       case 'zoneTokenAgg':
         return this.evaluateCompiledZoneTokenAggregate(expr, candidate);
       case 'globalTokenAgg':
@@ -1400,12 +1402,14 @@ export class PolicyEvaluationContext {
         case 'op':
           return current.args.some(visit);
         case 'zoneTokenAgg':
-          return visit(current.zone);
+          return current.tokenFilter !== undefined || current.prop === undefined || visit(current.zone);
         case 'adjacentTokenAgg':
           return true;
         case 'seatAgg':
           return true;
         case 'zoneProp':
+          return true;
+        case 'tokenProp':
           return true;
         case 'ref':
           return current.ref.kind === 'previewSurface'
@@ -1698,6 +1702,9 @@ export class PolicyEvaluationContext {
         case 'zoneProp':
           visit(current.zone);
           return;
+        case 'tokenProp':
+          visit(current.token);
+          return;
         case 'literal':
         case 'param':
         case 'ref':
@@ -1734,6 +1741,9 @@ export class PolicyEvaluationContext {
           return;
         case 'zoneProp':
           visit(current.zone);
+          return;
+        case 'tokenProp':
+          visit(current.token);
           return;
         case 'literal':
         case 'param':
@@ -1776,6 +1786,33 @@ export class PolicyEvaluationContext {
     return scalarZonePropValue(zoneDef.attributes?.[prop]);
   }
 
+  evaluateCompiledTokenProp(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'tokenProp' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const tokenId = this.evaluateCompiledExprDirect(expr.token, candidate);
+    if (typeof tokenId !== 'string') {
+      return undefined;
+    }
+    for (const [zoneId, tokens] of Object.entries(this.activeState.zones)) {
+      const token = tokens.find((entry) => entry.id === tokenId);
+      if (token === undefined) {
+        continue;
+      }
+      if (expr.prop === 'zone') {
+        return zoneId;
+      }
+      if (expr.prop === 'pieceType') {
+        return token.type;
+      }
+      const value = token.props[expr.prop];
+      return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+        ? value
+        : undefined;
+    }
+    return undefined;
+  }
+
   evaluateCompiledZoneTokenAggregate(
     expr: Extract<CompiledPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
     candidate: PolicyEvaluationCandidate | undefined,
@@ -1789,34 +1826,9 @@ export class PolicyEvaluationContext {
     if (zoneId === undefined) {
       return undefined;
     }
-    const encodedResult = this.evaluateEncodedZoneTokenAggregate([String(zoneId)], expr, undefined, true);
-    if (encodedResult !== undefined) {
-      return encodedResult.value;
-    }
-    const tokens = currentState.zones[zoneId];
-    if (tokens === undefined || tokens.length === 0) {
-      return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
-    }
-    const values: number[] = [];
-    for (const token of tokens) {
-      const value = token.props[expr.prop];
-      if (typeof value === 'number') {
-        values.push(value);
-      }
-    }
-    if (values.length === 0) {
-      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
-    }
-    switch (expr.aggOp) {
-      case 'sum':
-        return values.reduce((acc, value) => acc + value, 0);
-      case 'count':
-        return values.length;
-      case 'min':
-        return Math.min(...values);
-      case 'max':
-        return Math.max(...values);
-    }
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
+    return this.aggregateTokensAcrossZones([String(zoneId)], expr, resolvedFilter, expr.tokenFilter === undefined && expr.prop !== undefined);
   }
 
   evaluateCompiledGlobalTokenAggregate(
@@ -2635,8 +2647,9 @@ export class PolicyEvaluationContext {
     zoneIds: readonly string[],
     expr: { readonly aggOp: AgentPolicyZoneTokenAggOp; readonly prop?: string },
     resolvedFilter: ResolvedTokenFilter | undefined,
+    countRequiresNumericProp = false,
   ): PolicyValue {
-    const encodedResult = this.evaluateEncodedZoneTokenAggregate(zoneIds, expr, resolvedFilter);
+    const encodedResult = this.evaluateEncodedZoneTokenAggregate(zoneIds, expr, resolvedFilter, countRequiresNumericProp);
     if (encodedResult !== undefined) {
       return encodedResult.value;
     }

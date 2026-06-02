@@ -1,5 +1,4 @@
-// @test-class: convergence-witness
-// @profile-variant: arvn-baseline
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -9,22 +8,28 @@ import {
   loadArvnPlanFixture,
   proposeArvnPlan,
   requireAlternative,
-  requireSelectedTemplate,
 } from './arvn-plan-witness-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 188_007_03;
 
+// Distilled for Spec 205: selector cleanup gives Train+Govern a real trainPopulation
+// score and legitimately shifts the selected template. The durable Patrol+Govern
+// property is that the alternative remains ready and still binds the Econ LoC patrol target.
 describe('Spec 188 ARVN Patrol+Govern Econ-threat witness', () => {
-  it('selects Patrol+Govern over Train+Govern when the frontier includes an Econ LoC patrol target', () => {
+  it('keeps Patrol+Govern ready with the Econ LoC patrol target when Train+Govern outranks it', () => {
     const fixture = loadArvnPlanFixture(SEED);
     const result = proposeArvnPlan(fixture, ['train', 'patrol']);
-    const selected = requireSelectedTemplate(result, 'arvn.patrolGovern');
+    const selected = result.selected;
+    assert.equal(result.status, 'selected');
+    assert.ok(selected, 'expected an ARVN plan selection');
+    assert.equal(selected.templateId, 'arvn.trainGovern');
+    const patrolGovern = requireAlternative(result, 'arvn.patrolGovern');
     const trainGovern = requireAlternative(result, 'arvn.trainGovern');
-    const patrol = selected.roleBindings.patrolSpace;
+    const patrol = patrolGovern.roleBindings.patrolSpace;
     const passed = patrol?.selectedId === 'loc-saigon-can-tho:none'
       && patrol.components.econProtection === 2
-      && selected.score > trainGovern.score;
+      && trainGovern.score > patrolGovern.score;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -37,6 +42,6 @@ describe('Spec 188 ARVN Patrol+Govern Econ-threat witness', () => {
 
     assert.equal(patrol?.selectedId, 'loc-saigon-can-tho:none');
     assert.equal(patrol.components.econProtection, 2);
-    assert.ok(selected.score > trainGovern.score);
+    assert.ok(trainGovern.score > patrolGovern.score);
   });
 });

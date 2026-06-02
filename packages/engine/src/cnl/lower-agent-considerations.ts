@@ -381,7 +381,14 @@ export function lowerAgentPolicyExpr(expr: AgentPolicyExpr): CompiledPolicyExpr 
     case 'zoneTokenAgg': {
       const zone = lowerAgentPolicyZoneSource(expr.zone);
       if (zone === null) return null;
-      return { kind: 'zoneTokenAgg', zone, owner: expr.owner, prop: expr.prop, aggOp: expr.aggOp };
+      return {
+        kind: 'zoneTokenAgg',
+        zone,
+        owner: expr.owner,
+        ...(expr.tokenFilter === undefined ? {} : { tokenFilter: expr.tokenFilter }),
+        ...(expr.prop === undefined ? {} : { prop: expr.prop }),
+        aggOp: expr.aggOp,
+      };
     }
     case 'globalTokenAgg':
       return {
@@ -422,6 +429,11 @@ export function lowerAgentPolicyExpr(expr: AgentPolicyExpr): CompiledPolicyExpr 
         aggOp: expr.aggOp,
         ...(expr.availability === undefined ? {} : { availability: expr.availability }),
       };
+    }
+    case 'tokenProp': {
+      const token = lowerAgentPolicyExpr(expr.token);
+      if (token === null) return null;
+      return { kind: 'tokenProp', token, prop: expr.prop };
     }
     case 'zoneProp': {
       const zone = lowerAgentPolicyZoneSource(expr.zone);

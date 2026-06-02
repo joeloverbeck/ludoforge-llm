@@ -742,6 +742,51 @@ function evaluatePlanExpr(
       const value = zone.attributes?.[expr.prop];
       return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined;
     }
+    case 'zoneTokenAgg': {
+      const zoneId = typeof expr.zone === 'string'
+        ? expr.zone
+        : evaluatePlanExpr(expr.zone, state, candidate, selectorItemKey, context);
+      if (typeof zoneId !== 'string') {
+        return undefined;
+      }
+      const tokens = state.zones[zoneId] ?? [];
+      const filtered = tokens.filter((token) => {
+        if (expr.tokenFilter?.type !== undefined && token.type !== expr.tokenFilter.type) {
+          return false;
+        }
+        return Object.entries(expr.tokenFilter?.props ?? {}).every(([prop, comparison]) => token.props[prop] === comparison.eq);
+      });
+      if (expr.aggOp === 'count') {
+        return filtered.length;
+      }
+      const values = filtered
+        .map((token) => expr.prop === undefined ? undefined : token.props[expr.prop])
+        .filter((value): value is number => typeof value === 'number');
+      if (expr.aggOp === 'sum') {
+        return values.reduce((sum, value) => sum + value, 0);
+      }
+      if (values.length === 0) {
+        return undefined;
+      }
+      return expr.aggOp === 'min' ? Math.min(...values) : Math.max(...values);
+    }
+    case 'tokenProp': {
+      const tokenId = evaluatePlanExpr(expr.token, state, candidate, selectorItemKey, context);
+      if (typeof tokenId !== 'string') {
+        return undefined;
+      }
+      for (const [zoneId, tokens] of Object.entries(state.zones)) {
+        const token = tokens.find((entry) => entry.id === tokenId);
+        if (token === undefined) {
+          continue;
+        }
+        if (expr.prop === 'zone') return zoneId;
+        if (expr.prop === 'pieceType') return token.type;
+        const value = token.props[expr.prop];
+        return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined;
+      }
+      return undefined;
+    }
     case 'ref':
       if (expr.ref.kind === 'candidateIntrinsic') {
         switch (expr.ref.intrinsic) {

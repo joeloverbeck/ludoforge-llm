@@ -135,6 +135,7 @@ class BytecodeEmitter {
       case 'globalZoneAgg':
       case 'adjacentTokenAgg':
       case 'seatAgg':
+      case 'tokenProp':
       case 'zoneProp':
         this.emitFeature(expr);
         return;
@@ -315,6 +316,9 @@ function collectConstants(expr: PolicyExprInput): readonly number[] {
       case 'seatAgg':
         visit(current.expr as PolicyExprInput);
         return;
+      case 'tokenProp':
+        visit(current.token as PolicyExprInput);
+        return;
       case 'zoneProp':
         if (typeof current.zone !== 'string') visit(current.zone as PolicyExprInput);
         return;
@@ -362,6 +366,7 @@ function analyzeRange(expr: PolicyExprInput): Range | null {
     case 'globalZoneAgg':
     case 'adjacentTokenAgg':
     case 'seatAgg':
+    case 'tokenProp':
     case 'zoneProp':
       return null;
   }

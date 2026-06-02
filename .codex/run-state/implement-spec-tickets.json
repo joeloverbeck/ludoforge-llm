@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/203-fitl-nva-completion.md",
-  "archived_spec": "archive/specs/203-fitl-nva-completion.md",
-  "last_ticket": "archive/tickets/203FITLNVACOM-006.md",
+  "originating_spec": "specs/205-fitl-arvn-selector-cleanup.md",
+  "archived_spec": "archive/specs/205-fitl-arvn-selector-cleanup.md",
+  "last_ticket": "archive/tickets/205FITLARVSEL-006.md",
   "last_result": "completed_archived",
-  "last_work_commit": "f55d9ea246568d582b2de07078e1121ca1e12c9f",
+  "last_work_commit": "d159983cc",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 203 ticket 006 and originating spec completed and archived in work commit f55d9ea246568d582b2de07078e1121ca1e12c9f. Post-state-commit worktree expected clean.",
+  "owned_dirty_summary": "All active 205FITLARVSEL tickets, originating Spec 205, and the FITL implementation-order artifact are completed and archived. Implementation order archived at archive/specs/IMPLEMENTATION-ORDER-2026-06-02.md.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-06-01"
+  "updated_at": "2026-06-02"
 }

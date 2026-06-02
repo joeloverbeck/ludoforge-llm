@@ -5,6 +5,419 @@
   "decisions": [
     {
       "turnCount": null,
+      "turnId": 5,
+      "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+      "selectedValue": "rangers",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"rangers\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 3,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 2,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 2,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"rangers\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"arvn-cubes\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 8,
+      "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+      "selectedValue": "rangers",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"rangers\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 4,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 1,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 1,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 1,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 1,
+          "unavailableRootOptionCount": 1,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"rangers\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [
+            {
+              "refId": "preview.option.delta.victory.currentMargin.self",
+              "reason": "depthCap"
+            }
+          ],
+          "previewFallbackFired": {
+            "termId": "selector.arvnMicroturnOptionProjectedMargin.projectedSelfMargin",
+            "kind": "noContribution"
+          },
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "depthCap",
+          "previewDrive": {
+            "depth": 4,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]:\"rangers\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 3,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:\"arvn-cubes\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 4,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseOne",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]",
+                "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]:\"rangers\"",
+                "selectionReason": "microturnPolicy",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "policyGuided"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              },
+              {
+                "depth": 3,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
+      "turnId": 8,
+      "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]",
+      "selectedValue": "rangers",
+      "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]:\"rangers\"",
+      "previewUsage": {
+        "mode": "exactWorld",
+        "evaluatedCandidateCount": 2,
+        "completionPolicyFallbackCount": 3,
+        "refIds": [
+          "preview.option.delta.victory.currentMargin.self"
+        ],
+        "unknownRefs": [],
+        "readyRefStats": {
+          "preview.option.delta.victory.currentMargin.self": {
+            "readyCount": 2,
+            "distinctValueCount": 1,
+            "min": 0,
+            "max": 0,
+            "range": 0,
+            "allReadyValuesEqual": true
+          }
+        },
+        "utility": "constant",
+        "widenedBecauseUniform": false,
+        "outcomeBreakdown": {
+          "ready": 2,
+          "stochastic": 0,
+          "unknownRandom": 0,
+          "unknownHidden": 0,
+          "unknownUnresolved": 0,
+          "unknownDepthCap": 0,
+          "unknownPostGrantCap": 0,
+          "unknownFreeOperationCap": 0,
+          "unknownGrantFlowPartial": 0,
+          "unknownNoPreviewDecision": 0,
+          "unknownGated": 0,
+          "unknownFailed": 0
+        },
+        "coverage": {
+          "requestedRefCount": 1,
+          "evaluatedRootOptionCount": 2,
+          "readyRootOptionCount": 2,
+          "unavailableRootOptionCount": 0,
+          "allRootsUnavailable": false,
+          "selectedByTieBreakerBecausePreviewUnavailable": true,
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024"
+        }
+      },
+      "advisories": [],
+      "scoreContributionsByOption": [
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]:\"rangers\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "tiebreakAfterPreviewNoSignal",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 3,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[1]:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              },
+              {
+                "depth": 2,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        },
+        {
+          "stableMoveKey": "chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]:\"arvn-cubes\"",
+          "score": 0,
+          "scoreContributions": [
+            {
+              "termId": "preferOptionProjectedMargin",
+              "contribution": 0
+            }
+          ],
+          "unknownPreviewRefs": [],
+          "previewFallbackFired": null,
+          "selectionReason": "gated",
+          "previewOutcome": "ready",
+          "previewDrive": {
+            "depth": 2,
+            "completionPolicy": "policyGuided",
+            "syntheticDecisions": [
+              {
+                "depth": 1,
+                "microturnKind": "chooseNStep",
+                "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+                "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces:confirm:null",
+                "selectionReason": "fallback",
+                "score": 0,
+                "scoreContributions": [],
+                "completionPolicy": "greedy"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turnCount": null,
       "turnId": 28,
       "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
       "selectedValue": "pleiku-darlac:none",

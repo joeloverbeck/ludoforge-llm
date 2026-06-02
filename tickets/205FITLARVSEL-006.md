@@ -4,12 +4,12 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — verification only
-**Deps**: `archive/tickets/205FITLARVSEL-002.md`, `tickets/205FITLARVSEL-003.md`, `archive/tickets/205FITLARVSEL-004.md`, `archive/tickets/205FITLARVSEL-007.md`, `archive/tickets/205FITLARVSEL-005.md`
+**Deps**: `archive/tickets/205FITLARVSEL-002.md`, `archive/tickets/205FITLARVSEL-003.md`, `archive/tickets/205FITLARVSEL-004.md`, `archive/tickets/205FITLARVSEL-007.md`, `archive/tickets/205FITLARVSEL-005.md`
 
 ## Problem
 
 After all selector replacements (002), the Transport postState constraint (003), the Govern Patronage term (004), and the faction-agnostic invariant test (005) land, verify that:
-1. All 10 existing ARVN witnesses still pass (under distillation rule if trajectory shifts).
+1. Existing ARVN policy-profile witnesses still pass (under distillation rule if trajectory shifts).
 2. The 4-profile convergence canary remains byte-identical.
 3. `pnpm turbo build` produces deterministic compiled artifacts.
 
@@ -17,7 +17,7 @@ This is the final acceptance gate for Spec 205.
 
 ## Assumption Reassessment (2026-06-01)
 
-1. All 10 ARVN witnesses listed in spec §7 are present and currently passing on main (verified by reassess-spec; markers recorded in spec §7).
+1. Existing ARVN witnesses listed in spec §7 are present and currently passing on main (verified by reassess-spec; markers recorded in spec §7).
 2. The 4-profile convergence canary is exercised by `packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts` (verify path during implementation; the file is listed in the policy-profile-quality directory inventory).
 3. The Spec 137 distillation rule (`archive/specs/137-convergence-witness-invariant-promotion.md`) allows distilling a convergence witness to architectural-invariant form if trajectory shifts — this ticket records distillation decisions when they occur.
 4. `pnpm turbo build` is the canonical byte-identity check per CLAUDE.md.
@@ -66,7 +66,7 @@ Confirm that `no-placeholder-value-one-selectors.test.ts` (from 205FITLARVSEL-00
 
 ### Tests That Must Pass
 
-1. All 10 ARVN witnesses pass (possibly distilled).
+1. Existing ARVN policy-profile witnesses pass (possibly distilled).
 2. 4-profile convergence canary passes byte-identical to its pre-change baseline (or, if trajectory legitimately shifts, has been distilled/re-blessed per `.claude/rules/testing.md`).
 3. `pnpm turbo build` byte-identical between two consecutive runs (Foundation #8).
 4. `no-placeholder-value-one-selectors.test.ts` passes (no ARVN placeholder residue).
@@ -89,17 +89,18 @@ Confirm that `no-placeholder-value-one-selectors.test.ts` (from 205FITLARVSEL-00
 
 1. `pnpm turbo build`
 2. `pnpm turbo test`
-3. `node --test dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js`
-4. `node --test dist/test/policy-profile-quality/arvn-patrol-govern-over-train-when-threatened.test.js`
-5. `node --test dist/test/policy-profile-quality/arvn-precoup-posture-avoids-redeploy-undone.test.js`
-6. `node --test dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js`
-7. `node --test dist/test/policy-profile-quality/arvn-sweep-raid-expose-before-removal.test.js`
-8. `node --test dist/test/policy-profile-quality/arvn-train-govern-fallback.test.js`
-9. `node --test dist/test/policy-profile-quality/arvn-train-govern-separation.test.js`
-10. `node --test dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js`
-11. `node --test dist/test/policy-profile-quality/arvn-transport-rejected-by-reachable.test.js`
-12. `node --test dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js`
-13. `node --test dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js`
-14. `node --test dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js`
-15. `pnpm turbo build` (second run) — diff GameDef hash and compiled JSON for byte-identity (Foundation #8).
-16. `pnpm turbo lint && pnpm turbo typecheck`
+3. `node --test packages/engine/dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js`
+4. `node --test packages/engine/dist/test/policy-profile-quality/arvn-patrol-govern-over-train-when-threatened.test.js`
+5. `node --test packages/engine/dist/test/policy-profile-quality/arvn-precoup-posture-avoids-redeploy-undone.test.js`
+6. `node --test packages/engine/dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js`
+7. `node --test packages/engine/dist/test/policy-profile-quality/arvn-sweep-raid-expose-before-removal.test.js`
+8. `node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-fallback.test.js`
+9. `node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js`
+10. `node --test packages/engine/dist/test/policy-profile-quality/arvn-transport-postState-origin-control-constraint-time.test.js`
+11. `node --test packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js`
+12. `node --test packages/engine/dist/test/policy-profile-quality/arvn-transport-rejected-by-reachable.test.js`
+13. `node --test packages/engine/dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js`
+14. `node --test packages/engine/dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js`
+15. `node --test packages/engine/dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js`
+16. `pnpm turbo build` (second run) — diff GameDef hash and compiled JSON for byte-identity (Foundation #8).
+17. `pnpm turbo lint && pnpm turbo typecheck`

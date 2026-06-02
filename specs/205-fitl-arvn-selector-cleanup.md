@@ -27,7 +27,7 @@ Replace placeholder-constant selector components (`value: 1`) and global-feature
    - `arvn.pieceRemovalPriority:741` — `baseAndControlThreat` with `value: 1` → removable-base, control-swing, population components.
 
 2. **Strengthen Transport with an inline `postState.predicate.condition` origin-control guard**:
-   - Add an inline `postState` constraint with `predicate: { condition: { bindings, when } }` (modeled on the existing `arvn.trainTransport.transportDestination` constraint at `92-agents.md:1990-2019`) to the `arvn.trainTransport` plan template's `transportOrigin` role so Transport that would lose origin-Control is filtered at constraint time, not posture time. The existing `arvn.doNotLoseOriginControlByTransport` guardrail remains as defense-in-depth.
+   - Preserve and prove the inline `postState` constraint with `predicate: { condition: { bindings, when } }` on the `arvn.trainTransport` plan template's `transportDestination` role (`92-agents.md:2323-2347`). It observes the Transport destination step, binds `origin: role.transportOrigin`, and filters Transport choices that would lose origin-Control at constraint time, not posture time. The original draft placement on `transportOrigin` was rejected because Spec 196 postState observers must match the observed step role. The existing `arvn.doNotLoseOriginControlByTransport` guardrail remains as defense-in-depth.
 
 3. **Extend Govern with a Patronage-availability term**:
    - Existing `arvn.governPatronageSpace` already encodes Active-vs-Passive Support via `activeSupportGovern` (weight 20) and `passiveSupportGovern` (weight 10) components at `92-agents.md:576-601`. Add an `arvnCubesExceedUsCubes` term so Govern is demoted when Patronage mode is unavailable.
@@ -40,7 +40,7 @@ Sweep+Raid preview-derived posture composition is deferred to §10 (blocked on t
 ## 2. Non-Goals
 
 - **No removal of ARVN doctrine.** All existing modules (`arvnPursueProjectedMargin`, `buildPoliticalEngine`, `arvn.harvestPatronage`, `arvn.holdHighPopControl`, `arvn.protectAidEcon`, `arvn.selectiveViolence`, `arvn.denyUSIfNearWin`, `arvn.preCoupRedeployDiscipline`) preserved verbatim. (Note: `arvnPursueProjectedMargin` and `buildPoliticalEngine` are authored without the `arvn.` prefix in the file; this spec preserves the existing identifiers.)
-- **No removal of existing ARVN witnesses.** All 10 must continue to pass.
+- **No removal of existing ARVN witnesses.** Existing ARVN policy-profile witnesses must continue to pass.
 - **No renames for aesthetics.** Selector ids stay; only their *bodies* change.
 - **No engine changes.**
 - **No new plan templates or strategy modules.**
@@ -67,7 +67,7 @@ Post-002 reassessment found the same pattern still present in additional selecto
 
 **ARVN guardrails (`92-agents.md`)**: six faction guardrails (`arvn.doNotServeUSWin:3409`, `arvn.preserveAidEconFloor:3424`, `arvn.doNotGovernAwaySupportEverywhere:3441`, `arvn.doNotLoseOriginControlByTransport:3456`, `arvn.doNotOvercommitTroopsPreCoupWithoutBase:3469`, `arvn.doNotFightLowYieldHighlands:3486`) plus shared guardrails. The proposal calls out `arvn.avoidGovernWhenSupportLossOutweighsPatronage` and `arvn.avoidResourceBurnWithoutMarginOrControl`; verification finds `doNotGovernAwaySupportEverywhere` covers the first concern and the score-side `arvn.holdHighPopControl` module covers the second. No new guardrails added; existing identifiers preserved (they do not lie about doctrine).
 
-**Existing inline `postState.predicate.condition` shape**: shipped via Spec 196 (outcome: "uses generic `postState.predicate.condition` semantics over authored role bindings and token-count predicates") and authored at `arvn.trainTransport.transportDestination` (`92-agents.md:1990-2019`). This is the template for the §4.5 origin-control constraint. Named predicates (e.g., `predicate: <name>`) are NOT a shipped surface; only inline condition expressions ship.
+**Existing inline `postState.predicate.condition` shape**: shipped via Spec 196 (outcome: "uses generic `postState.predicate.condition` semantics over authored role bindings and token-count predicates") and authored at `arvn.trainTransport.transportDestination` (`92-agents.md:2323-2347`). This is the §4.5 origin-control constraint. Named predicates (e.g., `predicate: <name>`) are NOT a shipped surface; only inline condition expressions ship.
 
 **Plan template name**: the existing Train+Transport compound template is `arvn.trainTransport:1976`. There is no separate `arvn.transportControl` template; §4.5 amends `arvn.trainTransport`.
 
@@ -127,7 +127,7 @@ arvn.trainSpaceForControlOrPacification:
 
 ### 4.2 `arvn.sweepToExposeSpace` replacement
 
-Cited exemplar: `arvn.trainTransport.transportDestination.constraints.postState.predicate.condition` (`92-agents.md:2001-2019`) for `aggregate.op:count` over `tokensInZone` with `prop: faction, op: in`. The selector-scope `zoneExpr` resolution is P0 vocabulary baseline.
+Cited exemplar: `arvn.trainTransport.transportDestination.constraints.postState.predicate.condition` (`92-agents.md:2333-2347`) for `aggregate.op:count` over `tokensInZone` with `prop: faction, op: in`. The selector-scope `zoneExpr` resolution is P0 vocabulary baseline.
 
 ```yaml
 arvn.sweepToExposeSpace:
@@ -274,27 +274,31 @@ arvn.transportOrigin:
 
 ### 4.5 Transport `postState` inline-condition constraint
 
-Add to the existing `arvn.trainTransport.transportOrigin` role (preserving all other fields), modeled byte-for-byte on the existing `transportDestination` constraint at `92-agents.md:1990-2019`. The predicate asserts that, in the post-state, COIN faction token count at the Transport origin is at least the insurgent count there (i.e., origin Control is preserved).
+Preserve the existing `arvn.trainTransport.transportDestination` role constraint (preserving all other fields). The original draft placement on `transportOrigin` is not Foundation-aligned: Spec 196 `postState` probes require the observed step label and constrained role to match, and the observed `transport-destination` step has role `transportDestination`. The predicate asserts that, in the post-state, COIN faction token count at the Transport origin is greater than the insurgent count there (i.e., origin Control is preserved).
 
 ```yaml
 arvn.trainTransport:
   # ... existing fields preserved verbatim ...
   roles:
     trainSpace: { selector: arvn.trainSpaceForControlOrPacification, required: true }
-    transportOrigin:
-      selector: arvn.transportOrigin
+    transportOrigin: { selector: arvn.transportOrigin, required: true }
+    transportDestination:
+      selector: arvn.transportDestination
       required: true
       constraints:
+        - { reachable: { from: role.transportOrigin, to: role.transportDestination, via: routeClass.land } }
+        - { distinctOriginDestination: { origin: role.transportOrigin, destination: role.transportDestination } }
+        - { notEqual: role.trainSpace }
         - postState:
             step: transport-destination
-            role: role.transportOrigin
+            role: role.transportDestination
             maxSteps: 8
             predicate:
               condition:
                 bindings:
                   origin: role.transportOrigin
                 when:
-                  op: '>='
+                  op: '>'
                   left:
                     aggregate:
                       op: count
@@ -315,8 +319,6 @@ arvn.trainTransport:
                           op: and
                           args:
                             - { prop: faction, op: in, value: ['NVA', 'VC'] }
-    transportDestination:
-      # ... existing constraints (reachable, distinctOriginDestination, notEqual, postState) preserved verbatim ...
 ```
 
 This makes the existing guardrail `arvn.doNotLoseOriginControlByTransport` a defense-in-depth backup rather than the sole enforcement; constraint-time filtering removes the candidate before scoring. Bounded computation (Foundation #10) is preserved via `maxSteps: 8`, matching the existing destination constraint.
@@ -411,9 +413,9 @@ arvn.pieceRemovalPriority:
 |---|---|---|---|
 | **P0** | Selector vocabulary baseline | For each placeholder name in §§4.1-4.7 (`zoneProp.pacificationEligible`, the `markers.terror` lookup path, the `tokensInZone` aggregate authoring shape in selector scope, etc.), determine the concrete authoring form: existing `zoneProp.prop` / inline `lookup` / `aggregate` / new derived metric. Open Questions list any reference that needs a new authored metric. Also confirms whether plan-template posture `prefer` terms honor `previewFallback` (informational, for the deferred §10 Sweep+Raid follow-up). | S |
 | **P1** | Selector body replacements (§§4.1-4.4, 4.7) | All five ARVN placeholder selectors replaced using current authoring shape with item-local features; existing ARVN witnesses pass (under distillation rule if necessary). | M |
-| **P2** | Transport inline `postState.predicate.condition` constraint (§4.5) | Constraint added to `arvn.trainTransport.transportOrigin`; existing `arvn.doNotLoseOriginControlByTransport` witness passes (now via constraint-time filtering); guardrail preserved as defense-in-depth. | S |
+| **P2** | Transport inline `postState.predicate.condition` constraint (§4.5) | Destination-side `arvn.trainTransport.transportDestination` constraint preserved/proven as the constraint-time origin-Control guard; existing `arvn.doNotLoseOriginControlByTransport` witness passes; guardrail preserved as defense-in-depth. | S |
 | **P3** | Govern Patronage-availability term (§4.6) | New `arvnCubesExceedUsCubes` component added to `arvn.governPatronageSpace`; existing Active/Passive Support components untouched; new witness asserts Patronage-unavailable demotion. | S |
-| **P4** | Regression re-attestation | All 10 existing ARVN witnesses pass (under distillation rule); 4-profile convergence canary byte-identical; `pnpm turbo build` byte-identical. | S |
+| **P4** | Regression re-attestation | Existing ARVN policy-profile witnesses pass (under distillation rule); 4-profile convergence canary byte-identical; `pnpm turbo build` byte-identical. | S |
 
 ## 7. Test plan
 
@@ -484,7 +486,7 @@ If any witness becomes trajectory-sensitive under the new selectors, distill per
 - **Zone-prop / lookup / aggregate vocabulary baseline**: for each placeholder name in §§4.1-4.7 (`zoneProp.pacificationEligible`, `markers.terror` lookup path, `tokensInZone` aggregate authoring shape in selector scope, etc.), determine concrete authoring form:
   - (a) existing `zoneProp.prop` field (pattern: `zoneProp: { zone: { ref: selector.item.key }, prop: <name> }`, see `arvn.governPatronageSpace:605-607`)
   - (b) inline `lookup` against `policyState` (pattern: `lookup: { surface: policyState, collection: zones, keyType: ZoneId, key: { ref: selector.item.key }, path: [markers, <name>], onMissing: {kind: constant, value: <default>} }`, see `arvn.governPatronageSpace:580-587`)
-  - (c) `aggregate` over `tokensInZone` (pattern in `arvn.trainTransport.transportDestination.constraints.postState.predicate.condition` at 92-agents.md:2001-2019)
+  - (c) `aggregate` over `tokensInZone` (pattern in `arvn.trainTransport.transportDestination.constraints.postState.predicate.condition` at 92-agents.md:2333-2347)
   - (d) new authored derived metric (last resort)
 
   **P0 deliverable.**
@@ -499,7 +501,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-01:
 
 - [`archive/tickets/205FITLARVSEL-001.md`](../archive/tickets/205FITLARVSEL-001.md) — P0 — Selector vocabulary baseline for ARVN cleanup (covers §6 P0 / §11)
 - [`archive/tickets/205FITLARVSEL-002.md`](../archive/tickets/205FITLARVSEL-002.md) — P1 — Replace placeholder selector bodies (covers §§4.1–4.4, 4.7)
-- [`tickets/205FITLARVSEL-003.md`](../tickets/205FITLARVSEL-003.md) — P2 — Transport postState origin-control constraint (covers §4.5)
+- [`archive/tickets/205FITLARVSEL-003.md`](../archive/tickets/205FITLARVSEL-003.md) — P2 — Transport postState origin-control constraint (covers §4.5)
 - [`archive/tickets/205FITLARVSEL-004.md`](../archive/tickets/205FITLARVSEL-004.md) — P3 — Govern Patronage-availability term (covers §4.6)
 - [`archive/tickets/205FITLARVSEL-007.md`](../archive/tickets/205FITLARVSEL-007.md) — Prerequisite cleanup for selector value-one invariant
 - [`archive/tickets/205FITLARVSEL-005.md`](../archive/tickets/205FITLARVSEL-005.md) — Faction-agnostic no-placeholder-value-one invariant (covers §7 last bullet)

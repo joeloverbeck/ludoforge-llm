@@ -1,6 +1,6 @@
 # 205FITLARVSEL-006: P4 — Regression re-attestation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — verification only
@@ -104,3 +104,27 @@ Confirm that `no-placeholder-value-one-selectors.test.ts` (from 205FITLARVSEL-00
 15. `node --test packages/engine/dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js`
 16. `pnpm turbo build` (second run) — diff GameDef hash and compiled JSON for byte-identity (Foundation #8).
 17. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-06-02.
+
+No selector, rule-data, engine, runner, or witness source changes were required. The final regression re-attestation stayed verification-only: existing ARVN policy-profile witnesses passed, the 4-profile convergence canary remained on its expected terminal outcomes, the no-placeholder invariant passed, and no trajectory shift required distillation or re-blessing.
+
+Build byte-identity was proven by running `pnpm turbo build` twice and hashing the generated GameDef-related outputs after each run:
+
+```bash
+find packages/runner/dist/assets packages/engine/dist/.cache -maxdepth 1 -type f \( -name "*game-def*.js" -o -name "*.v2.gamedef.json" \) -print | sort | xargs sha256sum
+```
+
+Both manifests contained 79 artifacts, including `packages/runner/dist/assets/fitl-game-def-u41q0-mf.js`, `packages/runner/dist/assets/texas-game-def-DF3TLrc9.js`, and engine `.v2.gamedef.json` cache entries. `diff -u /tmp/spec205-build-a.sha256 /tmp/spec205-build-b.sha256` produced no output.
+
+Proof:
+
+1. `pnpm turbo build` — 3 successful tasks.
+2. `pnpm turbo build` — 3 successful tasks on the second consecutive run.
+3. `diff -u /tmp/spec205-build-a.sha256 /tmp/spec205-build-b.sha256` — no output; 79/79 hashed artifacts byte-identical.
+4. `node --test packages/engine/dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js packages/engine/dist/test/policy-profile-quality/arvn-patrol-govern-over-train-when-threatened.test.js packages/engine/dist/test/policy-profile-quality/arvn-precoup-posture-avoids-redeploy-undone.test.js packages/engine/dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js packages/engine/dist/test/policy-profile-quality/arvn-sweep-raid-expose-before-removal.test.js packages/engine/dist/test/policy-profile-quality/arvn-train-govern-fallback.test.js packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-postState-origin-control-constraint-time.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-rejected-by-reachable.test.js packages/engine/dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js packages/engine/dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js packages/engine/dist/test/policy-profile-quality/no-placeholder-value-one-selectors.test.js` — 15 tests passed across 13 suites.
+5. `pnpm turbo test` — 5 successful tasks; engine default lane reported `summary 189/189 files passed`.
+6. `pnpm turbo lint` — 2 successful tasks.
+7. `pnpm turbo typecheck` — 3 successful tasks.

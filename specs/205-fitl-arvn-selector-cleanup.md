@@ -505,4 +505,4 @@ Decomposed via `/spec-to-tickets` on 2026-06-01:
 - [`archive/tickets/205FITLARVSEL-004.md`](../archive/tickets/205FITLARVSEL-004.md) — P3 — Govern Patronage-availability term (covers §4.6)
 - [`archive/tickets/205FITLARVSEL-007.md`](../archive/tickets/205FITLARVSEL-007.md) — Prerequisite cleanup for selector value-one invariant
 - [`archive/tickets/205FITLARVSEL-005.md`](../archive/tickets/205FITLARVSEL-005.md) — Faction-agnostic no-placeholder-value-one invariant (covers §7 last bullet)
-- [`tickets/205FITLARVSEL-006.md`](../tickets/205FITLARVSEL-006.md) — P4 — Regression re-attestation (covers §6 P4)
+- [`archive/tickets/205FITLARVSEL-006.md`](../archive/tickets/205FITLARVSEL-006.md) — P4 — Regression re-attestation (covers §6 P4)

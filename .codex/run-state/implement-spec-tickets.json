@@ -1,21 +1,20 @@
 {
   "originating_spec": "specs/205-fitl-arvn-selector-cleanup.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/205FITLARVSEL-007.md",
+  "last_ticket": "archive/tickets/205FITLARVSEL-005.md",
   "last_result": "completed_archived",
-  "last_work_commit": "242a55610a78453769170b70d7b6facf79051086",
+  "last_work_commit": "90dc09272",
   "last_state_commit": "self",
-  "next_target": "tickets/205FITLARVSEL-005.md",
+  "next_target": "tickets/205FITLARVSEL-003.md",
   "queue": [
-    "tickets/205FITLARVSEL-005.md",
     "tickets/205FITLARVSEL-003.md",
     "tickets/205FITLARVSEL-006.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "205FITLARVSEL-007 completed and archived in work commit 242a55610a78453769170b70d7b6facf79051086. Structural selector-library value:1 inventory is now clean across the current agents files, so 205FITLARVSEL-005 is next. 205FITLARVSEL-003 remains pending user-confirmed resolution from the 1-3-1 reassessment.",
+  "owned_dirty_summary": "205FITLARVSEL-005 completed and archived in work commit 90dc09272. 205FITLARVSEL-003 is next and still needs live reassessment of the transport origin-control postState deliverable before 006 can run final re-attestation.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-06-01"
+  "updated_at": "2026-06-02"
 }

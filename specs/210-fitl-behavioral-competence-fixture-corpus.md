@@ -123,7 +123,7 @@ Each added feature must be justified by a named failing fixture in the ticket th
 Decomposed via `/spec-to-tickets` on 2026-06-03:
 
 - [`archive/tickets/210FITLCOMP-000.md`](../archive/tickets/210FITLCOMP-000.md) — Prerequisite: add generic bootstrap-state competence helper support and repair any block-current-leader doctrine/data gap exposed before promotion
-- [`tickets/210FITLCOMP-001.md`](../tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
+- [`archive/tickets/210FITLCOMP-001.md`](../archive/tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
 - [`tickets/210FITLCOMP-002.md`](../tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
 - [`tickets/210FITLCOMP-003.md`](../tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures ×4 (covers §2(3))
 - [`tickets/210FITLCOMP-004.md`](../tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))

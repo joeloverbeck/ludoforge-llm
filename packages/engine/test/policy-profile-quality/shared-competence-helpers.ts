@@ -1,0 +1,246 @@
+import * as assert from 'node:assert/strict';
+
+import { PolicyAgent } from '../../src/agents/index.js';
+import {
+  assertValidatedGameDef,
+  initialState,
+  asPlayerId,
+  type Agent,
+  type GameDef,
+  type GameState,
+  type Token,
+  type ValidatedGameDef,
+} from '../../src/kernel/index.js';
+import { resolveActiveDeciderSeatIdForPlayer } from '../../src/kernel/microturn/types.js';
+import {
+  assertAdversarialAlternativeAvoided,
+  assertOutcomeDeltas,
+  assertPlanTraceChain,
+  assertPreviewStatuses,
+  assertReplayIdentity,
+  canonicalStateChanged,
+  runToCompetenceDecision,
+  type CompetenceRunResult,
+  type OutcomeDeltaAssertion,
+  type PreviewRefExpectation,
+} from '../helpers/competence/index.js';
+import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
+import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+
+const PLAYER_COUNT = 4;
+const PROFILE_IDS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|false|pass';
+const LEADER_OPTION_DELTA_REF = 'preview.option.delta.victory.currentMargin.role:currentLeader';
+
+export type FitlProfileId = (typeof PROFILE_IDS)[number];
+
+export interface FitlCompetenceCase {
+  readonly testFile: string;
+  readonly profileId: FitlProfileId;
+  readonly seatId: string;
+  readonly playerIndex: number;
+  readonly seed: number;
+  readonly expectedRootStableMoveKey: string;
+  readonly leaderMarginAssertion: OutcomeDeltaAssertion;
+  readonly prepareState: (def: GameDef, state: GameState) => GameState;
+}
+
+export function assertFitlExecutedOutcomeCase(input: FitlCompetenceCase): void {
+  const def = loadFitlProductionDef();
+  const run = (): CompetenceRunResult => runFitlCompetenceCase(def, input);
+  const result = run();
+  const outcomeDeltas = assertOutcomeDeltas({
+    def,
+    before: result.preState,
+    after: result.postState,
+    assertions: [input.leaderMarginAssertion],
+  });
+  const passed = canonicalStateChanged(result.preState, result.postState)
+    && outcomeDeltas.every((delta) => typeof delta.delta === 'number' && delta.delta < 0);
+
+  emitPolicyProfileQualityRecord({
+    file: input.testFile,
+    variantId: input.profileId,
+    seed: input.seed,
+    passed,
+    stopReason: result.stopReason,
+    decisions: result.decisions.length,
+  });
+
+  assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected selected live turn to change state');
+  assertPlanTraceChain({
+    def,
+    result,
+    expected: {
+      activeDoctrine: 'shared.blockCurrentLeader',
+      selectedRootStableMoveKey: input.expectedRootStableMoveKey,
+    },
+  });
+  assertAdversarialAlternativeAvoided({
+    def,
+    result,
+    trapStableMoveKeys: [PASS_TRAP_STABLE_MOVE_KEY],
+  });
+  assertLeaderOptionPreviewIntegrity(result);
+  assertReplayIdentity({
+    def,
+    runFixture: run,
+    outcomeDeltaAssertions: [input.leaderMarginAssertion],
+  });
+}
+
+export function withEveryZoneSupportMarker(def: GameDef, state: GameState, support: string): GameState {
+  return {
+    ...state,
+    markers: {
+      ...state.markers,
+      ...Object.fromEntries(def.zones.map((zone) => [
+        zone.id,
+        {
+          ...(state.markers[zone.id] ?? {}),
+          supportOpposition: support,
+        },
+      ])),
+    },
+  };
+}
+
+export function moveFactionBoardTokensToZone(
+  def: GameDef,
+  state: GameState,
+  faction: string,
+  destination: string,
+): GameState {
+  const boardZoneIds = new Set(def.zones.filter((zone) => zone.zoneKind === 'board').map((zone) => zone.id));
+  const zones: Record<string, readonly Token[]> = { ...state.zones };
+  const moved: Token[] = [];
+
+  for (const zoneId of boardZoneIds) {
+    const kept: Token[] = [];
+    for (const token of zones[zoneId] ?? []) {
+      if (token.props.faction === faction) {
+        moved.push(token);
+      } else {
+        kept.push(token);
+      }
+    }
+    zones[zoneId] = kept;
+  }
+
+  zones[destination] = [...(zones[destination] ?? []), ...moved];
+  return { ...state, zones };
+}
+
+export function moveOneToken(
+  state: GameState,
+  source: string,
+  destination: string,
+  predicate: (token: Token) => boolean,
+): GameState {
+  const token = (state.zones[source] ?? []).find(predicate);
+  assert.ok(token, `expected token in ${source}`);
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      [source]: (state.zones[source] ?? []).filter((entry) => entry.id !== token.id),
+      [destination]: [...(state.zones[destination] ?? []), token],
+    },
+  };
+}
+
+export function moveAvailableUsIrregularsToCasualties(state: GameState): GameState {
+  const available = state.zones['available-US:none'] ?? [];
+  const irregulars = available.filter((token) => token.props.faction === 'US' && token.props.type === 'irregular');
+  const retained = available.filter((token) => !(token.props.faction === 'US' && token.props.type === 'irregular'));
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      'available-US:none': retained,
+      'casualties-US:none': [...(state.zones['casualties-US:none'] ?? []), ...irregulars],
+    },
+  };
+}
+
+function loadFitlProductionDef(): ValidatedGameDef {
+  return assertValidatedGameDef(getFitlProductionFixture().gameDef);
+}
+
+function runFitlCompetenceCase(def: ValidatedGameDef, input: FitlCompetenceCase): CompetenceRunResult {
+  const baseState = initialState(def, input.seed, PLAYER_COUNT).state;
+  const prepared = setSingleEligibleFactionTurn(
+    def,
+    input.prepareState(def, baseState),
+    input.seatId,
+    input.playerIndex,
+  );
+  return runToCompetenceDecision({
+    def,
+    seed: input.seed,
+    agents: createFitlPolicyAgents(),
+    playerCount: PLAYER_COUNT,
+    bootstrapState: prepared,
+    maxTurns: 1,
+    microturnBound: 80,
+    advanceUntil: ({ microturn }) =>
+      String(microturn.seatId) === input.seatId && microturn.kind === 'actionSelection',
+  });
+}
+
+function createFitlPolicyAgents(): readonly Agent[] {
+  return PROFILE_IDS.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'verbose' }));
+}
+
+function setSingleEligibleFactionTurn(
+  def: GameDef,
+  state: GameState,
+  seatId: string,
+  playerIndex: number,
+): GameState {
+  assert.equal(state.turnOrderState?.type, 'cardDriven');
+  return {
+    ...state,
+    activePlayer: asPlayerId(playerIndex),
+    activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, playerIndex),
+    turnOrderState: {
+      ...state.turnOrderState,
+      runtime: {
+        ...state.turnOrderState.runtime,
+        currentCard: {
+          ...state.turnOrderState.runtime.currentCard,
+          firstEligible: seatId,
+          secondEligible: null,
+          actedSeats: [],
+          passedSeats: [],
+          nonPassCount: 0,
+          firstActionClass: null,
+        },
+      },
+    },
+  };
+}
+
+function assertLeaderOptionPreviewIntegrity(result: CompetenceRunResult): void {
+  for (const log of result.decisions) {
+    const trace = log.agentDecision;
+    if (trace === undefined || !trace.previewUsage.refIds.includes(LEADER_OPTION_DELTA_REF)) {
+      continue;
+    }
+    const decisiveRefs: PreviewRefExpectation[] = (trace.candidates ?? [])
+      .filter((candidate) =>
+        candidate.previewRefIds.includes(LEADER_OPTION_DELTA_REF)
+        || candidate.unknownPreviewRefs.some((ref) => ref.refId === LEADER_OPTION_DELTA_REF))
+      .map((candidate) => {
+        const base = {
+          refId: LEADER_OPTION_DELTA_REF,
+          stableMoveKey: candidate.stableMoveKey,
+        };
+        return candidate.previewOutcome === 'ready' ? { ...base, status: 'ready' as const } : base;
+      });
+    assertPreviewStatuses({
+      result: { agentDecision: trace },
+      decisiveRefs,
+    });
+  }
+}

@@ -8,7 +8,7 @@
 
 ## Problem
 
-`tickets/210FITLCOMP-001.md` assumes the existing Spec 209 competence harness can run curated FITL states and that the current `shared.blockCurrentLeader` doctrine already selects denial moves whose executed outcome reduces the current leader's victory margin for all four factions. Live reassessment contradicted both assumptions:
+`archive/tickets/210FITLCOMP-001.md` assumes the existing Spec 209 competence harness can run curated FITL states and that the current `shared.blockCurrentLeader` doctrine already selects denial moves whose executed outcome reduces the current leader's victory margin for all four factions. Live reassessment contradicted both assumptions:
 
 1. `runToCompetenceDecision` only bootstrapped from `initialState`, so fixture-authored curated states could not be published/executed through the live-frontier helper.
 2. A bounded live-frontier probe showed `shared.blockCurrentLeader` activates for US/ARVN/NVA/VC under near-leader states, but only the VC case produced an executed leader-margin reduction (`US` leader `43 -> 40`). US, ARVN, and NVA selected legal roots with leader-margin delta `0`, which does not satisfy Spec 210's behavioral proof bar.
@@ -55,11 +55,11 @@ Do not rewrite `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` in this pr
 - `packages/engine/src/contracts/policy-contract.ts` and preview-option compiler/runtime mirrors (modify only if generic standing-role refs are required)
 - `packages/engine/test/policy-profile-quality/shared-block-current-leader-live-prerequisite.test.ts` (add focused pre-promotion witness)
 - `data/games/fire-in-the-lake/92-agents.md` (modify only if required by failing block-leader probes)
-- `tickets/210FITLCOMP-001.md` (read/modify dependency boundary)
+- `archive/tickets/210FITLCOMP-001.md` (read/modify dependency boundary)
 
 ## Out of Scope
 
-- Final in-place promotion of the four block-current-leader test files; that remains `tickets/210FITLCOMP-001.md`.
+- Final in-place promotion of the four block-current-leader test files; that remains `archive/tickets/210FITLCOMP-001.md`.
 - Other shared intents and faction signature fixtures.
 - FITL-specific engine/kernel/runtime production changes.
 - Speculative §3 feature additions unrelated to the named block-current-leader failing probes.

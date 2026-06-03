@@ -125,7 +125,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/209COMPHARNESS-001.md`](../archive/tickets/209COMPHARNESS-001.md) — Live-frontier competence runner + `competence/` module scaffolding (covers §3.1)
 - [`archive/tickets/209COMPHARNESS-002.md`](../archive/tickets/209COMPHARNESS-002.md) — Plan-trace-chain assertion helper (covers §3.2)
 - [`archive/tickets/209COMPHARNESS-003.md`](../archive/tickets/209COMPHARNESS-003.md) — Generic outcome-delta assertion helper (covers §3.3)
-- [`tickets/209COMPHARNESS-004.md`](../tickets/209COMPHARNESS-004.md) — Adversarial-alternative + preview-status assertion helpers (covers §3.4, §3.5)
+- [`archive/tickets/209COMPHARNESS-004.md`](../archive/tickets/209COMPHARNESS-004.md) — Adversarial-alternative + preview-status assertion helpers (covers §3.4, §3.5)
 - [`tickets/209COMPHARNESS-005.md`](../tickets/209COMPHARNESS-005.md) — Deterministic-replay wrapper (covers §3.6)
 - [`archive/tickets/209COMPHARNESS-006.md`](../archive/tickets/209COMPHARNESS-006.md) — Proof-tier convention — `testing.md` amendment (covers §3.7, AC#5)
 - [`tickets/209COMPHARNESS-007.md`](../tickets/209COMPHARNESS-007.md) — Reference fixture: cross-game agnosticism + replay-identity proof (covers §4 AC#2/#3/#4)

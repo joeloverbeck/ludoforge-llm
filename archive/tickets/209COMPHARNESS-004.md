@@ -1,6 +1,6 @@
 # 209COMPHARNESS-004: Adversarial-alternative + preview-status assertion helpers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
@@ -76,3 +76,23 @@ Append both helper exports to `packages/engine/test/helpers/competence/index.ts`
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine typecheck`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-06-03
+
+Implemented `packages/engine/test/helpers/competence/adversarial-alternative.ts` and `packages/engine/test/helpers/competence/preview-status.ts`, and exported both through the competence helper barrel.
+
+The adversarial helper asserts fixture-authored trap stable move keys are present in the published frontier and are not selected. The preview-status helper inspects existing policy decision trace data for decisive preview refs, selected/target candidates, seat-matrix cells, and turn-shape preview statuses; non-ready decisive refs must be explicitly traced and carry trace-visible preview fallback evidence.
+
+Verification completed:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine typecheck`
+3. `pnpm -F @ludoforge/engine test:unit` — 6110 tests, 0 failures
+4. `pnpm turbo build`
+5. `pnpm turbo lint`
+6. `pnpm turbo typecheck`
+7. `pnpm run check:ticket-deps`
+8. `git diff --check`
+9. No game-specific identifier matches in the helper/barrel sweep

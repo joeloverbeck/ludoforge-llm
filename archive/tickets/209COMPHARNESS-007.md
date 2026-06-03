@@ -1,6 +1,6 @@
 # 209COMPHARNESS-007: Reference fixture — cross-game agnosticism + replay-identity proof
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test infrastructure only
@@ -78,3 +78,17 @@ Spec §4 AC#2/#3/#4: ship a reference fixture that exercises **every** harness h
 1. `pnpm -F @ludoforge/engine build && node --test "dist/test/architecture/competence-harness-reference.test.js"`
 2. `pnpm -F @ludoforge/engine test:all`
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-06-03
+
+Implemented the Spec 209 reference fixture in `packages/engine/test/architecture/competence-harness-reference.test.ts` with fixture builders under `packages/engine/test/helpers/competence/__reference__/`. The fixture exercises the live-frontier runner, plan-trace-chain, outcome-delta, adversarial alternative, preview-status, and replay-wrapper helpers. FITL covers the plan-trace-chain-only path plus decisive ready preview refs; generic-control runs the same family-agnostic helper assertions as the second corpus family and asserts an executed board-state outcome delta.
+
+Proof:
+- `pnpm -F @ludoforge/engine build` passed.
+- `node --test "dist/test/architecture/competence-harness-reference.test.js"` passed: 2 tests, 0 failures.
+- `pnpm -F @ludoforge/engine test:all` passed: 1001 tests, 0 failures.
+- `pnpm turbo build` passed; runner emitted the existing non-failing Vite chunk-size warning.
+- `pnpm turbo lint` passed.
+- `pnpm turbo typecheck` passed.

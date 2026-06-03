@@ -63,7 +63,7 @@ const expectations: Record<SharedModuleKey, {
     scoreGroupId: 'leaderDenial',
     strategicCondition: 'currentLeaderNearWin',
     candidateFeatures: ['projectedLeaderMarginDelta'],
-    actionTags: ['govern', 'patrol', 'sweep', 'assault', 'train', 'air-strike', 'march', 'attack', 'infiltrate', 'bombard'],
+    actionTags: ['govern', 'patrol', 'sweep', 'assault', 'train', 'air-strike', 'march', 'attack', 'terror', 'infiltrate', 'bombard'],
     expectedScore: 20,
   },
   nearCoupConcreteSwing: {

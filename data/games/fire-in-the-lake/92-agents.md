@@ -2283,6 +2283,16 @@ agents:
           - { label: govern-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.governLeaderDenial:
+        traceLabel: "ARVN Govern to deny current leader"
+        root: { actionTags: [govern] }
+        postureHook: arvn.preserveAidAndMargin
+        roles:
+          governSpace: { selector: arvn.governPatronageSpace, required: true }
+        steps:
+          - { label: govern-denial-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
       arvn.sweepRaid:
         traceLabel: "ARVN Sweep then Raid"
         root: { actionTags: [sweep], compound: { specialTags: [raid], timing: after } }
@@ -2981,7 +2991,7 @@ agents:
           ref: condition.currentLeaderNearWin.satisfied
         applies:
           scopes: [move]
-          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, infiltrate, bombard]
+          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, terror, infiltrate, bombard]
         priority:
           tier: 80
         scoreGroups:
@@ -2993,6 +3003,10 @@ agents:
                   sub:
                     - 0
                     - { ref: feature.projectedLeaderMarginDelta }
+        enablesPlanTemplates:
+          - us.assaultHighValueInfrastructure
+          - arvn.governLeaderDenial
+          - nva.terrorSupportReduction
       shared.nearCoupConcreteSwing:
         traceLabel: "concrete coup swing"
         when:
@@ -4262,6 +4276,20 @@ agents:
         weight: 300
         value:
           ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+      preferLeaderDenialOption:
+        scopes: [microturn]
+        costClass: preview
+        when:
+          ref: condition.currentLeaderNearWin.satisfied
+        weight: 1000
+        value:
+          coalesce:
+            - sub:
+                - 0
+                - { ref: preview.option.delta.victory.currentMargin.role:currentLeader }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -4269,6 +4297,13 @@ agents:
   profiles:
     us-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          depthCap: 4
       params:
         eventWeight: 200
         projectedMarginWeight: 100
@@ -4304,6 +4339,7 @@ agents:
           - us.airLiftControlOrWithdrawal
           - us.assaultHighValueInfrastructure
         considerations:
+          - preferLeaderDenialOption
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -4376,6 +4412,7 @@ agents:
         planTemplates:
           - arvn.trainGovern
           - arvn.patrolGovern
+          - arvn.governLeaderDenial
           - arvn.sweepRaid
           - arvn.assaultRaid
           - arvn.trainTransport
@@ -4383,12 +4420,20 @@ agents:
         turnShapeEvaluators:
           - currentTurnImpact
         considerations:
+          - preferLeaderDenialOption
           - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey
 
     nva-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          depthCap: 4
       params:
         eventWeight: 150
         projectedMarginWeight: 100
@@ -4429,6 +4474,7 @@ agents:
           - nva.bombardCoinStack
           - nva.terrorSupportReduction
         considerations:
+          - preferLeaderDenialOption
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent

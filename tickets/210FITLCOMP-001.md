@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only (uses the existing Spec 209 competence harness)
-**Deps**: `tickets/210FITLCOMP-000.md`
+**Deps**: `archive/tickets/210FITLCOMP-000.md`
 
 ## Problem
 
@@ -19,7 +19,7 @@ This ticket establishes the canonical **in-place promotion pattern** (the "imple
 3. The four block-leader fixtures `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` exist, tagged `architectural-invariant`, calling `assertSharedModuleWitness(file, faction, 'blockCurrentLeader')`. Confirmed.
 4. The structural shared helper `shared-doctrine-witness-helpers.ts` is the thing being superseded; a NEW harness-backed `shared-competence-helpers.ts` avoids co-edit collisions with later shared tickets (002–005).
 5. Victory-formula refs for the outcome delta live in `data/games/fire-in-the-lake/91-victory-standings.md` and are surfaced as `victory.currentMargin.<faction>` / `victory.currentRank.<faction>` / `metric.auto:victory:*` (already used in `92-agents.md` `stateFeatures`). Confirmed.
-6. Boundary reset approved 2026-06-03: live probes showed the helper/bootstrap and doctrine assumptions were not fully true yet. `tickets/210FITLCOMP-000.md` now owns making the generic bootstrap helper and block-leader doctrine/data prerequisite true before this ticket performs final witness promotion.
+6. Boundary reset approved 2026-06-03: live probes showed the helper/bootstrap and doctrine assumptions were not fully true yet. `archive/tickets/210FITLCOMP-000.md` now owns making the generic bootstrap helper and block-leader doctrine/data prerequisite true before this ticket performs final witness promotion.
 
 ## Architecture Check
 
@@ -59,7 +59,7 @@ Add a short header comment in `shared-competence-helpers.ts` describing the prom
 - The other shared intents (immediate-win, near-Coup, Monsoon, ally-rival) — tickets 002–005.
 - Faction signature fixtures — tickets 006–009.
 - Any `92-agents.md` feature additions — ticket 010 (gated).
-- Generic bootstrap-state helper support and the block-current-leader doctrine/data prerequisite — `tickets/210FITLCOMP-000.md`.
+- Generic bootstrap-state helper support and the block-current-leader doctrine/data prerequisite — `archive/tickets/210FITLCOMP-000.md`.
 - Deleting `assertSharedModuleWitness` from `shared-doctrine-witness-helpers.ts`: defer until the ticket that promotes the last shared consumer (005) — block-leader alone does not remove all consumers.
 - Curated *state* definitions must NOT be added to `shared-competence-helpers.ts` (keep them in fixture files) so 002–005 stay parallelizable without co-editing this file.
 

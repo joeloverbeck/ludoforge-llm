@@ -107,7 +107,7 @@ Each added feature must be justified by a named failing fixture in the ticket th
 - **No P1 fixtures** (Patrol/Advise LoC/Econ, Air Lift route, Sweep/Raid expose-before-removal, Bombard, Rally/Base network, base-threat-from-Infiltrate, event direct-swing).
 - **No event-decision annotation taxonomy.** Event direct-swing remains a module, not a plan template, until a (deferred) fixture proves the annotation surface cannot express direct-swing vs trap.
 - **No brittle single-stable-key assertions** where moves are strategically equivalent — assert strategic properties and adversarial dominance.
-- **No engine changes.**
+- **No FITL-specific engine changes.** The prerequisite ticket added generic standing-role preview-option refs so block-leader microturn choices can score the current leader's margin without hardcoding FITL behavior.
 - **No witness reclassification work** beyond promoting the targeted fixtures and tagging them with the Spec 209 `@proof-tier` annotation.
 
 ## 6. Reassessment of `reports/fitl-ai-encoding-second-iteration.md`
@@ -122,7 +122,7 @@ Each added feature must be justified by a named failing fixture in the ticket th
 
 Decomposed via `/spec-to-tickets` on 2026-06-03:
 
-- [`tickets/210FITLCOMP-000.md`](../tickets/210FITLCOMP-000.md) — Prerequisite: add generic bootstrap-state competence helper support and repair any block-current-leader doctrine/data gap exposed before promotion
+- [`archive/tickets/210FITLCOMP-000.md`](../archive/tickets/210FITLCOMP-000.md) — Prerequisite: add generic bootstrap-state competence helper support and repair any block-current-leader doctrine/data gap exposed before promotion
 - [`tickets/210FITLCOMP-001.md`](../tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
 - [`tickets/210FITLCOMP-002.md`](../tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
 - [`tickets/210FITLCOMP-003.md`](../tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures ×4 (covers §2(3))

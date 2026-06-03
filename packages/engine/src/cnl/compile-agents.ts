@@ -12,6 +12,7 @@ import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
   AGENT_POLICY_PROFILE_USE_TO_LIBRARY_BUCKET,
   isAgentPolicyRelationshipRole,
+  isAgentPolicyStandingRoleSelector,
 } from '../contracts/index.js';
 import { parsePolicyStandingRoleToken, POLICY_STANDING_ROLE_TOKEN_PREFIX } from '../agents/policy-standing-roles.js';
 import { collectChoiceBindingSpecs } from '../kernel/move-runtime-bindings.js';
@@ -4286,6 +4287,30 @@ class AgentLibraryCompiler {
     }
 
     const optionPath = refPath.slice('preview.option.'.length);
+    if (optionPath.startsWith('victory.currentMargin.role:')) {
+      if (this.options.hasVictoryMargins === false) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const role = optionPath.slice('victory.currentMargin.role:'.length);
+      if (!isAgentPolicyStandingRoleSelector(role)) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginRole', id: role } };
+    }
+    if (optionPath.startsWith('delta.victory.currentMargin.role:')) {
+      if (this.options.hasVictoryMargins === false) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      const role = optionPath.slice('delta.victory.currentMargin.role:'.length);
+      if (!isAgentPolicyStandingRoleSelector(role)) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginRole', id: role } };
+    }
     switch (optionPath) {
       case 'victory.currentMargin.self':
         if (this.options.hasVictoryMargins === false) {
@@ -5943,10 +5968,14 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
   switch (ref.refKind) {
     case 'victoryCurrentMarginSelf':
       return 'preview.option.victory.currentMargin.self';
+    case 'victoryCurrentMarginRole':
+      return `preview.option.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'victoryCurrentRankSelf':
       return 'preview.option.victory.currentRank.self';
     case 'deltaVictoryCurrentMarginSelf':
       return 'preview.option.delta.victory.currentMargin.self';
+    case 'deltaVictoryCurrentMarginRole':
+      return `preview.option.delta.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'globalVar':
       return `preview.option.var.global.${ref.id ?? ''}`;
     case 'perPlayerVarSelf':

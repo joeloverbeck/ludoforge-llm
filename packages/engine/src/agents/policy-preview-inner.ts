@@ -99,10 +99,14 @@ export const previewOptionRefKey = (ref: PreviewOptionRef): string => {
   switch (ref.refKind) {
     case 'victoryCurrentMarginSelf':
       return 'preview.option.victory.currentMargin.self';
+    case 'victoryCurrentMarginRole':
+      return `preview.option.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'victoryCurrentRankSelf':
       return 'preview.option.victory.currentRank.self';
     case 'deltaVictoryCurrentMarginSelf':
       return 'preview.option.delta.victory.currentMargin.self';
+    case 'deltaVictoryCurrentMarginRole':
+      return `preview.option.delta.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'globalVar':
       return `preview.option.var.global.${ref.id ?? ''}`;
     case 'perPlayerVarSelf':
@@ -124,6 +128,13 @@ const surfaceRefForPreviewOptionRef = (ref: PreviewOptionRef): CompiledSurfaceRe
         family: 'victoryCurrentMargin',
         id: 'currentMargin',
         selector: { kind: 'role', seatToken: 'self' },
+      };
+    case 'victoryCurrentMarginRole':
+    case 'deltaVictoryCurrentMarginRole':
+      return {
+        family: 'victoryCurrentMargin',
+        id: 'currentMargin',
+        selector: { kind: 'role', seatToken: `role:${ref.id ?? ''}` },
       };
     case 'victoryCurrentRankSelf':
       return {
@@ -575,7 +586,7 @@ export const resolveRefs = (
       resolved.set(key, { kind: 'unavailable', reason: drive.outcome === 'depthCap' ? 'depthCap' : 'unresolved' });
       continue;
     }
-    if (ref.refKind === 'deltaVictoryCurrentMarginSelf') {
+    if (ref.refKind === 'deltaVictoryCurrentMarginSelf' || ref.refKind === 'deltaVictoryCurrentMarginRole') {
       if (drive.outcome === 'depthCap') {
         resolved.set(key, { kind: 'unavailable', reason: 'depthCap' });
         continue;

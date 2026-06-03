@@ -1,18 +1,17 @@
 {
   "originating_spec": "specs/209-game-agnostic-executed-turn-competence-harness.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/209COMPHARNESS-004.md",
+  "last_ticket": "archive/tickets/209COMPHARNESS-005.md",
   "last_result": "completed_archived",
-  "last_work_commit": "c9107d1ee2e157fbd92a431327ae71edd58e3f68",
+  "last_work_commit": "e0eb1eba11ffa33ee13db9be745962a627835bd2",
   "last_state_commit": "self",
-  "next_target": "tickets/209COMPHARNESS-005.md",
+  "next_target": "tickets/209COMPHARNESS-007.md",
   "queue": [
-    "tickets/209COMPHARNESS-005.md",
     "tickets/209COMPHARNESS-007.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Ticket 004 implemented and archived in c9107d1ee2e157fbd92a431327ae71edd58e3f68; next ready target is ticket 005. Ticket 007 waits on ticket 005 plus archived 002, 003, 004, and 006. Post-state-commit worktree is expected clean.",
+  "owned_dirty_summary": "Ticket 005 implemented and archived in e0eb1eba11ffa33ee13db9be745962a627835bd2; next ready target is ticket 007. Ticket 007 now depends only on archived helpers 001-006. Post-state-commit worktree is expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

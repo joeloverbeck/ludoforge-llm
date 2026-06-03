@@ -1,6 +1,6 @@
 # Spec 209 — Game-Agnostic Executed-Turn Competence Test Harness
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — this is the enabling step. Verification of the current FITL agent suite (2026-06-03) found that **0 of 114 `policy-profile-quality` test files execute a turn and assert a board-outcome delta**. ~81% (92 of 114) are `architectural-invariant` binding checks, ~19% (22 of 114) are `convergence-witness` (mostly proposal-level), and the only 8 full-game tests assert termination/determinism, not competence. The faction witnesses prove that named structures exist, bind, and score a *synthetic* candidate — not that the live agent selects a competent legal move from the real frontier and improves the intended strategic property. This is a genuine proof gap under FOUNDATIONS #16 (Testing as Proof). The harness is the precondition for closing it without engine churn.
 **Complexity**: M — new game-agnostic test infrastructure under `packages/engine/test/helpers/` (+ a small `testing.md` amendment). No kernel, compiler, or runtime change. Building blocks already exist (`runGame()` accepts `PolicyAgent`; `cross-family-conformance.test.ts` already publishes a real frontier and applies decisions); what is missing is the assertion layer that bundles live-frontier execution with plan-trace-chain, outcome-delta, adversarial-alternative, preview-status, and replay assertions.
 **Date**: 2026-06-03
@@ -129,3 +129,16 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/209COMPHARNESS-005.md`](../archive/tickets/209COMPHARNESS-005.md) — Deterministic-replay wrapper (covers §3.6)
 - [`archive/tickets/209COMPHARNESS-006.md`](../archive/tickets/209COMPHARNESS-006.md) — Proof-tier convention — `testing.md` amendment (covers §3.7, AC#5)
 - [`archive/tickets/209COMPHARNESS-007.md`](../archive/tickets/209COMPHARNESS-007.md) — Reference fixture: cross-game agnosticism + replay-identity proof (covers §4 AC#2/#3/#4)
+
+## Completion
+
+Completed on 2026-06-03. All seven owned tickets are archived under `archive/tickets/209COMPHARNESS-*.md`.
+
+Final proof:
+- `pnpm -F @ludoforge/engine build` passed.
+- `node --test "dist/test/architecture/competence-harness-reference.test.js"` passed: 2 tests, 0 failures.
+- `pnpm -F @ludoforge/engine test:all` passed: 1001 tests, 0 failures.
+- `pnpm turbo build` passed; runner emitted the existing non-failing Vite chunk-size warning.
+- `pnpm turbo lint` passed.
+- `pnpm turbo typecheck` passed.
+- `pnpm run check:ticket-deps` passed with 0 active tickets and 2597 archived tickets.

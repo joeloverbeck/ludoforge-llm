@@ -16,7 +16,7 @@ The trigger report's central diagnosis is **accepted with corrections**. Verific
 
 | Order | Spec | Title | Depends on | Rationale |
 |---|---|---|---|---|
-| 1 | **209** | Game-agnostic executed-turn competence harness | — | Enabling step. Without the harness + proof-tier convention, the fixtures cannot be written or trusted. Test infrastructure only; no engine change. |
+| 1 | **209** (`archive/specs/209-game-agnostic-executed-turn-competence-harness.md`) | Game-agnostic executed-turn competence harness | — | Completed and archived on 2026-06-03. Enabling test infrastructure only; no engine change. |
 | 2 | **210** | FITL behavioral competence fixture corpus (P0) | **209 (hard)** | Builds every fixture on the Spec 209 harness; proves the four-faction doctrine authored by Specs 201–205 at executed-outcome tier. |
 
 **209 → 210 is a hard dependency** (210 fixtures import the 209 harness helpers and the `@proof-tier` convention). Both specs are independent of any other in-flight work (none exists; Specs 196–208 are all archived). Neither requires kernel, compiler, or runtime changes.

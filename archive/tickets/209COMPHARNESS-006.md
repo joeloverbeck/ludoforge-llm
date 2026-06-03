@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation/convention only
-**Deps**: `specs/209-game-agnostic-executed-turn-competence-harness.md`
+**Deps**: `archive/specs/209-game-agnostic-executed-turn-competence-harness.md`
 
 ## Problem
 

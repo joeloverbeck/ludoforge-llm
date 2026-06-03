@@ -5,7 +5,7 @@
 **Complexity**: M–L — fixtures + curated states under `packages/engine/test/policy-profile-quality/` (or a `competence/` sibling), plus *conditional* YAML feature additions in `data/games/fire-in-the-lake/92-agents.md` — added only where a fixture proves the current encoding cannot distinguish the required choice. No engine work.
 **Date**: 2026-06-03
 **Dependencies**:
-- **Hard**: `specs/209-game-agnostic-executed-turn-competence-harness.md` (PROPOSED) — every fixture here is built on the Spec 209 harness. 210 cannot start until 209 lands.
+- **Hard**: `archive/specs/209-game-agnostic-executed-turn-competence-harness.md` (COMPLETED) — every fixture here is built on the Spec 209 harness. 210 can start after the archived Spec 209 harness landed.
 - **Soft**: `archive/specs/201-fitl-shared-doctrine-and-lifecycle.md`, `202` (US), `203` (NVA), `204` (VC), `205` (ARVN) — all COMPLETED; this spec proves the doctrine those specs authored.
 - **Soft**: `data/games/fire-in-the-lake/91-victory-standings.md` — victory formulas used directly in outcome assertions.
 - **Soft**: `data/games/fire-in-the-lake/93-observability.md` — public preview surfaces fixtures assert against.

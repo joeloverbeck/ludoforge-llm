@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
-**Deps**: `specs/209-game-agnostic-executed-turn-competence-harness.md`
+**Deps**: `archive/specs/209-game-agnostic-executed-turn-competence-harness.md`
 
 ## Problem
 

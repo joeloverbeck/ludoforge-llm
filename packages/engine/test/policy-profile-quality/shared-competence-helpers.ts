@@ -1,11 +1,13 @@
 import * as assert from 'node:assert/strict';
 
 import { PolicyAgent } from '../../src/agents/index.js';
+import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import {
   assertValidatedGameDef,
   initialState,
   asPlayerId,
   type Agent,
+  type Decision,
   type GameDef,
   type GameState,
   type Token,
@@ -31,6 +33,7 @@ const PLAYER_COUNT = 4;
 const PROFILE_IDS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|false|pass';
 const LEADER_OPTION_DELTA_REF = 'preview.option.delta.victory.currentMargin.role:currentLeader';
+const SELF_MARGIN_REF = 'victoryCurrentMargin.currentMargin.self';
 
 export type FitlProfileId = (typeof PROFILE_IDS)[number];
 
@@ -42,6 +45,24 @@ export interface FitlCompetenceCase {
   readonly seed: number;
   readonly expectedRootStableMoveKey: string;
   readonly leaderMarginAssertion: OutcomeDeltaAssertion;
+  readonly prepareState: (def: GameDef, state: GameState) => GameState;
+}
+
+export interface FitlImmediateWinCase {
+  readonly testFile: string;
+  readonly profileId: FitlProfileId;
+  readonly seatId: string;
+  readonly playerIndex: number;
+  readonly seed: number;
+  readonly expectedRootStableMoveKey: string;
+  readonly selfMarginAssertion: OutcomeDeltaAssertion;
+  readonly prepareState: (def: GameDef, state: GameState) => GameState;
+}
+
+interface FitlRunnableCase {
+  readonly seatId: string;
+  readonly playerIndex: number;
+  readonly seed: number;
   readonly prepareState: (def: GameDef, state: GameState) => GameState;
 }
 
@@ -86,6 +107,45 @@ export function assertFitlExecutedOutcomeCase(input: FitlCompetenceCase): void {
     def,
     runFixture: run,
     outcomeDeltaAssertions: [input.leaderMarginAssertion],
+  });
+}
+
+export function assertFitlImmediateWinCase(input: FitlImmediateWinCase): void {
+  const def = loadFitlProductionDef();
+  const run = (): CompetenceRunResult => runFitlCompetenceCase(def, input);
+  const result = run();
+  const outcomeDeltas = assertOutcomeDeltas({
+    def,
+    before: result.preState,
+    after: result.postState,
+    assertions: [input.selfMarginAssertion],
+  });
+  const selectedSelfMargin = outcomeDeltas[0]?.after;
+  const passed = canonicalStateChanged(result.preState, result.postState)
+    && typeof selectedSelfMargin === 'number'
+    && selectedSelfMargin >= 0;
+
+  emitPolicyProfileQualityRecord({
+    file: input.testFile,
+    variantId: input.profileId,
+    seed: input.seed,
+    passed,
+    stopReason: result.stopReason,
+    decisions: result.decisions.length,
+  });
+
+  assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected selected live turn to change state');
+  assertImmediateWinTrace(def, result, input.expectedRootStableMoveKey);
+  assertAdversarialAlternativeAvoided({
+    def,
+    result,
+    trapStableMoveKeys: [PASS_TRAP_STABLE_MOVE_KEY],
+  });
+  assertSelectedSelfMarginTrace(result, input.expectedRootStableMoveKey);
+  assertReplayIdentity({
+    def,
+    runFixture: run,
+    outcomeDeltaAssertions: [input.selfMarginAssertion],
   });
 }
 
@@ -167,7 +227,7 @@ function loadFitlProductionDef(): ValidatedGameDef {
   return assertValidatedGameDef(getFitlProductionFixture().gameDef);
 }
 
-function runFitlCompetenceCase(def: ValidatedGameDef, input: FitlCompetenceCase): CompetenceRunResult {
+function runFitlCompetenceCase(def: ValidatedGameDef, input: FitlRunnableCase): CompetenceRunResult {
   const baseState = initialState(def, input.seed, PLAYER_COUNT).state;
   const prepared = setSingleEligibleFactionTurn(
     def,
@@ -243,4 +303,37 @@ function assertLeaderOptionPreviewIntegrity(result: CompetenceRunResult): void {
       decisiveRefs,
     });
   }
+}
+
+function assertSelectedSelfMarginTrace(result: CompetenceRunResult, stableMoveKey: string): void {
+  assert.ok(result.agentDecision, 'expected policy decision trace');
+  if (!result.agentDecision.candidates?.some((candidate) => candidate.stableMoveKey === stableMoveKey)) {
+    return;
+  }
+
+  assertPreviewStatuses({
+    result,
+    decisiveRefs: [{ refId: SELF_MARGIN_REF, stableMoveKey, status: 'ready' }],
+  });
+}
+
+function assertImmediateWinTrace(def: GameDef, result: CompetenceRunResult, expectedRootStableMoveKey: string): void {
+  assert.ok(result.agentDecision, 'expected policy decision trace');
+  assert.ok(
+    result.agentDecision.plan?.activeDoctrines.includes('shared.immediateWin'),
+    `expected active doctrine shared.immediateWin; got ${JSON.stringify(result.agentDecision.plan?.activeDoctrines ?? [])}`,
+  );
+  assert.equal(decisionStableKey(def, result.selectedDecision), expectedRootStableMoveKey);
+  assert.equal(result.agentDecision.selectedStableMoveKey, expectedRootStableMoveKey);
+  assert.ok(
+    result.targetFrontier.some((decision) => decisionStableKey(def, decision) === expectedRootStableMoveKey),
+    `expected selected root ${expectedRootStableMoveKey} in published frontier`,
+  );
+}
+
+function decisionStableKey(def: GameDef, decision: Decision): string {
+  if (decision.kind !== 'actionSelection') {
+    return `${decision.kind}:${JSON.stringify(decision)}`;
+  }
+  return decision.move === undefined ? String(decision.actionId) : toMoveIdentityKey(def, decision.move);
 }

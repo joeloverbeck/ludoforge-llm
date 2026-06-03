@@ -55,7 +55,7 @@ Each P0 intent below already has a structural witness in `policy-profile-quality
 
 **Shared (one per faction where applicable):**
 1. **Block current leader** — one fixture per faction (US/ARVN/NVA/VC), near-win leader with ≥2 legal denials and one irrelevant strong move; assert the selected candidate reduces the leader's margin more than the alternative, via the leader's own victory-formula query.
-2. **Immediate own win** — at least the US case (Support+Available) as the shared exemplar: a legal winning move plus a tempting non-winning setup; assert the winning root is selected and the executed margin crosses threshold.
+2. **Immediate own win** — promote the shared immediate-win witnesses against the current shared-module contract: a legal non-pass root plus a tempting pass setup; assert `shared.immediateWin` is active, the non-pass root is selected, the executed state is replay-identical, and exact self-margin before/after is proven. Assert candidate-local ready self-margin status where candidate trace exists, and assert an executed threshold crossing only where the bounded live fixture actually crosses; do not imply unbounded compound-turn preview beyond Foundations #20.
 3. **Near-Coup concrete swing** — one fixture: Coup imminent, speculative setup tempting, concrete swing available; assert the selected plan changes the Coup-scored property.
 4. **Monsoon paired** — same board with Monsoon false/true; assert Sweep/March setup preferred when legal, and a competent legal fallback (not merely "not Sweep/March") under Monsoon.
 5. **Ally-rival paired** — same tempting ally-helping move, ally far-from-win vs near-win; assert cooperation in the former and throttle in the latter.
@@ -124,7 +124,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 
 - [`archive/tickets/210FITLCOMP-000.md`](../archive/tickets/210FITLCOMP-000.md) — Prerequisite: add generic bootstrap-state competence helper support and repair any block-current-leader doctrine/data gap exposed before promotion
 - [`archive/tickets/210FITLCOMP-001.md`](../archive/tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
-- [`tickets/210FITLCOMP-002.md`](../tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
+- [`archive/tickets/210FITLCOMP-002.md`](../archive/tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
 - [`tickets/210FITLCOMP-003.md`](../tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures ×4 (covers §2(3))
 - [`tickets/210FITLCOMP-004.md`](../tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
 - [`tickets/210FITLCOMP-005.md`](../tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; retire dead structural helper (covers §2(5))

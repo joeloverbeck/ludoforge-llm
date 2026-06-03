@@ -1,6 +1,6 @@
 # 209COMPHARNESS-006: Proof-tier convention — `testing.md` amendment
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation/convention only
@@ -72,3 +72,23 @@ State explicitly in `testing.md` that structural / proposal-level witnesses MUST
 
 1. `grep -n "@proof-tier" .claude/rules/testing.md`
 2. `pnpm turbo lint`
+
+## Outcome
+
+Completed on 2026-06-03. `.claude/rules/testing.md` now documents the optional
+`@proof-tier` sub-annotation under the existing three-class `@test-class`
+taxonomy, explicitly rejects the parallel 9-category taxonomy, and states that
+structural / proposal-level witnesses MUST NOT be counted as behavioral
+competence proof.
+
+Verification:
+
+1. `grep -n "@proof-tier" .claude/rules/testing.md` passed; the marker and tier
+   explanation are present.
+2. `grep -n "structural ≠ competence proof" .claude/rules/testing.md` passed.
+3. `rg -n "@test-class: (architectural-invariant|convergence-witness|golden-trace)|@test-class:" .claude/rules/testing.md` showed only the three existing class examples.
+4. `pnpm turbo lint` passed.
+5. `pnpm turbo test` passed: 5/5 Turbo tasks successful; engine default lane
+   reported `summary 190/190 files passed`.
+
+Deviations: none.

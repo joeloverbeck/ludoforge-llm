@@ -1,6 +1,6 @@
 # 209COMPHARNESS-001: Live-frontier competence runner + `competence/` module scaffolding
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
@@ -78,3 +78,22 @@ The `policy-profile-quality` suite proves binding/proposal-level facts but never
 
 1. `pnpm -F @ludoforge/engine build && node --test "dist/test/architecture/competence-runner-smoke.test.js"`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-06-03
+
+What changed:
+- Added `packages/engine/test/helpers/competence/live-frontier-runner.ts` and the `competence/index.ts` barrel.
+- Added `packages/engine/test/architecture/competence-runner-smoke.test.ts`, discovered by the existing architecture/unit test glob.
+- The runner exposes the target microturn, published frontier, selected decision, pre/post states, same-turn decision logs, the selected agent decision trace, the selected plan trace when present, flattened plan microturn traces, and a bounded stop reason.
+
+Deviation from original plan:
+- The implementation uses the existing `runGameSteps` iterator rather than manually duplicating `initialState` / `publishMicroturn` / `applyPublishedDecision` looping. This keeps runtime forking, auto-resolution, rollback recovery, per-seat RNG, and decision logging aligned with the canonical simulator path while still invoking agents against the kernel-published frontier and failing if the selected decision is absent from that frontier.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine build && node --test "packages/engine/dist/test/architecture/competence-runner-smoke.test.js"` — passed, 1 test.
+- `pnpm -F @ludoforge/engine test:unit` — passed, 6,110 tests across 826 top-level suites.
+- Helper agnosticism sweep: `rg -n "fitl|fire|arvn|nva|vc|texas|holdem|generic-control|Support|Patronage|Trail|Opposition" packages/engine/test/helpers/competence/live-frontier-runner.ts packages/engine/test/helpers/competence/index.ts` — no matches.
+- Source size: `live-frontier-runner.ts` 160 lines, `competence-runner-smoke.test.ts` 52 lines, `index.ts` 1 line.

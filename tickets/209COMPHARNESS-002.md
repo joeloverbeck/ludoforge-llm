@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
-**Deps**: `tickets/209COMPHARNESS-001.md`
+**Deps**: `archive/tickets/209COMPHARNESS-001.md`
 
 ## Problem
 

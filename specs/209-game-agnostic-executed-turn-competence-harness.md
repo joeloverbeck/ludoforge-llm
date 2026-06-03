@@ -122,7 +122,7 @@ No engine logic, no per-game schema, no new cap classes, no compatibility shims.
 
 Decomposed via `/spec-to-tickets` on 2026-06-03:
 
-- [`tickets/209COMPHARNESS-001.md`](../tickets/209COMPHARNESS-001.md) — Live-frontier competence runner + `competence/` module scaffolding (covers §3.1)
+- [`archive/tickets/209COMPHARNESS-001.md`](../archive/tickets/209COMPHARNESS-001.md) — Live-frontier competence runner + `competence/` module scaffolding (covers §3.1)
 - [`tickets/209COMPHARNESS-002.md`](../tickets/209COMPHARNESS-002.md) — Plan-trace-chain assertion helper (covers §3.2)
 - [`tickets/209COMPHARNESS-003.md`](../tickets/209COMPHARNESS-003.md) — Generic outcome-delta assertion helper (covers §3.3)
 - [`tickets/209COMPHARNESS-004.md`](../tickets/209COMPHARNESS-004.md) — Adversarial-alternative + preview-status assertion helpers (covers §3.4, §3.5)

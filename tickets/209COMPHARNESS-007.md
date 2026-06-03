@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test infrastructure only
-**Deps**: `tickets/209COMPHARNESS-001.md`, `tickets/209COMPHARNESS-002.md`, `tickets/209COMPHARNESS-003.md`, `tickets/209COMPHARNESS-004.md`, `tickets/209COMPHARNESS-005.md`, `tickets/209COMPHARNESS-006.md`
+**Deps**: `archive/tickets/209COMPHARNESS-001.md`, `tickets/209COMPHARNESS-002.md`, `tickets/209COMPHARNESS-003.md`, `tickets/209COMPHARNESS-004.md`, `tickets/209COMPHARNESS-005.md`, `tickets/209COMPHARNESS-006.md`
 
 ## Problem
 

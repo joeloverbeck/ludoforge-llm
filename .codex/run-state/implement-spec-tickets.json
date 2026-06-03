@@ -1,17 +1,24 @@
 {
-  "originating_spec": "specs/205-fitl-arvn-selector-cleanup.md",
-  "archived_spec": "archive/specs/205-fitl-arvn-selector-cleanup.md",
-  "last_ticket": "archive/tickets/205FITLARVSEL-006.md",
+  "originating_spec": "specs/209-game-agnostic-executed-turn-competence-harness.md",
+  "archived_spec": null,
+  "last_ticket": "archive/tickets/209COMPHARNESS-001.md",
   "last_result": "completed_archived",
-  "last_work_commit": "d159983cc",
+  "last_work_commit": "c6a64167c7b8c2039f375d17f4d3d377b194bdb2",
   "last_state_commit": "self",
-  "next_target": null,
-  "queue": [],
-  "phase": "completed",
+  "next_target": "tickets/209COMPHARNESS-006.md",
+  "queue": [
+    "tickets/209COMPHARNESS-006.md",
+    "tickets/209COMPHARNESS-002.md",
+    "tickets/209COMPHARNESS-003.md",
+    "tickets/209COMPHARNESS-004.md",
+    "tickets/209COMPHARNESS-005.md",
+    "tickets/209COMPHARNESS-007.md"
+  ],
+  "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "All active 205FITLARVSEL tickets, originating Spec 205, and the FITL implementation-order artifact are completed and archived. Implementation order archived at archive/specs/IMPLEMENTATION-ORDER-2026-06-02.md.",
+  "owned_dirty_summary": "Ticket 001 implemented and archived in c6a64167c7b8c2039f375d17f4d3d377b194bdb2; next ready target is independent documentation ticket 006, while tickets 002-005 depend on the archived runner and ticket 007 waits on 001-006. Post-state-commit worktree is expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-06-02"
+  "updated_at": "2026-06-03"
 }

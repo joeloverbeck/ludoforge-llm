@@ -92,6 +92,8 @@ Do not rewrite `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` in this pr
 
 ## Outcome (2026-06-03)
 
+Outcome amended: 2026-06-03 -- post-ticket review added the final dependency and whitespace verification commands that were run after archival.
+
 Completed. Live reassessment found that the prerequisite needed both the already-implemented generic `bootstrapState` competence-runner support and a generic preview-option ref extension for standing-role victory-current-margin refs. The engine/compiler/runtime additions are role-based and game-agnostic (`preview.option.victory.currentMargin.role:<role>` and `preview.option.delta.victory.currentMargin.role:<role>`), with no FITL identifiers in engine code.
 
 FITL data changes were limited to `data/games/fire-in-the-lake/92-agents.md`: `shared.blockCurrentLeader` now includes Terror, enables the missing denial templates, US/NVA get bounded exact-world inner preview, and the new microturn `preferLeaderDenialOption` scores the current leader's margin delta. ARVN also gained a narrow Govern denial template.
@@ -105,3 +107,5 @@ Verification run:
 3. `node --test packages/engine/dist/test/unit/cnl/compile-microturn-refs.test.js packages/engine/dist/test/unit/cnl/compile-preview-option-refs.test.js`
 4. `node --test packages/engine/dist/test/policy-profile-quality/shared-block-current-leader-us.test.js packages/engine/dist/test/policy-profile-quality/shared-block-current-leader-arvn.test.js packages/engine/dist/test/policy-profile-quality/shared-block-current-leader-nva.test.js packages/engine/dist/test/policy-profile-quality/shared-block-current-leader-vc.test.js`
 5. `node --test packages/engine/dist/test/architecture/competence-harness-reference.test.js`
+6. `pnpm run check:ticket-deps`
+7. `git diff --check`

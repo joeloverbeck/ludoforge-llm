@@ -11,10 +11,13 @@ import {
   assertPreviewStatuses,
   assertReplayIdentity,
   canonicalStateChanged,
+  runToCompetenceDecision,
   type CompetenceRunResult,
   type OutcomeDeltaAssertion,
   type PreviewCandidateExpectation,
 } from '../helpers/competence/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
+import { createGameDefRuntime, initialState } from '../../src/kernel/index.js';
 import { createFitlCompetenceReference } from '../helpers/competence/__reference__/fitl-reference.js';
 import { createGenericControlCompetenceReference } from '../helpers/competence/__reference__/generic-control-reference.js';
 
@@ -84,6 +87,37 @@ describe('competence harness reference fixture', () => {
       def: reference.def,
       runFixture: reference.run,
       outcomeDeltaAssertions: reference.outcomeDeltaAssertions,
+    });
+  });
+
+  it('runs from a caller-provided bootstrap state', () => {
+    const reference = createGenericControlCompetenceReference();
+    const runtime = createGameDefRuntime(reference.def);
+    const bootstrapState = initialState(reference.def, 209, 2, undefined, runtime).state;
+    const result = runToCompetenceDecision({
+      def: reference.def,
+      seed: 209,
+      agents: [new PolicyAgent({ traceLevel: 'verbose' }), new PolicyAgent({ traceLevel: 'verbose' })],
+      playerCount: 2,
+      runtime,
+      bootstrapState,
+      maxTurns: 3,
+      microturnBound: 20,
+      advanceUntil: ({ microturn }) =>
+        microturn.kind === 'actionSelection' && microturn.legalActions.length > 1,
+    });
+
+    assertFamilyAgnosticOutcomeAndPreview({
+      label: 'generic-control bootstrapped action-selection turn',
+      def: reference.def,
+      result,
+      outcomeDeltaAssertions: reference.outcomeDeltaAssertions,
+      previewCandidates: reference.previewCandidates,
+    });
+    assertAdversarialAlternativeAvoided({
+      def: reference.def,
+      result,
+      trapStableMoveKeys: reference.trapStableMoveKeys,
     });
   });
 });

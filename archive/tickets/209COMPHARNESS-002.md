@@ -1,6 +1,6 @@
 # 209COMPHARNESS-002: Plan-trace-chain assertion helper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test infrastructure only
@@ -70,3 +70,26 @@ Append the helper export to `packages/engine/test/helpers/competence/index.ts`.
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine typecheck`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-06-03. Added
+`packages/engine/test/helpers/competence/plan-trace-chain.ts` and exported it
+from the competence helper barrel. The helper consumes the existing
+`CompetenceRunResult`, `PolicyPlanTrace`, and `PolicyPlanMicroturnTrace`
+surfaces to assert the ordered doctrine/template/root/availability/role/microturn
+chain without adding or depending on new trace fields.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` passed.
+2. `pnpm -F @ludoforge/engine typecheck` passed.
+3. `pnpm -F @ludoforge/engine test:unit` passed: 6110 tests, 0 failures.
+4. `pnpm turbo build` passed: 3/3 tasks successful.
+5. `pnpm turbo lint` passed: 2/2 tasks successful.
+6. `pnpm turbo typecheck` passed: 3/3 tasks successful.
+7. Game-specific identifier sweep over the new helper returned no hits.
+8. Source-size check: `plan-trace-chain.ts` is 214 lines.
+
+Deviations: none. The helper's behavioral reference-fixture exercise remains
+owned by ticket 007, as planned by this ticket and Spec 209 AC#2.

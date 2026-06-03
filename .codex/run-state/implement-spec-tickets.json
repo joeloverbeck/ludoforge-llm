@@ -1,19 +1,18 @@
 {
   "originating_spec": "specs/209-game-agnostic-executed-turn-competence-harness.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/209COMPHARNESS-003.md",
+  "last_ticket": "archive/tickets/209COMPHARNESS-004.md",
   "last_result": "completed_archived",
-  "last_work_commit": "5033fd914b2a073442daf524ca684eb0e27f23de",
+  "last_work_commit": "c9107d1ee2e157fbd92a431327ae71edd58e3f68",
   "last_state_commit": "self",
-  "next_target": "tickets/209COMPHARNESS-004.md",
+  "next_target": "tickets/209COMPHARNESS-005.md",
   "queue": [
-    "tickets/209COMPHARNESS-004.md",
     "tickets/209COMPHARNESS-005.md",
     "tickets/209COMPHARNESS-007.md"
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Ticket 003 implemented and archived in 5033fd914b2a073442daf524ca684eb0e27f23de; next ready target is ticket 004. Tickets 004-005 depend on the archived runner and ticket 007 waits on tickets 004-005 plus archived 002, 003, and 006. Post-state-commit worktree is expected clean.",
+  "owned_dirty_summary": "Ticket 004 implemented and archived in c9107d1ee2e157fbd92a431327ae71edd58e3f68; next ready target is ticket 005. Ticket 007 waits on ticket 005 plus archived 002, 003, 004, and 006. Post-state-commit worktree is expected clean.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",

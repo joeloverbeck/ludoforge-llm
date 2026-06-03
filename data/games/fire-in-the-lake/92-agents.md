@@ -148,7 +148,8 @@ agents:
         type: number
         expr:
           coalesce:
-            - { ref: schedule.distance.toBoundary.coupEntry.cards }
+            - scheduleLowerBound:
+                ref: schedule.distance.toBoundary.coupEntry.cards
             - 999
       monsoonNow:
         type: boolean
@@ -500,7 +501,7 @@ agents:
             - { ref: feature.projectedCurrentLeaderMargin }
             - -2
       coupImminent:
-        description: "Coup is one card away or sooner; speculative setup is dominated by concrete swing."
+        description: "Coup is visible in the current or next lifecycle slot; speculative setup is dominated by concrete swing."
         target:
           lte:
             - { ref: feature.distanceToCoup }

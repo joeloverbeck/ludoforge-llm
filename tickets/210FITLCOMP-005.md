@@ -14,7 +14,7 @@ The shared ally-rival witnesses assert structurally. Spec 210 §2(5) requires a 
 
 1. Fixtures exist: `shared-ally-rival-throttle-{us,arvn,nva,vc}.test.ts` (bind `allyRivalRisk`), plus the rival-specific `arvn-us-rival-risk-flip.test.ts` and `nva-vc-rival-suppresses-terror.test.ts`. Confirmed.
 2. Ally/rival margins are observable via `projectedAllyMarginDelta` / `projectedLeaderMarginDelta` / `victory.currentMargin.<faction>` — already shipping candidateFeatures/stateFeatures (no new feature needed). Confirmed.
-3. After this ticket, all shared-doctrine fixtures (block, immediate-win, near-Coup, Monsoon, ally-rival) are promoted, so `assertSharedModuleWitness` in `shared-doctrine-witness-helpers.ts` has no remaining shared consumer.
+3. After this ticket, most shared-doctrine fixtures (block, immediate-win, near-Coup US/ARVN/NVA, Monsoon, ally-rival) are promoted. The VC near-Coup structural consumer remains until `tickets/210FITLCOMP-010.md`, so `assertSharedModuleWitness` must not be deleted in this ticket.
 
 ## Architecture Check
 
@@ -32,9 +32,9 @@ For each `shared-ally-rival-throttle-{us,arvn,nva,vc}.test.ts`: build one curate
 
 Promote `arvn-us-rival-risk-flip.test.ts` and `nva-vc-rival-suppresses-terror.test.ts` to executed-outcome tier following the same recipe (each proves the rival-risk flip / terror-suppression as an executed outcome with a bad-but-legal alternative).
 
-### 3. Retire the dead structural shared helper
+### 3. Preserve the structural shared helper until the VC residual lands
 
-Delete `assertSharedModuleWitness` and any other now-unused exports from `shared-doctrine-witness-helpers.ts`. If the file becomes empty, delete it. Grep to confirm zero remaining consumers across `packages/engine/test/**` before deleting (FOUNDATIONS #14).
+Do not delete `assertSharedModuleWitness` while `shared-near-coup-concrete-swing-vc.test.ts` remains structural. Grep to confirm the only remaining shared consumer is the VC near-Coup fixture; deletion is deferred to `tickets/210FITLCOMP-010.md` after that fixture is promoted (FOUNDATIONS #14).
 
 ## Files to Touch
 
@@ -44,7 +44,7 @@ Delete `assertSharedModuleWitness` and any other now-unused exports from `shared
 - `packages/engine/test/policy-profile-quality/shared-ally-rival-throttle-vc.test.ts` (modify)
 - `packages/engine/test/policy-profile-quality/arvn-us-rival-risk-flip.test.ts` (modify)
 - `packages/engine/test/policy-profile-quality/nva-vc-rival-suppresses-terror.test.ts` (modify)
-- `packages/engine/test/policy-profile-quality/shared-doctrine-witness-helpers.ts` (modify/delete — remove dead helpers)
+- `packages/engine/test/policy-profile-quality/shared-doctrine-witness-helpers.ts` (read/verify — preserve while VC near-Coup remains structural)
 - `packages/engine/test/policy-profile-quality/shared-competence-helpers.ts` (read — created by 001)
 
 ## Out of Scope
@@ -64,7 +64,7 @@ Delete `assertSharedModuleWitness` and any other now-unused exports from `shared
 ### Invariants
 
 1. All promoted fixtures carry `@proof-tier: executed-outcome` + `adversarial`; original paths/`describe` preserved (FOUNDATIONS #14).
-2. `assertSharedModuleWitness` has zero remaining consumers and is deleted (FOUNDATIONS #14).
+2. `assertSharedModuleWitness` has no remaining consumers except `shared-near-coup-concrete-swing-vc.test.ts`; deletion is deferred to `tickets/210FITLCOMP-010.md` (FOUNDATIONS #14).
 3. Replay identity holds for all paired runs (FOUNDATIONS #8).
 4. Decisive preview refs `ready` or explicitly traced (FOUNDATIONS #20).
 
@@ -78,5 +78,5 @@ Delete `assertSharedModuleWitness` and any other now-unused exports from `shared
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/shared-ally-rival-throttle-us.test.js packages/engine/dist/test/policy-profile-quality/shared-ally-rival-throttle-arvn.test.js packages/engine/dist/test/policy-profile-quality/shared-ally-rival-throttle-nva.test.js packages/engine/dist/test/policy-profile-quality/shared-ally-rival-throttle-vc.test.js packages/engine/dist/test/policy-profile-quality/arvn-us-rival-risk-flip.test.js packages/engine/dist/test/policy-profile-quality/nva-vc-rival-suppresses-terror.test.js`
-2. `grep -rln assertSharedModuleWitness packages/engine/test` (expect: no matches)
+2. `grep -rln assertSharedModuleWitness packages/engine/test` (expect: only the helper plus `shared-near-coup-concrete-swing-vc.test.ts`)
 3. `pnpm turbo lint typecheck && pnpm turbo test`

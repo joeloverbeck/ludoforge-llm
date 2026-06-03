@@ -56,7 +56,7 @@ Each P0 intent below already has a structural witness in `policy-profile-quality
 **Shared (one per faction where applicable):**
 1. **Block current leader** — one fixture per faction (US/ARVN/NVA/VC), near-win leader with ≥2 legal denials and one irrelevant strong move; assert the selected candidate reduces the leader's margin more than the alternative, via the leader's own victory-formula query.
 2. **Immediate own win** — promote the shared immediate-win witnesses against the current shared-module contract: a legal non-pass root plus a tempting pass setup; assert `shared.immediateWin` is active, the non-pass root is selected, the executed state is replay-identical, and exact self-margin before/after is proven. Assert candidate-local ready self-margin status where candidate trace exists, and assert an executed threshold crossing only where the bounded live fixture actually crosses; do not imply unbounded compound-turn preview beyond Foundations #20.
-3. **Near-Coup concrete swing** — one fixture: Coup imminent, speculative setup tempting, concrete swing available; assert the selected plan changes the Coup-scored property.
+3. **Near-Coup concrete swing** — one fixture per shared faction witness: Coup imminent via bounded visible schedule evidence, speculative setup tempting, concrete swing available; assert the selected plan changes the Coup-scored property. `210FITLCOMP-003` owns the bounded schedule correction and the US/ARVN/NVA executed witnesses; the VC executed witness is deferred to `210FITLCOMP-010` because the live VC profile currently selects a no-delta March under the real visible-Coup setup.
 4. **Monsoon paired** — same board with Monsoon false/true; assert Sweep/March setup preferred when legal, and a competent legal fallback (not merely "not Sweep/March") under Monsoon.
 5. **Ally-rival paired** — same tempting ally-helping move, ally far-from-win vs near-win; assert cooperation in the former and throttle in the latter.
 
@@ -94,7 +94,7 @@ Each added feature must be justified by a named failing fixture in the ticket th
 ## 4. Acceptance Criteria
 
 1. Every faction reaches `executed-outcome` proof tier on its primary victory engine and ≥1 signature combination.
-2. The shared block-leader (all four factions), immediate-win, near-Coup, Monsoon-paired, and ally-rival-paired witnesses are promoted from structural to `executed-outcome` tier — their `assertSharedModuleWitness` bodies replaced by harness runs.
+2. The shared block-leader (all four factions), immediate-win, near-Coup, Monsoon-paired, and ally-rival-paired witnesses are promoted from structural to `executed-outcome` tier — their `assertSharedModuleWitness` bodies replaced by harness runs. The VC near-Coup witness remains structural until the gated YAML/profile work in `210FITLCOMP-010`.
 3. Each positive fixture has a co-located adversarial bad-but-legal alternative that the agent rejects.
 4. Preview-derived decisive refs are `ready` or explicitly traced non-`ready`; no silent coercion.
 5. All fixtures replay deterministically (identical stable keys, microturn decisions, outcome deltas).
@@ -125,11 +125,11 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-000.md`](../archive/tickets/210FITLCOMP-000.md) — Prerequisite: add generic bootstrap-state competence helper support and repair any block-current-leader doctrine/data gap exposed before promotion
 - [`archive/tickets/210FITLCOMP-001.md`](../archive/tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
 - [`archive/tickets/210FITLCOMP-002.md`](../archive/tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
-- [`tickets/210FITLCOMP-003.md`](../tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures ×4 (covers §2(3))
+- [`archive/tickets/210FITLCOMP-003.md`](../archive/tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures for US/ARVN/NVA and correct bounded Coup schedule data (partial §2(3))
 - [`tickets/210FITLCOMP-004.md`](../tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
-- [`tickets/210FITLCOMP-005.md`](../tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; retire dead structural helper (covers §2(5))
+- [`tickets/210FITLCOMP-005.md`](../tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
 - [`tickets/210FITLCOMP-006.md`](../tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
 - [`tickets/210FITLCOMP-007.md`](../tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`tickets/210FITLCOMP-008.md`](../tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
 - [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures (covers §2(15–17))
-- [`tickets/210FITLCOMP-010.md`](../tickets/210FITLCOMP-010.md) — Conditional §3 YAML feature additions, gated on failing fixtures (covers §3, §4 AC#7)
+- [`tickets/210FITLCOMP-010.md`](../tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual (covers remaining §2(3), §3, §4 AC#7)

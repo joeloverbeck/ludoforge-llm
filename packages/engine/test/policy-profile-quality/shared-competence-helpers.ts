@@ -6,6 +6,7 @@ import {
   assertValidatedGameDef,
   initialState,
   asPlayerId,
+  asTokenId,
   type Agent,
   type Decision,
   type GameDef,
@@ -34,6 +35,7 @@ const PROFILE_IDS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baselin
 const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|false|pass';
 const LEADER_OPTION_DELTA_REF = 'preview.option.delta.victory.currentMargin.role:currentLeader';
 const SELF_MARGIN_REF = 'victoryCurrentMargin.currentMargin.self';
+const NEAR_COUP_DOCTRINE_ID = 'shared.nearCoupConcreteSwing';
 
 export type FitlProfileId = (typeof PROFILE_IDS)[number];
 
@@ -57,6 +59,17 @@ export interface FitlImmediateWinCase {
   readonly expectedRootStableMoveKey: string;
   readonly selfMarginAssertion: OutcomeDeltaAssertion;
   readonly prepareState: (def: GameDef, state: GameState) => GameState;
+}
+
+export interface FitlNearCoupCase {
+  readonly testFile: string;
+  readonly profileId: FitlProfileId;
+  readonly seatId: string;
+  readonly playerIndex: number;
+  readonly seed: number;
+  readonly expectedRootStableMoveKey: string;
+  readonly outcomeAssertions: readonly OutcomeDeltaAssertion[];
+  readonly prepareState?: (def: GameDef, state: GameState) => GameState;
 }
 
 interface FitlRunnableCase {
@@ -149,6 +162,47 @@ export function assertFitlImmediateWinCase(input: FitlImmediateWinCase): void {
   });
 }
 
+export function assertFitlNearCoupCase(input: FitlNearCoupCase): void {
+  const def = loadFitlProductionDef();
+  const run = (): CompetenceRunResult => runFitlCompetenceCase(def, {
+    ...input,
+    prepareState: (caseDef, state) => {
+      const prepared = withCoupLookahead(caseDef, state);
+      return input.prepareState === undefined ? prepared : input.prepareState(caseDef, prepared);
+    },
+  });
+  const result = run();
+  const outcomeDeltas = assertOutcomeDeltas({
+    def,
+    before: result.preState,
+    after: result.postState,
+    assertions: input.outcomeAssertions,
+  });
+
+  emitPolicyProfileQualityRecord({
+    file: input.testFile,
+    variantId: input.profileId,
+    seed: input.seed,
+    passed: canonicalStateChanged(result.preState, result.postState),
+    stopReason: result.stopReason,
+    decisions: result.decisions.length,
+  });
+
+  assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected selected live turn to change state');
+  assertPolicySelectedRoot(def, result, NEAR_COUP_DOCTRINE_ID, input.expectedRootStableMoveKey);
+  assertAdversarialAlternativeAvoided({
+    def,
+    result,
+    trapStableMoveKeys: [PASS_TRAP_STABLE_MOVE_KEY],
+  });
+  assertReplayIdentity({
+    def,
+    runFixture: run,
+    outcomeDeltaAssertions: input.outcomeAssertions,
+  });
+  assert.ok(outcomeDeltas.length > 0, 'expected near-Coup outcome assertions');
+}
+
 export function withEveryZoneSupportMarker(def: GameDef, state: GameState, support: string): GameState {
   return {
     ...state,
@@ -219,6 +273,26 @@ export function moveAvailableUsIrregularsToCasualties(state: GameState): GameSta
       ...state.zones,
       'available-US:none': retained,
       'casualties-US:none': [...(state.zones['casualties-US:none'] ?? []), ...irregulars],
+    },
+  };
+}
+
+export function withCoupLookahead(def: GameDef, state: GameState): GameState {
+  const coupCard = def.eventDecks
+    ?.flatMap((deck) => deck.cards)
+    .find((card) => card.tags?.includes('coup'));
+  assert.ok(coupCard, 'expected FITL event deck to contain a Coup card');
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      'lookahead:none': [
+        {
+          id: asTokenId(`spec-210-near-coup-lookahead-${String(coupCard.id)}`),
+          type: 'card',
+          props: { cardId: String(coupCard.id) },
+        },
+      ],
     },
   };
 }
@@ -318,10 +392,19 @@ function assertSelectedSelfMarginTrace(result: CompetenceRunResult, stableMoveKe
 }
 
 function assertImmediateWinTrace(def: GameDef, result: CompetenceRunResult, expectedRootStableMoveKey: string): void {
+  assertPolicySelectedRoot(def, result, 'shared.immediateWin', expectedRootStableMoveKey);
+}
+
+function assertPolicySelectedRoot(
+  def: GameDef,
+  result: CompetenceRunResult,
+  doctrineId: string,
+  expectedRootStableMoveKey: string,
+): void {
   assert.ok(result.agentDecision, 'expected policy decision trace');
   assert.ok(
-    result.agentDecision.plan?.activeDoctrines.includes('shared.immediateWin'),
-    `expected active doctrine shared.immediateWin; got ${JSON.stringify(result.agentDecision.plan?.activeDoctrines ?? [])}`,
+    result.agentDecision.plan?.activeDoctrines.includes(doctrineId),
+    `expected active doctrine ${doctrineId}; got ${JSON.stringify(result.agentDecision.plan?.activeDoctrines ?? [])}`,
   );
   assert.equal(decisionStableKey(def, result.selectedDecision), expectedRootStableMoveKey);
   assert.equal(result.agentDecision.selectedStableMoveKey, expectedRootStableMoveKey);

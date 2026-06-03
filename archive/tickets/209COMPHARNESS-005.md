@@ -1,6 +1,6 @@
 # 209COMPHARNESS-005: Deterministic-replay wrapper
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test infrastructure only
@@ -64,3 +64,21 @@ Append the helper export to `packages/engine/test/helpers/competence/index.ts`.
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine typecheck`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-06-03
+
+Implemented `packages/engine/test/helpers/competence/replay-wrapper.ts` and exported it through the competence helper barrel. The wrapper runs a fixture twice and deep-compares a replay snapshot containing selected stable move key, decision sequence, plan-controller microturn match/fallback statuses, optional outcome-delta results, and the canonical serialized final state.
+
+Verification completed:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine typecheck`
+3. `pnpm -F @ludoforge/engine test:unit` — 6110 tests, 0 failures
+4. `pnpm turbo build`
+5. `pnpm turbo lint`
+6. `pnpm turbo typecheck`
+7. `pnpm run check:ticket-deps`
+8. `git diff --check`
+9. No game-specific identifier matches in the helper/barrel sweep

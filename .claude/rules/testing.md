@@ -48,6 +48,32 @@ Every engine test file in scope must declare exactly one file-top class marker:
 // @test-class: golden-trace
 ```
 
+Policy-profile-quality tests may also declare an optional proof-strength tier
+under the existing class marker:
+
+```ts
+// @proof-tier: structural | proposal-level | selected-root | executed-outcome | adversarial
+```
+
+`@proof-tier` does not replace `@test-class` and does not add a fourth test
+class. Use it only to clarify the strength of a policy-quality witness:
+
+- `structural` and `proposal-level` map to the existing
+  `architectural-invariant` and `convergence-witness` classes and remain valid
+  regression guards.
+- `selected-root`, `executed-outcome`, and `adversarial` are reserved for
+  harness-backed witnesses that exercise the Spec 209 competence harness.
+- A behavioral competence claim is proven only at `executed-outcome` tier, or
+  at `adversarial` tier when the fixture also proves a bad-but-legal
+  alternative was present and not selected.
+
+Structural / proposal-level witnesses MUST NOT be counted as behavioral
+competence proof. In short: structural ≠ competence proof.
+
+Do not introduce a parallel witness-category marker system. The proposed
+9-category taxonomy from the Spec 209 trigger report is rejected in favor of
+this lightweight sub-annotation inside the existing 3-class taxonomy.
+
 ### Classes
 
 1. **architectural-invariant**

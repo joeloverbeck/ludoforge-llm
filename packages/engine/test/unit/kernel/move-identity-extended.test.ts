@@ -133,7 +133,7 @@ describe('toMoveIdentityKey — extended', () => {
     assert.ok(keys.every((k) => k === keys[0]));
   });
 
-  it('both options false produces minimal key', () => {
+  it('free-operation and class options false keep compound identity segment', () => {
     const def = makeDef();
     const move: Move = { actionId: asActionId('attack'), params: { t: 1 } };
     const key = toMoveIdentityKey(def, move, {
@@ -141,6 +141,19 @@ describe('toMoveIdentityKey — extended', () => {
       includeEffectiveActionClass: false,
     });
     const parts = key.split('|');
-    assert.equal(parts.length, 2); // actionId + params only
+    assert.equal(parts.length, 3); // actionId + params + compound sentinel
+    assert.equal(parts[2], 'noCompound');
+  });
+
+  it('all optional identity segments false produces action and params only', () => {
+    const def = makeDef();
+    const move: Move = { actionId: asActionId('attack'), params: { t: 1 } };
+    const key = toMoveIdentityKey(def, move, {
+      includeCompound: false,
+      includeFreeOperation: false,
+      includeEffectiveActionClass: false,
+    });
+    const parts = key.split('|');
+    assert.equal(parts.length, 2);
   });
 });

@@ -24,6 +24,7 @@ import {
   resolveDecisionContinuation,
   type DecisionContinuationResult,
 } from './continuation.js';
+import { COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX } from './continuation-bindings.js';
 import { isBridgeableNextDecision, MICROTURN_PROBE_DEPTH_BUDGET } from './probe.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 import { cardDrivenRuntime } from '../card-driven-accessors.js';
@@ -321,13 +322,39 @@ export const rebuildMoveFromTrace = (trace: readonly CompoundTurnTraceEntry[]): 
   }, selectedMove);
 };
 
-export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => ({
-  ...rebuildMoveFromTrace(rootDecisionHistory(frame)),
-  params: {
-    ...rebuildMoveFromTrace(rootDecisionHistory(frame)).params,
-    ...(frame.continuationBindings ?? {}),
-  },
-});
+export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => {
+  const baseMove = rebuildMoveFromTrace(rootDecisionHistory(frame));
+  const mainBindings: Record<string, Move['params'][string]> = {};
+  const compoundBindings: Record<string, Move['params'][string]> = {};
+  for (const [key, value] of Object.entries(frame.continuationBindings ?? {})) {
+    if (key.startsWith(COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX)) {
+      compoundBindings[key.slice(COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX.length)] = value;
+    } else {
+      mainBindings[key] = value;
+    }
+  }
+  return {
+    ...baseMove,
+    params: {
+      ...baseMove.params,
+      ...mainBindings,
+    },
+    ...(baseMove.compound === undefined || Object.keys(compoundBindings).length === 0
+      ? {}
+      : {
+        compound: {
+          ...baseMove.compound,
+          specialActivity: {
+            ...baseMove.compound.specialActivity,
+            params: {
+              ...baseMove.compound.specialActivity.params,
+              ...compoundBindings,
+            },
+          },
+        },
+      }),
+  };
+};
 
 const buildProjectedState = (
   def: GameDef,
@@ -382,6 +409,7 @@ const toChooseNStepContext = (
   options: request.options,
   targetKinds: request.targetKinds,
   ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
+  ...(request.decisionPath === undefined ? {} : { decisionPath: request.decisionPath }),
   selectedSoFar: request.selected,
   cardinality: {
     min: request.min ?? 0,
@@ -619,6 +647,7 @@ const toChooseOneContext = (
   options: request.options,
   targetKinds: request.targetKinds,
   ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
+  ...(request.decisionPath === undefined ? {} : { decisionPath: request.decisionPath }),
 });
 
 const findRootFrame = (state: GameState, top: DecisionStackFrame): DecisionStackFrame => {

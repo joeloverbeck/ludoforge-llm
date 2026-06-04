@@ -1,4 +1,4 @@
-import { hasActionPipeline } from './action-pipeline-lookup.js';
+import { getActionPipelinesForAction, hasActionPipeline } from './action-pipeline-lookup.js';
 import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
@@ -235,6 +235,70 @@ const isBaseClassCompatibleWithConstrained = (
   return baseClass === constrainedClass;
 };
 
+const operationAllowsSpecialActivity = (
+  operationActionId: Move['actionId'],
+  accompanyingOps: 'any' | readonly string[] | undefined,
+): boolean => {
+  if (accompanyingOps === undefined || accompanyingOps === 'any') {
+    return true;
+  }
+  return accompanyingOps.includes(String(operationActionId));
+};
+
+const compoundSpecialActivitiesForOperation = (
+  def: GameDef,
+  state: GameState,
+  operationMove: Move,
+): readonly Move['actionId'][] => {
+  if (operationMove.actionClass !== 'operationPlusSpecialActivity') {
+    return [];
+  }
+  if (resolveTurnFlowActionClass(def, { actionId: operationMove.actionId, params: {} }) !== 'operation') {
+    return [];
+  }
+  return def.actions
+    .filter((action) =>
+      resolveTurnFlowActionClass(def, { actionId: action.id, params: {} }) === 'specialActivity'
+      && getActionPipelinesForAction(def, action.id)
+        .some((pipeline) =>
+          pipelineAppliesToActivePlayer(pipeline.applicability, state.activePlayer)
+          && operationAllowsSpecialActivity(operationMove.actionId, pipeline.accompanyingOps)))
+    .map((action) => action.id);
+};
+
+const compoundVariantsForOperation = (
+  def: GameDef,
+  state: GameState,
+  operationMove: Move,
+): readonly Move[] => compoundSpecialActivitiesForOperation(def, state, operationMove)
+  .map((specialActionId) => ({
+    ...operationMove,
+    compound: {
+      specialActivity: {
+        actionId: specialActionId,
+        params: {},
+      },
+      timing: 'after' as const,
+    },
+  }));
+
+const pipelineAppliesToActivePlayer = (
+  applicability: unknown,
+  activePlayer: GameState['activePlayer'],
+): boolean => {
+  if (applicability === undefined || applicability === null || applicability === true) {
+    return true;
+  }
+  if (typeof applicability !== 'object') {
+    return false;
+  }
+  const record = applicability as Record<string, unknown>;
+  const left = record.left as Record<string, unknown> | undefined;
+  return record.op === '=='
+    && left?.ref === 'activePlayer'
+    && record.right === Number(activePlayer);
+};
+
 const tryPushOptionMatrixFilteredMove = (
   enumeration: MoveEnumerationState,
   def: GameDef,
@@ -294,8 +358,19 @@ const tryPushOptionMatrixFilteredMove = (
     if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, variant)) {
       continue;
     }
-    if (!tryPushEnumeratedMove(enumeration, variant, action.id)) {
-      return false;
+    const compoundVariants = compoundVariantsForOperation(def, state, variant);
+    const isBareOperationPlusSpecialOperation =
+      variant.actionClass === 'operationPlusSpecialActivity'
+      && resolveTurnFlowActionClass(def, { actionId: variant.actionId, params: {} }) === 'operation';
+    if (!(isBareOperationPlusSpecialOperation && compoundVariants.length > 0)) {
+      if (!tryPushEnumeratedMove(enumeration, variant, action.id)) {
+        return false;
+      }
+    }
+    for (const compoundVariant of compoundVariants) {
+      if (!tryPushEnumeratedMove(enumeration, compoundVariant, action.id)) {
+        return false;
+      }
     }
   }
   return true;

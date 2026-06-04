@@ -29,7 +29,7 @@ export const choosePlanSelectedRootDecision = (
     throw new Error('PolicyAgent: selected plan proposal did not include selected plan metadata.');
   }
   const rootStableMoveKey = selectedPlan.rootStableMoveKey;
-  const selectedDecision = actionDecisions.find(
+  const selectedDecision = selectedPlan.rootDecision ?? actionDecisions.find(
     (decision) => decision.move !== undefined
       && toMoveIdentityKey(input.def, decision.move) === rootStableMoveKey,
   );

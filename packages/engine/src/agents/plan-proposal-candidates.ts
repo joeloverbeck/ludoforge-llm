@@ -10,6 +10,8 @@ export interface PlanProposalRootCandidate {
   readonly stableMoveKey: string;
   readonly actionId: string;
   readonly actionTags: readonly string[];
+  readonly compoundSpecialActionId?: string;
+  readonly compoundSpecialActionTags: readonly string[];
 }
 
 export function rootCandidatesFor(
@@ -23,12 +25,19 @@ export function rootCandidatesFor(
         return null;
       }
       const actionId = String(move.actionId);
+      const compoundSpecialActionId = move.compound?.specialActivity.actionId === undefined
+        ? undefined
+        : String(move.compound.specialActivity.actionId);
       return {
         decision,
         move,
         stableMoveKey: toMoveIdentityKey(def, move),
         actionId,
         actionTags: def.actionTagIndex?.byAction[actionId] ?? [],
+        ...(compoundSpecialActionId === undefined ? {} : { compoundSpecialActionId }),
+        compoundSpecialActionTags: compoundSpecialActionId === undefined
+          ? []
+          : (def.actionTagIndex?.byAction[compoundSpecialActionId] ?? []),
       };
     })
     .filter((candidate): candidate is PlanProposalRootCandidate => candidate !== null)
@@ -38,7 +47,19 @@ export function rootCandidatesFor(
 export function rootMatchesTemplate(candidate: PlanProposalRootCandidate, template: CompiledPlanTemplate): boolean {
   const ids = new Set(template.root.actionIds.map(String));
   const tags = new Set(template.root.actionTags.map(String));
-  return ids.has(candidate.actionId) || candidate.actionTags.some((tag) => tags.has(String(tag)));
+  const rootMatches = ids.has(candidate.actionId) || candidate.actionTags.some((tag) => tags.has(String(tag)));
+  if (!rootMatches) {
+    return false;
+  }
+  if (template.root.compound === undefined) {
+    return true;
+  }
+  if (candidate.compoundSpecialActionId === undefined) {
+    return false;
+  }
+  const specialTags = new Set(template.root.compound.specialTags.map(String));
+  return specialTags.has(candidate.compoundSpecialActionId)
+    || candidate.compoundSpecialActionTags.some((tag) => specialTags.has(String(tag)));
 }
 
 export function decisionSurfaceMatchFor(

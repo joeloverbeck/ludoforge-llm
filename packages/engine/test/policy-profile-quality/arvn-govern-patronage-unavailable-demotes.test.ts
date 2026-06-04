@@ -1,4 +1,6 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -6,12 +8,14 @@ import { fileURLToPath } from 'node:url';
 import type { GameState, Token } from '../../src/kernel/index.js';
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import {
+  executePublishedArvnCompoundRoot,
   loadArvnPlanFixture,
-  proposeArvnPlan,
+  proposeArvnCompoundPlan,
   requireSelectedTemplate,
   withEveryZoneSupportMarker,
   withZoneSupportMarkers,
 } from './arvn-plan-witness-helpers.js';
+import { withCoupLookahead } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 205_004_01;
@@ -42,18 +46,29 @@ describe('Spec 205 ARVN Govern Patronage availability witness', () => {
     const supportState = withZoneSupportMarkers(neutralState, {
       [PATRONAGE_AVAILABLE_ZONE]: 'activeSupport',
     });
-    const availableResult = proposeArvnPlan(fixture, ['train'], supportState);
+    const availableResult = proposeArvnCompoundPlan(fixture, [{ actionId: 'train', specialActionId: 'govern' }], supportState);
     const availableGovern = requireSelectedTemplate(availableResult, 'arvn.trainGovern').roleBindings.governSpace;
+    const executed = executePublishedArvnCompoundRoot(fixture, {
+      actionId: 'train',
+      specialActionId: 'govern',
+      seed: SEED,
+      prepareState: (def) => ({
+        ...withCoupLookahead(def, supportState),
+        globalMarkers: { ...supportState.globalMarkers, activeLeader: 'youngTurks' },
+      }),
+    });
 
     const unavailableState = withPatronageUnavailableAtGovernTarget(supportState);
-    const unavailableResult = proposeArvnPlan(fixture, ['train'], unavailableState);
+    const unavailableResult = proposeArvnCompoundPlan(fixture, [{ actionId: 'train', specialActionId: 'govern' }], unavailableState);
     const unavailableGovern = requireSelectedTemplate(unavailableResult, 'arvn.trainGovern').roleBindings.governSpace;
+    const patronageDelta = Number(executed.postState.globalVars.patronage) - Number(executed.preState.globalVars.patronage);
 
     const passed = availableGovern?.selectedId === PATRONAGE_AVAILABLE_ZONE
       && unavailableGovern?.selectedId === PATRONAGE_AVAILABLE_ZONE
       && availableGovern.components.arvnCubesExceedUsCubes === 1
       && unavailableGovern.components.arvnCubesExceedUsCubes === 0
-      && availableGovern.quality > unavailableGovern.quality;
+      && availableGovern.quality > unavailableGovern.quality
+      && patronageDelta > 0;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -61,7 +76,7 @@ describe('Spec 205 ARVN Govern Patronage availability witness', () => {
       seed: SEED,
       passed,
       stopReason: unavailableResult.status,
-      decisions: availableResult.alternatives.length + unavailableResult.alternatives.length,
+      decisions: availableResult.alternatives.length + unavailableResult.alternatives.length + executed.decisions.length,
     });
 
     assert.equal(availableGovern?.selectedId, PATRONAGE_AVAILABLE_ZONE);
@@ -69,5 +84,6 @@ describe('Spec 205 ARVN Govern Patronage availability witness', () => {
     assert.equal(availableGovern.components.arvnCubesExceedUsCubes, 1);
     assert.equal(unavailableGovern.components.arvnCubesExceedUsCubes, 0);
     assert.ok(availableGovern.quality > unavailableGovern.quality);
+    assert.ok(patronageDelta > 0);
   });
 });

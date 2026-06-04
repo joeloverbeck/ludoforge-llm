@@ -182,6 +182,7 @@ export interface ChooseOneContext {
   readonly options: readonly ChooseOption[];
   readonly targetKinds?: readonly ChoiceTargetKind[];
   readonly stageIndex?: number;
+  readonly decisionPath?: 'main' | 'compound.specialActivity';
 }
 
 export interface ChooseNStepContext {
@@ -191,6 +192,7 @@ export interface ChooseNStepContext {
   readonly options: readonly ChooseOption[];
   readonly targetKinds?: readonly ChoiceTargetKind[];
   readonly stageIndex?: number;
+  readonly decisionPath?: 'main' | 'compound.specialActivity';
   readonly selectedSoFar: readonly MoveParamScalar[];
   readonly cardinality: { readonly min: number; readonly max: number };
   readonly stepCommands: readonly ChooseNStepCommand[];

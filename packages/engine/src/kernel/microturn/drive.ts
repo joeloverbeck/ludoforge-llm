@@ -37,7 +37,11 @@ import {
 } from './publish.js';
 import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
-import { continuationBindingsFromMove, mergeContinuationBindingsFromMove } from './continuation-bindings.js';
+import {
+  COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX,
+  continuationBindingsFromMove,
+  mergeContinuationBindingsFromMove,
+} from './continuation-bindings.js';
 
 const rootHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -189,10 +193,13 @@ const appendTraceEntry = (
 
 const withAccumulatedBinding = (
   frame: DecisionStackFrame,
-  decisionKey: DecisionKey,
+  context: Extract<DecisionStackFrame['context'], { readonly kind: 'chooseNStep' }>,
   value: readonly MoveParamScalar[],
 ): DecisionStackFrame => {
-  const nextBindings = { ...(frame.continuationBindings ?? {}) };
+  const nextBindings: Record<string, Move['params'][string]> = { ...(frame.continuationBindings ?? {}) };
+  const decisionKey = context.decisionPath === 'compound.specialActivity'
+    ? `${COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX}${context.decisionKey}`
+    : context.decisionKey;
   if (value.length === 0) {
     delete nextBindings[decisionKey];
   } else {
@@ -213,6 +220,35 @@ const withAccumulatedBindingsFromMove = (
   ...frame,
   continuationBindings: mergeContinuationBindingsFromMove(frame.continuationBindings, move),
 });
+
+const withDecisionParam = (
+  move: Move,
+  context: Extract<DecisionStackFrame['context'], { readonly kind: 'chooseOne' | 'chooseNStep' }>,
+  value: MoveParamScalar | readonly MoveParamScalar[],
+): Move => {
+  if (context.decisionPath === 'compound.specialActivity' && move.compound !== undefined) {
+    return {
+      ...move,
+      compound: {
+        ...move.compound,
+        specialActivity: {
+          ...move.compound.specialActivity,
+          params: {
+            ...move.compound.specialActivity.params,
+            [context.decisionKey]: value,
+          },
+        },
+      },
+    };
+  }
+  return {
+    ...move,
+    params: {
+      ...move.params,
+      [context.decisionKey]: value,
+    },
+  };
+};
 
 const entryForDecision = (
   microturn: MicroturnState,
@@ -259,6 +295,21 @@ const applyChosenMoveNoFinalHash = (
   resolveRefCache?: ResolveRefCache,
 ): ApplyDecisionResult => {
   const baseState = clearMicroturnStateNoFinalHash(def, state);
+  if (move.compound !== undefined) {
+    const continuation = resolveDecisionContinuation(
+      def,
+      baseState,
+      move,
+      { choose: () => undefined },
+      runtime,
+    );
+    if (continuation.illegal !== undefined) {
+      throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
+    }
+    if (continuation.nextDecision !== undefined || continuation.stochasticDecision !== undefined) {
+      return spawnPendingFrameNoFinalHash(def, state, microturn, decision, continuation, runtime ?? createGameDefRuntime(def));
+    }
+  }
   const applied = applyMove(def, baseState, move, options, runtime, resolveRefCache);
   const triggerFirings = [...applied.triggerFirings];
   const nextState = {
@@ -434,16 +485,10 @@ const applyPublishedDecisionInternalNoFinalHash = (
   if (decision.kind === 'chooseOne') {
     const rootFrame = rootFrameFor(canonicalState);
     const topFrame = canonicalState.decisionStack?.at(-1);
-    if (rootFrame === undefined) {
+    if (rootFrame === undefined || topFrame?.context.kind !== 'chooseOne') {
       throw new Error('MICROTURN_ROOT_FRAME_MISSING');
     }
-    const move = {
-      ...rebuildMoveFromFrame(rootFrame),
-      params: {
-        ...rebuildMoveFromFrame(rootFrame).params,
-        [decision.decisionKey]: decision.value,
-      },
-    };
+    const move = withDecisionParam(rebuildMoveFromFrame(rootFrame), topFrame.context, decision.value);
     if (topFrame?.effectFrame.suspendedFrame !== undefined) {
       const continuation = resumeSuspendedEffectFrame(
         def,
@@ -470,16 +515,16 @@ const applyPublishedDecisionInternalNoFinalHash = (
     const tracedRoot = advanced.done
       ? {
         ...appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
-        continuationBindings: {
-          ...(rootFrame.continuationBindings ?? {}),
-          [decision.decisionKey]: advanced.value,
-        },
+        continuationBindings: mergeContinuationBindingsFromMove(
+          rootFrame.continuationBindings,
+          withDecisionParam(baseMove, top.context, advanced.value),
+        ),
       }
       : appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
     if (!advanced.done) {
       const updatedRoot = withAccumulatedBinding(
         tracedRoot,
-        decision.decisionKey,
+        advanced.nextContext,
         advanced.nextContext.selectedSoFar,
       );
       const nextTop: DecisionStackFrame = {
@@ -522,13 +567,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
           && candidate.decisionKey === advanced.nextContext.decisionKey,
         );
       if (autoCompleteChooseN) {
-        const move: Move = {
-          ...baseMove,
-          params: {
-            ...baseMove.params,
-            [decision.decisionKey]: advanced.nextContext.selectedSoFar,
-          },
-        };
+        const move = withDecisionParam(baseMove, advanced.nextContext, advanced.nextContext.selectedSoFar);
         return continueResolvedMoveNoFinalHash(def, nextState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       return {
@@ -538,13 +577,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
         warnings: [],
       };
     }
-    const move: Move = {
-      ...baseMove,
-      params: {
-        ...baseMove.params,
-        [decision.decisionKey]: advanced.value,
-      },
-    };
+    const move = withDecisionParam(baseMove, top.context, advanced.value);
     if (top.effectFrame.suspendedFrame !== undefined) {
       const continuation = resumeSuspendedEffectFrame(
         def,

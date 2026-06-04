@@ -129,7 +129,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-004.md`](../archive/tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
 - [`archive/tickets/210FITLCOMP-005.md`](../archive/tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
 - [`archive/tickets/210FITLCOMP-006.md`](../archive/tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
-- [`tickets/210FITLCOMP-007.md`](../tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
+- [`archive/tickets/210FITLCOMP-007.md`](../archive/tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`tickets/210FITLCOMP-008.md`](../tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
 - [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures (covers §2(15–17))
 - [`tickets/210FITLCOMP-010.md`](../tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual (covers remaining §2(3), §3, §4 AC#7)

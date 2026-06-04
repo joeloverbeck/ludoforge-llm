@@ -1,6 +1,6 @@
 # 210FITLCOMP-007: Promote ARVN faction fixtures to executed-outcome tier
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only
@@ -83,3 +83,17 @@ Update markers to `@proof-tier: executed-outcome` + `@proof-tier: adversarial`. 
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js packages/engine/dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js packages/engine/dist/test/policy-profile-quality/arvn-govern-patronage-unavailable-demotes.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-postState-origin-control-constraint-time.test.js packages/engine/dist/test/policy-profile-quality/arvn-precoup-posture-avoids-redeploy-undone.test.js`
 2. `pnpm turbo lint typecheck && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-06-04
+
+Implemented the ARVN executed-outcome promotion across the six requested policy-profile fixtures. The Train+Govern fixtures now execute a real published ARVN `train+govern` compound root, assert distinct Train/Govern plan roles, prove Patronage increase, and bound Support marker destruction. The Transport fixtures now execute a real published `train+transport` route and retain the adversarial postState origin-control rejection check against the marginal control-loss row. The pre-Coup fixture now verifies the redeploy-discipline module remains bound while executing a near-Coup ARVN deployment branch.
+
+Deviation from the original ticket: the ticket assumed test-only work, but the live checkout exposed a generic engine gap for published operation+special-activity compound roots. The implementation therefore added game-agnostic compound payload identity, legal-move enumeration, plan-root matching, and microturn continuation/preview binding support so published compound roots remain constructible under `docs/FOUNDATIONS.md`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/arvn-train-govern-separation.test.js packages/engine/dist/test/policy-profile-quality/arvn-govern-active-support-priority.test.js packages/engine/dist/test/policy-profile-quality/arvn-govern-patronage-unavailable-demotes.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-refuses-origin-control-loss.test.js packages/engine/dist/test/policy-profile-quality/arvn-transport-postState-origin-control-constraint-time.test.js packages/engine/dist/test/policy-profile-quality/arvn-precoup-posture-avoids-redeploy-undone.test.js`
+2. `node --test packages/engine/dist/test/architecture/plan-controller-compound-availability-correspondence.test.js packages/engine/dist/test/integration/fitl-option-matrix.test.js packages/engine/dist/test/unit/kernel/special-activity-option-matrix.test.js`
+3. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/kernel/move-identity.test.js packages/engine/dist/test/unit/kernel/move-identity-extended.test.js packages/engine/dist/test/unit/kernel/legal-choices-compound.test.js packages/engine/dist/test/unit/kernel/microturn-publication.test.js packages/engine/dist/test/unit/agents/plan-proposal-compound-availability.test.js`

@@ -54,6 +54,13 @@ const resolveBindingArray = (
 ): readonly unknown[] =>
   selected.map((value) => resolveSingleBinding(options, value));
 
+const readMoveDecisionParam = (
+  move: Move,
+  decisionKey: keyof Move['params'],
+): Move['params'][string] | undefined =>
+  move.params[decisionKey]
+  ?? move.compound?.specialActivity.params[decisionKey];
+
 interface ResumedDiscoveryResult {
   readonly state: GameState;
   readonly rng: Rng;
@@ -371,7 +378,7 @@ export const resumeSuspendedEffectFrame = (
   const warnings: RuntimeWarning[] = [];
 
   if (suspendedFrame.leaf.kind === 'chooseOne') {
-    const selected = move.params[suspendedFrame.leaf.decisionKey];
+    const selected = readMoveDecisionParam(move, suspendedFrame.leaf.decisionKey);
     if (selected === undefined || Array.isArray(selected)) {
       throw new Error(`MICROTURN_SUSPENDED_CHOOSE_ONE_SELECTION_MISSING:${String(suspendedFrame.leaf.decisionKey)}`);
     }
@@ -383,7 +390,7 @@ export const resumeSuspendedEffectFrame = (
       ),
     };
   } else {
-    const selected = move.params[suspendedFrame.leaf.decisionKey];
+    const selected = readMoveDecisionParam(move, suspendedFrame.leaf.decisionKey);
     if (selected === undefined || !Array.isArray(selected)) {
       throw new Error(`MICROTURN_SUSPENDED_CHOOSE_N_SELECTION_MISSING:${String(suspendedFrame.leaf.decisionKey)}`);
     }

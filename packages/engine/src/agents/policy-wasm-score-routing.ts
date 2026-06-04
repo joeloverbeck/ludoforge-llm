@@ -465,6 +465,11 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
+    if (input.candidates.some((candidate) => candidate.move.compound !== undefined)) {
+      recordProductionPolicyWasmPreviewCandidateFeatureRowOracleFallback();
+      pushTsOracleCandidateFeatureRow(id, feature.costClass);
+      continue;
+    }
     if (exprReadsPreviewRelationship(feature.expr)) {
       // Spec 206 §4.3: a `preview.relationship.*` ref needs dynamic preview-state
       // role→seat resolution plus an arbitrary `gainValue` expression evaluated in

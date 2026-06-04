@@ -1,4 +1,5 @@
 import type { GameDefRuntime } from '../gamedef-runtime.js';
+import { probeMoveViability } from '../apply-move.js';
 import type {
   ChoiceOption,
   ChoicePendingChooseNRequest,
@@ -9,6 +10,7 @@ import type {
   Move,
 } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
+import { toMoveIdentityKey } from '../move-identity.js';
 import { resolveDecisionContinuation } from './continuation.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 
@@ -48,7 +50,7 @@ const cacheKey = (
   [
     'probe',
     String(ctx.state.stateHash),
-    String(ctx.move.actionId),
+    toMoveIdentityKey(ctx.def, ctx.move),
     String(request.decisionPath ?? 'main'),
     String(request.decisionKey),
     stableValueKey(value),
@@ -87,13 +89,18 @@ const withResolvedDecisionValue = (
   };
 };
 
+const isCompleteMoveViable = (ctx: ProbeContext, move: Move): boolean => {
+  const viability = probeMoveViability(ctx.def, ctx.state, move, ctx.runtime);
+  return viability.viable && viability.complete;
+};
+
 const probeBridge = (
   ctx: ProbeContext,
   request: ChoicePendingRequest,
   value: MoveParamScalar | readonly MoveParamScalar[],
 ): boolean => {
   if (ctx.depthBudget <= 0) {
-    return true;
+    return ctx.move.compound === undefined;
   }
   const move = withResolvedDecisionValue(ctx.move, request, value);
   const suspendedFrame = request.suspendedFrame;
@@ -121,7 +128,7 @@ const probeBridge = (
           return false;
         }
         if (continuation.nextDecision === undefined) {
-          return continuation.complete;
+          return continuation.complete && isCompleteMoveViable(ctx, continuation.move);
         }
         return isBridgeableNextDecision(
           {
@@ -137,7 +144,7 @@ const probeBridge = (
         return false;
       }
       if (continuation.nextDecision === undefined) {
-        return continuation.complete;
+        return continuation.complete && isCompleteMoveViable(ctx, continuation.move);
       }
       return isBridgeableNextDecision(
         {

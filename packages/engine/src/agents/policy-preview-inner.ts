@@ -8,9 +8,9 @@ import {
   applyPublishedDecisionFromPreviewStateNoFinalHash,
 } from '../kernel/microturn/drive.js';
 import {
-  publishMicroturnFromPreviewStateNoHash,
   publishMicroturnPreferredChooseOne,
 } from '../kernel/microturn/publish.js';
+import { tryPublishMicroturnFromPreviewStateNoHash } from '../kernel/microturn/preview-publication.js';
 import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import { createResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
@@ -488,8 +488,14 @@ const driveOption = (
     const preferredPublication = preferredValue === undefined
       ? null
       : publishMicroturnPreferredChooseOne(input.def, state, [preferredValue], input.runtime);
-    const microturn = preferredPublication?.microturn
-      ?? publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+    const publication = preferredPublication === null
+      ? tryPublishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime)
+      : { kind: 'published' as const, microturn: preferredPublication.microturn };
+    if (publication.kind === 'unbridgeable') {
+      perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
+      return finish(canonicalizeForExit(), depth, 'failed');
+    }
+    const microturn = publication.microturn;
     perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
     const pickStartedAt = perfHotPathStart();
     const nextDecisionResult = preferredPublication === null

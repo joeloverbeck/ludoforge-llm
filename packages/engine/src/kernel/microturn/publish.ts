@@ -25,6 +25,7 @@ import {
   type DecisionContinuationResult,
 } from './continuation.js';
 import { COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX } from './continuation-bindings.js';
+import { hasImmediateChooseNStepProgress, hasPublishableFirstContinuation } from './publish-constructibility.js';
 import { isBridgeableNextDecision, MICROTURN_PROBE_DEPTH_BUDGET } from './probe.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 import { cardDrivenRuntime } from '../card-driven-accessors.js';
@@ -249,12 +250,29 @@ const isSupportedContinuationResult = (
       }
       return compoundContinuation.complete;
     }
-    return continuation.complete && (moveViability?.viable ?? true);
+    return continuation.complete && (
+      moveViability === null
+      || (moveViability.viable && moveViability.complete)
+    );
   }
   if (
     moveViability !== null && !moveViability.viable
     && moveViability.code === 'ILLEGAL_MOVE'
     && moveViability.context.reason !== 'moveHasIncompleteParams'
+  ) {
+    return false;
+  }
+  if (
+    move.compound !== undefined
+    && !hasPublishableFirstContinuation(
+      def,
+      state,
+      continuation.move,
+      continuation,
+      { withResolvedDecisionValue, isSupportedFrameContinuationMove },
+      runtime,
+      1,
+    )
   ) {
     return false;
   }
@@ -283,7 +301,11 @@ const isSupportedFrameContinuationMove = (
   }
   try {
     const continuation = resumeSuspendedEffectFrame(def, suspendedFrame, move, runtime);
-    return isSupportedContinuationResult(def, state, move, continuation, runtime, false);
+    if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
+      const moveViability = probeMoveViability(def, state, continuation.move, runtime);
+      return continuation.complete && moveViability.viable && moveViability.complete;
+    }
+    return isSupportedContinuationResult(def, state, continuation.move, continuation, runtime);
   } catch {
     return false;
   }
@@ -597,6 +619,7 @@ export const toChooseNStepDecisions = (
   context: ChooseNStepContext,
   effectFrame: EffectExecutionFrameSnapshot,
   runtime?: GameDefRuntime,
+  progressOptionLimit = Number.POSITIVE_INFINITY,
 ): readonly ChooseNStepDecision[] => {
   const selectedKeys = new Set(context.selectedSoFar.map((value) => JSON.stringify([typeof value, value])));
   const decisions = context.options
@@ -627,25 +650,7 @@ export const toChooseNStepDecisions = (
     try {
       const advanced = advanceChooseNStepContext(context, decision);
 
-      // Intermediate chooseN steps are executable if they produce another
-      // valid pending chooseN frame in the current microturn context. Only the
-      // terminal confirm step must additionally prove that the resulting move
-      // continuation remains bridgeable as a supported action move.
       if (!advanced.done) {
-        const nextSelectedKeys = new Set(
-          advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
-        );
-        const hasRemainingAdd = advanced.nextContext.options.some((option) =>
-          option.legality !== 'illegal'
-          && !Array.isArray(option.value)
-          && !nextSelectedKeys.has(JSON.stringify([typeof option.value, option.value])),
-        );
-        if (hasRemainingAdd) {
-          return true;
-        }
-        if (!advanced.nextContext.stepCommands.includes('confirm')) {
-          return false;
-        }
         const candidateMove = withResolvedDecisionValue(
           baseMove,
           context,
@@ -657,6 +662,15 @@ export const toChooseNStepDecisions = (
           effectFrame,
           candidateMove,
           runtime,
+        ) && hasImmediateChooseNStepProgress(
+          def,
+          state,
+          candidateMove,
+          advanced.nextContext,
+          effectFrame,
+          { withResolvedDecisionValue, isSupportedFrameContinuationMove, advanceChooseNStepContext },
+          runtime,
+          progressOptionLimit,
         );
       }
 
@@ -665,11 +679,24 @@ export const toChooseNStepDecisions = (
         context,
         advanced.value,
       );
-      return isSupportedFrameContinuationMove(
+      if (!isSupportedFrameContinuationMove(
         def,
         state,
         effectFrame,
         candidateMove,
+        runtime,
+      )) {
+        return false;
+      }
+      const continuation = effectFrame.suspendedFrame === undefined
+        ? resolveContinuationForMove(def, state, candidateMove, runtime)
+        : resumeSuspendedEffectFrame(def, effectFrame.suspendedFrame, candidateMove, runtime);
+      return hasPublishableFirstContinuation(
+        def,
+        state,
+        continuation.move,
+        continuation,
+        { withResolvedDecisionValue, isSupportedFrameContinuationMove },
         runtime,
       );
     } catch {
@@ -815,13 +842,7 @@ const publishStackTop = (
           decisionKey: context.decisionKey,
           value: option.value,
         } as ChooseOneDecision,
-        move: {
-          ...baseMove,
-          params: {
-            ...baseMove.params,
-            [context.decisionKey]: option.value,
-          },
-        },
+        move: withResolvedDecisionValue(baseMove, context, option.value),
       }))
       .filter(({ move }) => isSupportedFrameContinuationMove(def, state, top.effectFrame, move, runtime))
       .map(({ decision }) => decision);

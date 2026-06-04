@@ -33,7 +33,7 @@ import {
   type PolicyWasmPreviewZoneValues,
   type PolicyWasmPreviewZoneVarValues,
 } from './policy-wasm-production-preview-values.js';
-import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
+import { tryMaterializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
 import {
   classifyPolicyWasmPreviewStateSlots,
   evalPolicyWasmPreviewSurfaceSlot,
@@ -94,23 +94,36 @@ export const evaluateProductionPreviewDriveBatchWithWasm = (
   if (result.kind !== 'supported' || input.materializeStatePatch !== true) {
     return result;
   }
+  const rows: typeof result.rows[number][] = [];
+  for (const row of result.rows) {
+    if (row.statePatch === undefined) {
+      // @policy-wasm-throw: contract-violation
+      throw new Error('Policy WASM preview-drive supported row did not return a state patch.');
+    }
+    const materialized = tryMaterializePolicyWasmPreviewStatePatch({
+      def: input.def,
+      state: input.state,
+      patch: row.statePatch,
+      ...(input.gameDefRuntime === undefined ? {} : { runtime: input.gameDefRuntime }),
+    });
+    if (materialized === null) {
+      return {
+        kind: 'unsupported',
+        profileId: result.profileId,
+        candidateCount: result.rows.length,
+        unsupportedDriveClass: 'unsupported-effect',
+        unsupportedOwner: 'production-preview-drive.statePatch',
+        reason: 'WASM preview-drive state patch reached a non-constructible preview continuation',
+      };
+    }
+    rows.push({
+      ...row,
+      projectedState: materialized.state,
+    });
+  }
   return {
     ...result,
-    rows: result.rows.map((row) => {
-      if (row.statePatch === undefined) {
-        // @policy-wasm-throw: contract-violation
-        throw new Error('Policy WASM preview-drive supported row did not return a state patch.');
-      }
-      return {
-        ...row,
-        projectedState: materializePolicyWasmPreviewStatePatch({
-          def: input.def,
-          state: input.state,
-          patch: row.statePatch,
-          ...(input.gameDefRuntime === undefined ? {} : { runtime: input.gameDefRuntime }),
-        }).state,
-      };
-    }),
+    rows,
   };
 };
 
@@ -151,6 +164,13 @@ const compileProductionPreviewDrive = (
   const actionId = actionIds[0]!;
   if (!actionIds.every((candidateActionId) => candidateActionId === actionId)) {
     return unsupported('unsupported-effect', 'production-preview-drive.actionBatch', 'production preview-drive supports one shared action program per batch');
+  }
+  if (input.candidates.some((candidate) => candidate.move.compound !== undefined)) {
+    return unsupported(
+      'unsupported-effect',
+      'production-preview-drive.compound',
+      'production preview-drive requires TypeScript fallback for compound operation+special-activity candidates',
+    );
   }
   const pipeline = findPolicyWasmPreviewActionPipeline(input.def, actionId);
   const action = pipeline === undefined ? findPolicyWasmPreviewAction(input.def, actionId) : undefined;

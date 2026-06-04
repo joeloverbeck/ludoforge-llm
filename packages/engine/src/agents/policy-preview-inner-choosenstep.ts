@@ -6,6 +6,7 @@ import {
 import {
   publishMicroturn,
 } from '../kernel/microturn/publish.js';
+import { tryPublishMicroturnForPreview } from '../kernel/microturn/preview-publication.js';
 import type {
   Decision,
   MicroturnState,
@@ -208,7 +209,11 @@ const outcomeForBeamState = (
   input: RunChooseNStepBeamPreviewInput,
   state: GameState,
 ): PolicyPreviewTraceOutcome => {
-  const microturn = publishMicroturn(input.def, state, input.runtime);
+  const publication = tryPublishMicroturnForPreview(input.def, state, input.runtime);
+  if (publication.kind === 'unbridgeable') {
+    return 'failed';
+  }
+  const microturn = publication.microturn;
   if (
     microturn.kind === 'actionSelection'
     || microturn.kind === 'outcomeGrantResolve'
@@ -327,7 +332,11 @@ export function runChooseNStepBeamPreview(input: RunChooseNStepBeamPreviewInput)
   for (let step = 1; step <= depthCap; step += 1) {
     const candidates: BeamCandidate[] = [];
     for (const partial of beam) {
-      const microturn = publishMicroturn(input.def, partial.state, input.runtime);
+      const publication = tryPublishMicroturnForPreview(input.def, partial.state, input.runtime);
+      if (publication.kind === 'unbridgeable') {
+        continue;
+      }
+      const microturn = publication.microturn;
       if (
         microturn.kind !== 'chooseNStep'
         || microturn.seatId !== input.microturn.seatId
@@ -426,7 +435,11 @@ export const continueChooseNStepInnerPreviewDrive = (
   let depth = initialDepth;
 
   while (true) {
-    const microturn = publishMicroturn(input.def, state, input.runtime);
+    const publication = tryPublishMicroturnForPreview(input.def, state, input.runtime);
+    if (publication.kind === 'unbridgeable') {
+      return finish(state, depth, 'failed');
+    }
+    const microturn = publication.microturn;
     if (
       microturn.kind === 'actionSelection'
       || microturn.kind === 'outcomeGrantResolve'
@@ -579,9 +592,11 @@ export function runChooseNStepInnerPreview(input: RunChooseNStepInnerPreviewInpu
       continue;
     }
 
-    const nextMicroturn = publishMicroturn(input.def, stateAfterRoot, input.runtime);
+    const nextPublication = tryPublishMicroturnForPreview(input.def, stateAfterRoot, input.runtime);
+    const nextMicroturn = nextPublication.kind === 'published' ? nextPublication.microturn : null;
     const remainingDepthCap = Math.max(0, depthCap - 1);
-    const canContinueWithAddBeam = isSameChooseNStepMicroturn(nextMicroturn, input.microturn)
+    const canContinueWithAddBeam = nextMicroturn !== null
+      && isSameChooseNStepMicroturn(nextMicroturn, input.microturn)
       && legalChooseNAddDecisions(nextMicroturn).length > 0
       && remainingDepthCap > 0;
 

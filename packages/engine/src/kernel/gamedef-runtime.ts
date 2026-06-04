@@ -36,7 +36,7 @@ export interface CardDrawRuntimeState {
   currentDrawPosition: number;
 }
 
-export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
+export const PUBLICATION_PROBE_CACHE_LIMIT = 50_000;
 export const TOKEN_STATE_INDEX_CACHE_LIMIT = 4_096;
 export const POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT = 4_096;
 export const POLICY_ENCODED_STATE_PROJECTION_CACHE_LIMIT = 4_096;

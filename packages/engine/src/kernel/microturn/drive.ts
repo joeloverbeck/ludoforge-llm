@@ -295,21 +295,6 @@ const applyChosenMoveNoFinalHash = (
   resolveRefCache?: ResolveRefCache,
 ): ApplyDecisionResult => {
   const baseState = clearMicroturnStateNoFinalHash(def, state);
-  if (move.compound !== undefined) {
-    const continuation = resolveDecisionContinuation(
-      def,
-      baseState,
-      move,
-      { choose: () => undefined },
-      runtime,
-    );
-    if (continuation.illegal !== undefined) {
-      throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
-    }
-    if (continuation.nextDecision !== undefined || continuation.stochasticDecision !== undefined) {
-      return spawnPendingFrameNoFinalHash(def, state, microturn, decision, continuation, runtime ?? createGameDefRuntime(def));
-    }
-  }
   const applied = applyMove(def, baseState, move, options, runtime, resolveRefCache);
   const triggerFirings = [...applied.triggerFirings];
   const nextState = {

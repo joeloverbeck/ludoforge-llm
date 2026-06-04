@@ -390,21 +390,6 @@ const applyChosenMove = (
   resolveRefCache?: ResolveRefCache,
 ): ApplyDecisionResult => {
   const baseState = clearMicroturnState(def, state, runtime);
-  if (move.compound !== undefined) {
-    const continuation = resolveDecisionContinuation(
-      def,
-      baseState,
-      move,
-      { choose: () => undefined },
-      runtime,
-    );
-    if (continuation.illegal !== undefined) {
-      throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
-    }
-    if (continuation.nextDecision !== undefined || continuation.stochasticDecision !== undefined) {
-      return spawnPendingFrame(def, state, microturn, decision, continuation, runtime ?? createGameDefRuntime(def));
-    }
-  }
   const applied = applyMove(def, baseState, move, options, runtime, resolveRefCache);
   const triggerFirings = [...applied.triggerFirings];
   const nextState = updateHash(def, {
@@ -493,22 +478,6 @@ const continueResolvedMove = (
     throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
   }
   if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-    if (move.compound !== undefined) {
-      const clearedState = clearMicroturnState(def, canonicalState, runtime);
-      const compoundContinuation = resolveDecisionContinuation(
-        def,
-        clearedState,
-        move,
-        { choose: () => undefined },
-        runtime,
-      );
-      if (compoundContinuation.illegal !== undefined) {
-        throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
-      }
-      if (compoundContinuation.nextDecision !== undefined || compoundContinuation.stochasticDecision !== undefined) {
-        return spawnPendingFrame(def, canonicalState, microturn, decision, compoundContinuation, runtime);
-      }
-    }
     return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, runtime, resolveRefCache);
   }
   return spawnPendingFrame(def, canonicalState, microturn, decision, continuation, runtime);

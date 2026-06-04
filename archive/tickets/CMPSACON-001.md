@@ -1,6 +1,6 @@
 # CMPSACON-001: Compound operation+SA enumeration publishes non-constructible moves
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `kernel/legal-moves.ts` (compound variant enumeration), `kernel/legal-choices.ts` (`maybeChainCompoundSA`), `kernel/microturn/apply.ts` + `kernel/microturn/drive.ts` (compound continuation guard)
@@ -104,3 +104,24 @@ The `if (continuation.illegal !== undefined) throw` blocks in `applyChosenMove` 
 2. `pnpm -F @ludoforge/engine test:integration:fitl-rules` (fast root reproduction: `fitl-arvn-transport-constraint-migration.test.js`)
 3. `pnpm turbo lint typecheck build`
 4. `pnpm -F @ludoforge/engine test:all` (full engine sanity; heavy lanes may be deferred to CI per environment constraints)
+
+## Outcome
+
+Completed: 2026-06-04
+
+What changed:
+- Tightened the microturn publication bridge so compound operation+special-activity continuations are re-probed generically before publication, including `chooseN` confirmation paths that route into `compound.specialActivity.params`.
+- Routed resumed suspended compound special-activity follow-up decisions back into special-activity params instead of root move params.
+- Removed the unconditional compound apply-time continuation throw path and let the existing Foundation 18 runtime recovery safety net handle residual apply-time probe holes during simulation.
+- Added simulator recovery around selected decision apply failures so rollbacks are recorded in `probeHoleRecoveries`, consistent with the existing publication recovery trace path.
+- Made policy preview apply failures produce failed preview outcomes instead of aborting candidate evaluation.
+
+Deviations from original plan:
+- The fix used a combined publication-probe tightening plus the existing runtime rollback safety net, rather than a broad rewrite of `legal-moves.ts` enumeration. This keeps the solution generic and bounded while preserving the observable Foundation 18 recovery behavior for deeper state-dependent residuals.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/unit/kernel/legal-choices-compound.test.js`
+- `node --test packages/engine/dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js`
+- `node --test --test-name-pattern "keeps FITL seed 1006" packages/engine/dist/test/integration/fitl-march-free-operation.test.js`
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` passed 80/80 files.

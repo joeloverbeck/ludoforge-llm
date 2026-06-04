@@ -396,15 +396,21 @@ const driveOption = (
   });
   const refCache = createResolveRefCache();
   const initialDecisionStartedAt = perfHotPathStart();
-  let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
-    input.def,
-    input.state,
-    input.microturn,
-    decision,
-    { advanceToDecisionPoint: true },
-    input.runtime,
-    refCache,
-  ).state;
+  let state: GameState;
+  try {
+    state = applyPublishedDecisionFromPreviewStateNoFinalHash(
+      input.def,
+      input.state,
+      input.microturn,
+      decision,
+      { advanceToDecisionPoint: true },
+      input.runtime,
+      refCache,
+    ).state;
+  } catch {
+    perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
+    return finish(input.state, 0, 'failed');
+  }
   perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
   let draftTokenStateIndex: ReturnType<typeof createDraftTokenStateIndex> | undefined;
   let depth = 1;
@@ -537,15 +543,20 @@ const driveOption = (
     }
     const prevState = state;
     const continuationApplyStartedAt = perfHotPathStart();
-    state = applyPublishedDecisionFromPreviewStateNoFinalHash(
-      input.def,
-      prevState,
-      microturn,
-      nextDecision,
-      { advanceToDecisionPoint: true },
-      input.runtime,
-      refCache,
-    ).state;
+    try {
+      state = applyPublishedDecisionFromPreviewStateNoFinalHash(
+        input.def,
+        prevState,
+        microturn,
+        nextDecision,
+        { advanceToDecisionPoint: true },
+        input.runtime,
+        refCache,
+      ).state;
+    } catch {
+      perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
+      return finish(canonicalizeForExit(), depth, 'failed');
+    }
     perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
     syncDraftTokenStateIndex(prevState, state);
     stateIsCanonical = false;

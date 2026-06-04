@@ -82,6 +82,39 @@ const actionSelectionTurnId = (state: GameState): ReturnType<typeof asTurnId> =>
 const actionSelectionFrameId = (state: GameState): ReturnType<typeof asDecisionFrameId> =>
   state.nextFrameId ?? asDecisionFrameId(0);
 
+const withResolvedDecisionValue = (
+  move: Move,
+  context: ChooseOneContext | ChooseNStepContext,
+  value: MoveParamScalar | readonly MoveParamScalar[],
+): Move => {
+  if (context.decisionPath === 'compound.specialActivity') {
+    if (move.compound === undefined) {
+      return move;
+    }
+    return {
+      ...move,
+      compound: {
+        ...move.compound,
+        specialActivity: {
+          ...move.compound.specialActivity,
+          params: {
+            ...move.compound.specialActivity.params,
+            [context.decisionKey]: value,
+          },
+        },
+      },
+    };
+  }
+
+  return {
+    ...move,
+    params: {
+      ...move.params,
+      [context.decisionKey]: value,
+    },
+  };
+};
+
 const toStochasticDistribution = (
   continuation: DecisionContinuationResult,
 ): { readonly decisionKey: DecisionKey; readonly distribution: StochasticDistribution } | null => {
@@ -185,6 +218,37 @@ const isSupportedContinuationResult = (
     return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
+    if (probeMove && continuation.complete && continuation.move.compound !== undefined) {
+      const compoundContinuation = resolveContinuationForMove(
+        def,
+        {
+          ...state,
+          decisionStack: [],
+          activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(state.activePlayer)),
+        },
+        continuation.move,
+        runtime,
+      );
+      if (compoundContinuation.illegal !== undefined) {
+        return false;
+      }
+      if (compoundContinuation.nextDecision !== undefined) {
+        return isBridgeableNextDecision(
+          {
+            def,
+            state,
+            runtime: getRuntime(def, runtime),
+            move: compoundContinuation.move,
+            depthBudget: MICROTURN_PROBE_DEPTH_BUDGET,
+          },
+          compoundContinuation.nextDecision,
+        );
+      }
+      if (compoundContinuation.stochasticDecision !== undefined) {
+        return toStochasticDistribution(compoundContinuation) !== null;
+      }
+      return compoundContinuation.complete;
+    }
     return continuation.complete && (moveViability?.viable ?? true);
   }
   if (
@@ -582,13 +646,11 @@ export const toChooseNStepDecisions = (
         if (!advanced.nextContext.stepCommands.includes('confirm')) {
           return false;
         }
-        const candidateMove: Move = {
-          ...baseMove,
-          params: {
-            ...baseMove.params,
-            [context.decisionKey]: advanced.nextContext.selectedSoFar,
-          },
-        };
+        const candidateMove = withResolvedDecisionValue(
+          baseMove,
+          context,
+          advanced.nextContext.selectedSoFar,
+        );
         return isSupportedFrameContinuationMove(
           def,
           state,
@@ -598,13 +660,11 @@ export const toChooseNStepDecisions = (
         );
       }
 
-      const candidateMove: Move = {
-        ...baseMove,
-        params: {
-          ...baseMove.params,
-          [context.decisionKey]: advanced.value,
-        },
-      };
+      const candidateMove = withResolvedDecisionValue(
+        baseMove,
+        context,
+        advanced.value,
+      );
       return isSupportedFrameContinuationMove(
         def,
         state,

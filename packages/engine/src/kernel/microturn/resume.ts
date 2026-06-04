@@ -61,6 +61,41 @@ const readMoveDecisionParam = (
   move.params[decisionKey]
   ?? move.compound?.specialActivity.params[decisionKey];
 
+const moveParamsForSuspendedFrame = (
+  move: Move,
+  suspendedFrame: SuspendedEffectFrameSnapshot,
+): Move['params'] => {
+  const saParams = move.compound?.specialActivity.params;
+  if (
+    saParams !== undefined
+    && Object.prototype.hasOwnProperty.call(saParams, suspendedFrame.leaf.decisionKey)
+  ) {
+    return saParams;
+  }
+  return move.params;
+};
+
+const withResumedDecisionPath = (
+  move: Move,
+  suspendedFrame: SuspendedEffectFrameSnapshot,
+  request: ChoicePendingRequest,
+): ChoicePendingRequest => {
+  if (request.decisionPath !== undefined) {
+    return request;
+  }
+  const saParams = move.compound?.specialActivity.params;
+  if (
+    saParams === undefined
+    || !Object.prototype.hasOwnProperty.call(saParams, suspendedFrame.leaf.decisionKey)
+  ) {
+    return request;
+  }
+  return {
+    ...request,
+    decisionPath: 'compound.specialActivity',
+  };
+};
+
 interface ResumedDiscoveryResult {
   readonly state: GameState;
   readonly rng: Rng;
@@ -79,6 +114,7 @@ const executeResumedEffects = (
   decisionScope: DecisionScope,
   effects: readonly import('../types-ast.js').EffectAST[],
   move: Move,
+  moveParams: Move['params'],
   runtime: GameDefRuntime,
   freeOperationOverlay: SuspendedEffectFrameSnapshot['freeOperationOverlay'],
   onChooseNTemplateCreated?: (template: ChooseNTemplate) => void,
@@ -92,7 +128,7 @@ const executeResumedEffects = (
     activePlayer: state.activePlayer,
     actorPlayer,
     bindings,
-    moveParams: move.params,
+    moveParams,
     resources,
     decisionScope,
     runtimeTableIndex: runtime.runtimeTableIndex,
@@ -299,16 +335,20 @@ const resumePipelineTail = (
       emptyScope(),
       stage.effects,
       move,
+      moveParamsForSuspendedFrame(move, suspendedFrame),
       runtime,
       suspendedFrame.freeOperationOverlay,
       onChooseNTemplateCreated,
     );
     warnings.push(...resumed.warnings);
     if (resumed.nextDecision !== undefined) {
-      const nextDecision = appendResumeFrame(resumed.nextDecision, {
-        ...frame,
-        remainingStages: frame.remainingStages.slice(stageIndex + 1),
-      });
+      const nextDecision = appendResumeFrame(
+        withResumedDecisionPath(move, suspendedFrame, resumed.nextDecision),
+        {
+          ...frame,
+          remainingStages: frame.remainingStages.slice(stageIndex + 1),
+        },
+      );
       return {
         complete: false,
         move,
@@ -332,17 +372,21 @@ const resumePipelineTail = (
       emptyScope(),
       frame.eventEffects,
       move,
+      moveParamsForSuspendedFrame(move, suspendedFrame),
       runtime,
       suspendedFrame.freeOperationOverlay,
       onChooseNTemplateCreated,
     );
     warnings.push(...resumed.warnings);
     if (resumed.nextDecision !== undefined) {
-      const nextDecision = appendResumeFrame(resumed.nextDecision, {
-        ...frame,
-        remainingStages: [],
-        eventEffects: [],
-      });
+      const nextDecision = appendResumeFrame(
+        withResumedDecisionPath(move, suspendedFrame, resumed.nextDecision),
+        {
+          ...frame,
+          remainingStages: [],
+          eventEffects: [],
+        },
+      );
       return {
         complete: false,
         move,
@@ -376,6 +420,7 @@ export const resumeSuspendedEffectFrame = (
   let currentBindings: Readonly<Record<string, unknown>>;
   let currentDecisionScope: DecisionScope = suspendedFrame.leaf.decisionScope;
   const warnings: RuntimeWarning[] = [];
+  const resumeMoveParams = moveParamsForSuspendedFrame(move, suspendedFrame);
 
   if (suspendedFrame.leaf.kind === 'chooseOne') {
     const selected = readMoveDecisionParam(move, suspendedFrame.leaf.decisionKey);
@@ -416,13 +461,17 @@ export const resumeSuspendedEffectFrame = (
         currentDecisionScope,
         frame.effects,
         move,
+        resumeMoveParams,
         resolvedRuntime,
         suspendedFrame.freeOperationOverlay,
         onChooseNTemplateCreated,
       );
       warnings.push(...resumed.warnings);
       if (resumed.nextDecision !== undefined) {
-        const nextDecision = appendRemainingResumeFrames(resumed.nextDecision, remainingFrames);
+        const nextDecision = appendRemainingResumeFrames(
+          withResumedDecisionPath(move, suspendedFrame, resumed.nextDecision),
+          remainingFrames,
+        );
         return finalizeResumedPendingDecision(def, move, nextDecision, warnings, resolvedRuntime, onChooseNTemplateCreated);
       }
       currentState = resumed.state;
@@ -488,6 +537,7 @@ export const resumeSuspendedEffectFrame = (
         withIterationSegment(rebaseIterationPath(currentDecisionScope, frame.parentIterationPath), index),
         frame.effects,
         move,
+        resumeMoveParams,
         resolvedRuntime,
         suspendedFrame.freeOperationOverlay,
         onChooseNTemplateCreated,
@@ -495,10 +545,13 @@ export const resumeSuspendedEffectFrame = (
       warnings.push(...resumed.warnings);
       if (resumed.nextDecision !== undefined) {
         const nextDecision = appendRemainingResumeFrames(
-          appendResumeFrame(resumed.nextDecision, {
-            ...frame,
-            nextIndex: index + 1,
-          }),
+          appendResumeFrame(
+            withResumedDecisionPath(move, suspendedFrame, resumed.nextDecision),
+            {
+              ...frame,
+              nextIndex: index + 1,
+            },
+          ),
           remainingFrames,
         );
         return finalizeResumedPendingDecision(def, move, nextDecision, warnings, resolvedRuntime, onChooseNTemplateCreated);

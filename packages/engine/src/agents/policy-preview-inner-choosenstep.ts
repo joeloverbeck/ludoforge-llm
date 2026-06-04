@@ -253,16 +253,20 @@ const applyChooseNStepPreviewDecision = (
   stateForApply: GameState,
   microturn: ChooseNStepMicroturn,
   decision: ChooseNStepDecision,
-): GameState => {
+): GameState | null => {
   getTokenStateIndex(sourceState, input.runtime?.tokenStateIndexCache);
-  return applyPublishedDecision(
-    input.def,
-    stateForApply,
-    microturn,
-    decision,
-    { advanceToDecisionPoint: true },
-    input.runtime,
-  ).state;
+  try {
+    return applyPublishedDecision(
+      input.def,
+      stateForApply,
+      microturn,
+      decision,
+      { advanceToDecisionPoint: true },
+      input.runtime,
+    ).state;
+  } catch {
+    return null;
+  }
 };
 
 const resolveBeamResult = (
@@ -340,6 +344,9 @@ export function runChooseNStepBeamPreview(input: RunChooseNStepBeamPreviewInput)
           chooseNStepMicroturn,
           decision,
         );
+        if (nextState === null) {
+          continue;
+        }
         const scored = scoreChooseNStepCandidate(input, nextState, chooseNStepMicroturn, decision);
         const stableMoveKey = chooseNStepStableMoveKey(decision);
         candidates.push({
@@ -473,13 +480,17 @@ export const continueChooseNStepInnerPreviewDrive = (
     if (traceEntry !== undefined) {
       syntheticDecisions.push(traceEntry);
     }
-    state = applyChooseNStepPreviewDecision(
+    const nextState = applyChooseNStepPreviewDecision(
       input,
       state,
       state,
       microturn as ChooseNStepMicroturn,
       nextDecision as ChooseNStepDecision,
     );
+    if (nextState === null) {
+      return finish(state, depth, 'failed');
+    }
+    state = nextState;
     depth += 1;
   }
 };
@@ -547,6 +558,26 @@ export function runChooseNStepInnerPreview(input: RunChooseNStepInnerPreviewInpu
       decision,
     );
     evaluatedCandidateCount += 1;
+    if (stateAfterRoot === null) {
+      const drive: DriveResult = {
+        state: input.state,
+        depth: 0,
+        outcome: 'failed',
+        completionPolicy: continuationPolicy,
+        syntheticDecisions: [],
+        completionPolicyFallbackCount: 0,
+      };
+      options.push(resolvedInnerPreviewResult(
+        input,
+        decision,
+        stableMoveKey,
+        drive,
+        null,
+        surfaceContext,
+        seatResolutionIndex,
+      ));
+      continue;
+    }
 
     const nextMicroturn = publishMicroturn(input.def, stateAfterRoot, input.runtime);
     const remainingDepthCap = Math.max(0, depthCap - 1);

@@ -7,15 +7,22 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  createGameDefRuntime,
+  createRng,
+  isBridgeableNextDecision,
   legalChoicesDiscover,
   legalChoicesEvaluate,
   type ActionDef,
+  type ChoicePendingChooseNRequest,
   type EffectAST,
   type GameDef,
   type GameState,
   type Move,
+  type DecisionKey,
   type ChoicePendingRequest,
 } from '../../../src/kernel/index.js';
+import { emptyScope } from '../../../src/kernel/decision-scope.js';
+import { resumeSuspendedEffectFrame } from '../../../src/kernel/microturn/resume.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 // ---------------------------------------------------------------------------
@@ -74,6 +81,16 @@ const chooseOneEffect = (bind: string, values: readonly string[]): EffectAST => 
     internalDecisionId: `decision:${bind}`,
     bind,
     options: { query: 'enums', values: [...values] },
+  },
+}));
+
+const chooseNRangeEffect = (bind: string, values: readonly string[], min: number, max: number): EffectAST => (eff({
+  chooseN: {
+    internalDecisionId: `decision:${bind}`,
+    bind,
+    options: { query: 'enums', values: [...values] },
+    min,
+    max,
   },
 }));
 
@@ -513,6 +530,118 @@ describe('legalChoicesDiscover() compound SA chaining', () => {
     assert.deepStrictEqual(
       pending.options.map((o) => o.value),
       ['city-x', 'city-y'],
+    );
+  });
+
+  it('publication bridge rejects compound confirmations whose post-main SA is illegal', () => {
+    const mainAction = makeAction('march', [
+      chooseNRangeEffect('$units', ['u1'], 0, 1),
+    ]);
+    const saAction: ActionDef = {
+      ...makeAction('ambush', [chooseOneEffect('$target', ['A'])]),
+      pre: { op: '==', left: { _t: 2, ref: 'gvar', var: 'saReady' }, right: 1 },
+    };
+    const def = makeBaseDef({
+      actions: [mainAction, saAction],
+    }) as GameDef;
+    const defWithGlobal: GameDef = {
+      ...def,
+      globalVars: [{ name: 'saReady', type: 'int', init: 1, min: 0, max: 1 }],
+    };
+    const state = makeBaseState({
+      globalVars: { saReady: 0 },
+    });
+    const move = makeMove('march', {}, {
+      specialActivity: { actionId: asActionId('ambush'), params: {} },
+      timing: 'after',
+    });
+    const request: ChoicePendingChooseNRequest = {
+      kind: 'pending',
+      complete: false,
+      type: 'chooseN',
+      decisionKey: '$units' as DecisionKey,
+      name: '$units',
+      options: [{ value: 'u1', legality: 'legal', illegalReason: null }],
+      targetKinds: [],
+      selected: [],
+      canConfirm: true,
+    };
+
+    assert.equal(
+      isBridgeableNextDecision(
+        {
+          def: defWithGlobal,
+          state,
+          runtime: createGameDefRuntime(defWithGlobal),
+          move,
+          depthBudget: 3,
+        },
+        request,
+      ),
+      false,
+    );
+  });
+
+  it('routes forced follow-up choices from resumed compound SA frames into SA params', () => {
+    const mainAction = makeAction('assault', []);
+    const saAction = makeAction('airLift', []);
+    const def = makeBaseDef({
+      actions: [mainAction, saAction],
+    });
+    const state = makeBaseState();
+    const firstKey = 'decision:$spaces' as DecisionKey;
+    const forcedKey = '$forcedEmpty' as DecisionKey;
+    const move = makeMove('assault', {}, {
+      specialActivity: {
+        actionId: asActionId('airLift'),
+        params: {
+          [firstKey]: ['loc-a'],
+        },
+      },
+      timing: 'after',
+    });
+
+    const continuation = resumeSuspendedEffectFrame(
+      def,
+      {
+        state,
+        rng: createRng(1n),
+        actorPlayer: state.activePlayer,
+        bindings: {},
+        leaf: {
+          kind: 'chooseN',
+          decisionKey: firstKey,
+          bind: '$spaces',
+          decisionScope: emptyScope(),
+          bindingOptions: [{ comparable: 'loc-a', binding: 'loc-a' }],
+        },
+        resumeStack: [{
+          kind: 'pipeline',
+          actionId: asActionId('airLift'),
+          profileId: 'airLift-profile',
+          atomicity: 'atomic',
+          remainingStages: [{
+            legality: null,
+            costValidation: null,
+            effects: [
+              chooseNRangeEffect('$forcedEmpty', [], 0, 0),
+            ],
+          }],
+          eventEffects: [],
+        }],
+      },
+      move,
+      createGameDefRuntime(def),
+    );
+
+    assert.equal(continuation.complete, true);
+    assert.deepEqual(continuation.move.params, {});
+    assert.deepEqual(
+      continuation.move.compound?.specialActivity.params,
+      {
+        [firstKey]: ['loc-a'],
+        [forcedKey]: [],
+      },
     );
   });
 });

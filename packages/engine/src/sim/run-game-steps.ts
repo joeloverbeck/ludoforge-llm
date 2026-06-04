@@ -441,15 +441,36 @@ export function* runGameSteps(input: RunGameInput): Generator<RunGameStep, GameT
 
     const preState = state;
     const t0_apply = perfStart(profiler);
-    const applied = applyPublishedDecisionFromCanonicalState(
-      validatedDef,
-      state,
-      microturn,
-      selected.decision,
-      kernelOptions,
-      resolvedRuntime,
-    );
-    perfEnd(profiler, 'simApplyMove', t0_apply);
+    let applied: ApplyDecisionResult;
+    try {
+      applied = applyPublishedDecisionFromCanonicalState(
+        validatedDef,
+        state,
+        microturn,
+        selected.decision,
+        kernelOptions,
+        resolvedRuntime,
+      );
+      perfEnd(profiler, 'simApplyMove', t0_apply);
+    } catch (error) {
+      perfEnd(profiler, 'simApplyMove', t0_apply);
+      const rollback = rollbackToActionSelection(
+        validatedDef,
+        state,
+        resolvedRuntime,
+        error instanceof Error ? error.message : String(error),
+      );
+      if (rollback === null) {
+        throw error;
+      }
+      state = rollback.state;
+      if (shouldRetainTrace) {
+        probeHoleRecoveries.push(rollback.logEntry);
+      }
+      emitProbeHoleRecoveryHook(options, rollback.logEntry, state.turnCount);
+      yield { kind: 'recovery', state, logEntry: rollback.logEntry };
+      continue;
+    }
     state = applied.state;
     appliedDecisionCount += 1;
 

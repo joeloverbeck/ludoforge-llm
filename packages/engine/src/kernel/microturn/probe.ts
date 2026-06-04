@@ -9,6 +9,7 @@ import type {
   Move,
 } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
+import { resolveDecisionContinuation } from './continuation.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 
 export interface ProbeContext {
@@ -94,10 +95,8 @@ const probeBridge = (
   if (ctx.depthBudget <= 0) {
     return true;
   }
+  const move = withResolvedDecisionValue(ctx.move, request, value);
   const suspendedFrame = request.suspendedFrame;
-  if (suspendedFrame === undefined) {
-    return true;
-  }
 
   const key = cacheKey(ctx, request, value);
   const cached = ctx.runtime.publicationProbeCache.get(key);
@@ -107,7 +106,32 @@ const probeBridge = (
 
   const bridgeable = (() => {
     try {
-      const move = withResolvedDecisionValue(ctx.move, request, value);
+      if (suspendedFrame === undefined) {
+        if (move.compound === undefined) {
+          return true;
+        }
+        const continuation = resolveDecisionContinuation(
+          ctx.def,
+          ctx.state,
+          move,
+          { choose: () => undefined },
+          ctx.runtime,
+        );
+        if (continuation.illegal !== undefined) {
+          return false;
+        }
+        if (continuation.nextDecision === undefined) {
+          return continuation.complete;
+        }
+        return isBridgeableNextDecision(
+          {
+            ...ctx,
+            move: continuation.move,
+            depthBudget: ctx.depthBudget - 1,
+          },
+          continuation.nextDecision,
+        );
+      }
       const continuation = resumeSuspendedEffectFrame(ctx.def, suspendedFrame, move, ctx.runtime);
       if (continuation.illegal !== undefined) {
         return false;

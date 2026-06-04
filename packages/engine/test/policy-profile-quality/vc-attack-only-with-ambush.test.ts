@@ -1,9 +1,26 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertProfileBinds, emitVcArchitecturalRecord, loadVcPlanFixture } from './vc-plan-witness-helpers.js';
+import { applyMove } from '../../src/kernel/index.js';
+import {
+  loadFitlProductionDef,
+  runFitlCompetenceCase,
+} from './shared-competence-helpers.js';
+import {
+  assertProfileBinds,
+  actionDecision,
+  countFactionInZone,
+  compoundActionDecision,
+  emitVcArchitecturalRecord,
+  loadVcPlanFixture,
+  prepareVcAttackAmbushState,
+  proposeVcPlanFromDecisions,
+  vcAttackMove,
+} from './vc-plan-witness-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 204_008_05;
@@ -32,5 +49,35 @@ describe('Spec 204 VC Attack/Ambush witness', () => {
       guardrails: ['vc.avoidConventionalAttackWithoutAmbush'],
       planTemplates: ['vc.attackAmbush'],
     });
+  });
+
+  it('executes Attack+Ambush for stronger removal than conventional Attack', () => {
+    const def = loadFitlProductionDef();
+    const fixture = loadVcPlanFixture(210_001);
+    const run = runFitlCompetenceCase(def, {
+      seatId: 'vc',
+      playerIndex: 3,
+      seed: 210_001,
+      prepareState: prepareVcAttackAmbushState,
+    });
+    const before = run.preState;
+    const proposal = proposeVcPlanFromDecisions(fixture, [
+      compoundActionDecision('attack', 'ambushVc', { timing: 'after' }),
+      actionDecision('attack'),
+    ], before);
+    const conventional = applyMove(def, before, vcAttackMove(false)).state;
+    const ambush = applyMove(def, before, vcAttackMove(true)).state;
+    const conventionalRemoved = countFactionInZone(before, 'saigon:none', 'US') - countFactionInZone(conventional, 'saigon:none', 'US');
+    const ambushRemoved = countFactionInZone(before, 'saigon:none', 'US') - countFactionInZone(ambush, 'saigon:none', 'US');
+    const passed = proposal.selected?.templateId === 'vc.attackAmbush'
+      && conventionalRemoved === 2
+      && ambushRemoved === 3;
+
+    emitVcArchitecturalRecord(TEST_FILE, 210_001, passed, 2);
+
+    assert.equal(proposal.selected?.templateId, 'vc.attackAmbush');
+    assert.equal(conventionalRemoved, 2);
+    assert.equal(ambushRemoved, 3);
+    assert.equal(ambushRemoved > conventionalRemoved, true);
   });
 });

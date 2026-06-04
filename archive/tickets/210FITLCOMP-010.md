@@ -14,7 +14,7 @@ Spec 210 §3 permits adding agent-library features **only** where a fixture fail
 
 Live gate opened by `archive/tickets/210FITLCOMP-003.md`: after the bounded visible-Coup schedule correction, US/ARVN/NVA near-Coup concrete-swing witnesses pass as executed outcomes, but `shared-near-coup-concrete-swing-vc.test.ts` selects `march|{}|false|operation` with no Coup-scored margin/Aid delta across base, active-support, passive-opposition, and active-opposition seed scans. This ticket owns the YAML/profile change that makes the VC fixture distinguish and select an executed near-Coup concrete swing.
 
-Live gate opened by `tickets/210FITLCOMP-009.md` reassessment on 2026-06-04: a curated LoC-guerrilla probe showed VC Tax can execute and produce resources when forced, but the current full VC proposal selected `vc.rallySubvert` ahead of Rally/LoC Tax. The blocked 009 acceptance is specifically `vc-tax-on-populated-support-vetoed.test.ts` / `vc-tax-funds-future-terror-rally.test.ts`: LoC-Tax must be selected and executed while populated-Support Tax is demoted absent a resource crisis. This ticket now runs before 009 and owns the data/profile distinction needed to make that selection claim truthful.
+Live gate opened by `archive/tickets/210FITLCOMP-009.md` reassessment on 2026-06-04: a curated LoC-guerrilla probe showed VC Tax can execute and produce resources when forced, but the current full VC proposal selected `vc.rallySubvert` ahead of Rally/LoC Tax. The blocked 009 acceptance is specifically `vc-tax-on-populated-support-vetoed.test.ts` / `vc-tax-funds-future-terror-rally.test.ts`: LoC-Tax must be selected and executed while populated-Support Tax is demoted absent a resource crisis. This ticket now runs before 009 and owns the data/profile distinction needed to make that selection claim truthful.
 
 ## Assumption Reassessment (2026-06-03)
 
@@ -93,6 +93,8 @@ After the YAML/profile distinction is added, promote `shared-near-coup-concrete-
 ## Outcome
 
 Completed: 2026-06-04
+
+Outcome amended: 2026-06-04 -- archive-path cleanup after 210FITLCOMP-009 completed and moved to archive/tickets/.
 
 What changed:
 

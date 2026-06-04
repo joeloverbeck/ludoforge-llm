@@ -1,9 +1,20 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertProfileBinds, emitVcArchitecturalRecord, includesId, loadVcPlanFixture } from './vc-plan-witness-helpers.js';
+import { applyMove, asActionId, asPhaseId } from '../../src/kernel/index.js';
+import { loadFitlProductionDef, runFitlCompetenceCase, withCoupLookahead, withEveryZoneSupportMarker } from './shared-competence-helpers.js';
+import {
+  actionDecision,
+  assertProfileBinds,
+  emitVcArchitecturalRecord,
+  includesId,
+  loadVcPlanFixture,
+  proposeVcPlanFromDecisions,
+} from './vc-plan-witness-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 204_008_06;
@@ -35,5 +46,57 @@ describe('Spec 204 VC Agitation preparation witness', () => {
       strategyModules: ['vc.agitationReadiness'],
       planTemplates: ['vc.agitationPrep'],
     });
+  });
+
+  it('executes Coup Agitation to shift a passive Opposition space to active Opposition', () => {
+    const def = loadFitlProductionDef();
+    const fixture = loadVcPlanFixture(210_001);
+    const run = runFitlCompetenceCase(def, {
+      seatId: 'vc',
+      playerIndex: 3,
+      seed: 210_001,
+      prepareState: (caseDef, state) => withCoupLookahead(
+        caseDef,
+        withEveryZoneSupportMarker(caseDef, state, 'passiveOpposition'),
+      ),
+    });
+    const before = { ...run.preState, currentPhase: asPhaseId('coupSupport') };
+    const agitationDecision = {
+      kind: 'actionSelection' as const,
+      actionId: asActionId('coupAgitateVC'),
+      move: {
+        actionId: asActionId('coupAgitateVC'),
+        params: {
+          targetSpace: 'quang-tin-quang-ngai:none',
+          action: 'shiftOpposition',
+        },
+        actionClass: 'specialActivity' as const,
+      },
+    };
+    const proposal = proposeVcPlanFromDecisions(fixture, [
+      agitationDecision,
+      actionDecision('rally'),
+      actionDecision('march'),
+      actionDecision('terror'),
+    ], before);
+    const after = applyMove(def, before, {
+      actionId: asActionId('coupAgitateVC'),
+      params: {
+        targetSpace: 'quang-tin-quang-ngai:none',
+        action: 'shiftOpposition',
+      },
+    }).state;
+    const beforeMarker = before.markers['quang-tin-quang-ngai:none']?.supportOpposition;
+    const afterMarker = after.markers['quang-tin-quang-ngai:none']?.supportOpposition;
+    const passed = proposal.selected?.templateId === 'vc.agitationPrep'
+      && beforeMarker === 'passiveOpposition'
+      && afterMarker === 'activeOpposition';
+
+    emitVcArchitecturalRecord(TEST_FILE, 210_001, passed, 1);
+
+    assert.equal(proposal.selected?.templateId, 'vc.agitationPrep');
+    assert.equal(beforeMarker, 'passiveOpposition');
+    assert.equal(afterMarker, 'activeOpposition');
+    assert.equal(after.markers['quang-tin-quang-ngai:none']?.coupAgitateSpaceUsage, 'used');
   });
 });

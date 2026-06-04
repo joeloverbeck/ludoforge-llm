@@ -1,9 +1,13 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { moveOneToken } from './shared-competence-helpers.js';
+import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
+import { asActionId } from '../../src/kernel/index.js';
+import { loadFitlProductionDef, moveOneToken, runFitlCompetenceCase } from './shared-competence-helpers.js';
 import {
   actionDecision,
   assertProfileBinds,
@@ -91,5 +95,35 @@ describe('Spec 204 VC Tax funding witness', () => {
       false,
       'expected VC plan roles to ignore off-board holding zones',
     );
+  });
+
+  it('executes the selected LoC Tax resource gain', () => {
+    const def = loadFitlProductionDef();
+    const run = runFitlCompetenceCase(def, {
+      seatId: 'vc',
+      playerIndex: 3,
+      seed: CURATED_TAX_SEED,
+      prepareState: (_caseDef, state) => moveOneToken(
+        state,
+        'available-VC:none',
+        'loc-saigon-can-tho:none',
+        (token) => token.props.faction === 'VC' && token.props.type === 'guerrilla',
+      ),
+    });
+    const result = applyMoveWithResolvedDecisionIds(def, run.preState, {
+      actionId: asActionId('tax'),
+      params: {},
+      actionClass: 'specialActivity',
+    }, {
+      overrides: [
+        { when: (request) => request.name === '$targetSpaces', value: ['loc-saigon-can-tho:none'] },
+      ],
+    });
+    const resourceDelta = Number(result.state.globalVars.vcResources) - Number(run.preState.globalVars.vcResources);
+    const passed = resourceDelta === 2;
+
+    emitVcArchitecturalRecord(TEST_FILE, CURATED_TAX_SEED, passed, 1);
+
+    assert.equal(resourceDelta, 2);
   });
 });

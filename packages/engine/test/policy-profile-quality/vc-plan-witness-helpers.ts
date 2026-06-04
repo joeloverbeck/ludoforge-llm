@@ -10,10 +10,12 @@ import {
   type Decision,
   type GameDef,
   type GameState,
+  type Move,
 } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { moveFactionBoardTokensToZone, moveOneToken } from './shared-competence-helpers.js';
 
 const FITL_PLAYER_COUNT = 4;
 const VC_PROFILE_ID = 'vc-baseline';
@@ -147,3 +149,41 @@ export const assertProfileBinds = (
 
 export const includesId = (values: readonly unknown[] | undefined, id: string): boolean =>
   (values ?? []).some((value) => String(value) === id);
+
+export const prepareVcAttackAmbushState = (def: GameDef, state: GameState): GameState => {
+  const withoutMapVc = moveFactionBoardTokensToZone(def, state, 'VC', 'available-VC:none');
+  const withVc = moveOneToken(withoutMapVc, 'available-VC:none', 'saigon:none', (token) =>
+    token.props.faction === 'VC' && token.props.type === 'guerrilla');
+  return moveOneToken(withVc, 'available-US:none', 'saigon:none', (token) =>
+    token.props.faction === 'US' && token.props.type === 'troops');
+};
+
+export const vcAttackMove = (withAmbush: boolean): Move => {
+  const attackTargetKey = 'decision:doc.actionPipelines.13.stages[0].effects.0.if.else.0.chooseN::$targetSpaces';
+  const ambushTargetKey = 'decision:doc.actionPipelines.28.stages[0].effects.0.if.else.0.if.else.0.if.else.0.chooseN::$targetSpaces';
+  const ambushModeKey = 'decision:doc.actionPipelines.28.stages[1].effects.0.forEach.effects.1.let.in.0.let.in.0.if.else.0.chooseOne::$ambushTargetMode@saigon:none[0][0]';
+  const base: Move = {
+    actionId: asActionId('attack'),
+    params: { [attackTargetKey]: ['saigon:none'] },
+    actionClass: 'operation',
+  };
+  return withAmbush
+    ? {
+        ...base,
+        actionClass: 'operationPlusSpecialActivity',
+        compound: {
+          specialActivity: {
+            actionId: asActionId('ambushVc'),
+            params: {
+              [ambushTargetKey]: ['saigon:none'],
+              [ambushModeKey]: 'self',
+            },
+          },
+          timing: 'during',
+        },
+      }
+    : base;
+};
+
+export const countFactionInZone = (state: GameState, zoneId: string, faction: string): number =>
+  (state.zones[zoneId] ?? []).filter((token) => token.props.faction === faction).length;

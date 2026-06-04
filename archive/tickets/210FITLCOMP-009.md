@@ -1,6 +1,6 @@
 # 210FITLCOMP-009: Promote VC faction fixtures to executed-outcome tier
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only
@@ -88,3 +88,43 @@ Update markers to `@proof-tier: executed-outcome` + `@proof-tier: adversarial`. 
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/vc-terror-high-pop-non-coin-controlled.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-on-populated-support-vetoed.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-funds-future-terror-rally.test.js packages/engine/dist/test/policy-profile-quality/vc-attack-only-with-ambush.test.js packages/engine/dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js packages/engine/dist/test/policy-profile-quality/vc-agitation-prep-before-coup.test.js`
 2. `pnpm turbo lint typecheck && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-06-04
+
+What changed:
+
+- Promoted all six VC fixture files in place with `@proof-tier: executed-outcome` and `@proof-tier: adversarial` markers.
+- `vc-terror-high-pop-non-coin-controlled.test.ts` now runs the live VC policy frontier in a passive-Opposition state, proves Terror is selected, targets `quang-tin-quang-ngai:none`, and improves total Opposition by 2.
+- `vc-tax-funds-future-terror-rally.test.ts` keeps the post-010 Rally+Tax proposal gate and now also executes LoC Tax from a VC turn state, proving the selected LoC Tax path gains 2 VC resources.
+- `vc-tax-on-populated-support-vetoed.test.ts` executes the same LoC Tax resource gain and proves the populated Support city target is rejected by the Tax target domain in the curated non-crisis state.
+- `vc-attack-only-with-ambush.test.ts` proves the plan proposer selects `vc.attackAmbush` over conventional Attack and that Attack+Ambush removes 3 US pieces where conventional Attack removes 2.
+- `vc-avoids-conventional-attack-without-ambush.test.ts` keeps the conventional-Attack guardrail proof and shares the same direct execution comparison as the adversarial path.
+- `vc-agitation-prep-before-coup.test.ts` proves `vc.agitationPrep` is selected in a Coup-lookahead state and executes `coupAgitateVC` in `coupSupport`, shifting passive Opposition to active Opposition.
+- Extended `vc-plan-witness-helpers.ts` with the shared VC compound-root and Attack/Ambush execution helpers used by the promoted fixtures.
+
+Deviations:
+
+- No `92-agents.md` or engine changes were made in 009; the YAML/profile prerequisite was completed and archived in `archive/tickets/210FITLCOMP-010.md`.
+- `vc-plan-witness-helpers.ts` was not pruned to zero structural helpers because existing P1/other VC witnesses still use the structural proposal helper exports.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/vc-terror-high-pop-non-coin-controlled.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-on-populated-support-vetoed.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-funds-future-terror-rally.test.js packages/engine/dist/test/policy-profile-quality/vc-attack-only-with-ambush.test.js packages/engine/dist/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.js packages/engine/dist/test/policy-profile-quality/vc-agitation-prep-before-coup.test.js` — passed, 13 tests / 6 suites.
+- `pnpm -F @ludoforge/engine typecheck` — passed.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2607 archived tickets.
+- `git diff --check` — passed.
+- `pnpm -F @ludoforge/engine lint` — failed outside this ticket in `packages/engine/test/unit/agents/plan-controller.test.ts` on unused import `asDecisionFrameId`.
+- Root `pnpm turbo lint typecheck` / `pnpm turbo test` were not rerun after 009 because the 010 closeout already established unrelated blockers: runner typecheck in `packages/runner/src/model/derive-runner-frame.ts(1386,56)`, stale `noCompound` stable-key expectations in `policy-eval-grouping.test.js`, and target-kind `"value"` expectation drift in `legal-choices.test.js` / `query-domain-kinds.test.js`.
+
+Source-size ledger:
+
+- `packages/engine/test/policy-profile-quality/vc-terror-high-pop-non-coin-controlled.test.ts` — 84 lines.
+- `packages/engine/test/policy-profile-quality/vc-tax-on-populated-support-vetoed.test.ts` — 89 lines.
+- `packages/engine/test/policy-profile-quality/vc-tax-funds-future-terror-rally.test.ts` — 129 lines.
+- `packages/engine/test/policy-profile-quality/vc-attack-only-with-ambush.test.ts` — 83 lines.
+- `packages/engine/test/policy-profile-quality/vc-avoids-conventional-attack-without-ambush.test.ts` — 84 lines.
+- `packages/engine/test/policy-profile-quality/vc-agitation-prep-before-coup.test.ts` — 102 lines.
+- `packages/engine/test/policy-profile-quality/vc-plan-witness-helpers.ts` — 189 lines.

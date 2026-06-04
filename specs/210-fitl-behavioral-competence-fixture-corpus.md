@@ -132,4 +132,4 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-007.md`](../archive/tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`archive/tickets/210FITLCOMP-008.md`](../archive/tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
 - [`archive/tickets/210FITLCOMP-010.md`](../archive/tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual and the VC Tax-selection profile gate opened by 009 reassessment (covers remaining §2(3), §3, §4 AC#7)
-- [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures after the 010 YAML/profile prerequisite lands (covers §2(15–17))
+- [`archive/tickets/210FITLCOMP-009.md`](../archive/tickets/210FITLCOMP-009.md) — Promote VC faction fixtures after the 010 YAML/profile prerequisite lands (covers §2(15–17))

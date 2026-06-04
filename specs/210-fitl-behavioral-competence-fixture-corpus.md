@@ -61,8 +61,8 @@ Each P0 intent below already has a structural witness in `policy-profile-quality
 5. **Ally-rival paired** — same ally/rival pressure, ally far-from-win vs near-win; assert cooperation in the former and throttle/suppression in the latter through the live profile's actual owner modules. Approved 2026-06-04 reassessment for `210FITLCOMP-005`: current GameSpecDoc ownership is mixed between `shared.allyRivalThrottle` and faction-specific modules (`us.avoidArvnKingmaking`, `arvn.denyUSIfNearWin`, `nva.vcRivalRisk`, `vc.nvaRivalRisk`, with `vc.denyNvaIfNearWin` also active in the VC near-NVA trace), so the fixtures must prove live behavior rather than overclaim common shared-module ownership.
 
 **US:**
-6. Train/Pacify executes and improves Support (named-feature/token query) on a legal COIN-controlled high-pop target.
-7. Train+Advise selected over plain Train on a live frontier; Advise role executed; Aid/removal outcome.
+6. Train/Pacify executes and improves Support (named-feature/token query) on a legal COIN-controlled high-pop target. Approved 2026-06-04 reassessment for `210FITLCOMP-006`: live proof may correct US target selectors in `92-agents.md` when they bind off-board holding zones through the existing generic selector `where` surface, and may add generic plan-template fixed-choice support for scalar chooseOne/chooseNStep decisions; these are selector validity and generic authoring repairs, not new §3 FITL feature additions.
+7. Train+Advise selected over plain Train on a live frontier; Advise role executed; Aid/removal outcome. `210FITLCOMP-006` reassessment note: the old seed-pinned proposal became stale after the selector validity repair excluded off-board holding zones, so 006 preserves the authored Train+Advise wiring structurally until a valid live frontier is authored.
 8. Safe Air Strike: zero-pop/Trail target selected; populated-Support target present as the bad alternative and rejected; executed Support not harmed.
 
 **ARVN:**
@@ -128,7 +128,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-003.md`](../archive/tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures for US/ARVN/NVA and correct bounded Coup schedule data (partial §2(3))
 - [`archive/tickets/210FITLCOMP-004.md`](../archive/tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
 - [`archive/tickets/210FITLCOMP-005.md`](../archive/tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
-- [`tickets/210FITLCOMP-006.md`](../tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
+- [`archive/tickets/210FITLCOMP-006.md`](../archive/tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
 - [`tickets/210FITLCOMP-007.md`](../tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`tickets/210FITLCOMP-008.md`](../tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
 - [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures (covers §2(15–17))

@@ -948,6 +948,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: pacificationPopulation
@@ -1057,6 +1061,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: indigenousForceMultiplier
@@ -1134,6 +1142,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: zeroPopulationSafeStrike
@@ -2389,7 +2401,7 @@ agents:
           trainSpace: { selector: us.trainSupportSpace, required: true }
           adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.trainSpace }] }
         steps:
-          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train, stageIndex: 0 } }
           - { label: advise-force-multiplier, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
@@ -2442,8 +2454,12 @@ agents:
         roles:
           pacifySpace: { selector: us.pacifyTargetSpace, required: true }
         steps:
-          - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
-        caps: { capClass: standard256, maxSteps: 1 }
+          - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train, stageIndex: 0 } }
+          - { label: train-place-irregulars, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: trainChoice, actionTag: train, stageIndex: 1, selectedValue: place-irregulars } }
+          - { label: sub-action-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: subActionSpaces, actionTag: train, stageIndex: 3 } }
+          - { label: choose-pacify, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: subAction, actionTag: train, stageIndex: 3, selectedValue: pacify } }
+          - { label: max-pacification-levels, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: pacLevels, actionTag: train, stageIndex: 3, selectedValue: 2 } }
+        caps: { capClass: standard256, maxSteps: 5 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       us.airLiftAssault:
         traceLabel: "US Assault, Air Lift, Assault (mass Troops)"

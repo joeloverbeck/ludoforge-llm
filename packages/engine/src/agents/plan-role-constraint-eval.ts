@@ -325,6 +325,9 @@ function materializedStepValue(
   step: CompiledPlanTemplate['steps'][number],
   selectedId: string,
 ): MoveParamValue {
+  if (step.match.selectedValue !== undefined) {
+    return step.match.selectedValue;
+  }
   return step.match.decisionKind === 'chooseNStep' ? [selectedId] : selectedId;
 }
 

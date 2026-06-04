@@ -63,6 +63,7 @@ export function compilePlanTemplateDefinition({
       decisionPath: step.match.decisionPath,
       ...(step.match.actionTag === undefined ? {} : { actionTag: step.match.actionTag }),
       ...(step.match.stageIndex === undefined ? {} : { stageIndex: step.match.stageIndex }),
+      ...(step.match.selectedValue === undefined ? {} : { selectedValue: step.match.selectedValue }),
     },
   }));
 

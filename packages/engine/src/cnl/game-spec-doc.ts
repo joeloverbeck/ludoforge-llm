@@ -834,6 +834,7 @@ export interface GameSpecPlanStepDef {
     readonly decisionPath: string;
     readonly actionTag?: string;
     readonly stageIndex?: number;
+    readonly selectedValue?: string | number | boolean;
   };
 }
 

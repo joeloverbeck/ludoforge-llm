@@ -1270,6 +1270,7 @@ export interface CompiledPlanStepMatch {
   readonly decisionPath: string;
   readonly actionTag?: string;
   readonly stageIndex?: number;
+  readonly selectedValue?: string | number | boolean;
 }
 
 export interface CompiledPlanStep {
@@ -1996,7 +1997,7 @@ export interface ChoiceCompleteRequest {
   readonly reason?: ChoiceIllegalReason;
 }
 
-export type ChoiceTargetKind = 'zone' | 'token';
+export type ChoiceTargetKind = 'zone' | 'token' | 'value';
 
 /**
  * Indicates where a decision value should be placed in the move structure.

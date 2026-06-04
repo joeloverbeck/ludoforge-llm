@@ -1513,6 +1513,7 @@ const CompiledPlanTemplateSchema = z.object({
       decisionPath: StringSchema,
       actionTag: StringSchema.optional(),
       stageIndex: z.number().int().nonnegative().optional(),
+      selectedValue: z.union([StringSchema, z.number(), z.boolean()]).optional(),
     }).strict(),
   }).strict()),
   caps: z.object({
@@ -2228,7 +2229,7 @@ export const ChooseOneContextSchema = z
     seatId: StringSchema,
     decisionKey: StringSchema,
     options: z.array(ChooseOptionSchema),
-    targetKinds: z.array(z.union([z.literal('zone'), z.literal('token')])).optional(),
+    targetKinds: z.array(z.union([z.literal('zone'), z.literal('token'), z.literal('value')])).optional(),
     stageIndex: z.number().int().nonnegative().optional(),
   })
   .strict();
@@ -2239,7 +2240,7 @@ export const ChooseNStepContextSchema = z
     seatId: StringSchema,
     decisionKey: StringSchema,
     options: z.array(ChooseOptionSchema),
-    targetKinds: z.array(z.union([z.literal('zone'), z.literal('token')])).optional(),
+    targetKinds: z.array(z.union([z.literal('zone'), z.literal('token'), z.literal('value')])).optional(),
     stageIndex: z.number().int().nonnegative().optional(),
     selectedSoFar: z.array(MoveParamScalarSchema),
     cardinality: z.object({ min: NumberSchema, max: NumberSchema }).strict(),

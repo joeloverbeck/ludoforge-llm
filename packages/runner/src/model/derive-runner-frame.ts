@@ -1334,7 +1334,7 @@ function deriveChoiceBreadcrumb(
 
 function resolveChoiceTarget(
   value: MoveParamValue,
-  targetKinds: readonly ('zone' | 'token')[],
+  targetKinds: readonly ('zone' | 'token' | 'value')[],
   zonesById: ReadonlyMap<string, RunnerZone>,
   tokens: readonly RunnerToken[],
 ): RunnerChoiceTarget {

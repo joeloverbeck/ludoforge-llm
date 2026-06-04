@@ -5,7 +5,6 @@ import { describe, it } from 'node:test';
 import { planExecutionKey, type PlanExecutionStateStore } from '../../../src/agents/plan-execution.js';
 import { selectPlanControlledDecision } from '../../../src/agents/plan-controller.js';
 import {
-  asDecisionFrameId,
   asSeatId,
   asTurnId,
   type AgentPolicyCatalog,

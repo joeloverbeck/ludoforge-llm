@@ -77,7 +77,7 @@ Each P0 intent below already has a structural witness in `policy-profile-quality
 
 **VC:**
 15. Terror high-pop non-COIN: Terror executes and Opposition (or Support-denial) improves on a legal high-pop target; low-pop Terror present as bad alternative.
-16. LoC-Tax over populated-Support Tax: LoC tax selected; populated-Support tax present and demoted/avoided absent resource crisis.
+16. LoC-Tax over populated-Support Tax: LoC tax selected; populated-Support tax present and demoted/avoided absent resource crisis. Approved 2026-06-04 reassessment: live 009 probing showed Tax can execute when forced, but the full VC profile currently selects `vc.rallySubvert` ahead of Rally/LoC Tax; the profile/YAML gate is retargeted to `210FITLCOMP-010` before 009 resumes fixture promotion.
 17. Ambush-first / Agitation prep (combined or as two if budget allows): Attack+Ambush selected over conventional Attack; near-Coup Agitation prep selected over a flashy irrelevant move.
 
 (Numbering is indicative; the implementing tickets may merge #16/#17 if the curated states overlap, but every faction must reach `executed-outcome` tier on its primary victory engine and ≥1 signature combination. All target files already exist — tickets rewrite them in place rather than creating new files.)
@@ -131,5 +131,5 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-006.md`](../archive/tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
 - [`archive/tickets/210FITLCOMP-007.md`](../archive/tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`archive/tickets/210FITLCOMP-008.md`](../archive/tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
-- [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures (covers §2(15–17))
-- [`tickets/210FITLCOMP-010.md`](../tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual (covers remaining §2(3), §3, §4 AC#7)
+- [`tickets/210FITLCOMP-010.md`](../tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual and the VC Tax-selection profile gate opened by 009 reassessment (covers remaining §2(3), §3, §4 AC#7)
+- [`tickets/210FITLCOMP-009.md`](../tickets/210FITLCOMP-009.md) — Promote VC faction fixtures after the 010 YAML/profile prerequisite lands (covers §2(15–17))

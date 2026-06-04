@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/210FITLCOMP-001.md`
+**Deps**: `archive/tickets/210FITLCOMP-001.md`, `tickets/210FITLCOMP-010.md`
 
 ## Problem
 
@@ -16,6 +16,10 @@ VC signature fixtures assert structurally. Spec 210 §2(15–17) requires execut
 2. They consume `vc-plan-witness-helpers.ts` — structural helpers to be superseded.
 3. Opposition outcome ref: `metric.auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition`; VC margin via `victory.currentMargin.vc` (used in `92-agents.md`). Confirmed.
 4. `nva-attack-ambush-beats-conventional-attack.test.ts` (listed under §2 #17) is allocated to NVA ticket 008, not here.
+
+## Approved Retarget (2026-06-04)
+
+Option 1 was approved after live 009 reassessment found that the current full VC profile cannot honestly satisfy the ticket's LoC-Tax selection acceptance without the YAML/profile owner first fixing the distinction. A curated LoC-guerrilla probe exposed Tax as executable when forced, but the live proposal selected `vc.rallySubvert` ahead of Rally/LoC Tax; the same probe family showed Attack+Ambush and Terror execution are viable fixture targets. Because `92-agents.md` feature/profile work is explicitly out of scope here and owned by `210FITLCOMP-010`, this ticket remains pending and now depends on 010 before returning to the six VC fixture promotions.
 
 ## Architecture Check
 
@@ -56,6 +60,7 @@ Update markers to `@proof-tier: executed-outcome` + `@proof-tier: adversarial`. 
 
 - P1 VC fixtures (`vc-protects-bases-from-nva-infiltrate`, `vc-march-spreads-underground`, `vc-subvert-drops-arvn-patronage`) — deferred / not §2 P0 intents.
 - `92-agents.md` features — ticket 010.
+- Reweighting or adding VC Tax/profile distinctions required for LoC-Tax selection — ticket 010 prerequisite.
 - `nva-attack-ambush-beats-conventional-attack.test.ts` — owned by ticket 008.
 
 ## Acceptance Criteria

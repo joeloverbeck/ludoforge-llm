@@ -58,7 +58,7 @@ Each P0 intent below already has a structural witness in `policy-profile-quality
 2. **Immediate own win** — promote the shared immediate-win witnesses against the current shared-module contract: a legal non-pass root plus a tempting pass setup; assert `shared.immediateWin` is active, the non-pass root is selected, the executed state is replay-identical, and exact self-margin before/after is proven. Assert candidate-local ready self-margin status where candidate trace exists, and assert an executed threshold crossing only where the bounded live fixture actually crosses; do not imply unbounded compound-turn preview beyond Foundations #20.
 3. **Near-Coup concrete swing** — one fixture per shared faction witness: Coup imminent via bounded visible schedule evidence, speculative setup tempting, concrete swing available; assert the selected plan changes the Coup-scored property. `210FITLCOMP-003` owns the bounded schedule correction and the US/ARVN/NVA executed witnesses; the VC executed witness is deferred to `210FITLCOMP-010` because the live VC profile currently selects a no-delta March under the real visible-Coup setup.
 4. **Monsoon paired** — same board with Monsoon false/true; assert Sweep/March setup preferred when legal, and a competent legal fallback (not merely "not Sweep/March") under Monsoon.
-5. **Ally-rival paired** — same tempting ally-helping move, ally far-from-win vs near-win; assert cooperation in the former and throttle in the latter.
+5. **Ally-rival paired** — same ally/rival pressure, ally far-from-win vs near-win; assert cooperation in the former and throttle/suppression in the latter through the live profile's actual owner modules. Approved 2026-06-04 reassessment for `210FITLCOMP-005`: current GameSpecDoc ownership is mixed between `shared.allyRivalThrottle` and faction-specific modules (`us.avoidArvnKingmaking`, `arvn.denyUSIfNearWin`, `nva.vcRivalRisk`, `vc.nvaRivalRisk`, with `vc.denyNvaIfNearWin` also active in the VC near-NVA trace), so the fixtures must prove live behavior rather than overclaim common shared-module ownership.
 
 **US:**
 6. Train/Pacify executes and improves Support (named-feature/token query) on a legal COIN-controlled high-pop target.
@@ -127,7 +127,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-002.md`](../archive/tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
 - [`archive/tickets/210FITLCOMP-003.md`](../archive/tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures for US/ARVN/NVA and correct bounded Coup schedule data (partial §2(3))
 - [`archive/tickets/210FITLCOMP-004.md`](../archive/tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
-- [`tickets/210FITLCOMP-005.md`](../tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
+- [`archive/tickets/210FITLCOMP-005.md`](../archive/tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
 - [`tickets/210FITLCOMP-006.md`](../tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
 - [`tickets/210FITLCOMP-007.md`](../tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))
 - [`tickets/210FITLCOMP-008.md`](../tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))

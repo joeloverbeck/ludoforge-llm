@@ -1,11 +1,48 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertSharedModuleWitness } from './shared-doctrine-witness-helpers.js';
+import { assertFitlAllyRivalLiveCase } from './ally-rival-competence-helpers.js';
+
+const TEST_FILE = fileURLToPath(import.meta.url);
+const SEED = 210_005_01;
 
 describe('US shared.allyRivalThrottle witness', () => {
-  it('compiles, binds, and scores the ally-rival throttle doctrine', () => {
-    assertSharedModuleWitness(fileURLToPath(import.meta.url), 'us', 'allyRivalThrottle');
+  it('keeps ARVN-helping templates eligible while ARVN is far from victory', () => {
+    assertFitlAllyRivalLiveCase({
+      testFile: TEST_FILE,
+      profileId: 'us-baseline',
+      seatId: 'us',
+      playerIndex: 0,
+      seed: SEED,
+      prepareState: (_def, state) => state,
+      expectedRootStableMoveKey: 'sweep|{}|false|operation',
+      expectedTemplateId: 'us.sweepAirStrike',
+      inactiveDoctrines: ['us.avoidArvnKingmaking', 'shared.allyRivalThrottle'],
+      unfilteredTemplates: ['us.trainPacify', 'us.patrolAdvise'],
+    });
+  });
+
+  it('suppresses ARVN-helping templates when ARVN is near victory', () => {
+    assertFitlAllyRivalLiveCase({
+      testFile: TEST_FILE,
+      profileId: 'us-baseline',
+      seatId: 'us',
+      playerIndex: 0,
+      seed: SEED,
+      prepareState: (_def, state) => ({
+        ...state,
+        globalVars: { ...state.globalVars, patronage: 29 },
+      }),
+      expectedRootStableMoveKey: 'sweep|{}|false|operation',
+      expectedTemplateId: 'us.sweepAirStrike',
+      activeDoctrines: ['us.avoidArvnKingmaking'],
+      filteredTemplates: [
+        { templateId: 'us.trainPacify', gatedBy: ['us.avoidArvnKingmaking'], reason: 'suppressed' },
+        { templateId: 'us.patrolAdvise', gatedBy: ['us.avoidArvnKingmaking'], reason: 'suppressed' },
+      ],
+    });
   });
 });

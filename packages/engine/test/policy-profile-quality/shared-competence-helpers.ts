@@ -89,7 +89,7 @@ export interface FitlMonsoonPairCase {
   readonly monsoonOutcomeAssertions?: readonly OutcomeDeltaAssertion[];
 }
 
-interface FitlRunnableCase {
+export interface FitlRunnableCase {
   readonly seatId: string;
   readonly playerIndex: number;
   readonly seed: number;
@@ -396,11 +396,11 @@ function withNonCoupLookahead(def: GameDef, state: GameState): GameState {
   };
 }
 
-function loadFitlProductionDef(): ValidatedGameDef {
+export function loadFitlProductionDef(): ValidatedGameDef {
   return assertValidatedGameDef(getFitlProductionFixture().gameDef);
 }
 
-function runFitlCompetenceCase(def: ValidatedGameDef, input: FitlRunnableCase): CompetenceRunResult {
+export function runFitlCompetenceCase(def: ValidatedGameDef, input: FitlRunnableCase): CompetenceRunResult {
   const baseState = initialState(def, input.seed, PLAYER_COUNT).state;
   const prepared = setSingleEligibleFactionTurn(
     def,
@@ -562,7 +562,7 @@ function assertPolicySelectedRoot(
   );
 }
 
-function decisionStableKey(def: GameDef, decision: Decision): string {
+export function decisionStableKey(def: GameDef, decision: Decision): string {
   if (decision.kind !== 'actionSelection') {
     return `${decision.kind}:${JSON.stringify(decision)}`;
   }

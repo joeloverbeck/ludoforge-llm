@@ -126,7 +126,7 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-001.md`](../archive/tickets/210FITLCOMP-001.md) — Establish promotion pattern + shared competence helper; promote block-current-leader ×4 (covers §2(1))
 - [`archive/tickets/210FITLCOMP-002.md`](../archive/tickets/210FITLCOMP-002.md) — Promote shared immediate-win fixtures ×4 (covers §2(2))
 - [`archive/tickets/210FITLCOMP-003.md`](../archive/tickets/210FITLCOMP-003.md) — Promote shared near-Coup concrete-swing fixtures for US/ARVN/NVA and correct bounded Coup schedule data (partial §2(3))
-- [`tickets/210FITLCOMP-004.md`](../tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
+- [`archive/tickets/210FITLCOMP-004.md`](../archive/tickets/210FITLCOMP-004.md) — Promote shared Monsoon-paired fixtures ×4 (covers §2(4))
 - [`tickets/210FITLCOMP-005.md`](../tickets/210FITLCOMP-005.md) — Promote shared ally-rival-paired fixtures ×4 + rival-specific; preserve the shared structural helper until the VC near-Coup residual lands (covers §2(5))
 - [`tickets/210FITLCOMP-006.md`](../tickets/210FITLCOMP-006.md) — Promote US faction fixtures (covers §2(6–8))
 - [`tickets/210FITLCOMP-007.md`](../tickets/210FITLCOMP-007.md) — Promote ARVN faction fixtures (covers §2(9–11))

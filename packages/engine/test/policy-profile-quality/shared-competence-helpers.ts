@@ -36,6 +36,7 @@ const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|false|pass';
 const LEADER_OPTION_DELTA_REF = 'preview.option.delta.victory.currentMargin.role:currentLeader';
 const SELF_MARGIN_REF = 'victoryCurrentMargin.currentMargin.self';
 const NEAR_COUP_DOCTRINE_ID = 'shared.nearCoupConcreteSwing';
+const MONSOON_DOCTRINE_ID = 'shared.monsoonOperationalRestriction';
 
 export type FitlProfileId = (typeof PROFILE_IDS)[number];
 
@@ -70,6 +71,22 @@ export interface FitlNearCoupCase {
   readonly expectedRootStableMoveKey: string;
   readonly outcomeAssertions: readonly OutcomeDeltaAssertion[];
   readonly prepareState?: (def: GameDef, state: GameState) => GameState;
+}
+
+export interface FitlMonsoonPairCase {
+  readonly testFile: string;
+  readonly profileId: FitlProfileId;
+  readonly seatId: string;
+  readonly playerIndex: number;
+  readonly seed: number;
+  readonly clearRootStableMoveKey: string;
+  readonly clearTemplateId: string;
+  readonly monsoonRootStableMoveKey: string;
+  readonly monsoonTemplateId: string;
+  readonly suppressedTemplateIds: readonly string[];
+  readonly prepareState?: (def: GameDef, state: GameState) => GameState;
+  readonly clearOutcomeAssertions?: readonly OutcomeDeltaAssertion[];
+  readonly monsoonOutcomeAssertions?: readonly OutcomeDeltaAssertion[];
 }
 
 interface FitlRunnableCase {
@@ -203,6 +220,68 @@ export function assertFitlNearCoupCase(input: FitlNearCoupCase): void {
   assert.ok(outcomeDeltas.length > 0, 'expected near-Coup outcome assertions');
 }
 
+export function assertFitlMonsoonPairCase(input: FitlMonsoonPairCase): void {
+  const def = loadFitlProductionDef();
+  const runClear = (): CompetenceRunResult => runFitlCompetenceCase(def, {
+    ...input,
+    prepareState: (caseDef, state) => withNonCoupLookahead(
+      caseDef,
+      input.prepareState === undefined ? state : input.prepareState(caseDef, state),
+    ),
+  });
+  const runMonsoon = (): CompetenceRunResult => runFitlCompetenceCase(def, {
+    ...input,
+    prepareState: (caseDef, state) => withCoupLookahead(
+      caseDef,
+      input.prepareState === undefined ? state : input.prepareState(caseDef, state),
+    ),
+  });
+  const clear = runClear();
+  const monsoon = runMonsoon();
+
+  if (input.clearOutcomeAssertions !== undefined) {
+    assertOutcomeDeltas({
+      def,
+      before: clear.preState,
+      after: clear.postState,
+      assertions: input.clearOutcomeAssertions,
+    });
+  }
+  if (input.monsoonOutcomeAssertions !== undefined) {
+    assertOutcomeDeltas({
+      def,
+      before: monsoon.preState,
+      after: monsoon.postState,
+      assertions: input.monsoonOutcomeAssertions,
+    });
+  }
+
+  emitPolicyProfileQualityRecord({
+    file: input.testFile,
+    variantId: input.profileId,
+    seed: input.seed,
+    passed: canonicalStateChanged(clear.preState, clear.postState)
+      && canonicalStateChanged(monsoon.preState, monsoon.postState),
+    stopReason: monsoon.stopReason,
+    decisions: clear.decisions.length + monsoon.decisions.length,
+  });
+
+  assertMonsoonClearBranch(def, clear, input);
+  assertMonsoonRestrictedBranch(def, monsoon, input);
+  assertReplayIdentity({
+    def,
+    runFixture: runClear,
+    ...(input.clearOutcomeAssertions === undefined ? {} : { outcomeDeltaAssertions: input.clearOutcomeAssertions }),
+  });
+  assertReplayIdentity({
+    def,
+    runFixture: runMonsoon,
+    ...(input.monsoonOutcomeAssertions === undefined ? {} : { outcomeDeltaAssertions: input.monsoonOutcomeAssertions }),
+  });
+  assertPreviewStatuses({ result: clear });
+  assertPreviewStatuses({ result: monsoon });
+}
+
 export function withEveryZoneSupportMarker(def: GameDef, state: GameState, support: string): GameState {
   return {
     ...state,
@@ -291,6 +370,26 @@ export function withCoupLookahead(def: GameDef, state: GameState): GameState {
           id: asTokenId(`spec-210-near-coup-lookahead-${String(coupCard.id)}`),
           type: 'card',
           props: { cardId: String(coupCard.id) },
+        },
+      ],
+    },
+  };
+}
+
+function withNonCoupLookahead(def: GameDef, state: GameState): GameState {
+  const nonCoupCard = def.eventDecks
+    ?.flatMap((deck) => deck.cards)
+    .find((card) => !(card.tags ?? []).includes('coup'));
+  assert.ok(nonCoupCard, 'expected FITL event deck to contain a non-Coup card');
+  return {
+    ...state,
+    zones: {
+      ...state.zones,
+      'lookahead:none': [
+        {
+          id: asTokenId(`spec-210-clear-lookahead-${String(nonCoupCard.id)}`),
+          type: 'card',
+          props: { cardId: String(nonCoupCard.id) },
         },
       ],
     },
@@ -393,6 +492,55 @@ function assertSelectedSelfMarginTrace(result: CompetenceRunResult, stableMoveKe
 
 function assertImmediateWinTrace(def: GameDef, result: CompetenceRunResult, expectedRootStableMoveKey: string): void {
   assertPolicySelectedRoot(def, result, 'shared.immediateWin', expectedRootStableMoveKey);
+}
+
+function assertMonsoonClearBranch(
+  def: GameDef,
+  result: CompetenceRunResult,
+  input: FitlMonsoonPairCase,
+): void {
+  assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected clear branch to change state');
+  assert.equal(result.stopReason, 'turnCompleted');
+  assert.ok(
+    !result.agentDecision?.plan?.activeDoctrines.includes(MONSOON_DOCTRINE_ID),
+    `expected clear branch to leave ${MONSOON_DOCTRINE_ID} inactive`,
+  );
+  assertPlanTraceChain({
+    def,
+    result,
+    expected: {
+      eligibleTemplate: input.clearTemplateId,
+      selectedRootStableMoveKey: input.clearRootStableMoveKey,
+    },
+  });
+}
+
+function assertMonsoonRestrictedBranch(
+  def: GameDef,
+  result: CompetenceRunResult,
+  input: FitlMonsoonPairCase,
+): void {
+  assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected Monsoon branch to change state');
+  assert.equal(result.stopReason, 'turnCompleted');
+  assert.notEqual(
+    input.monsoonRootStableMoveKey,
+    input.clearRootStableMoveKey,
+    'expected Monsoon fallback root to differ from the clear Sweep/March root',
+  );
+  assertPlanTraceChain({
+    def,
+    result,
+    expected: {
+      activeDoctrine: MONSOON_DOCTRINE_ID,
+      eligibleTemplate: input.monsoonTemplateId,
+      selectedRootStableMoveKey: input.monsoonRootStableMoveKey,
+    },
+  });
+  const filteredByMonsoon = result.agentDecision?.plan?.filteredOutTemplates
+    .filter((entry) => entry.gatedBy.includes(MONSOON_DOCTRINE_ID))
+    .map((entry) => entry.templateId)
+    .sort() ?? [];
+  assert.deepEqual(filteredByMonsoon, [...input.suppressedTemplateIds].sort());
 }
 
 function assertPolicySelectedRoot(

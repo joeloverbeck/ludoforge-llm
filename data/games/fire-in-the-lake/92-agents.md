@@ -157,7 +157,7 @@ agents:
           lte:
             - scheduleLowerBound:
                 ref: schedule.distance.toBoundary.coupEntry.cards
-            - 2
+            - 1
       aid:
         type: number
         expr:
@@ -3094,6 +3094,7 @@ agents:
           - nva.locOccupationBeforeCoup
           - vc.marchSubvert
           - vc.marchAmbushFromLoc
+          - vc.marchSpread
       arvnPursueProjectedMargin:
         traceLabel: "ARVN pursue projected margin"
         when: true
@@ -3221,7 +3222,7 @@ agents:
           scopes: [move]
           actionTags: [sweep, assault]
         priority:
-          tier: 60
+          tier: 80
         selectors:
           - { role: exposeTarget, selectorId: arvn.sweepToExposeSpace }
           - { role: removalTarget, selectorId: arvn.raidRemovalTarget }
@@ -3331,6 +3332,7 @@ agents:
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
         enablesPlanTemplates:
+          - us.sweepAirStrike
           - us.trainPacify
           - us.patrolAdvise
           - us.trainAdvise

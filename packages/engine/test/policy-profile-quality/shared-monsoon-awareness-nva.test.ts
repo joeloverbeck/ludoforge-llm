@@ -1,11 +1,37 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { assertMonsoonAwarenessWitness } from './shared-doctrine-witness-helpers.js';
+import { assertFitlMonsoonPairCase } from './shared-competence-helpers.js';
 
 describe('NVA shared monsoon-awareness witness', () => {
-  it('compiles the monsoon lifecycle condition consumed by the profile witness surface', () => {
-    assertMonsoonAwarenessWitness(fileURLToPath(import.meta.url), 'nva');
+  it('selects March control when clear and a competent fallback under Monsoon', () => {
+    assertFitlMonsoonPairCase({
+      testFile: fileURLToPath(import.meta.url),
+      profileId: 'nva-baseline',
+      seatId: 'nva',
+      playerIndex: 2,
+      seed: 1,
+      clearRootStableMoveKey: 'march|{}|false|operation',
+      clearTemplateId: 'nva.marchControl',
+      monsoonRootStableMoveKey: 'rally|{}|false|operation',
+      monsoonTemplateId: 'nva.rallyTrail',
+      suppressedTemplateIds: [
+        'nva.locOccupationBeforeCoup',
+        'nva.marchAmbush',
+        'nva.marchControl',
+        'nva.marchInfiltrate',
+        'nva.marchInfiltrateControl',
+      ],
+      monsoonOutcomeAssertions: [
+        {
+          label: 'Trail improved by fallback Rally',
+          query: { kind: 'globalVar', name: 'trail' },
+          delta: { exact: 1 },
+        },
+      ],
+    });
   });
 });

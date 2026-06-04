@@ -36,23 +36,23 @@ export const createFitlCompetenceReference = (): FitlCompetenceReference => {
     previewRun: () => runFitlPreviewMicroturn(def),
     planExpectation: {
       activeDoctrine: 'us.buildSupport',
-      eligibleTemplate: 'us.trainAdvise',
-      selectedRootStableMoveKey: 'train|{}|false|operation',
+      eligibleTemplate: 'us.sweepAirStrike',
+      selectedRootStableMoveKey: 'sweep|{}|false|operation',
       compoundAvailability: { kind: 'provisional', reason: 'partial-grant' },
       roleBinding: [
-        { role: 'trainSpace', status: 'ready', selectedId: 'saigon:none' },
-        { role: 'adviseSpace', status: 'ready', selectedId: 'an-loc:none' },
+        { role: 'sweepSpace', status: 'ready', selectedId: 'available-VC:none' },
+        { role: 'airStrikeSpace', status: 'ready', selectedId: '__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_coups_pool:none' },
       ],
       microturnMatch: [
         {
-          expectedStep: 'train-support-space',
-          matchedRole: 'trainSpace',
+          expectedStep: 'sweep-expose-space',
+          matchedRole: 'sweepSpace',
           match: 'fallback',
           fallbackReasonKind: 'stableFrontierTieBreakFallback',
         },
         {
-          expectedStep: 'advise-force-multiplier',
-          matchedRole: 'adviseSpace',
+          expectedStep: 'air-strike-space',
+          matchedRole: 'airStrikeSpace',
           match: 'fallback',
           fallbackReasonKind: 'stableFrontierTieBreakFallback',
         },
@@ -63,34 +63,34 @@ export const createFitlCompetenceReference = (): FitlCompetenceReference => {
       {
         label: 'arvn preview margin improves',
         query: { kind: 'victoryStandingMargin', seat: 'arvn' },
-        delta: { exact: 2 },
+        delta: { exact: 1 },
       },
       {
-        label: 'arvn preview rank improves',
+        label: 'arvn preview rank remains stable',
         query: { kind: 'victoryStandingRank', seat: 'arvn' },
-        delta: { exact: -1 },
+        delta: { exact: 0 },
       },
     ],
     previewRefs: [
       {
         refId: PREVIEW_MARGIN_REF,
-        stableMoveKey: 'chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:"rangers"',
+        stableMoveKey: 'chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:"pleiku-darlac:none"',
         status: 'ready',
       },
       {
         refId: PREVIEW_MARGIN_REF,
-        stableMoveKey: 'chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:"arvn-cubes"',
+        stableMoveKey: 'chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:"an-loc:none"',
         status: 'ready',
       },
     ],
     previewCandidates: [
       {
-        stableMoveKey: 'chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:"rangers"',
+        stableMoveKey: 'chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:"pleiku-darlac:none"',
         previewOutcome: 'ready',
         selectionReason: 'scored',
       },
       {
-        stableMoveKey: 'chooseOne:decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]:"arvn-cubes"',
+        stableMoveKey: 'chooseOne:decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]:"an-loc:none"',
         previewOutcome: 'ready',
         selectionReason: 'gated',
       },

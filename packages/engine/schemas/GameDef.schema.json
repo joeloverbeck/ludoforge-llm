@@ -2859,7 +2859,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
@@ -2889,7 +2889,7 @@
                     "$ref": "#/definitions/anon_1abb190e"
                   },
                   "expr": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "dependencies": {
                     "$ref": "#/definitions/anon_514bbce9"
@@ -2922,12 +2922,12 @@
                     "$ref": "#/definitions/anon_4682db72"
                   },
                   "of": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
@@ -2972,7 +2972,7 @@
                   "where": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
@@ -2988,7 +2988,7 @@
                               "$ref": "#/definitions/anon_4682db72"
                             },
                             "value": {
-                              "$ref": "#/definitions/anon_84942a06"
+                              "$ref": "#/definitions/anon_84dab054"
                             },
                             "weight": {
                               "$ref": "#/definitions/anon_e7c99bd4"
@@ -3026,7 +3026,7 @@
                   "minImpact": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
@@ -3066,7 +3066,7 @@
                     "$ref": "#/definitions/anon_4682db72"
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "applies": {
                     "$ref": "#/definitions/anon_8743dba2"
@@ -3082,7 +3082,7 @@
                       "value": {
                         "allOf": [
                           {
-                            "$ref": "#/definitions/anon_84942a06"
+                            "$ref": "#/definitions/anon_84dab054"
                           }
                         ]
                       }
@@ -3119,7 +3119,7 @@
                                 ]
                               },
                               "value": {
-                                "$ref": "#/definitions/anon_84942a06"
+                                "$ref": "#/definitions/anon_84dab054"
                               },
                               "weight": {
                                 "$ref": "#/definitions/anon_e7c99bd4"
@@ -3217,7 +3217,7 @@
                     }
                   },
                   "when": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "severity": {
                     "$ref": "#/definitions/anon_1c93aa90"
@@ -3225,7 +3225,7 @@
                   "penalty": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
@@ -3286,7 +3286,7 @@
                           "$ref": "#/definitions/anon_4682db72"
                         },
                         "condition": {
-                          "$ref": "#/definitions/anon_84942a06"
+                          "$ref": "#/definitions/anon_84dab054"
                         },
                         "onViolation": {
                           "type": "string",
@@ -3298,7 +3298,7 @@
                         "demotePenalty": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/anon_84942a06"
+                              "$ref": "#/definitions/anon_84dab054"
                             }
                           ]
                         }
@@ -3322,21 +3322,21 @@
                         "when": {
                           "allOf": [
                             {
-                              "$ref": "#/definitions/anon_84942a06"
+                              "$ref": "#/definitions/anon_84dab054"
                             }
                           ]
                         },
                         "value": {
-                          "$ref": "#/definitions/anon_84942a06"
+                          "$ref": "#/definitions/anon_84dab054"
                         },
                         "weight": {
-                          "$ref": "#/definitions/anon_84942a06"
+                          "$ref": "#/definitions/anon_84dab054"
                         },
                         "fallback": {
                           "type": "object",
                           "properties": {
                             "contribution": {
-                              "$ref": "#/definitions/anon_84942a06"
+                              "$ref": "#/definitions/anon_84dab054"
                             }
                           },
                           "required": [
@@ -3421,7 +3421,7 @@
                   "gainValue": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   }
@@ -3454,15 +3454,15 @@
                   "when": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
                   "weight": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "value": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "hasPreviewRef": {
                     "$ref": "#/definitions/anon_def33f2f"
@@ -3564,7 +3564,7 @@
                   "value": {
                     "allOf": [
                       {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       }
                     ]
                   },
@@ -3595,13 +3595,13 @@
                 "type": "object",
                 "properties": {
                   "target": {
-                    "$ref": "#/definitions/anon_84942a06"
+                    "$ref": "#/definitions/anon_84dab054"
                   },
                   "proximity": {
                     "type": "object",
                     "properties": {
                       "current": {
-                        "$ref": "#/definitions/anon_84942a06"
+                        "$ref": "#/definitions/anon_84dab054"
                       },
                       "threshold": {
                         "$ref": "#/definitions/anon_c0e4ebfe"
@@ -8560,7 +8560,7 @@
       ],
       "additionalProperties": false
     },
-    "anon_84942a06": {
+    "anon_84dab054": {
       "anyOf": [
         {
           "type": "object",
@@ -9087,8 +9087,10 @@
                       "type": "string",
                       "enum": [
                         "victoryCurrentMarginSelf",
+                        "victoryCurrentMarginRole",
                         "victoryCurrentRankSelf",
                         "deltaVictoryCurrentMarginSelf",
+                        "deltaVictoryCurrentMarginRole",
                         "globalVar",
                         "perPlayerVarSelf",
                         "derivedMetric",
@@ -9199,7 +9201,7 @@
                     "key": {
                       "allOf": [
                         {
-                          "$ref": "#/definitions/anon_84942a06"
+                          "$ref": "#/definitions/anon_84dab054"
                         }
                       ]
                     },
@@ -9643,7 +9645,7 @@
             "args": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/anon_84942a06"
+                "$ref": "#/definitions/anon_84dab054"
               }
             }
           },
@@ -9667,7 +9669,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_84942a06"
+                  "$ref": "#/definitions/anon_84dab054"
                 }
               ]
             },
@@ -9836,7 +9838,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_84942a06"
+                  "$ref": "#/definitions/anon_84dab054"
                 }
               ]
             },
@@ -9916,7 +9918,7 @@
               ]
             },
             "expr": {
-              "$ref": "#/definitions/anon_84942a06"
+              "$ref": "#/definitions/anon_84dab054"
             },
             "aggOp": {
               "type": "string",
@@ -9958,7 +9960,7 @@
                   "$ref": "#/definitions/anon_4682db72"
                 },
                 {
-                  "$ref": "#/definitions/anon_84942a06"
+                  "$ref": "#/definitions/anon_84dab054"
                 }
               ]
             },
@@ -9981,7 +9983,7 @@
               "const": "tokenProp"
             },
             "token": {
-              "$ref": "#/definitions/anon_84942a06"
+              "$ref": "#/definitions/anon_84dab054"
             },
             "prop": {
               "$ref": "#/definitions/anon_4682db72"

@@ -8,10 +8,19 @@
     "evaluatedCandidateCount": 2,
     "completionPolicyFallbackCount": 0,
     "refIds": [
+      "preview.option.delta.victory.currentMargin.role:currentLeader",
       "preview.option.delta.victory.currentMargin.self"
     ],
     "unknownRefs": [],
     "readyRefStats": {
+      "preview.option.delta.victory.currentMargin.role:currentLeader": {
+        "readyCount": 2,
+        "distinctValueCount": 1,
+        "min": 0,
+        "max": 0,
+        "range": 0,
+        "allReadyValuesEqual": true
+      },
       "preview.option.delta.victory.currentMargin.self": {
         "readyCount": 2,
         "distinctValueCount": 2,
@@ -21,7 +30,7 @@
         "allReadyValuesEqual": false
       }
     },
-    "utility": "differentiating",
+    "utility": "lowInformation",
     "widenedBecauseUniform": false,
     "outcomeBreakdown": {
       "ready": 2,
@@ -38,7 +47,7 @@
       "unknownFailed": 0
     },
     "coverage": {
-      "requestedRefCount": 1,
+      "requestedRefCount": 2,
       "evaluatedRootOptionCount": 2,
       "readyRootOptionCount": 2,
       "unavailableRootOptionCount": 0,

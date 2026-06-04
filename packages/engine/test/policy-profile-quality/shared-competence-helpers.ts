@@ -32,7 +32,7 @@ import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js'
 
 const PLAYER_COUNT = 4;
 const PROFILE_IDS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|false|pass';
+const PASS_TRAP_STABLE_MOVE_KEY = 'pass|{}|noCompound|false|pass';
 const LEADER_OPTION_DELTA_REF = 'preview.option.delta.victory.currentMargin.role:currentLeader';
 const SELF_MARGIN_REF = 'victoryCurrentMargin.currentMargin.self';
 const NEAR_COUP_DOCTRINE_ID = 'shared.nearCoupConcreteSwing';

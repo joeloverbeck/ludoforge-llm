@@ -12,11 +12,11 @@ The `shared-near-coup-concrete-swing-{us,arvn,nva,vc}.test.ts` witnesses assert 
 
 Live Foundations reassessment found an authored data gap: `distanceToCoup` reads the actual hidden-deck `schedule.distance.toBoundary.coupEntry.cards` ref and falls back to `999`, so `condition.coupImminent` cannot activate in the production observer state. `monsoonNow` already uses the bounded lower-bound schedule signal. User approved option 1 on 2026-06-03: repair the GameSpecDoc data in this ticket, then promote the witnesses.
 
-Late boundary reset: the approved data correction plus real FITL Coup-card lookahead produced executed witnesses for US/ARVN/NVA, but the VC witness selected `march|{}|false|operation` with no Coup-scored margin/Aid delta across base, active-support, passive-opposition, and active-opposition seed scans. User approved option 1 on 2026-06-03: close this ticket on the proven US/ARVN/NVA slice and move the VC executed-outcome gap to `tickets/210FITLCOMP-010.md` as the gated YAML/profile-feature owner.
+Late boundary reset: the approved data correction plus real FITL Coup-card lookahead produced executed witnesses for US/ARVN/NVA, but the VC witness selected `march|{}|false|operation` with no Coup-scored margin/Aid delta across base, active-support, passive-opposition, and active-opposition seed scans. User approved option 1 on 2026-06-03: close this ticket on the proven US/ARVN/NVA slice and move the VC executed-outcome gap to `archive/tickets/210FITLCOMP-010.md` as the gated YAML/profile-feature owner.
 
 ## Assumption Reassessment (2026-06-03)
 
-1. The four fixtures exist, tagged `architectural-invariant`, binding `concreteCoupSwing` (scoreGroupId `concreteCoupSwing`). US/ARVN/NVA can be promoted here; VC remains structural until `tickets/210FITLCOMP-010.md`.
+1. The four fixtures exist, tagged `architectural-invariant`, binding `concreteCoupSwing` (scoreGroupId `concreteCoupSwing`). US/ARVN/NVA can be promoted here; VC remains structural until `archive/tickets/210FITLCOMP-010.md`.
 2. Coup proximity must use the bounded lower-bound schedule signal for profile-quality decisions under hidden-deck visibility. The current `distanceToCoup` actual-distance fallback to `999` is too conservative for this doctrine and prevents the executed proof. Correct in `92-agents.md`.
 3. Promotion pattern + primitives established by 001.
 
@@ -35,14 +35,14 @@ First update `data/games/fire-in-the-lake/92-agents.md` so `distanceToCoup` / `c
 
 ### 2. Defer the VC executed witness to gated YAML/profile work
 
-Keep `shared-near-coup-concrete-swing-vc.test.ts` structural in this ticket. `tickets/210FITLCOMP-010.md` owns the fixture-justified YAML/profile change needed for VC to select and execute a near-Coup concrete swing rather than a no-delta March.
+Keep `shared-near-coup-concrete-swing-vc.test.ts` structural in this ticket. `archive/tickets/210FITLCOMP-010.md` owns the fixture-justified YAML/profile change needed for VC to select and execute a near-Coup concrete swing rather than a no-delta March.
 
 ## Files to Touch
 
 - `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-us.test.ts` (modify)
 - `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-arvn.test.ts` (modify)
 - `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-nva.test.ts` (modify)
-- `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.ts` (verified structural, deferred to `tickets/210FITLCOMP-010.md`)
+- `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.ts` (verified structural, deferred to `archive/tickets/210FITLCOMP-010.md`)
 - `packages/engine/test/policy-profile-quality/shared-competence-helpers.ts` (read — created by 001)
 - `data/games/fire-in-the-lake/92-agents.md` (modify — bounded lower-bound schedule data correction)
 
@@ -50,7 +50,7 @@ Keep `shared-near-coup-concrete-swing-vc.test.ts` structural in this ticket. `ti
 
 - Other shared intents and faction fixtures.
 - Speculative `92-agents.md` feature additions — ticket 010. The bounded lower-bound schedule correction is in scope because it directly blocks `coupImminent`.
-- VC near-Coup executed-outcome promotion — deferred to `tickets/210FITLCOMP-010.md` after live proof showed the current VC profile selects a no-delta March under the real visible-Coup setup.
+- VC near-Coup executed-outcome promotion — deferred to `archive/tickets/210FITLCOMP-010.md` after live proof showed the current VC profile selects a no-delta March under the real visible-Coup setup.
 - Adding shared primitives to `shared-competence-helpers.ts` (keep curated states inline to avoid collision with 002/004/005).
 
 ## Acceptance Criteria
@@ -72,7 +72,7 @@ Keep `shared-near-coup-concrete-swing-vc.test.ts` structural in this ticket. `ti
 ### New/Modified Tests
 
 1. `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-{us,arvn,nva}.test.ts` — promoted.
-2. `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.ts` — verified structural; executed promotion deferred to `tickets/210FITLCOMP-010.md`.
+2. `packages/engine/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.ts` — verified structural; executed promotion deferred to `archive/tickets/210FITLCOMP-010.md`.
 
 ### Commands
 
@@ -83,16 +83,18 @@ Keep `shared-near-coup-concrete-swing-vc.test.ts` structural in this ticket. `ti
 
 Completed: 2026-06-03
 
+Outcome amended: 2026-06-04 -- archive-path cleanup after `210FITLCOMP-010` completed and moved to `archive/tickets/`.
+
 What landed:
 - Corrected `data/games/fire-in-the-lake/92-agents.md` so `distanceToCoup` uses explicit `scheduleLowerBound` on `schedule.distance.toBoundary.coupEntry.cards`, preserving hidden-deck visibility while allowing current/next visible Coup evidence.
 - Kept `coupImminent` at `<= 1`: current or next visible Coup activates near-Coup, while the no-visible-Coup partial lower-bound row (`2`) remains non-imminent.
 - Added `assertFitlNearCoupCase` and real FITL Coup-card lookahead support to `shared-competence-helpers.ts`.
 - Promoted `shared-near-coup-concrete-swing-{us,arvn,nva}.test.ts` to executed-outcome + adversarial witnesses. Each proves `shared.nearCoupConcreteSwing` is active, the selected root is published, pass is rejected, replay identity holds, and the executed state changes a Coup-scored margin.
-- Left `shared-near-coup-concrete-swing-vc.test.ts` structural. Live evidence showed the current VC profile selects `march|{}|false|operation` with no Coup-scored margin/Aid delta under the real visible-Coup setup. `tickets/210FITLCOMP-010.md` now owns the gated YAML/profile follow-up and eventual VC promotion.
+- Left `shared-near-coup-concrete-swing-vc.test.ts` structural. Live evidence showed the current VC profile selects `march|{}|false|operation` with no Coup-scored margin/Aid delta under the real visible-Coup setup. `archive/tickets/210FITLCOMP-010.md` now owns the gated YAML/profile follow-up and eventual VC promotion.
 - Updated the parent spec and `tickets/210FITLCOMP-005.md` so helper deletion waits for the VC residual.
 
 Deviations from original plan:
-- Original draft said ×4 promotion. User-approved option 1 narrowed this ticket to US/ARVN/NVA plus the GameSpecDoc schedule correction, with VC deferred to `tickets/210FITLCOMP-010.md`.
+- Original draft said ×4 promotion. User-approved option 1 narrowed this ticket to US/ARVN/NVA plus the GameSpecDoc schedule correction, with VC deferred to `archive/tickets/210FITLCOMP-010.md`.
 
 Verification:
 - `pnpm -F @ludoforge/engine build` — passed.

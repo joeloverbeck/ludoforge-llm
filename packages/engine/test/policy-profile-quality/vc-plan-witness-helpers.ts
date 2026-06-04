@@ -47,6 +47,30 @@ export const actionDecision = (actionId: string): Extract<Decision, { readonly k
   move: { actionId: asActionId(actionId), params: {} },
 });
 
+export const compoundActionDecision = (
+  actionId: string,
+  specialActionId: string,
+  compound?: {
+    readonly timing?: 'before' | 'during' | 'after';
+    readonly insertAfterStage?: number;
+    readonly replaceRemainingStages?: boolean;
+  },
+): Extract<Decision, { readonly kind: 'actionSelection' }> => ({
+  kind: 'actionSelection',
+  actionId: asActionId(actionId),
+  move: {
+    actionId: asActionId(actionId),
+    params: {},
+    actionClass: 'operationPlusSpecialActivity',
+    compound: {
+      specialActivity: { actionId: asActionId(specialActionId), params: {} },
+      timing: compound?.timing ?? 'after',
+      ...(compound?.insertAfterStage === undefined ? {} : { insertAfterStage: compound.insertAfterStage }),
+      ...(compound?.replaceRemainingStages === undefined ? {} : { replaceRemainingStages: compound.replaceRemainingStages }),
+    },
+  },
+});
+
 export const proposeVcPlan = (
   fixture: VcPlanFixture,
   actionIds: readonly string[],
@@ -59,6 +83,20 @@ export const proposeVcPlan = (
   profile: fixture.profile,
   catalog: fixture.def.agents!,
   actionDecisions: actionIds.map(actionDecision),
+});
+
+export const proposeVcPlanFromDecisions = (
+  fixture: VcPlanFixture,
+  actionDecisions: readonly Extract<Decision, { readonly kind: 'actionSelection' }>[],
+  state: GameState = fixture.state,
+): PlanProposalResult => proposeAdvisoryTurnPlan({
+  def: fixture.def,
+  state,
+  seatId: 'vc',
+  playerId: asPlayerId(3),
+  profile: fixture.profile,
+  catalog: fixture.def.agents!,
+  actionDecisions,
 });
 
 export const requireAlternative = (

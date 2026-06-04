@@ -1869,6 +1869,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: supportInfiltration
@@ -2005,6 +2009,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: arvnCubeDisruption
@@ -3621,6 +3629,10 @@ agents:
               - { id: surgicalRemoval, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallyTax
+          - vc.marchAmbushFromLoc
+          - vc.attackAmbush
       vc.denyNvaIfNearWin:
         traceLabel: "VC deny NVA if near win"
         when: true

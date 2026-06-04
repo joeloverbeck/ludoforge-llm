@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/210FITLCOMP-001.md`, `tickets/210FITLCOMP-010.md`
+**Deps**: `archive/tickets/210FITLCOMP-001.md`, `archive/tickets/210FITLCOMP-010.md`
 
 ## Problem
 

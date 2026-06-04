@@ -19,7 +19,7 @@ This prerequisite makes the promotion surface true before `001` rewrites the fou
 
 1. The generic competence helper can remain game-agnostic by accepting an optional canonical `bootstrapState` and then using normal kernel publication/application APIs. This preserves FOUNDATIONS #1 and #5.
 2. The block-leader doctrine gap is FITL agent data behavior, not an engine rule gap: `shared.blockCurrentLeader` already compiles and activates, but current profile/YAML scoring does not force an executed margin-reducing denial in three faction cases. Any behavior tuning belongs in `data/games/fire-in-the-lake/92-agents.md` under FOUNDATIONS #2.
-3. `tickets/210FITLCOMP-010.md` remains the series-level bucket for later conditional §3 feature additions, but this narrower prerequisite owns the block-current-leader gap discovered before `001` can honestly close.
+3. `archive/tickets/210FITLCOMP-010.md` remains the series-level bucket for later conditional §3 feature additions, but this narrower prerequisite owns the block-current-leader gap discovered before `001` can honestly close.
 4. Follow-up reassessment showed a generic engine gap in the microturn preview surface: microturn choices can score `preview.option.delta.victory.currentMargin.self`, but cannot score the current leader's margin delta. Because block-leader proof requires later target choices to optimize against the leader's margin, this ticket owns adding a generic standing-role preview-option ref rather than hardcoding FITL behavior.
 
 ## Architecture Check
@@ -91,6 +91,8 @@ Do not rewrite `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` in this pr
 2. `pnpm run check:ticket-deps`
 
 ## Outcome (2026-06-03)
+
+Outcome amended: 2026-06-04 -- archive-path cleanup after `210FITLCOMP-010` completed and moved to `archive/tickets/`.
 
 Outcome amended: 2026-06-03 -- post-ticket review added the final dependency and whitespace verification commands that were run after archival.
 

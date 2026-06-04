@@ -14,7 +14,7 @@ describe('ARVN shared.nearCoupConcreteSwing witness', () => {
       seatId: 'arvn',
       playerIndex: 1,
       seed: 210_001,
-      expectedRootStableMoveKey: 'govern|{}|false|specialActivity',
+      expectedRootStableMoveKey: 'govern|{}|noCompound|false|specialActivity',
       outcomeAssertions: [
         {
           label: 'US Coup margin',

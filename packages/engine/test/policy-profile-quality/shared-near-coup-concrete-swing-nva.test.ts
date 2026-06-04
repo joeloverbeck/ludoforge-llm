@@ -20,7 +20,7 @@ describe('NVA shared.nearCoupConcreteSwing witness', () => {
       seatId: 'nva',
       playerIndex: 2,
       seed: 210_001,
-      expectedRootStableMoveKey: 'terror|{}|false|operation',
+      expectedRootStableMoveKey: 'terror|{}|noCompound|false|operation',
       outcomeAssertions: [
         {
           label: 'US Coup margin',

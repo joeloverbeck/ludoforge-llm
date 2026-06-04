@@ -21,7 +21,7 @@ describe('US shared.nearCoupConcreteSwing witness', () => {
       seatId: 'us',
       playerIndex: 0,
       seed: 1,
-      expectedRootStableMoveKey: 'train|{}|false|operation',
+      expectedRootStableMoveKey: 'train|{}|noCompound|false|operation',
       outcomeAssertions: [
         {
           label: 'VC Coup margin',

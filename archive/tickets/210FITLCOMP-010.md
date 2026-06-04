@@ -1,6 +1,6 @@
 # 210FITLCOMP-010: Conditional §3 YAML feature additions (gated on failing fixtures)
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — data-only (`92-agents.md`)
@@ -89,3 +89,30 @@ After the YAML/profile distinction is added, promote `shared-near-coup-concrete-
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/<demanding-fixture>.test.js`
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-on-populated-support-vetoed.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-funds-future-terror-rally.test.js`
 3. `pnpm turbo lint typecheck && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-06-04
+
+What changed:
+
+- Added map-space `where` filters to `vc.marchPoliticalCellSpace` and `vc.subvertArvnControlSpace` so VC plan roles no longer score off-board holding zones such as `available-VC:none` / `available-ARVN:none` as strategic targets.
+- Wired `vc.fundAndAmbushCarefully` to enable the existing `vc.rallyTax`, `vc.marchAmbushFromLoc`, and `vc.attackAmbush` templates. This keeps the existing Tax/Ambush doctrine as the data-only owner of ordinary resource-building Tax selection without adding engine logic or speculative candidate/state features.
+- Promoted `shared-near-coup-concrete-swing-vc.test.ts` to `@proof-tier: executed-outcome` + `@proof-tier: adversarial`; the witness executes VC Terror in a near-Coup state and proves VC margin / Opposition deltas.
+- Added a focused Rally+Tax proposal witness in `vc-tax-funds-future-terror-rally.test.ts` for the curated LoC-guerrilla state that blocked 009. The witness asserts the full proposal selects `vc.rallyTax`, binds Tax to `loc-saigon-can-tho:none`, and does not bind plan roles to off-board holding zones.
+- Normalized same-family near-Coup expected stable keys and the shared pass-trap key to the current canonical `noCompound` move identity format.
+
+Deviations:
+
+- No new `candidateFeatures` or `stateFeatures` were added. The live failures were resolved with existing selector/profile surfaces, so adding new feature refs would have violated the ticket gate.
+- `vc-tax-on-populated-support-vetoed.test.ts` remains structural for 009 to promote. This ticket proved only the YAML/profile gate needed before the six VC fixture promotions resume.
+- `shared-doctrine-witness-helpers.ts` was not modified because it still has active consumers outside the promoted VC near-Coup fixture.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/policy-profile-quality/shared-near-coup-concrete-swing-vc.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-on-populated-support-vetoed.test.js packages/engine/dist/test/policy-profile-quality/vc-tax-funds-future-terror-rally.test.js packages/engine/dist/test/policy-profile-quality/shared-near-coup-concrete-swing-us.test.js packages/engine/dist/test/policy-profile-quality/shared-near-coup-concrete-swing-arvn.test.js packages/engine/dist/test/policy-profile-quality/shared-near-coup-concrete-swing-nva.test.js` — passed, 7 tests.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2606 archived tickets.
+- `git diff --check` — passed.
+- `pnpm turbo lint typecheck` — failed outside this ticket in `packages/runner/src/model/derive-runner-frame.ts(1386,56)` because runner typecheck sees `ChoiceTargetKind` including `"value"` where the local frame code expects only `"zone" | "token"`. Engine build/typecheck/lint tasks completed successfully within the same run.
+- `pnpm turbo test` — failed outside this ticket's implementation surface in stale default-lane unit expectations: `policy-eval-grouping.test.js` expects pre-`noCompound` stable keys, and `legal-choices.test.js` / `query-domain-kinds.test.js` expect target-kind arrays without `"value"`. The focused Spec 210 witnesses above passed after the final edits.

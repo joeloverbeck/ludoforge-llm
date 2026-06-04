@@ -2074,6 +2074,9 @@
                             "type": "integer",
                             "minimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "replaceRemainingStages": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -2408,6 +2411,19 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 9007199254740991
+                            },
+                            "selectedValue": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/definitions/anon_4682db72"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
                             }
                           },
                           "required": [

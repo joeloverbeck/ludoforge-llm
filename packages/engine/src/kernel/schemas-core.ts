@@ -1496,6 +1496,7 @@ const CompiledPlanTemplateSchema = z.object({
       specialTags: z.array(StringSchema),
       timing: z.enum(['before', 'during', 'after']),
       interruptAfterStage: z.number().int().nonnegative().optional(),
+      replaceRemainingStages: z.boolean().optional(),
     }).strict().optional(),
   }).strict(),
   roles: z.record(StringSchema, z.object({

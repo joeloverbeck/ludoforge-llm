@@ -2583,7 +2583,7 @@ agents:
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.attackAmbush:
         traceLabel: "NVA Attack then Ambush"
-        root: { actionTags: [attack], compound: { specialTags: [ambush-nva], timing: after } }
+        root: { actionTags: [attack], compound: { specialTags: [ambush-nva], timing: during, interruptAfterStage: 1, replaceRemainingStages: true } }
         postureHook: nva.protectLogisticsAndBases
         roles:
           attackSpace: { selector: nva.attackTargetSpace, required: true }

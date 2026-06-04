@@ -12,6 +12,9 @@ export interface PlanProposalRootCandidate {
   readonly actionTags: readonly string[];
   readonly compoundSpecialActionId?: string;
   readonly compoundSpecialActionTags: readonly string[];
+  readonly compoundTiming?: 'before' | 'during' | 'after';
+  readonly compoundInsertAfterStage?: number;
+  readonly compoundReplaceRemainingStages?: boolean;
 }
 
 export function rootCandidatesFor(
@@ -35,6 +38,9 @@ export function rootCandidatesFor(
         actionId,
         actionTags: def.actionTagIndex?.byAction[actionId] ?? [],
         ...(compoundSpecialActionId === undefined ? {} : { compoundSpecialActionId }),
+        ...(move.compound?.timing === undefined ? {} : { compoundTiming: move.compound.timing }),
+        ...(move.compound?.insertAfterStage === undefined ? {} : { compoundInsertAfterStage: move.compound.insertAfterStage }),
+        ...(move.compound?.replaceRemainingStages === undefined ? {} : { compoundReplaceRemainingStages: move.compound.replaceRemainingStages }),
         compoundSpecialActionTags: compoundSpecialActionId === undefined
           ? []
           : (def.actionTagIndex?.byAction[compoundSpecialActionId] ?? []),
@@ -55,6 +61,15 @@ export function rootMatchesTemplate(candidate: PlanProposalRootCandidate, templa
     return true;
   }
   if (candidate.compoundSpecialActionId === undefined) {
+    return false;
+  }
+  if (candidate.compoundTiming !== template.root.compound.timing) {
+    return false;
+  }
+  if (candidate.compoundInsertAfterStage !== template.root.compound.interruptAfterStage) {
+    return false;
+  }
+  if (candidate.compoundReplaceRemainingStages !== template.root.compound.replaceRemainingStages) {
     return false;
   }
   const specialTags = new Set(template.root.compound.specialTags.map(String));

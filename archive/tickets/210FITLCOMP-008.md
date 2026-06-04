@@ -1,6 +1,6 @@
 # 210FITLCOMP-008: Promote NVA faction fixtures to executed-outcome tier
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — test-only
@@ -88,3 +88,20 @@ Update markers to `@proof-tier: executed-outcome` + `@proof-tier: adversarial`. 
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/nva-protects-trail-before-coup.test.js packages/engine/dist/test/policy-profile-quality/nva-rally-improves-trail.test.js packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-builds-nva-not-steal-vc.test.js packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-steal-vc-base.test.js packages/engine/dist/test/policy-profile-quality/nva-avoid-low-yield-vc-steal.test.js packages/engine/dist/test/policy-profile-quality/nva-blocks-vc-near-win.test.js packages/engine/dist/test/policy-profile-quality/nva-attack-ambush-beats-conventional-attack.test.js`
 2. `pnpm turbo lint typecheck && pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-06-04
+
+Implemented the NVA fixture promotion in the seven named policy-profile tests. The promoted fixtures now carry `@proof-tier: executed-outcome` and `@proof-tier: adversarial`, execute published NVA roots, and assert concrete Trail, NVA board build-up, VC non-benefit, and Attack+Ambush casualty deltas.
+
+The implementation exposed a generic compound-root gap: NVA Attack+Ambush needs the authored during-stage interrupt shape, not the generic after-special-activity shape. Added `replaceRemainingStages` to compiled plan-root metadata, made legal move enumeration include agent-authored compound timing variants, and tightened plan root matching so after/during compound roots are not interchangeable. Updated the NVA Attack+Ambush doctrine root to the during-stage interrupt shape.
+
+Deviation from the original plan: this was not test-only. The engine change was necessary to make the Attack+Ambush root constructible and selected from the same published frontier shape that executes.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/nva-protects-trail-before-coup.test.js packages/engine/dist/test/policy-profile-quality/nva-rally-improves-trail.test.js packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-builds-nva-not-steal-vc.test.js packages/engine/dist/test/policy-profile-quality/nva-march-infiltrate-steal-vc-base.test.js packages/engine/dist/test/policy-profile-quality/nva-avoid-low-yield-vc-steal.test.js packages/engine/dist/test/policy-profile-quality/nva-blocks-vc-near-win.test.js packages/engine/dist/test/policy-profile-quality/nva-attack-ambush-beats-conventional-attack.test.js` passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check && node --test packages/engine/dist/test/unit/agents/plan-proposal.test.js packages/engine/dist/test/unit/agents/plan-proposal-compound-availability.test.js packages/engine/dist/test/unit/agents/plan-proposal-doctrine-gating.test.js packages/engine/dist/test/unit/kernel/legal-moves*.test.js packages/engine/dist/test/unit/kernel/microturn*.test.js` passed.
+- `pnpm -F @ludoforge/engine test` reached the default unit lane but failed on pre-existing unrelated expectation drift in `policy-eval-grouping.test.js`, `legal-choices.test.js`, and `query-domain-kinds.test.js`.
+- An abandoned seed-scan probe was stopped with `pkill`; `pgrep` confirmed no matching process remained, and no probe output files were retained.

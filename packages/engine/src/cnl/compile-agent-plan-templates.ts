@@ -99,6 +99,9 @@ export function compilePlanTemplateDefinition({
           ...(def.root.compound.interruptAfterStage === undefined
             ? {}
             : { interruptAfterStage: def.root.compound.interruptAfterStage }),
+          ...(def.root.compound.replaceRemainingStages === undefined
+            ? {}
+            : { replaceRemainingStages: def.root.compound.replaceRemainingStages }),
         },
       }),
     },

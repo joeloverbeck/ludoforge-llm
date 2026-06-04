@@ -249,7 +249,7 @@ const compoundSpecialActivitiesForOperation = (
   def: GameDef,
   state: GameState,
   operationMove: Move,
-): readonly Move['actionId'][] => {
+): readonly ActionDef[] => {
   if (operationMove.actionClass !== 'operationPlusSpecialActivity') {
     return [];
   }
@@ -262,25 +262,85 @@ const compoundSpecialActivitiesForOperation = (
       && getActionPipelinesForAction(def, action.id)
         .some((pipeline) =>
           pipelineAppliesToActivePlayer(pipeline.applicability, state.activePlayer)
-          && operationAllowsSpecialActivity(operationMove.actionId, pipeline.accompanyingOps)))
-    .map((action) => action.id);
+          && operationAllowsSpecialActivity(operationMove.actionId, pipeline.accompanyingOps)));
 };
 
 const compoundVariantsForOperation = (
   def: GameDef,
   state: GameState,
   operationMove: Move,
-): readonly Move[] => compoundSpecialActivitiesForOperation(def, state, operationMove)
-  .map((specialActionId) => ({
-    ...operationMove,
-    compound: {
-      specialActivity: {
-        actionId: specialActionId,
-        params: {},
-      },
-      timing: 'after' as const,
-    },
-  }));
+): readonly Move[] => {
+  const operationAction = def.actions.find((action) => action.id === operationMove.actionId);
+  if (operationAction === undefined) {
+    return [];
+  }
+  const moves: Move[] = [];
+  const seen = new Set<string>();
+  for (const specialAction of compoundSpecialActivitiesForOperation(def, state, operationMove)) {
+    for (const compound of compoundPayloadsForOperationSpecialPair(def, operationAction, specialAction)) {
+      const move: Move = {
+        ...operationMove,
+        compound: {
+          specialActivity: {
+            actionId: specialAction.id,
+            params: {},
+          },
+          ...compound,
+        },
+      };
+      const key = toMoveIdentityKey(def, move);
+      if (!seen.has(key)) {
+        seen.add(key);
+        moves.push(move);
+      }
+    }
+  }
+  return moves;
+};
+
+const compoundPayloadsForOperationSpecialPair = (
+  def: GameDef,
+  operationAction: ActionDef,
+  specialAction: ActionDef,
+): readonly Omit<NonNullable<Move['compound']>, 'specialActivity'>[] => {
+  const payloads: Omit<NonNullable<Move['compound']>, 'specialActivity'>[] = [{ timing: 'after' }];
+  for (const template of Object.values(def.agents?.library.planTemplates ?? {})) {
+    const compound = template.root.compound;
+    if (compound === undefined) {
+      continue;
+    }
+    if (!actionMatchesCompiledRoot(operationAction, template.root.actionIds, template.root.actionTags)) {
+      continue;
+    }
+    if (!specialTagsMatch(specialAction, compound.specialTags)) {
+      continue;
+    }
+    payloads.push({
+      timing: compound.timing,
+      ...(compound.interruptAfterStage === undefined ? {} : { insertAfterStage: compound.interruptAfterStage }),
+      ...(compound.replaceRemainingStages === undefined ? {} : { replaceRemainingStages: compound.replaceRemainingStages }),
+    });
+  }
+  return payloads;
+};
+
+const actionMatchesCompiledRoot = (
+  action: ActionDef,
+  actionIds: readonly string[],
+  actionTags: readonly string[],
+): boolean => {
+  const tags = new Set(action.tags ?? []);
+  return actionIds.includes(String(action.id))
+    || actionTags.some((tag) => String(action.id) === tag || tags.has(tag));
+};
+
+const specialTagsMatch = (
+  action: ActionDef,
+  specialTags: readonly string[],
+): boolean => {
+  const tags = new Set(action.tags ?? []);
+  return specialTags.every((tag) => String(action.id) === tag || tags.has(tag));
+};
 
 const pipelineAppliesToActivePlayer = (
   applicability: unknown,

@@ -794,6 +794,7 @@ export interface GameSpecPlanRootDef {
     readonly specialTags?: readonly string[];
     readonly timing?: GameSpecPlanRootTiming;
     readonly interruptAfterStage?: number;
+    readonly replaceRemainingStages?: boolean;
   };
 }
 

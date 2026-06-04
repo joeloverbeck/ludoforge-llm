@@ -1234,6 +1234,7 @@ export interface CompiledPlanRoot {
     readonly specialTags: readonly string[];
     readonly timing: 'before' | 'during' | 'after';
     readonly interruptAfterStage?: number;
+    readonly replaceRemainingStages?: boolean;
   };
 }
 

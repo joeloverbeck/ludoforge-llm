@@ -272,6 +272,29 @@ function validatePlanTemplateCompound(
       return;
     }
   }
+  const replaceRemainingStages = compound.replaceRemainingStages;
+  if (replaceRemainingStages !== undefined) {
+    if (timing !== 'during') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.replaceRemainingStages`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound replaceRemainingStages requires timing "during".`,
+        suggestion: 'Set timing: during or remove replaceRemainingStages.',
+      });
+      return;
+    }
+    if (typeof replaceRemainingStages !== 'boolean') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.replaceRemainingStages`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound replaceRemainingStages must be boolean.`,
+        suggestion: 'Use true to replace remaining operation stages after the compound interrupt.',
+      });
+      return;
+    }
+  }
 
   const specialTagVocabulary = new Set(witnesses.flatMap((witness) => witness.specialTags));
   for (const [tagIndex, tag] of specialTags.entries()) {

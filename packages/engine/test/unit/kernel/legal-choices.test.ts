@@ -497,7 +497,7 @@ phase: [asPhaseId('main')],
     assert.equal(result1.name, '$color');
     assert.equal(result1.type, 'chooseOne');
     assert.deepStrictEqual(result1.options.map((option) => option.value), ['red', 'blue', 'green']);
-    assert.deepStrictEqual(result1.targetKinds, []);
+    assert.deepStrictEqual(result1.targetKinds, ['value']);
 
     // Second call: param filled → complete
     const result2 = legalChoicesDiscover(def, state, makeMove('pickColor', { '$color': 'blue' }));
@@ -536,7 +536,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.name, '$targets');
     assert.equal(result.type, 'chooseN');
     assert.deepStrictEqual(result.options.map((option) => option.value), ['a', 'b', 'c']);
-    assert.deepStrictEqual(result.targetKinds, []);
+    assert.deepStrictEqual(result.targetKinds, ['value']);
     assert.equal(result.min, 1);
     assert.equal(result.max, 3); // clamped from 10 to domain size 3
   });
@@ -565,7 +565,7 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action] });
     const request = legalChoicesDiscover(def, makeBaseState(), makeMove('pickZone'));
     assert.equal(request.kind, 'pending');
-    assert.deepStrictEqual(request.targetKinds, ['zone']);
+    assert.deepStrictEqual(request.targetKinds, ['zone', 'value']);
   });
 
   it('3e. chooseN on token queries exposes canonical token target metadata', () => {
@@ -650,8 +650,8 @@ phase: [asPhaseId('main')],
     assert.equal(plainRequest.kind, 'pending');
     assert.equal(reformattedRequest.kind, 'pending');
     assert.notEqual(plainRequest.decisionKey, reformattedRequest.decisionKey);
-    assert.deepStrictEqual(plainRequest.targetKinds, ['zone']);
-    assert.deepStrictEqual(reformattedRequest.targetKinds, ['zone']);
+    assert.deepStrictEqual(plainRequest.targetKinds, ['zone', 'value']);
+    assert.deepStrictEqual(reformattedRequest.targetKinds, ['zone', 'value']);
   });
 
   it('3b. chooseN evaluates expression-valued min/max at decision time', () => {

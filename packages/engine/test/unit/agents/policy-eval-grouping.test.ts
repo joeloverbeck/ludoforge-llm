@@ -128,6 +128,6 @@ describe('evaluatePolicyMove actionId grouping', () => {
     });
 
     assert.deepEqual(result.move, { actionId: asActionId('raise'), params: { raiseAmount: 40 } });
-    assert.equal(result.metadata.selectedStableMoveKey, 'raise|{"raiseAmount":40}|false|unclassified');
+    assert.equal(result.metadata.selectedStableMoveKey, 'raise|{"raiseAmount":40}|noCompound|false|unclassified');
   });
 });

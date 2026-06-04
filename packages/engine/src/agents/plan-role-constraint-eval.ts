@@ -304,10 +304,17 @@ function materializePostStateProbeMove(
 
 function materializeCompoundRootMove(context: PostStateConstraintContext): Move {
   const compound = context.root.compound;
-  if (compound === undefined || context.rootMove.compound !== undefined) {
+  if (compound === undefined) {
     return context.rootMove;
   }
-  const specialActionId = compound.specialTags[0];
+  const existingSpecialActionId = context.rootMove.compound?.specialActivity.actionId;
+  if (
+    existingSpecialActionId !== undefined
+    && compoundSpecialMatches(context.def, String(existingSpecialActionId), compound.specialTags)
+  ) {
+    return context.rootMove;
+  }
+  const specialActionId = materializedCompoundSpecialActionId(context.def, compound.specialTags);
   if (specialActionId === undefined) {
     return context.rootMove;
   }
@@ -319,6 +326,34 @@ function materializeCompoundRootMove(context: PostStateConstraintContext): Move 
       ...(compound.interruptAfterStage === undefined ? {} : { insertAfterStage: compound.interruptAfterStage }),
     },
   };
+}
+
+function compoundSpecialMatches(
+  def: GameDef,
+  actionId: string,
+  specialTags: readonly string[],
+): boolean {
+  if (specialTags.includes(actionId)) {
+    return true;
+  }
+  const actionTags = def.actionTagIndex?.byAction[actionId] ?? [];
+  return actionTags.some((tag) => specialTags.includes(tag));
+}
+
+function materializedCompoundSpecialActionId(
+  def: GameDef,
+  specialTags: readonly string[],
+): string | undefined {
+  for (const specialTag of specialTags) {
+    if (def.actions.some((action) => String(action.id) === specialTag)) {
+      return specialTag;
+    }
+    const taggedActionId = def.actionTagIndex?.byTag[specialTag]?.[0];
+    if (taggedActionId !== undefined) {
+      return taggedActionId;
+    }
+  }
+  return undefined;
 }
 
 function materializedStepValue(

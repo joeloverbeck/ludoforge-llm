@@ -1,10 +1,10 @@
 # CMPSACON-002: Train+Transport postState probe materializes a non-incrementing compound
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/plan-role-constraint-eval.ts` (postState probe), possibly `kernel/legal-choices.ts` (SA chaining)
-**Deps**: `tickets/CMPSACON-001.md`, `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts`, `packages/engine/src/agents/plan-role-constraint-eval.ts`
+**Deps**: `archive/tickets/CMPSACON-001.md`, `packages/engine/test/integration/fitl-arvn-transport-constraint-migration.test.ts`, `packages/engine/src/agents/plan-role-constraint-eval.ts`
 
 ## Problem
 
@@ -65,3 +65,20 @@ Determine whether `materializePostStateProbeMove`'s `choose` callback correctly 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`
 2. `pnpm -F @ludoforge/engine test:integration:fitl-rules`
 3. `pnpm turbo lint typecheck`
+
+## Outcome
+
+Completed: 2026-06-04
+
+What changed:
+- Fixed generic compound postState materialization so an existing root compound is preserved only when its special activity matches the plan template special tags.
+- Resolved template special tags to the intended special action id using direct action-id matches first, then the compiled action tag index.
+- Preserved game-agnostic matching; no FITL-specific action ids or branch logic were introduced.
+
+Deviations from original plan:
+- CMPSACON-001 did not fully subsume this ticket. The Train+Transport witness still required the materializer fix in `packages/engine/src/agents/plan-role-constraint-eval.ts`.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/fitl-arvn-transport-constraint-migration.test.js`
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` passed 80/80 files.

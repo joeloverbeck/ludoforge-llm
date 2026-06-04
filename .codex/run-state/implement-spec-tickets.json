@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/210-fitl-behavioral-competence-fixture-corpus.md",
   "archived_spec": null,
-  "last_ticket": "archive/tickets/210FITLCOMP-003.md",
+  "last_ticket": "archive/tickets/210FITLCOMP-004.md",
   "last_result": "completed_archived",
-  "last_work_commit": "29d91ea3a9b6e82ad4a24b00e7f846be4b8f9071",
+  "last_work_commit": "e181058fe3049b7f715736e8c1a1fee795247ea5",
   "last_state_commit": "self",
-  "next_target": "tickets/210FITLCOMP-004.md",
+  "next_target": "tickets/210FITLCOMP-005.md",
   "queue": [
-    "tickets/210FITLCOMP-004.md",
     "tickets/210FITLCOMP-005.md",
     "tickets/210FITLCOMP-006.md",
     "tickets/210FITLCOMP-007.md",
@@ -17,9 +16,9 @@
   ],
   "phase": "ready_for_next_ticket",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Completed and archived 210FITLCOMP-003. The bounded visible-Coup schedule correction and US/ARVN/NVA near-Coup executed witnesses landed; VC near-Coup remains structural and is owned by 210FITLCOMP-010. Next target is 210FITLCOMP-004.",
+  "owned_dirty_summary": "Completed and archived 210FITLCOMP-004. Shared Monsoon paired witnesses now execute clear/Monsoon branches; existing FITL profile data was corrected in GameSpecDoc with no engine-specific logic. Next target is 210FITLCOMP-005.",
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-06-03"
+  "updated_at": "2026-06-04"
 }

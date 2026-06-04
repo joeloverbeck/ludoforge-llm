@@ -44,3 +44,29 @@ FITL rules confirm illegality: **3.3.2** (March *moves* pieces *into* spaces) + 
 - `pnpm -F @ludoforge/runner bootstrap:fixtures:check` ✓
 - `plan-controller.test.js` ✓ (1/1); full runner suite ✓ (2019/2019)
 - Engine test/determinism/perf lanes remain red on cluster 3 until CMPSACON-001 lands (expected).
+
+---
+
+# Round 2 — 2026-06-04 (HEAD `ff92f88ed`, after CMPSACON-001/002)
+
+CMPSACON-001 (`c9c1d40b`) + CMPSACON-002 (`66e9c7b6`) landed. They turned the cluster-3 **simulator** lanes green (`fitl-rules`, `slow-parity-a/b/c`, `perf`, `performance`, `determinism` runtime-parity + zobrist-123). The CI run on `120ad53e3`'s successor surfaced the remaining failures, collapsing to **2 clusters**:
+
+| Cluster | Lanes | Class | Status | Root cause | Resolution |
+|---------|-------|-------|--------|-----------|------------|
+| A | `ci` (test step) | test-lane | PR regression (stale snapshots) | Deliberate spec-210 contract changes — `toMoveIdentityKey` appends a `noCompound`/compound segment (default `includeCompound:true`); `deriveChoiceTargetKinds` emits `'value'` for scalar runtime shapes. Author updated `move-identity-extended.test.ts` + the runner type but missed `policy-eval-grouping.test.ts`, `legal-choices.test.ts`, `query-domain-kinds.test.ts`. | FIXED — `ff92f88ed` (5 assertions + 1 test name; user chose "update assertions only", keeping the shipped zone+value behavior) |
+| B | `test (fitl-events-shard-c)`, `test (policy-canaries)`, `test (policy-preview-parity)`, advisory `policy-profile-quality (full)` | test-lane / determinism-adjacent | PR regression — **residual of round-1 cluster 3** | Non-constructible compound op+SA still reaches the agent frontier/preview. CMPSACON-001's "tighten publication probe + runtime rollback" fixed the simulator but left preview paths broken: unguarded `publishMicroturn` in `continueChooseNStepInnerPreviewDrive` throws `MICROTURN_CONSTRUCTIBILITY_INVARIANT`; `materializePolicyWasmPreviewStatePatch` throws `IllegalMoveError`; golden-trace parity shows `ready:2→unknownFailed:2` (quality regression) alongside the legit new `role:currentLeader` refs. | DEFERRED — **CMPSACON-003** (untracked ticket) |
+
+## Is the round-1 cluster-3 root cause still active?
+
+**Yes.** CMPSACON-001 did not implement design option A (enumeration-time pruning); it converted the apply-time throw into graceful degradation + simulator rollback. That closed the symptom on the simulator lanes but converted the same non-constructible-compound defect into a **silent preview-quality regression** on the preview/WASM-preview path. The root cause (a compound op+SA whose committed operation cannot construct the paired SA being publishable into the frontier) is unchanged. CMPSACON-003 carries the full diagnosis.
+
+## What did NOT work (round 2)
+
+1. Catching the throw at the preview call sites alone would green `fitl-events-shard-c` and `policy-canaries` but leaves `policy-preview-parity` red — the `ready→unknownFailed` golden-trace regression can't be re-blessed without blessing a quality regression (forbidden by `.claude/rules/testing.md`).
+2. Cluster A required fixing **three** test files, not the two visible in the first CI failing-tests block — `query-domain-kinds.test.js` was masked behind the others and surfaced only in the full local unit run.
+
+## Verification (round 2, cluster A)
+
+- Engine unit suite (`ci` test step): 0 fail (was 5 failing assertions across 3 files).
+- `pnpm turbo lint typecheck`: 5/5 successful; engine build green.
+- Cluster B lanes stay red on the next CI run by design until CMPSACON-003 lands.

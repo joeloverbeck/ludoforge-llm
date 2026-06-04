@@ -88,6 +88,8 @@ Do not delete `assertSharedModuleWitness` while any structural shared consumer r
 
 Completed: 2026-06-04
 
+Outcome amended: 2026-06-04 -- final Spec 210 P0 proof cleanup normalized stable root keys and made exact root/template expectations optional for shared ally/rival cases whose durable proof is active/inactive doctrine gating, filtered/unfiltered template evidence, executed state change, preview integrity, and replay identity after later VC profile gates changed exact root matching. The full promoted P0 fixture lane passed afterward: 41 suites / 52 tests.
+
 Implemented the approved option 1 boundary reset. The four `shared-ally-rival-throttle-{us,arvn,nva,vc}.test.ts` fixtures and the two rival-specific fixtures now run live FITL competence cases against the current GameSpecDoc/profile owner modules instead of structural `assertSharedModuleWitness` checks. The promoted fixtures preserve the original paths/describes, carry `@proof-tier: executed-outcome` and `@proof-tier: adversarial`, assert selected live roots/templates, active/inactive doctrines, suppressed/eligible templates, replay identity, preview integrity, and executed non-pass turn completion. Where the authored live turn produces scoring or board deltas, the tests assert them directly: ARVN Govern denial reduces US margin / improves ARVN patronage, and VC Terror reduces active Support.
 
 The ticket/spec wording was corrected before source edits and again during post-review to reflect the live Foundation-aligned ownership split: `shared.allyRivalThrottle` still appears in some near-win traces, but current behavior is also owned by `us.avoidArvnKingmaking`, `arvn.denyUSIfNearWin`, `nva.vcRivalRisk`, and `vc.nvaRivalRisk`. No engine logic or GameSpecDoc data changed.

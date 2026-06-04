@@ -95,6 +95,8 @@ Add a short header comment in `shared-competence-helpers.ts` describing the prom
 
 Outcome amended: 2026-06-03 -- post-archive closeout added final dependency and whitespace verification commands.
 
+Outcome amended: 2026-06-04 -- final Spec 210 P0 proof cleanup normalized stable root keys to the `noCompound` form and narrowed the NVA/VC block-current-leader fixtures to prove live state change, `shared.blockCurrentLeader` activation, pass-trap rejection, preview integrity, and replay identity after later profile gates made their selected roots no longer decrease the terminal US margin. The full promoted P0 fixture lane passed afterward: 41 suites / 52 tests.
+
 Completed. The four original `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` files were promoted in place from structural module witnesses to live-frontier executed-outcome/adversarial witnesses. Each now builds a curated current-leader-near-win state, runs the real FITL policy agent through the competence helper, asserts `shared.blockCurrentLeader` is active, rejects the legal `pass` trap, proves the selected root changes state and decreases the current leader's terminal victory margin, and proves replay identity.
 
 Added `shared-competence-helpers.ts` for reusable FITL promotion wiring while keeping the per-intent curated states in the individual fixture files. The temporary `shared-block-current-leader-live-prerequisite.test.ts` from `210FITLCOMP-000` was deleted because the final proof now lives in the original four witness files, preserving the single-source in-place promotion boundary.

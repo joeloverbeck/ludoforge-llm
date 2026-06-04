@@ -17,7 +17,7 @@ describe('NVA shared.immediateWin witness', () => {
       seatId: 'nva',
       playerIndex: 2,
       seed: 1,
-      expectedRootStableMoveKey: 'terror|{}|false|operation',
+      expectedRootStableMoveKey: 'terror|{}|noCompound|false|operation',
       selfMarginAssertion: {
         label: 'NVA self margin',
         query: { kind: 'terminalVictoryMargin', seat: 'nva' },

@@ -1,6 +1,6 @@
 # Spec 210 — FITL Behavioral Competence Fixture Corpus (P0)
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: High — this is where FITL faction competence actually gets *proven* rather than asserted. After Specs 201–205 authored the four-faction doctrine library, the remaining gap (verified 2026-06-03) is that no test executes a turn and asserts the intended strategic property improved. This spec closes that gap for the highest-value P0 claims using the Spec 209 harness.
 **Complexity**: M–L — *promote in place* the existing ~50 structural doctrine witnesses under `packages/engine/test/policy-profile-quality/` (authored by Specs 201–205; currently `architectural-invariant`/`convergence-witness` with no `@proof-tier`) to `executed-outcome` (and where specified, `adversarial`) tier, by rewriting each `assertSharedModuleWitness`-style body into a curated state run through the Spec 209 live-frontier harness. The structural compile/bind/score check folds into the harness fixture's `assertPlanTraceChain` assertion. Plus *conditional* YAML feature additions in `data/games/fire-in-the-lake/92-agents.md` — added only where a fixture proves the current encoding cannot distinguish the required choice. No engine work (new `candidateFeatures` are pure-data `preview.*` analogues; new `stateFeatures` compose existing expr primitives).
 **Date**: 2026-06-03
@@ -133,3 +133,20 @@ Decomposed via `/spec-to-tickets` on 2026-06-03:
 - [`archive/tickets/210FITLCOMP-008.md`](../archive/tickets/210FITLCOMP-008.md) — Promote NVA faction fixtures (covers §2(12–14, 17-NVA))
 - [`archive/tickets/210FITLCOMP-010.md`](../archive/tickets/210FITLCOMP-010.md) — Conditional §3 YAML/profile additions, gated on failing fixtures; includes the VC near-Coup concrete-swing executed witness residual and the VC Tax-selection profile gate opened by 009 reassessment (covers remaining §2(3), §3, §4 AC#7)
 - [`archive/tickets/210FITLCOMP-009.md`](../archive/tickets/210FITLCOMP-009.md) — Promote VC faction fixtures after the 010 YAML/profile prerequisite lands (covers §2(15–17))
+
+## Outcome
+
+Completed: 2026-06-04
+
+Spec 210 is complete. All owned `210FITLCOMP-*` tickets were implemented, reviewed, archived, and reference-repaired. The P0 FITL competence corpus now promotes the targeted shared, US, ARVN, NVA, and VC witnesses in place with `@proof-tier: executed-outcome` and adversarial coverage where required, using live-frontier execution, replay identity, preview-status checks, and outcome/doctrine assertions aligned with the current GameSpecDoc profile.
+
+Final proof cleanup before archival normalized stable root keys to the current `noCompound` identity form and corrected stale exact assertions in older shared fixtures where later profile gates changed exact roots/templates. The durable final invariant is now explicit: exact root/template/outcome assertions remain where the spec claim owns exact selection; legacy shared fixtures that no longer own exact roots prove live state change, active doctrine gating, filtered template evidence, preview integrity, and replay identity.
+
+Deviations from the original plan:
+- The conditional YAML/profile work became a real prerequisite (`210FITLCOMP-010`) for the VC near-Coup and VC Tax-selection claims, because live proof showed the old profile could execute Tax when forced but did not select the LoC Tax plan.
+- Some broad policy-profile-quality tests outside Spec 210 P0 remain outside this closeout boundary. The full `pnpm -F @ludoforge/engine test:policy-profile-quality` lane currently fails first on `arvn-patrol-govern-over-train-when-threatened.test.js`, a deferred P1 Patrol/Govern witness named outside this spec's scope.
+
+Verification:
+- `pnpm -F @ludoforge/engine build` passed after final proof cleanup.
+- Explicit promoted P0 fixture lane passed: `node --test` over the 41 promoted `@proof-tier: executed-outcome` policy-profile-quality files completed 41 suites / 52 tests with 0 failures.
+- `pnpm -F @ludoforge/engine test:policy-profile-quality` was attempted and failed on deferred P1 `arvn-patrol-govern-over-train-when-threatened.test.js`; this is classified outside Spec 210 P0 and does not block this spec archive.

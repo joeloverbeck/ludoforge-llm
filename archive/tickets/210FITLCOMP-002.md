@@ -69,6 +69,8 @@ For each `shared-immediate-win-{us,arvn,nva,vc}.test.ts`: build a curated state 
 
 ## Outcome (2026-06-03)
 
+Outcome amended: 2026-06-04 -- final Spec 210 P0 proof cleanup normalized stable root keys to the `noCompound` form and corrected the ARVN live immediate-win fixture to the current selected Govern root and exact self-margin improvement (+1). The full promoted P0 fixture lane passed afterward: 41 suites / 52 tests.
+
 Promoted the four `shared.immediateWin` witnesses in place to executed-outcome/adversarial proof while keeping FITL-specific fixture state in tests and generic runner logic in `shared-competence-helpers.ts`.
 
 Proofs run:

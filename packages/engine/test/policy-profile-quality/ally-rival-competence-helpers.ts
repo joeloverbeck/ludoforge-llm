@@ -43,7 +43,7 @@ export interface FitlAllyRivalLiveCase {
   readonly playerIndex: number;
   readonly seed: number;
   readonly prepareState: (def: GameDef, state: GameState) => GameState;
-  readonly expectedRootStableMoveKey: string;
+  readonly expectedRootStableMoveKey?: string;
   readonly expectedTemplateId?: string;
   readonly activeDoctrines?: readonly string[];
   readonly inactiveDoctrines?: readonly string[];
@@ -79,16 +79,20 @@ export function assertFitlAllyRivalLiveCase(input: FitlAllyRivalLiveCase): void 
 
   assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected selected live turn to change state');
   assert.equal(result.stopReason, 'turnCompleted');
-  assert.equal(decisionStableKey(def, result.selectedDecision), input.expectedRootStableMoveKey);
+  if (input.expectedRootStableMoveKey !== undefined) {
+    assert.equal(decisionStableKey(def, result.selectedDecision), input.expectedRootStableMoveKey);
+  }
   assertExecutedFactionTurn(input, result);
-  assertPlanTraceChain({
-    def,
-    result,
-    expected: {
-      ...(input.expectedTemplateId === undefined ? {} : { eligibleTemplate: input.expectedTemplateId }),
-      selectedRootStableMoveKey: input.expectedRootStableMoveKey,
-    },
-  });
+  if (input.expectedTemplateId !== undefined || input.expectedRootStableMoveKey !== undefined) {
+    assertPlanTraceChain({
+      def,
+      result,
+      expected: {
+        ...(input.expectedTemplateId === undefined ? {} : { eligibleTemplate: input.expectedTemplateId }),
+        ...(input.expectedRootStableMoveKey === undefined ? {} : { selectedRootStableMoveKey: input.expectedRootStableMoveKey }),
+      },
+    });
+  }
   assertPlanDoctrines(input, result.agentDecision?.plan?.activeDoctrines ?? []);
   assertFilteredTemplates(input, result.agentDecision?.plan?.filteredOutTemplates ?? []);
   assertPostureExpectations(input, result.agentDecision?.plan?.posture);

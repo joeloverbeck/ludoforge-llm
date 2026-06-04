@@ -21,7 +21,7 @@ describe('US shared.immediateWin witness', () => {
       seatId: 'us',
       playerIndex: 0,
       seed: 1,
-      expectedRootStableMoveKey: 'event|{"eventCardId":"card-26","eventDeckId":"fitl-events-initial-card-pack","side":"shaded"}|false|event',
+      expectedRootStableMoveKey: 'event|{"eventCardId":"card-26","eventDeckId":"fitl-events-initial-card-pack","side":"shaded"}|noCompound|false|event',
       selfMarginAssertion: {
         label: 'US self margin',
         query: { kind: 'terminalVictoryMargin', seat: 'us' },

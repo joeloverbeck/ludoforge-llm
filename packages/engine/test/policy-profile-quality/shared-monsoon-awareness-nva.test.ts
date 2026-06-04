@@ -14,9 +14,9 @@ describe('NVA shared monsoon-awareness witness', () => {
       seatId: 'nva',
       playerIndex: 2,
       seed: 1,
-      clearRootStableMoveKey: 'march|{}|false|operation',
+      clearRootStableMoveKey: 'march|{}|noCompound|false|operation',
       clearTemplateId: 'nva.marchControl',
-      monsoonRootStableMoveKey: 'rally|{}|false|operation',
+      monsoonRootStableMoveKey: 'rally|{}|noCompound|false|operation',
       monsoonTemplateId: 'nva.rallyTrail',
       suppressedTemplateIds: [
         'nva.locOccupationBeforeCoup',

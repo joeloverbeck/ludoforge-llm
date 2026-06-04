@@ -14,7 +14,7 @@ describe('ARVN shared.blockCurrentLeader witness', () => {
       seatId: 'arvn',
       playerIndex: 1,
       seed: 210_001,
-      expectedRootStableMoveKey: 'govern|{}|false|specialActivity',
+      expectedRootStableMoveKey: 'govern|{}|noCompound|false|specialActivity',
       leaderMarginAssertion: {
         label: 'US leader margin',
         query: { kind: 'terminalVictoryMargin', seat: 'us' },

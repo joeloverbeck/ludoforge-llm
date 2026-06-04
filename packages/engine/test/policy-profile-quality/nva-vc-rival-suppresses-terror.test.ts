@@ -19,7 +19,7 @@ describe('Spec 203 NVA VC-rival Terror suppression witness', () => {
       playerIndex: 2,
       seed: SEED,
       prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeOpposition'),
-      expectedRootStableMoveKey: 'march|{}|false|operation',
+      expectedRootStableMoveKey: 'march|{}|noCompound|false|operation',
       expectedTemplateId: 'nva.marchControl',
       activeDoctrines: ['nva.vcRivalRisk'],
       filteredTemplates: [

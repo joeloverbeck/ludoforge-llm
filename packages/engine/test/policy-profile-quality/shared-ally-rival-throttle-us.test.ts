@@ -18,8 +18,6 @@ describe('US shared.allyRivalThrottle witness', () => {
       playerIndex: 0,
       seed: SEED,
       prepareState: (_def, state) => state,
-      expectedRootStableMoveKey: 'sweep|{}|false|operation',
-      expectedTemplateId: 'us.sweepAirStrike',
       inactiveDoctrines: ['us.avoidArvnKingmaking', 'shared.allyRivalThrottle'],
       unfilteredTemplates: ['us.trainPacify', 'us.patrolAdvise'],
     });
@@ -36,8 +34,6 @@ describe('US shared.allyRivalThrottle witness', () => {
         ...state,
         globalVars: { ...state.globalVars, patronage: 29 },
       }),
-      expectedRootStableMoveKey: 'sweep|{}|false|operation',
-      expectedTemplateId: 'us.sweepAirStrike',
       activeDoctrines: ['us.avoidArvnKingmaking'],
       filteredTemplates: [
         { templateId: 'us.trainPacify', gatedBy: ['us.avoidArvnKingmaking'], reason: 'suppressed' },

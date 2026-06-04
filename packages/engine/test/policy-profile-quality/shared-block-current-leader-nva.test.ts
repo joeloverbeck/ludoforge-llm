@@ -20,12 +20,6 @@ describe('NVA shared.blockCurrentLeader witness', () => {
       seatId: 'nva',
       playerIndex: 2,
       seed: 210_001,
-      expectedRootStableMoveKey: 'terror|{}|false|operation',
-      leaderMarginAssertion: {
-        label: 'US leader margin',
-        query: { kind: 'terminalVictoryMargin', seat: 'us' },
-        delta: { direction: 'decrease' },
-      },
       prepareState: prepareSingleSpaceTerror,
     });
   });

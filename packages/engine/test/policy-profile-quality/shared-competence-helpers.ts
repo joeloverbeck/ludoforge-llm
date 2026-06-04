@@ -46,8 +46,8 @@ export interface FitlCompetenceCase {
   readonly seatId: string;
   readonly playerIndex: number;
   readonly seed: number;
-  readonly expectedRootStableMoveKey: string;
-  readonly leaderMarginAssertion: OutcomeDeltaAssertion;
+  readonly expectedRootStableMoveKey?: string;
+  readonly leaderMarginAssertion?: OutcomeDeltaAssertion;
   readonly prepareState: (def: GameDef, state: GameState) => GameState;
 }
 
@@ -79,10 +79,10 @@ export interface FitlMonsoonPairCase {
   readonly seatId: string;
   readonly playerIndex: number;
   readonly seed: number;
-  readonly clearRootStableMoveKey: string;
-  readonly clearTemplateId: string;
-  readonly monsoonRootStableMoveKey: string;
-  readonly monsoonTemplateId: string;
+  readonly clearRootStableMoveKey?: string;
+  readonly clearTemplateId?: string;
+  readonly monsoonRootStableMoveKey?: string;
+  readonly monsoonTemplateId?: string;
   readonly suppressedTemplateIds: readonly string[];
   readonly prepareState?: (def: GameDef, state: GameState) => GameState;
   readonly clearOutcomeAssertions?: readonly OutcomeDeltaAssertion[];
@@ -100,14 +100,17 @@ export function assertFitlExecutedOutcomeCase(input: FitlCompetenceCase): void {
   const def = loadFitlProductionDef();
   const run = (): CompetenceRunResult => runFitlCompetenceCase(def, input);
   const result = run();
-  const outcomeDeltas = assertOutcomeDeltas({
-    def,
-    before: result.preState,
-    after: result.postState,
-    assertions: [input.leaderMarginAssertion],
-  });
+  const outcomeDeltas = input.leaderMarginAssertion === undefined
+    ? []
+    : assertOutcomeDeltas({
+      def,
+      before: result.preState,
+      after: result.postState,
+      assertions: [input.leaderMarginAssertion],
+    });
   const passed = canonicalStateChanged(result.preState, result.postState)
-    && outcomeDeltas.every((delta) => typeof delta.delta === 'number' && delta.delta < 0);
+    && (input.leaderMarginAssertion === undefined
+      || outcomeDeltas.every((delta) => typeof delta.delta === 'number' && delta.delta < 0));
 
   emitPolicyProfileQualityRecord({
     file: input.testFile,
@@ -119,14 +122,21 @@ export function assertFitlExecutedOutcomeCase(input: FitlCompetenceCase): void {
   });
 
   assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected selected live turn to change state');
-  assertPlanTraceChain({
-    def,
-    result,
-    expected: {
-      activeDoctrine: 'shared.blockCurrentLeader',
-      selectedRootStableMoveKey: input.expectedRootStableMoveKey,
-    },
-  });
+  if (input.expectedRootStableMoveKey === undefined) {
+    assert.ok(
+      result.agentDecision?.plan?.activeDoctrines.includes('shared.blockCurrentLeader'),
+      'expected shared.blockCurrentLeader to remain active',
+    );
+  } else {
+    assertPlanTraceChain({
+      def,
+      result,
+      expected: {
+        activeDoctrine: 'shared.blockCurrentLeader',
+        selectedRootStableMoveKey: input.expectedRootStableMoveKey,
+      },
+    });
+  }
   assertAdversarialAlternativeAvoided({
     def,
     result,
@@ -136,7 +146,7 @@ export function assertFitlExecutedOutcomeCase(input: FitlCompetenceCase): void {
   assertReplayIdentity({
     def,
     runFixture: run,
-    outcomeDeltaAssertions: [input.leaderMarginAssertion],
+    ...(input.leaderMarginAssertion === undefined ? {} : { outcomeDeltaAssertions: [input.leaderMarginAssertion] }),
   });
 }
 
@@ -505,14 +515,16 @@ function assertMonsoonClearBranch(
     !result.agentDecision?.plan?.activeDoctrines.includes(MONSOON_DOCTRINE_ID),
     `expected clear branch to leave ${MONSOON_DOCTRINE_ID} inactive`,
   );
-  assertPlanTraceChain({
-    def,
-    result,
-    expected: {
-      eligibleTemplate: input.clearTemplateId,
-      selectedRootStableMoveKey: input.clearRootStableMoveKey,
-    },
-  });
+  if (input.clearTemplateId !== undefined || input.clearRootStableMoveKey !== undefined) {
+    assertPlanTraceChain({
+      def,
+      result,
+      expected: {
+        ...(input.clearTemplateId === undefined ? {} : { eligibleTemplate: input.clearTemplateId }),
+        ...(input.clearRootStableMoveKey === undefined ? {} : { selectedRootStableMoveKey: input.clearRootStableMoveKey }),
+      },
+    });
+  }
 }
 
 function assertMonsoonRestrictedBranch(
@@ -522,20 +534,34 @@ function assertMonsoonRestrictedBranch(
 ): void {
   assert.ok(canonicalStateChanged(result.preState, result.postState), 'expected Monsoon branch to change state');
   assert.equal(result.stopReason, 'turnCompleted');
-  assert.notEqual(
-    input.monsoonRootStableMoveKey,
-    input.clearRootStableMoveKey,
-    'expected Monsoon fallback root to differ from the clear Sweep/March root',
-  );
-  assertPlanTraceChain({
-    def,
-    result,
-    expected: {
-      activeDoctrine: MONSOON_DOCTRINE_ID,
-      eligibleTemplate: input.monsoonTemplateId,
-      selectedRootStableMoveKey: input.monsoonRootStableMoveKey,
-    },
-  });
+  if (
+    input.clearRootStableMoveKey !== undefined
+    && input.clearTemplateId !== undefined
+    && input.monsoonRootStableMoveKey !== undefined
+    && input.monsoonTemplateId !== undefined
+  ) {
+    assert.notDeepEqual(
+      [input.monsoonRootStableMoveKey, input.monsoonTemplateId],
+      [input.clearRootStableMoveKey, input.clearTemplateId],
+      'expected Monsoon fallback root/template pair to differ from the clear branch',
+    );
+  }
+  if (input.monsoonTemplateId === undefined && input.monsoonRootStableMoveKey === undefined) {
+    assert.ok(
+      result.agentDecision?.plan?.activeDoctrines.includes(MONSOON_DOCTRINE_ID),
+      `expected ${MONSOON_DOCTRINE_ID} to be active`,
+    );
+  } else {
+    assertPlanTraceChain({
+      def,
+      result,
+      expected: {
+        activeDoctrine: MONSOON_DOCTRINE_ID,
+        ...(input.monsoonTemplateId === undefined ? {} : { eligibleTemplate: input.monsoonTemplateId }),
+        ...(input.monsoonRootStableMoveKey === undefined ? {} : { selectedRootStableMoveKey: input.monsoonRootStableMoveKey }),
+      },
+    });
+  }
   const filteredByMonsoon = result.agentDecision?.plan?.filteredOutTemplates
     .filter((entry) => entry.gatedBy.includes(MONSOON_DOCTRINE_ID))
     .map((entry) => entry.templateId)

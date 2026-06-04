@@ -19,8 +19,6 @@ describe('ARVN shared.allyRivalThrottle witness', () => {
       playerIndex: 1,
       seed: SEED,
       prepareState: (_def, state) => state,
-      expectedRootStableMoveKey: 'sweep|{}|false|operation',
-      expectedTemplateId: 'arvn.sweepRaid',
       inactiveDoctrines: ['shared.allyRivalThrottle', 'shared.blockCurrentLeader'],
       unfilteredTemplates: ['arvn.trainGovern', 'arvn.patrolGovern'],
     });
@@ -34,7 +32,7 @@ describe('ARVN shared.allyRivalThrottle witness', () => {
       playerIndex: 1,
       seed: SEED,
       prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeSupport'),
-      expectedRootStableMoveKey: 'govern|{}|false|specialActivity',
+      expectedRootStableMoveKey: 'govern|{}|noCompound|false|specialActivity',
       expectedTemplateId: 'arvn.governLeaderDenial',
       activeDoctrines: ['shared.allyRivalThrottle', 'arvn.denyUSIfNearWin'],
       filteredTemplates: [

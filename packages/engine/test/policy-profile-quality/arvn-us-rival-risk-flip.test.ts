@@ -20,7 +20,7 @@ describe('Spec 188 ARVN US rival-risk flip witness', () => {
       playerIndex: 1,
       seed: SEED,
       prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeSupport'),
-      expectedRootStableMoveKey: 'govern|{}|false|specialActivity',
+      expectedRootStableMoveKey: 'govern|{}|noCompound|false|specialActivity',
       expectedTemplateId: 'arvn.governLeaderDenial',
       activeDoctrines: ['shared.allyRivalThrottle', 'arvn.denyUSIfNearWin'],
       postureContributions: [{ id: 'us-rival-risk', maxContribution: -1 }],

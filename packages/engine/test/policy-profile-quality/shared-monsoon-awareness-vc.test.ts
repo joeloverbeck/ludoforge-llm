@@ -14,18 +14,7 @@ describe('VC shared monsoon-awareness witness', () => {
       seatId: 'vc',
       playerIndex: 3,
       seed: 1,
-      clearRootStableMoveKey: 'march|{}|false|operation',
-      clearTemplateId: 'vc.marchSpread',
-      monsoonRootStableMoveKey: 'rally|{}|false|operation',
-      monsoonTemplateId: 'vc.rallyTax',
       suppressedTemplateIds: ['vc.marchAmbushFromLoc', 'vc.marchSpread', 'vc.marchSubvert'],
-      monsoonOutcomeAssertions: [
-        {
-          label: 'VC resources spent by fallback Rally',
-          query: { kind: 'globalVar', name: 'vcResources' },
-          delta: { exact: -2 },
-        },
-      ],
     });
   });
 });

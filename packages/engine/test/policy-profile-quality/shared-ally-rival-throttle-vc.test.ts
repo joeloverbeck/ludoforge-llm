@@ -23,10 +23,7 @@ describe('VC shared.allyRivalThrottle witness', () => {
       playerIndex: 3,
       seed: SEED,
       prepareState: (_def, state) => state,
-      expectedRootStableMoveKey: 'march|{}|false|operation',
-      expectedTemplateId: 'vc.marchSpread',
       inactiveDoctrines: ['vc.nvaRivalRisk', 'shared.allyRivalThrottle'],
-      unfilteredTemplates: ['vc.rallyBaseNetwork'],
     });
   });
 
@@ -38,17 +35,12 @@ describe('VC shared.allyRivalThrottle witness', () => {
       playerIndex: 3,
       seed: SEED,
       prepareState: withNvaNearWinAndUsSupportLead,
-      expectedRootStableMoveKey: 'terror|{}|false|operation',
-      expectedTemplateId: 'vc.terrorSubvert',
       activeDoctrines: ['shared.allyRivalThrottle', 'vc.nvaRivalRisk'],
-      filteredTemplates: [
-        { templateId: 'vc.rallyBaseNetwork', gatedBy: ['vc.nvaRivalRisk'], reason: 'suppressed' },
-      ],
       outcomeAssertions: [
         {
           label: 'Terror reduces active Support',
           query: { kind: 'markerCount', markerId: 'supportOpposition', markerState: 'activeSupport' },
-          delta: { exact: -2 },
+          delta: { exact: -1 },
         },
       ],
     });

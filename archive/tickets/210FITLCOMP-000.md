@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes -- generic preview-option standing-role refs plus GameSpecDoc data
-**Deps**: `specs/210-fitl-behavioral-competence-fixture-corpus.md`
+**Deps**: `archive/specs/210-fitl-behavioral-competence-fixture-corpus.md`
 
 ## Problem
 
@@ -93,6 +93,8 @@ Do not rewrite `shared-block-current-leader-{us,arvn,nva,vc}.test.ts` in this pr
 ## Outcome (2026-06-03)
 
 Outcome amended: 2026-06-04 -- archive-path cleanup after `210FITLCOMP-010` completed and moved to `archive/tickets/`.
+
+Outcome amended: 2026-06-04 -- archive-path cleanup after Spec 210 completed and moved to `archive/specs/`.
 
 Outcome amended: 2026-06-03 -- post-ticket review added the final dependency and whitespace verification commands that were run after archival.
 

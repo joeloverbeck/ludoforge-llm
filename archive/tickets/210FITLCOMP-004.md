@@ -75,6 +75,8 @@ For each `shared-monsoon-awareness-{us,arvn,nva,vc}.test.ts`: build one curated 
 
 Completed: 2026-06-04
 
+Outcome amended: 2026-06-04 -- final Spec 210 P0 proof cleanup normalized stable root keys and narrowed Monsoon paired assertions to the durable invariant after later profile gates changed exact selected roots/templates: clear branch changes state with Monsoon doctrine inactive, Monsoon branch changes state with `shared.monsoonOperationalRestriction` active, Monsoon-suppressed templates are filtered, preview statuses are checked, and both branches replay identically. Exact selected root/template assertions remain only in fixtures where they are still the invariant. The full promoted P0 fixture lane passed afterward: 41 suites / 52 tests.
+
 Implemented the approved option 1 boundary: the four shared Monsoon witnesses now run paired clear/Monsoon live-frontier fixtures with executed outcomes, replay identity, preview-status checks, selected-template/root assertions, and Monsoon-suppressed template assertions. The shared helper gained a reusable `assertFitlMonsoonPairCase` path plus a non-Coup lookahead helper for the clear branch.
 
 GameSpecDoc profile data was corrected in `data/games/fire-in-the-lake/92-agents.md`: `monsoonNow` now activates only on immediately visible Coup lookahead, VC `marchSpread` is suppressed by `shared.monsoonOperationalRestriction`, US build-support enables `us.sweepAirStrike`, and ARVN selective violence has the same priority tier as Train. These were not new feature additions; they were existing-profile corrections required for the paired proof and aligned with Foundations #1/#2.

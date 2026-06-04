@@ -19,7 +19,7 @@ describe('NVA shared.allyRivalThrottle witness', () => {
       playerIndex: 2,
       seed: SEED,
       prepareState: (_def, state) => state,
-      expectedRootStableMoveKey: 'march|{}|false|operation',
+      expectedRootStableMoveKey: 'march|{}|noCompound|false|operation',
       expectedTemplateId: 'nva.marchControl',
       inactiveDoctrines: ['nva.vcRivalRisk'],
     });
@@ -33,7 +33,7 @@ describe('NVA shared.allyRivalThrottle witness', () => {
       playerIndex: 2,
       seed: SEED,
       prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeOpposition'),
-      expectedRootStableMoveKey: 'march|{}|false|operation',
+      expectedRootStableMoveKey: 'march|{}|noCompound|false|operation',
       expectedTemplateId: 'nva.marchControl',
       activeDoctrines: ['nva.vcRivalRisk'],
       filteredTemplates: [

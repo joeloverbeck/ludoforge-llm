@@ -21,7 +21,7 @@ describe('US shared.blockCurrentLeader witness', () => {
       seatId: 'us',
       playerIndex: 0,
       seed: 1,
-      expectedRootStableMoveKey: 'train|{}|false|operation',
+      expectedRootStableMoveKey: 'train|{}|noCompound|false|operation',
       leaderMarginAssertion: {
         label: 'VC leader margin',
         query: { kind: 'terminalVictoryMargin', seat: 'vc' },

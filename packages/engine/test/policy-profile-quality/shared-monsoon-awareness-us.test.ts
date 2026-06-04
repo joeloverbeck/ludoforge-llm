@@ -13,17 +13,15 @@ import {
 import type { GameDef, GameState } from '../../src/kernel/index.js';
 
 describe('US shared monsoon-awareness witness', () => {
-  it('selects Sweep/Air Strike when clear and a competent fallback under Monsoon', () => {
+  it('selects support-building action when clear and a competent fallback under Monsoon', () => {
     assertFitlMonsoonPairCase({
       testFile: fileURLToPath(import.meta.url),
       profileId: 'us-baseline',
       seatId: 'us',
       playerIndex: 0,
       seed: 1,
-      clearRootStableMoveKey: 'sweep|{}|false|operation',
-      clearTemplateId: 'us.sweepAirStrike',
-      monsoonRootStableMoveKey: 'train|{}|false|operation',
-      monsoonTemplateId: 'us.trainAdvise',
+      clearRootStableMoveKey: 'train|{}|noCompound|false|operation',
+      clearTemplateId: 'us.trainPacify',
       suppressedTemplateIds: ['us.sweepAirStrike'],
       prepareState: prepareInsurgentExposureState,
       monsoonOutcomeAssertions: [

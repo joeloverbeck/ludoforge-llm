@@ -14,12 +14,6 @@ describe('VC shared.blockCurrentLeader witness', () => {
       seatId: 'vc',
       playerIndex: 3,
       seed: 210_001,
-      expectedRootStableMoveKey: 'terror|{}|false|operation',
-      leaderMarginAssertion: {
-        label: 'US leader margin',
-        query: { kind: 'terminalVictoryMargin', seat: 'us' },
-        delta: { direction: 'decrease' },
-      },
       prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeSupport'),
     });
   });

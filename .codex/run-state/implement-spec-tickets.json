@@ -1,13 +1,12 @@
 {
   "originating_spec": "specs/210-fitl-behavioral-competence-fixture-corpus.md",
   "archived_spec": null,
-  "last_ticket": "tickets/210FITLCOMP-009.md",
-  "last_result": "retargeted_to_prerequisite",
-  "last_work_commit": "7fe50a40173701f30f93703852e2bcec980ad0e3",
+  "last_ticket": "archive/tickets/210FITLCOMP-010.md",
+  "last_result": "completed",
+  "last_work_commit": "89b20b3a1075c9919303e709d8bc8fd8f94d3008",
   "last_state_commit": "self",
-  "next_target": "tickets/210FITLCOMP-010.md",
+  "next_target": "tickets/210FITLCOMP-009.md",
   "queue": [
-    "tickets/210FITLCOMP-010.md",
     "tickets/210FITLCOMP-009.md"
   ],
   "phase": "ready_for_next_ticket",

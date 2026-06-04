@@ -1,49 +1,42 @@
 // @test-class: convergence-witness
 // @profile-variant: arvn-baseline
-import * as assert from 'node:assert/strict';
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
-import {
-  loadArvnPlanFixture,
-  proposeArvnPlan,
-  requireSelectedTemplate,
-  withEveryZoneSupportMarker,
-} from './arvn-plan-witness-helpers.js';
+import { assertFitlAllyRivalLiveCase } from './ally-rival-competence-helpers.js';
+import { withEveryZoneSupportMarker } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
-const SEED = 188_007_02;
+const SEED = 210_005_02;
 
 describe('Spec 188 ARVN US rival-risk flip witness', () => {
-  it('turns the nominal US ally into a negative posture term when US is near victory', () => {
-    const fixture = loadArvnPlanFixture(SEED);
-    const state = withEveryZoneSupportMarker(fixture.def, fixture.state, 'activeSupport');
-
-    const result = proposeArvnPlan(fixture, ['train'], state);
-    const selected = requireSelectedTemplate(result, 'arvn.trainGovern');
-    const contribution = selected.posture.preferContributions.find((entry) => entry.id === 'us-rival-risk');
-    const flip = selected.posture.allyWeightContext?.flips.find((entry) => entry.contributionId === 'us-rival-risk');
-    const activeRoles = selected.posture.allyWeightContext?.activeRoles ?? [];
-    const passed = contribution?.status === 'ready'
-      && (contribution.contribution ?? 0) < 0
-      && flip?.fired === true
-      && activeRoles.some((entry) => entry.role === 'nominalAlly' && entry.seat === 'us')
-      && activeRoles.some((entry) => entry.role === 'nearWin' && entry.seat === 'us');
-
-    emitPolicyProfileQualityRecord({
-      file: TEST_FILE,
-      variantId: 'arvn-baseline',
+  it('turns the nominal US ally into a negative posture term and executes Govern denial', () => {
+    assertFitlAllyRivalLiveCase({
+      testFile: TEST_FILE,
+      profileId: 'arvn-baseline',
+      seatId: 'arvn',
+      playerIndex: 1,
       seed: SEED,
-      passed,
-      stopReason: selected.posture.status,
-      decisions: result.alternatives.length,
+      prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeSupport'),
+      expectedRootStableMoveKey: 'govern|{}|noCompound|false|specialActivity',
+      expectedTemplateId: 'arvn.governLeaderDenial',
+      activeDoctrines: ['shared.allyRivalThrottle', 'arvn.denyUSIfNearWin'],
+      postureContributions: [{ id: 'us-rival-risk', maxContribution: -1 }],
+      allyFlips: [{ contributionId: 'us-rival-risk', seat: 'us', fired: true }],
+      outcomeAssertions: [
+        {
+          label: 'US margin reduced by Govern denial',
+          query: { kind: 'victoryStandingMargin', seat: 'us' },
+          delta: { exact: -1 },
+        },
+        {
+          label: 'ARVN margin improves through patronage',
+          query: { kind: 'victoryStandingMargin', seat: 'arvn' },
+          delta: { exact: 1 },
+        },
+      ],
     });
-
-    assert.equal(contribution?.status, 'ready');
-    assert.ok((contribution?.contribution ?? 0) < 0);
-    assert.equal(flip?.fired, true);
-    assert.ok(activeRoles.some((entry) => entry.role === 'nominalAlly' && entry.seat === 'us'));
-    assert.ok(activeRoles.some((entry) => entry.role === 'nearWin' && entry.seat === 'us'));
   });
 });

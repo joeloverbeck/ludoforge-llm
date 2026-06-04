@@ -272,6 +272,29 @@ function validatePlanTemplateCompound(
       return;
     }
   }
+  const replaceRemainingStages = compound.replaceRemainingStages;
+  if (replaceRemainingStages !== undefined) {
+    if (timing !== 'during') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.replaceRemainingStages`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound replaceRemainingStages requires timing "during".`,
+        suggestion: 'Set timing: during or remove replaceRemainingStages.',
+      });
+      return;
+    }
+    if (typeof replaceRemainingStages !== 'boolean') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_COMPOUND_UNPROVABLE,
+        path: `${templatePath}.root.compound.replaceRemainingStages`,
+        severity: 'error',
+        message: `Plan template "${templateId}" root.compound replaceRemainingStages must be boolean.`,
+        suggestion: 'Use true to replace remaining operation stages after the compound interrupt.',
+      });
+      return;
+    }
+  }
 
   const specialTagVocabulary = new Set(witnesses.flatMap((witness) => witness.specialTags));
   for (const [tagIndex, tag] of specialTags.entries()) {
@@ -333,7 +356,12 @@ function validatePlanStepMatch(
     ? selectorTargetKindFor(selectors[selectorId])
     : null;
   const targetKind = match.targetKind;
-  if (typeof targetKind === 'string' && selectorTargetKind !== null && targetKind !== selectorTargetKind) {
+  if (
+    match.selectedValue === undefined
+    && typeof targetKind === 'string'
+    && selectorTargetKind !== null
+    && targetKind !== selectorTargetKind
+  ) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
       path: `${templatePath}.steps.${stepIndex}.match.targetKind`,
@@ -344,6 +372,19 @@ function validatePlanStepMatch(
     return;
   }
 
+  if (
+    match.selectedValue !== undefined
+    && match.decisionKind !== 'chooseOne'
+    && match.decisionKind !== 'chooseNStep'
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PLAN_TEMPLATE_STEP_MATCH_INVALID,
+      path: `${templatePath}.steps.${stepIndex}.match.selectedValue`,
+      severity: 'error',
+      message: `Plan template "${templateId}" step ${stepIndex} selectedValue can only be used with chooseOne or chooseNStep decisions.`,
+      suggestion: 'Remove selectedValue or use a choice decision kind.',
+    });
+  }
   if (decisionSurfaces.length === 0) {
     return;
   }
@@ -351,7 +392,7 @@ function validatePlanStepMatch(
     surface.decisionKind === match.decisionKind
     && surface.decisionPath === match.decisionPath
     && typeof targetKind === 'string'
-    && surface.targetKinds.includes(targetKind)
+    && (surface.targetKinds.length === 0 || surface.targetKinds.includes(targetKind))
     && (typeof match.actionTag !== 'string' || surface.actionTags.includes(match.actionTag))
     && (typeof match.stageIndex !== 'number' || surface.stageIndex === match.stageIndex),
   );
@@ -518,7 +559,7 @@ function collectChoiceSurface(
   const bind = choice.bind;
   const decisionPath = typeof bind === 'string' ? bind.replace(/^\$/, '') : null;
   const targetKinds = targetKindsForDomain(decisionKind === 'chooseOne' ? choice.options : choice.options);
-  if (decisionPath !== null && targetKinds.length > 0) {
+  if (decisionPath !== null) {
     surfaces.push({
       decisionKind,
       decisionPath,

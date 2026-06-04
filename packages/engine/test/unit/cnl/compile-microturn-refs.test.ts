@@ -50,11 +50,13 @@ const previewOptionRefs = [
   ['preview.option.victory.currentMargin.self', { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginSelf' }, [0, 0]],
   ['preview.option.victory.currentRank.self', { kind: 'previewOptionRef', refKind: 'victoryCurrentRankSelf' }, [1, 0]],
   ['preview.option.delta.victory.currentMargin.self', { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' }, [2, 0]],
-  ['preview.option.var.global.score', { kind: 'previewOptionRef', refKind: 'globalVar', id: 'score' }, [3, stableStringCode('score')]],
-  ['preview.option.var.player.self.tempo', { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id: 'tempo' }, [4, stableStringCode('tempo')]],
-  ['preview.option.metric.pressure', { kind: 'previewOptionRef', refKind: 'derivedMetric', id: 'pressure' }, [5, stableStringCode('pressure')]],
-  ['preview.option.outcome', { kind: 'previewOptionRef', refKind: 'outcome' }, [6, 0]],
-  ['preview.option.driveDepth', { kind: 'previewOptionRef', refKind: 'driveDepth' }, [7, 0]],
+  ['preview.option.victory.currentMargin.role:currentLeader', { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginRole', id: 'currentLeader' }, [3, stableStringCode('currentLeader')]],
+  ['preview.option.delta.victory.currentMargin.role:currentLeader', { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginRole', id: 'currentLeader' }, [4, stableStringCode('currentLeader')]],
+  ['preview.option.var.global.score', { kind: 'previewOptionRef', refKind: 'globalVar', id: 'score' }, [5, stableStringCode('score')]],
+  ['preview.option.var.player.self.tempo', { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id: 'tempo' }, [6, stableStringCode('tempo')]],
+  ['preview.option.metric.pressure', { kind: 'previewOptionRef', refKind: 'derivedMetric', id: 'pressure' }, [7, stableStringCode('pressure')]],
+  ['preview.option.outcome', { kind: 'previewOptionRef', refKind: 'outcome' }, [8, 0]],
+  ['preview.option.driveDepth', { kind: 'previewOptionRef', refKind: 'driveDepth' }, [9, 0]],
 ] as const;
 
 const instructions = (bytecode: { readonly instructions: Int32Array }): readonly number[] =>

@@ -113,6 +113,7 @@ export const resolveDecisionContinuation = (
   for (let step = 0; step < maxSteps; step += 1) {
     const cached = options?.discoveryCache?.get(move);
     const request = cached ?? legalChoicesDiscover(def, state, move, {
+      ...(move.compound === undefined ? {} : { chainCompoundSA: true }),
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
       },

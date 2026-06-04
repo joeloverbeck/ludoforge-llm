@@ -8,9 +8,9 @@ import {
   applyPublishedDecisionFromPreviewStateNoFinalHash,
 } from '../kernel/microturn/drive.js';
 import {
-  publishMicroturnFromPreviewStateNoHash,
   publishMicroturnPreferredChooseOne,
 } from '../kernel/microturn/publish.js';
+import { tryPublishMicroturnFromPreviewStateNoHash } from '../kernel/microturn/preview-publication.js';
 import { perfHotPathEnd, perfHotPathStart } from '../kernel/perf-profiler.js';
 import { createResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
@@ -99,10 +99,14 @@ export const previewOptionRefKey = (ref: PreviewOptionRef): string => {
   switch (ref.refKind) {
     case 'victoryCurrentMarginSelf':
       return 'preview.option.victory.currentMargin.self';
+    case 'victoryCurrentMarginRole':
+      return `preview.option.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'victoryCurrentRankSelf':
       return 'preview.option.victory.currentRank.self';
     case 'deltaVictoryCurrentMarginSelf':
       return 'preview.option.delta.victory.currentMargin.self';
+    case 'deltaVictoryCurrentMarginRole':
+      return `preview.option.delta.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'globalVar':
       return `preview.option.var.global.${ref.id ?? ''}`;
     case 'perPlayerVarSelf':
@@ -124,6 +128,13 @@ const surfaceRefForPreviewOptionRef = (ref: PreviewOptionRef): CompiledSurfaceRe
         family: 'victoryCurrentMargin',
         id: 'currentMargin',
         selector: { kind: 'role', seatToken: 'self' },
+      };
+    case 'victoryCurrentMarginRole':
+    case 'deltaVictoryCurrentMarginRole':
+      return {
+        family: 'victoryCurrentMargin',
+        id: 'currentMargin',
+        selector: { kind: 'role', seatToken: `role:${ref.id ?? ''}` },
       };
     case 'victoryCurrentRankSelf':
       return {
@@ -385,15 +396,21 @@ const driveOption = (
   });
   const refCache = createResolveRefCache();
   const initialDecisionStartedAt = perfHotPathStart();
-  let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
-    input.def,
-    input.state,
-    input.microturn,
-    decision,
-    { advanceToDecisionPoint: true },
-    input.runtime,
-    refCache,
-  ).state;
+  let state: GameState;
+  try {
+    state = applyPublishedDecisionFromPreviewStateNoFinalHash(
+      input.def,
+      input.state,
+      input.microturn,
+      decision,
+      { advanceToDecisionPoint: true },
+      input.runtime,
+      refCache,
+    ).state;
+  } catch {
+    perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
+    return finish(input.state, 0, 'failed');
+  }
   perfHotPathEnd('policyInnerPreviewDriveOption:initialDecisionApply', initialDecisionStartedAt);
   let draftTokenStateIndex: ReturnType<typeof createDraftTokenStateIndex> | undefined;
   let depth = 1;
@@ -471,8 +488,14 @@ const driveOption = (
     const preferredPublication = preferredValue === undefined
       ? null
       : publishMicroturnPreferredChooseOne(input.def, state, [preferredValue], input.runtime);
-    const microturn = preferredPublication?.microturn
-      ?? publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
+    const publication = preferredPublication === null
+      ? tryPublishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime)
+      : { kind: 'published' as const, microturn: preferredPublication.microturn };
+    if (publication.kind === 'unbridgeable') {
+      perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
+      return finish(canonicalizeForExit(), depth, 'failed');
+    }
+    const microturn = publication.microturn;
     perfHotPathEnd('policyInnerPreviewDriveOption:publishMicroturn', publishStartedAt);
     const pickStartedAt = perfHotPathStart();
     const nextDecisionResult = preferredPublication === null
@@ -526,15 +549,20 @@ const driveOption = (
     }
     const prevState = state;
     const continuationApplyStartedAt = perfHotPathStart();
-    state = applyPublishedDecisionFromPreviewStateNoFinalHash(
-      input.def,
-      prevState,
-      microturn,
-      nextDecision,
-      { advanceToDecisionPoint: true },
-      input.runtime,
-      refCache,
-    ).state;
+    try {
+      state = applyPublishedDecisionFromPreviewStateNoFinalHash(
+        input.def,
+        prevState,
+        microturn,
+        nextDecision,
+        { advanceToDecisionPoint: true },
+        input.runtime,
+        refCache,
+      ).state;
+    } catch {
+      perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
+      return finish(canonicalizeForExit(), depth, 'failed');
+    }
     perfHotPathEnd('policyInnerPreviewDriveOption:continuationDecisionApply', continuationApplyStartedAt);
     syncDraftTokenStateIndex(prevState, state);
     stateIsCanonical = false;
@@ -575,7 +603,7 @@ export const resolveRefs = (
       resolved.set(key, { kind: 'unavailable', reason: drive.outcome === 'depthCap' ? 'depthCap' : 'unresolved' });
       continue;
     }
-    if (ref.refKind === 'deltaVictoryCurrentMarginSelf') {
+    if (ref.refKind === 'deltaVictoryCurrentMarginSelf' || ref.refKind === 'deltaVictoryCurrentMarginRole') {
       if (drive.outcome === 'depthCap') {
         resolved.set(key, { kind: 'unavailable', reason: 'depthCap' });
         continue;

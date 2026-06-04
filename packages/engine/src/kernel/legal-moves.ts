@@ -1,4 +1,4 @@
-import { hasActionPipeline } from './action-pipeline-lookup.js';
+import { getActionPipelinesForAction, hasActionPipeline } from './action-pipeline-lookup.js';
 import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
@@ -235,6 +235,130 @@ const isBaseClassCompatibleWithConstrained = (
   return baseClass === constrainedClass;
 };
 
+const operationAllowsSpecialActivity = (
+  operationActionId: Move['actionId'],
+  accompanyingOps: 'any' | readonly string[] | undefined,
+): boolean => {
+  if (accompanyingOps === undefined || accompanyingOps === 'any') {
+    return true;
+  }
+  return accompanyingOps.includes(String(operationActionId));
+};
+
+const compoundSpecialActivitiesForOperation = (
+  def: GameDef,
+  state: GameState,
+  operationMove: Move,
+): readonly ActionDef[] => {
+  if (operationMove.actionClass !== 'operationPlusSpecialActivity') {
+    return [];
+  }
+  if (resolveTurnFlowActionClass(def, { actionId: operationMove.actionId, params: {} }) !== 'operation') {
+    return [];
+  }
+  return def.actions
+    .filter((action) =>
+      resolveTurnFlowActionClass(def, { actionId: action.id, params: {} }) === 'specialActivity'
+      && getActionPipelinesForAction(def, action.id)
+        .some((pipeline) =>
+          pipelineAppliesToActivePlayer(pipeline.applicability, state.activePlayer)
+          && operationAllowsSpecialActivity(operationMove.actionId, pipeline.accompanyingOps)));
+};
+
+const compoundVariantsForOperation = (
+  def: GameDef,
+  state: GameState,
+  operationMove: Move,
+): readonly Move[] => {
+  const operationAction = def.actions.find((action) => action.id === operationMove.actionId);
+  if (operationAction === undefined) {
+    return [];
+  }
+  const moves: Move[] = [];
+  const seen = new Set<string>();
+  for (const specialAction of compoundSpecialActivitiesForOperation(def, state, operationMove)) {
+    for (const compound of compoundPayloadsForOperationSpecialPair(def, operationAction, specialAction)) {
+      const move: Move = {
+        ...operationMove,
+        compound: {
+          specialActivity: {
+            actionId: specialAction.id,
+            params: {},
+          },
+          ...compound,
+        },
+      };
+      const key = toMoveIdentityKey(def, move);
+      if (!seen.has(key)) {
+        seen.add(key);
+        moves.push(move);
+      }
+    }
+  }
+  return moves;
+};
+
+const compoundPayloadsForOperationSpecialPair = (
+  def: GameDef,
+  operationAction: ActionDef,
+  specialAction: ActionDef,
+): readonly Omit<NonNullable<Move['compound']>, 'specialActivity'>[] => {
+  const payloads: Omit<NonNullable<Move['compound']>, 'specialActivity'>[] = [{ timing: 'after' }];
+  for (const template of Object.values(def.agents?.library.planTemplates ?? {})) {
+    const compound = template.root.compound;
+    if (compound === undefined) {
+      continue;
+    }
+    if (!actionMatchesCompiledRoot(operationAction, template.root.actionIds, template.root.actionTags)) {
+      continue;
+    }
+    if (!specialTagsMatch(specialAction, compound.specialTags)) {
+      continue;
+    }
+    payloads.push({
+      timing: compound.timing,
+      ...(compound.interruptAfterStage === undefined ? {} : { insertAfterStage: compound.interruptAfterStage }),
+      ...(compound.replaceRemainingStages === undefined ? {} : { replaceRemainingStages: compound.replaceRemainingStages }),
+    });
+  }
+  return payloads;
+};
+
+const actionMatchesCompiledRoot = (
+  action: ActionDef,
+  actionIds: readonly string[],
+  actionTags: readonly string[],
+): boolean => {
+  const tags = new Set(action.tags ?? []);
+  return actionIds.includes(String(action.id))
+    || actionTags.some((tag) => String(action.id) === tag || tags.has(tag));
+};
+
+const specialTagsMatch = (
+  action: ActionDef,
+  specialTags: readonly string[],
+): boolean => {
+  const tags = new Set(action.tags ?? []);
+  return specialTags.every((tag) => String(action.id) === tag || tags.has(tag));
+};
+
+const pipelineAppliesToActivePlayer = (
+  applicability: unknown,
+  activePlayer: GameState['activePlayer'],
+): boolean => {
+  if (applicability === undefined || applicability === null || applicability === true) {
+    return true;
+  }
+  if (typeof applicability !== 'object') {
+    return false;
+  }
+  const record = applicability as Record<string, unknown>;
+  const left = record.left as Record<string, unknown> | undefined;
+  return record.op === '=='
+    && left?.ref === 'activePlayer'
+    && record.right === Number(activePlayer);
+};
+
 const tryPushOptionMatrixFilteredMove = (
   enumeration: MoveEnumerationState,
   def: GameDef,
@@ -294,8 +418,19 @@ const tryPushOptionMatrixFilteredMove = (
     if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, variant)) {
       continue;
     }
-    if (!tryPushEnumeratedMove(enumeration, variant, action.id)) {
-      return false;
+    const compoundVariants = compoundVariantsForOperation(def, state, variant);
+    const isBareOperationPlusSpecialOperation =
+      variant.actionClass === 'operationPlusSpecialActivity'
+      && resolveTurnFlowActionClass(def, { actionId: variant.actionId, params: {} }) === 'operation';
+    if (!(isBareOperationPlusSpecialOperation && compoundVariants.length > 0)) {
+      if (!tryPushEnumeratedMove(enumeration, variant, action.id)) {
+        return false;
+      }
+    }
+    for (const compoundVariant of compoundVariants) {
+      if (!tryPushEnumeratedMove(enumeration, compoundVariant, action.id)) {
+        return false;
+      }
     }
   }
   return true;

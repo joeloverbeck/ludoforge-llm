@@ -794,6 +794,7 @@ export interface GameSpecPlanRootDef {
     readonly specialTags?: readonly string[];
     readonly timing?: GameSpecPlanRootTiming;
     readonly interruptAfterStage?: number;
+    readonly replaceRemainingStages?: boolean;
   };
 }
 
@@ -834,6 +835,7 @@ export interface GameSpecPlanStepDef {
     readonly decisionPath: string;
     readonly actionTag?: string;
     readonly stageIndex?: number;
+    readonly selectedValue?: string | number | boolean;
   };
 }
 

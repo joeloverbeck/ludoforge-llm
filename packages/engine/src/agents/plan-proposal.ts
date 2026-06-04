@@ -51,6 +51,9 @@ interface PlanExprContext {
 export interface PlanProposalAlternative {
   readonly templateId: string;
   readonly rootStableMoveKey: string;
+  readonly rootDecision?: Extract<Decision, { readonly kind: 'actionSelection' }>;
+  readonly rootActionClass?: string;
+  readonly rootHasCompound?: boolean;
   readonly score: number;
   readonly priorityTier: number;
   readonly stableKey: string;
@@ -159,6 +162,9 @@ export const proposeAdvisoryTurnPlan = (input: ProposeAdvisoryTurnPlanInput): Pl
       alternatives.push({
         templateId,
         rootStableMoveKey: root.stableMoveKey,
+        rootDecision: root.decision,
+        ...(root.move.actionClass === undefined ? {} : { rootActionClass: root.move.actionClass }),
+        ...(root.move.compound === undefined ? {} : { rootHasCompound: true }),
         score: priorityTier + roleScore + considerationScore + posture.scoreDelta,
         priorityTier,
         stableKey,
@@ -645,7 +651,25 @@ function compareAlternatives(left: PlanProposalAlternative, right: PlanProposalA
   return right.priorityTier - left.priorityTier
     || right.score - left.score
     || compareCompoundAvailability(left.compoundAvailability, right.compoundAvailability)
+    || compareCompoundRootActionClass(left.rootActionClass, right.rootActionClass)
+    || compareCompoundPayload(left.rootHasCompound, right.rootHasCompound)
     || compareStable(left.stableKey, right.stableKey);
+}
+
+function compareCompoundRootActionClass(left: string | undefined, right: string | undefined): number {
+  return compoundRootActionClassRank(left) - compoundRootActionClassRank(right);
+}
+
+function compoundRootActionClassRank(actionClass: string | undefined): number {
+  return actionClass === 'operationPlusSpecialActivity' ? 0 : 1;
+}
+
+function compareCompoundPayload(left: boolean | undefined, right: boolean | undefined): number {
+  return compoundPayloadRank(left) - compoundPayloadRank(right);
+}
+
+function compoundPayloadRank(hasCompound: boolean | undefined): number {
+  return hasCompound === true ? 0 : 1;
 }
 
 function emptyProposal(

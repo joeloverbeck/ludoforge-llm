@@ -24,6 +24,8 @@ import {
   resolveDecisionContinuation,
   type DecisionContinuationResult,
 } from './continuation.js';
+import { COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX } from './continuation-bindings.js';
+import { hasImmediateChooseNStepProgress, hasPublishableFirstContinuation } from './publish-constructibility.js';
 import { isBridgeableNextDecision, MICROTURN_PROBE_DEPTH_BUDGET } from './probe.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 import { cardDrivenRuntime } from '../card-driven-accessors.js';
@@ -80,6 +82,39 @@ const actionSelectionTurnId = (state: GameState): ReturnType<typeof asTurnId> =>
 
 const actionSelectionFrameId = (state: GameState): ReturnType<typeof asDecisionFrameId> =>
   state.nextFrameId ?? asDecisionFrameId(0);
+
+const withResolvedDecisionValue = (
+  move: Move,
+  context: ChooseOneContext | ChooseNStepContext,
+  value: MoveParamScalar | readonly MoveParamScalar[],
+): Move => {
+  if (context.decisionPath === 'compound.specialActivity') {
+    if (move.compound === undefined) {
+      return move;
+    }
+    return {
+      ...move,
+      compound: {
+        ...move.compound,
+        specialActivity: {
+          ...move.compound.specialActivity,
+          params: {
+            ...move.compound.specialActivity.params,
+            [context.decisionKey]: value,
+          },
+        },
+      },
+    };
+  }
+
+  return {
+    ...move,
+    params: {
+      ...move.params,
+      [context.decisionKey]: value,
+    },
+  };
+};
 
 const toStochasticDistribution = (
   continuation: DecisionContinuationResult,
@@ -184,12 +219,60 @@ const isSupportedContinuationResult = (
     return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
-    return continuation.complete && (moveViability?.viable ?? true);
+    if (probeMove && continuation.complete && continuation.move.compound !== undefined) {
+      const compoundContinuation = resolveContinuationForMove(
+        def,
+        {
+          ...state,
+          decisionStack: [],
+          activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(state.activePlayer)),
+        },
+        continuation.move,
+        runtime,
+      );
+      if (compoundContinuation.illegal !== undefined) {
+        return false;
+      }
+      if (compoundContinuation.nextDecision !== undefined) {
+        return isBridgeableNextDecision(
+          {
+            def,
+            state,
+            runtime: getRuntime(def, runtime),
+            move: compoundContinuation.move,
+            depthBudget: MICROTURN_PROBE_DEPTH_BUDGET,
+          },
+          compoundContinuation.nextDecision,
+        );
+      }
+      if (compoundContinuation.stochasticDecision !== undefined) {
+        return toStochasticDistribution(compoundContinuation) !== null;
+      }
+      return compoundContinuation.complete;
+    }
+    return continuation.complete && (
+      moveViability === null
+      || (moveViability.viable && moveViability.complete)
+    );
   }
   if (
     moveViability !== null && !moveViability.viable
     && moveViability.code === 'ILLEGAL_MOVE'
     && moveViability.context.reason !== 'moveHasIncompleteParams'
+  ) {
+    return false;
+  }
+  if (
+    move.compound !== undefined
+    && !hasPublishableFirstContinuation(
+      def,
+      state,
+      continuation.move,
+      continuation,
+      { withResolvedDecisionValue, isSupportedFrameContinuationMove },
+      runtime,
+      1,
+    )
   ) {
     return false;
   }
@@ -218,7 +301,11 @@ const isSupportedFrameContinuationMove = (
   }
   try {
     const continuation = resumeSuspendedEffectFrame(def, suspendedFrame, move, runtime);
-    return isSupportedContinuationResult(def, state, move, continuation, runtime, false);
+    if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
+      const moveViability = probeMoveViability(def, state, continuation.move, runtime);
+      return continuation.complete && moveViability.viable && moveViability.complete;
+    }
+    return isSupportedContinuationResult(def, state, continuation.move, continuation, runtime);
   } catch {
     return false;
   }
@@ -321,13 +408,39 @@ export const rebuildMoveFromTrace = (trace: readonly CompoundTurnTraceEntry[]): 
   }, selectedMove);
 };
 
-export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => ({
-  ...rebuildMoveFromTrace(rootDecisionHistory(frame)),
-  params: {
-    ...rebuildMoveFromTrace(rootDecisionHistory(frame)).params,
-    ...(frame.continuationBindings ?? {}),
-  },
-});
+export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => {
+  const baseMove = rebuildMoveFromTrace(rootDecisionHistory(frame));
+  const mainBindings: Record<string, Move['params'][string]> = {};
+  const compoundBindings: Record<string, Move['params'][string]> = {};
+  for (const [key, value] of Object.entries(frame.continuationBindings ?? {})) {
+    if (key.startsWith(COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX)) {
+      compoundBindings[key.slice(COMPOUND_SPECIAL_ACTIVITY_BINDING_PREFIX.length)] = value;
+    } else {
+      mainBindings[key] = value;
+    }
+  }
+  return {
+    ...baseMove,
+    params: {
+      ...baseMove.params,
+      ...mainBindings,
+    },
+    ...(baseMove.compound === undefined || Object.keys(compoundBindings).length === 0
+      ? {}
+      : {
+        compound: {
+          ...baseMove.compound,
+          specialActivity: {
+            ...baseMove.compound.specialActivity,
+            params: {
+              ...baseMove.compound.specialActivity.params,
+              ...compoundBindings,
+            },
+          },
+        },
+      }),
+  };
+};
 
 const buildProjectedState = (
   def: GameDef,
@@ -382,6 +495,7 @@ const toChooseNStepContext = (
   options: request.options,
   targetKinds: request.targetKinds,
   ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
+  ...(request.decisionPath === undefined ? {} : { decisionPath: request.decisionPath }),
   selectedSoFar: request.selected,
   cardinality: {
     min: request.min ?? 0,
@@ -505,6 +619,7 @@ export const toChooseNStepDecisions = (
   context: ChooseNStepContext,
   effectFrame: EffectExecutionFrameSnapshot,
   runtime?: GameDefRuntime,
+  progressOptionLimit = Number.POSITIVE_INFINITY,
 ): readonly ChooseNStepDecision[] => {
   const selectedKeys = new Set(context.selectedSoFar.map((value) => JSON.stringify([typeof value, value])));
   const decisions = context.options
@@ -535,53 +650,53 @@ export const toChooseNStepDecisions = (
     try {
       const advanced = advanceChooseNStepContext(context, decision);
 
-      // Intermediate chooseN steps are executable if they produce another
-      // valid pending chooseN frame in the current microturn context. Only the
-      // terminal confirm step must additionally prove that the resulting move
-      // continuation remains bridgeable as a supported action move.
       if (!advanced.done) {
-        const nextSelectedKeys = new Set(
-          advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
+        const candidateMove = withResolvedDecisionValue(
+          baseMove,
+          context,
+          advanced.nextContext.selectedSoFar,
         );
-        const hasRemainingAdd = advanced.nextContext.options.some((option) =>
-          option.legality !== 'illegal'
-          && !Array.isArray(option.value)
-          && !nextSelectedKeys.has(JSON.stringify([typeof option.value, option.value])),
-        );
-        if (hasRemainingAdd) {
-          return true;
-        }
-        if (!advanced.nextContext.stepCommands.includes('confirm')) {
-          return false;
-        }
-        const candidateMove: Move = {
-          ...baseMove,
-          params: {
-            ...baseMove.params,
-            [context.decisionKey]: advanced.nextContext.selectedSoFar,
-          },
-        };
         return isSupportedFrameContinuationMove(
           def,
           state,
           effectFrame,
           candidateMove,
           runtime,
+        ) && hasImmediateChooseNStepProgress(
+          def,
+          state,
+          candidateMove,
+          advanced.nextContext,
+          effectFrame,
+          { withResolvedDecisionValue, isSupportedFrameContinuationMove, advanceChooseNStepContext },
+          runtime,
+          progressOptionLimit,
         );
       }
 
-      const candidateMove: Move = {
-        ...baseMove,
-        params: {
-          ...baseMove.params,
-          [context.decisionKey]: advanced.value,
-        },
-      };
-      return isSupportedFrameContinuationMove(
+      const candidateMove = withResolvedDecisionValue(
+        baseMove,
+        context,
+        advanced.value,
+      );
+      if (!isSupportedFrameContinuationMove(
         def,
         state,
         effectFrame,
         candidateMove,
+        runtime,
+      )) {
+        return false;
+      }
+      const continuation = effectFrame.suspendedFrame === undefined
+        ? resolveContinuationForMove(def, state, candidateMove, runtime)
+        : resumeSuspendedEffectFrame(def, effectFrame.suspendedFrame, candidateMove, runtime);
+      return hasPublishableFirstContinuation(
+        def,
+        state,
+        continuation.move,
+        continuation,
+        { withResolvedDecisionValue, isSupportedFrameContinuationMove },
         runtime,
       );
     } catch {
@@ -619,6 +734,7 @@ const toChooseOneContext = (
   options: request.options,
   targetKinds: request.targetKinds,
   ...(request.stageIndex === undefined ? {} : { stageIndex: request.stageIndex }),
+  ...(request.decisionPath === undefined ? {} : { decisionPath: request.decisionPath }),
 });
 
 const findRootFrame = (state: GameState, top: DecisionStackFrame): DecisionStackFrame => {
@@ -726,13 +842,7 @@ const publishStackTop = (
           decisionKey: context.decisionKey,
           value: option.value,
         } as ChooseOneDecision,
-        move: {
-          ...baseMove,
-          params: {
-            ...baseMove.params,
-            [context.decisionKey]: option.value,
-          },
-        },
+        move: withResolvedDecisionValue(baseMove, context, option.value),
       }))
       .filter(({ move }) => isSupportedFrameContinuationMove(def, state, top.effectFrame, move, runtime))
       .map(({ decision }) => decision);

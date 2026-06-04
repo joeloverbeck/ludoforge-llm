@@ -1,4 +1,6 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
@@ -10,6 +12,8 @@ import { asActionId, asPlayerId, legalMoves, type GameDef, type GameState } from
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
+import { executePublishedArvnCompoundRoot, loadArvnPlanFixture } from './arvn-plan-witness-helpers.js';
+import { withCoupLookahead } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const ARVN_ACTION_WINDOW_FIXTURE_PATH = fileURLToPath(
@@ -57,7 +61,10 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
     const postStateConstraint = destinationConstraints.find((constraint) => constraint.kind === 'postState');
     assert.ok(postStateConstraint, 'expected transportDestination postState constraint');
     const trainTransportMove = legalMoves(def, state)
-      .find((move) => move.actionId === asActionId('train') && move.actionClass === 'operationPlusSpecialActivity');
+      .find((move) =>
+        move.actionId === asActionId('train')
+        && move.actionClass === 'operationPlusSpecialActivity'
+        && move.compound?.specialActivity.actionId === asActionId('transport'));
     assert.ok(trainTransportMove, 'expected production legal move enumeration to publish Train+Transport');
 
     const context = {
@@ -70,7 +77,7 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
     const routeGraph = routeGraphProviderForDef(def);
 
     const rejected = evaluateRoleConstraints(
-      roleBinding('transportDestination', 'binh-dinh:none'),
+      roleBinding('transportDestination', 'da-nang:none'),
       [postStateConstraint],
       {
         trainSpace: roleBinding('trainSpace', 'hue:none'),
@@ -91,6 +98,16 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
       routeGraph,
       context,
     );
+    const executed = executePublishedArvnCompoundRoot(loadArvnPlanFixture(1), {
+      actionId: 'train',
+      specialActionId: 'transport',
+      seed: 1,
+      prepareState: (caseDef, base) => ({
+        ...withCoupLookahead(caseDef, base),
+        globalMarkers: { ...base.globalMarkers, activeLeader: 'youngTurks' },
+      }),
+    });
+    const transportExecuted = Number(executed.postState.globalVars.transportCount) > Number(executed.preState.globalVars.transportCount);
     const passed = originConstraints.every((constraint) => constraint.kind !== 'postState')
       && postStateConstraint?.kind === 'postState'
       && postStateConstraint.role === 'transportDestination'
@@ -99,7 +116,8 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
       && rejected.kind === 'reject'
       && rejected.rejection.kind === 'postState'
       && rejected.rejection.reason === 'postStatePredicateFailed'
-      && admitted.kind === 'pass';
+      && admitted.kind === 'pass'
+      && transportExecuted;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -107,7 +125,7 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
       seed: 205_003,
       passed,
       stopReason: rejected.kind === 'reject' ? rejected.rejection.reason : rejected.kind,
-      decisions: 2,
+      decisions: 2 + executed.decisions.length,
     });
 
     assert.equal(originConstraints.every((constraint) => constraint.kind !== 'postState'), true);
@@ -119,5 +137,6 @@ describe('Spec 205 ARVN Transport postState origin-Control constraint-time witne
       rejection: { kind: 'postState', reason: 'postStatePredicateFailed' },
     });
     assert.deepEqual(admitted, { kind: 'pass' });
+    assert.equal(transportExecuted, true, 'expected selected Train+Transport route to execute');
   });
 });

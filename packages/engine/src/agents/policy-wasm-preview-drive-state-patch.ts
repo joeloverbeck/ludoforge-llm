@@ -309,5 +309,30 @@ export const materializePolicyWasmPreviewStatePatch = (
   };
 };
 
+const isPreviewConstructibilityMaterializationFailure = (error: unknown): boolean =>
+  error instanceof Error
+  && (
+    error.message.startsWith('MICROTURN_CONSTRUCTIBILITY_INVARIANT:')
+    || error.message.startsWith('Illegal move:')
+  );
+
+export const tryMaterializePolicyWasmPreviewStatePatch = (
+  input: {
+    readonly def: GameDef;
+    readonly state: GameState;
+    readonly patch: PolicyWasmPreviewStatePatch;
+    readonly runtime?: GameDefRuntime;
+  },
+): PolicyWasmPreviewStatePatchMaterializationResult | null => {
+  try {
+    return materializePolicyWasmPreviewStatePatch(input);
+  } catch (error) {
+    if (isPreviewConstructibilityMaterializationFailure(error)) {
+      return null;
+    }
+    throw error;
+  }
+};
+
 const isMoveParamScalar = (value: unknown): value is MoveParamScalar =>
   typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';

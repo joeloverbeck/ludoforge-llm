@@ -401,10 +401,14 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
   switch (ref.refKind) {
     case 'victoryCurrentMarginSelf':
       return 'option.victory.currentMargin.self';
+    case 'victoryCurrentMarginRole':
+      return `option.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'victoryCurrentRankSelf':
       return 'option.victory.currentRank.self';
     case 'deltaVictoryCurrentMarginSelf':
       return 'option.delta.victory.currentMargin.self';
+    case 'deltaVictoryCurrentMarginRole':
+      return `option.delta.victory.currentMargin.role:${ref.id ?? ''}`;
     case 'globalVar':
       return `option.var.global.${ref.id ?? ''}`;
     case 'perPlayerVarSelf':

@@ -26,7 +26,7 @@ import {
   pickInnerDecision,
 } from './policy-preview.js';
 import { lowerPolicyWasmDeepContinuationDecision } from './policy-wasm-preview-choosenstep-continuation.js';
-import { materializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
+import { tryMaterializePolicyWasmPreviewStatePatch } from './policy-wasm-preview-drive-state-patch.js';
 import {
   getInitializedPolicyWasmRuntime,
   recordProductionPolicyWasmPreviewDrive,
@@ -346,12 +346,20 @@ const continueChooseNStepInnerPreviewDriveWithWasm = (
     if (traceEntry !== undefined) {
       syntheticDecisions.push(traceEntry);
     }
-    state = materializePolicyWasmPreviewStatePatch({
+    const materialized = tryMaterializePolicyWasmPreviewStatePatch({
       def: input.def,
       state,
       patch,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-    }).state;
+    });
+    if (materialized === null) {
+      return unsupportedWasmDeepDrive(
+        'unsupported-effect',
+        'production-deep-choosenstep-continuation.statePatch',
+        'WASM chooseNStep continuation state patch reached a non-constructible preview continuation',
+      );
+    }
+    state = materialized.state;
     producedProjectedState = true;
     depth += 1;
   }

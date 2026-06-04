@@ -1,10 +1,17 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
-import { loadNvaPlanFixture } from './nva-plan-witness-helpers.js';
+import {
+  countBoardFactionTokens,
+  executePublishedNvaRoot,
+  emitNvaPolicyQualityRecord,
+  loadNvaPlanFixture,
+} from './nva-plan-witness-helpers.js';
+import { withCoupLookahead } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 188_009_01;
@@ -16,27 +23,38 @@ const SEED = 188_009_01;
 // vc-rival-leverage module, and the March+Infiltrate expansion/takeover selector wiring — are
 // asserted structurally.
 describe('Spec 188 NVA March/Infiltrate VC-base pressure witness', () => {
-  it('wires March+Infiltrate to NVA expansion + VC-rival takeover doctrine', () => {
+  it('executes NVA-gain Infiltrate while preserving the low-yield VC-steal guardrail', () => {
     const fixture = loadNvaPlanFixture(SEED);
     const lib = fixture.def.agents?.library;
     const modules = fixture.profile.use.strategyModules ?? [];
     const bound = fixture.profile.plan.planTemplates ?? [];
     const template = lib?.planTemplates?.['nva.marchInfiltrate'];
+    const executed = executePublishedNvaRoot(fixture, {
+      actionId: 'march',
+      specialActionId: 'infiltrate',
+      seed: SEED,
+      prepareState: (def, state) => withCoupLookahead(def, state),
+    });
+    const nvaBoardTroopDelta = countBoardFactionTokens(fixture.def, executed.postState, 'NVA', 'troops')
+      - countBoardFactionTokens(fixture.def, executed.preState, 'NVA', 'troops');
+    const vcBoardDelta = countBoardFactionTokens(fixture.def, executed.postState, 'VC')
+      - countBoardFactionTokens(fixture.def, executed.preState, 'VC');
 
     const passed = lib?.relationships?.['nva.vcNominalAlly']?.seat === 'vc'
       && lib?.guardrails?.['nva.doNotServeVcWin']?.severity === 'demote'
       && modules.includes('nva.vcRivalLeverage')
       && bound.includes('nva.marchInfiltrate')
       && template?.roles.marchSpace?.selectorId === 'nva.marchExpansionSpace'
-      && template?.roles.infiltrateSpace?.selectorId === 'nva.infiltrateTargetSpace';
+      && template?.roles.infiltrateSpace?.selectorId === 'nva.infiltrateTargetSpace'
+      && nvaBoardTroopDelta > 0
+      && vcBoardDelta === 0;
 
-    emitPolicyProfileQualityRecord({
+    emitNvaPolicyQualityRecord({
       file: TEST_FILE,
-      variantId: 'nva-baseline',
       seed: SEED,
       passed,
-      stopReason: 'architectural-invariant',
-      decisions: 6,
+      stopReason: executed.rootStableMoveKey,
+      decisions: executed.decisions.length,
     });
 
     assert.equal(lib?.relationships?.['nva.vcNominalAlly']?.seat, 'vc');
@@ -45,5 +63,7 @@ describe('Spec 188 NVA March/Infiltrate VC-base pressure witness', () => {
     assert.equal(bound.includes('nva.marchInfiltrate'), true);
     assert.equal(template?.roles.marchSpace?.selectorId, 'nva.marchExpansionSpace');
     assert.equal(template?.roles.infiltrateSpace?.selectorId, 'nva.infiltrateTargetSpace');
+    assert.ok(nvaBoardTroopDelta > 0, `expected NVA board troop build-up, got ${nvaBoardTroopDelta}`);
+    assert.equal(vcBoardDelta, 0, 'expected no low-yield VC steal in this NVA-gain execution');
   });
 });

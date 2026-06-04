@@ -121,6 +121,9 @@ const decisionMatchesStep = (
     }
     return template.root.actionIds.includes(actionId);
   }
+  if (step.match.selectedValue !== undefined) {
+    return decisionValueMatches(decision, step.match.selectedValue, allowAnySelectedRoleValue);
+  }
   const binding = state.roleBindings[step.role];
   if (binding === undefined) {
     return allowAnySelectedRoleValue;
@@ -134,6 +137,23 @@ const decisionMatchesStep = (
         : decision.value !== undefined && String(decision.value) === binding.selectedId;
     default:
       return allowAnySelectedRoleValue;
+  }
+};
+
+const decisionValueMatches = (
+  decision: Decision,
+  selectedValue: string | number | boolean,
+  allowConfirm: boolean,
+): boolean => {
+  switch (decision.kind) {
+    case 'chooseOne':
+      return decision.value === selectedValue;
+    case 'chooseNStep':
+      return decision.command === 'confirm'
+        ? allowConfirm
+        : decision.value !== undefined && decision.value === selectedValue;
+    default:
+      return allowConfirm;
   }
 };
 
@@ -151,7 +171,8 @@ const decisionContextMatchesStep = (
     if (String(context.decisionKey) !== match.decisionPath) {
       return false;
     }
-    if (!(context.targetKinds ?? []).includes(match.targetKind as never)) {
+    const contextTargetKinds = context.targetKinds ?? [];
+    if (contextTargetKinds.length > 0 && !contextTargetKinds.includes(match.targetKind as never)) {
       return false;
     }
     if (match.stageIndex !== undefined && context.stageIndex !== match.stageIndex) {

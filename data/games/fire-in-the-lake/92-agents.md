@@ -148,7 +148,8 @@ agents:
         type: number
         expr:
           coalesce:
-            - { ref: schedule.distance.toBoundary.coupEntry.cards }
+            - scheduleLowerBound:
+                ref: schedule.distance.toBoundary.coupEntry.cards
             - 999
       monsoonNow:
         type: boolean
@@ -156,7 +157,7 @@ agents:
           lte:
             - scheduleLowerBound:
                 ref: schedule.distance.toBoundary.coupEntry.cards
-            - 2
+            - 1
       aid:
         type: number
         expr:
@@ -500,7 +501,7 @@ agents:
             - { ref: feature.projectedCurrentLeaderMargin }
             - -2
       coupImminent:
-        description: "Coup is one card away or sooner; speculative setup is dominated by concrete swing."
+        description: "Coup is visible in the current or next lifecycle slot; speculative setup is dominated by concrete swing."
         target:
           lte:
             - { ref: feature.distanceToCoup }
@@ -947,6 +948,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: pacificationPopulation
@@ -1056,6 +1061,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: indigenousForceMultiplier
@@ -1133,6 +1142,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: zeroPopulationSafeStrike
@@ -1856,6 +1869,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: supportInfiltration
@@ -1992,6 +2009,10 @@ agents:
         scopes: [move]
         source:
           collection: { kind: zones }
+        where:
+          in:
+            - zoneProp: { zone: { ref: selector.item.key }, prop: category }
+            - [city, province, loc]
         quality:
           components:
             - id: arvnCubeDisruption
@@ -2283,6 +2304,16 @@ agents:
           - { label: govern-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
+      arvn.governLeaderDenial:
+        traceLabel: "ARVN Govern to deny current leader"
+        root: { actionTags: [govern] }
+        postureHook: arvn.preserveAidAndMargin
+        roles:
+          governSpace: { selector: arvn.governPatronageSpace, required: true }
+        steps:
+          - { label: govern-denial-space, role: governSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: govern } }
+        caps: { capClass: standard256, maxSteps: 1 }
+        fallback: { ifRoleTargetUnavailable: primitivePolicy }
       arvn.sweepRaid:
         traceLabel: "ARVN Sweep then Raid"
         root: { actionTags: [sweep], compound: { specialTags: [raid], timing: after } }
@@ -2378,7 +2409,7 @@ agents:
           trainSpace: { selector: us.trainSupportSpace, required: true }
           adviseSpace: { selector: us.adviseTargetSpace, required: true, constraints: [{ notEqual: role.trainSpace }] }
         steps:
-          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
+          - { label: train-support-space, role: trainSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train, stageIndex: 0 } }
           - { label: advise-force-multiplier, role: adviseSpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: advise } }
         caps: { capClass: standard256, maxSteps: 2 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
@@ -2431,8 +2462,12 @@ agents:
         roles:
           pacifySpace: { selector: us.pacifyTargetSpace, required: true }
         steps:
-          - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train } }
-        caps: { capClass: standard256, maxSteps: 1 }
+          - { label: pacify-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: targetSpaces, actionTag: train, stageIndex: 0 } }
+          - { label: train-place-irregulars, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: trainChoice, actionTag: train, stageIndex: 1, selectedValue: place-irregulars } }
+          - { label: sub-action-space, role: pacifySpace, match: { decisionKind: chooseNStep, targetKind: zone, decisionPath: subActionSpaces, actionTag: train, stageIndex: 3 } }
+          - { label: choose-pacify, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: subAction, actionTag: train, stageIndex: 3, selectedValue: pacify } }
+          - { label: max-pacification-levels, role: pacifySpace, match: { decisionKind: chooseOne, targetKind: value, decisionPath: pacLevels, actionTag: train, stageIndex: 3, selectedValue: 2 } }
+        caps: { capClass: standard256, maxSteps: 5 }
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       us.airLiftAssault:
         traceLabel: "US Assault, Air Lift, Assault (mass Troops)"
@@ -2556,7 +2591,7 @@ agents:
         fallback: { ifRoleTargetUnavailable: primitivePolicy }
       nva.attackAmbush:
         traceLabel: "NVA Attack then Ambush"
-        root: { actionTags: [attack], compound: { specialTags: [ambush-nva], timing: after } }
+        root: { actionTags: [attack], compound: { specialTags: [ambush-nva], timing: during, interruptAfterStage: 1, replaceRemainingStages: true } }
         postureHook: nva.protectLogisticsAndBases
         roles:
           attackSpace: { selector: nva.attackTargetSpace, required: true }
@@ -2981,7 +3016,7 @@ agents:
           ref: condition.currentLeaderNearWin.satisfied
         applies:
           scopes: [move]
-          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, infiltrate, bombard]
+          actionTags: [govern, patrol, sweep, assault, train, air-strike, march, attack, terror, infiltrate, bombard]
         priority:
           tier: 80
         scoreGroups:
@@ -2993,6 +3028,10 @@ agents:
                   sub:
                     - 0
                     - { ref: feature.projectedLeaderMarginDelta }
+        enablesPlanTemplates:
+          - us.assaultHighValueInfrastructure
+          - arvn.governLeaderDenial
+          - nva.terrorSupportReduction
       shared.nearCoupConcreteSwing:
         traceLabel: "concrete coup swing"
         when:
@@ -3079,6 +3118,7 @@ agents:
           - nva.locOccupationBeforeCoup
           - vc.marchSubvert
           - vc.marchAmbushFromLoc
+          - vc.marchSpread
       arvnPursueProjectedMargin:
         traceLabel: "ARVN pursue projected margin"
         when: true
@@ -3206,7 +3246,7 @@ agents:
           scopes: [move]
           actionTags: [sweep, assault]
         priority:
-          tier: 60
+          tier: 80
         selectors:
           - { role: exposeTarget, selectorId: arvn.sweepToExposeSpace }
           - { role: removalTarget, selectorId: arvn.raidRemovalTarget }
@@ -3316,6 +3356,7 @@ agents:
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
         enablesPlanTemplates:
+          - us.sweepAirStrike
           - us.trainPacify
           - us.patrolAdvise
           - us.trainAdvise
@@ -3588,6 +3629,10 @@ agents:
               - { id: surgicalRemoval, weight: 7, value: 1 }
         guardrailIds: []
         fallback: { ifInactive: noContribution, ifSelectorEmpty: noContribution }
+        enablesPlanTemplates:
+          - vc.rallyTax
+          - vc.marchAmbushFromLoc
+          - vc.attackAmbush
       vc.denyNvaIfNearWin:
         traceLabel: "VC deny NVA if near win"
         when: true
@@ -4262,6 +4307,20 @@ agents:
         weight: 300
         value:
           ref: selector.arvnMicroturnOptionProjectedMargin.current.quality
+      preferLeaderDenialOption:
+        scopes: [microturn]
+        costClass: preview
+        when:
+          ref: condition.currentLeaderNearWin.satisfied
+        weight: 1000
+        value:
+          coalesce:
+            - sub:
+                - 0
+                - { ref: preview.option.delta.victory.currentMargin.role:currentLeader }
+            - 0
+        previewFallback:
+          onUnavailable: noContribution
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -4269,6 +4328,13 @@ agents:
   profiles:
     us-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          depthCap: 4
       params:
         eventWeight: 200
         projectedMarginWeight: 100
@@ -4304,6 +4370,7 @@ agents:
           - us.airLiftControlOrWithdrawal
           - us.assaultHighValueInfrastructure
         considerations:
+          - preferLeaderDenialOption
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
@@ -4376,6 +4443,7 @@ agents:
         planTemplates:
           - arvn.trainGovern
           - arvn.patrolGovern
+          - arvn.governLeaderDenial
           - arvn.sweepRaid
           - arvn.assaultRaid
           - arvn.trainTransport
@@ -4383,12 +4451,20 @@ agents:
         turnShapeEvaluators:
           - currentTurnImpact
         considerations:
+          - preferLeaderDenialOption
           - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey
 
     nva-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          depthCap: 4
       params:
         eventWeight: 150
         projectedMarginWeight: 100
@@ -4429,6 +4505,7 @@ agents:
           - nva.bombardCoinStack
           - nva.terrorSupportReduction
         considerations:
+          - preferLeaderDenialOption
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent

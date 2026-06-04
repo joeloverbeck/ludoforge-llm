@@ -80,16 +80,16 @@ describe('query domain kinds', () => {
     assert.deepEqual(sortedDomains(query), ['other', 'token', 'zone']);
   });
 
-  it('derives choice target kinds from domain inference and ignores other-domain queries', () => {
-    assert.deepEqual(deriveChoiceTargetKinds({ query: 'mapSpaces' }), ['zone']);
+  it('derives choice target kinds from domain inference plus a value kind for scalar runtime shapes', () => {
+    assert.deepEqual(deriveChoiceTargetKinds({ query: 'mapSpaces' }), ['zone', 'value']);
     assert.deepEqual(
       deriveChoiceTargetKinds({
         query: 'tokenZones',
         source: { query: 'tokensInMapSpaces' },
       }),
-      ['zone'],
+      ['zone', 'value'],
     );
-    assert.deepEqual(deriveChoiceTargetKinds({ query: 'players' }), []);
+    assert.deepEqual(deriveChoiceTargetKinds({ query: 'players' }), ['value']);
     assert.deepEqual(
       deriveChoiceTargetKinds({
         query: 'concat',
@@ -99,7 +99,7 @@ describe('query domain kinds', () => {
           { query: 'binding', name: '$picked' },
         ],
       }),
-      ['zone', 'token'],
+      ['zone', 'token', 'value'],
     );
   });
 });

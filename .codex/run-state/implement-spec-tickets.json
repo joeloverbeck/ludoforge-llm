@@ -1,17 +1,17 @@
 {
-  "originating_spec": "archive/specs/209-game-agnostic-executed-turn-competence-harness.md",
-  "archived_spec": "archive/specs/209-game-agnostic-executed-turn-competence-harness.md",
-  "last_ticket": "archive/tickets/209COMPHARNESS-007.md",
-  "last_result": "spec_completed_archived",
-  "last_work_commit": "f554bcc3daf79de064b8170152f38e2d69f0350d",
+  "originating_spec": "archive/specs/210-fitl-behavioral-competence-fixture-corpus.md",
+  "archived_spec": "archive/specs/210-fitl-behavioral-competence-fixture-corpus.md",
+  "last_ticket": "archive/tickets/210FITLCOMP-009.md",
+  "last_result": "completed_archived",
+  "last_work_commit": "fef0f5ede45d7f886ad17885f2bdda16c1186c43",
   "last_state_commit": "self",
   "next_target": null,
   "queue": [],
   "phase": "completed",
   "in_progress_ticket": null,
-  "owned_dirty_summary": "Spec 209 complete. Ticket 007 implemented and archived in d73639071; originating spec archived in f554bcc3daf79de064b8170152f38e2d69f0350d. Queue is empty and post-state-commit worktree is expected clean.",
+  "owned_dirty_summary": null,
   "blocked": false,
   "blocker": null,
   "dirty_state": "clean",
-  "updated_at": "2026-06-03"
+  "updated_at": "2026-06-04"
 }

@@ -68,8 +68,10 @@ export type AgentPolicyMicroturnOptionIntrinsic = typeof AGENT_POLICY_MICROTURN_
 
 export const AGENT_POLICY_PREVIEW_OPTION_REF_KINDS = [
   'victoryCurrentMarginSelf',
+  'victoryCurrentMarginRole',
   'victoryCurrentRankSelf',
   'deltaVictoryCurrentMarginSelf',
+  'deltaVictoryCurrentMarginRole',
   'globalVar',
   'perPlayerVarSelf',
   'derivedMetric',

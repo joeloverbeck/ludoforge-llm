@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { PolicyAgent } from '../../../../src/agents/index.js';
 import { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } from '../../../../src/cnl/index.js';
@@ -59,7 +61,7 @@ export const createGenericControlCompetenceReference = (): GenericControlCompete
 };
 
 const compileGenericControl = (): ValidatedGameDef => {
-  const entrypoint = join(process.cwd(), '..', '..', 'data', 'games', 'generic-control.game-spec.md');
+  const entrypoint = join(resolveRepoRoot(), 'data', 'games', 'generic-control.game-spec.md');
   const staged = runGameSpecStagesFromBundle(loadGameSpecBundleFromEntrypoint(entrypoint));
   const compileResult = staged.compilation.result;
   const gameDef = compileResult?.gameDef;
@@ -78,6 +80,17 @@ const compileGenericControl = (): ValidatedGameDef => {
   }
 
   return assertValidatedGameDef(gameDef);
+};
+
+const resolveRepoRoot = (): string => {
+  let cursor = fileURLToPath(new URL('.', import.meta.url));
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
+      return cursor;
+    }
+    cursor = join(cursor, '..');
+  }
+  throw new Error('Unable to resolve repository root for generic-control competence reference.');
 };
 
 const createGenericControlAgents = (): readonly Agent[] =>

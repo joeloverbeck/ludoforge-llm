@@ -84,6 +84,7 @@ const materializeCompoundMove = (
     },
     timing: compound.timing,
     ...(compound.interruptAfterStage === undefined ? {} : { insertAfterStage: compound.interruptAfterStage }),
+    ...(compound.replaceRemainingStages === undefined ? {} : { replaceRemainingStages: compound.replaceRemainingStages }),
   },
 });
 

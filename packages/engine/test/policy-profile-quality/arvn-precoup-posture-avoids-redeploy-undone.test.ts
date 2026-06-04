@@ -1,13 +1,16 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
-import { loadArvnPlanFixture } from './arvn-plan-witness-helpers.js';
+import { executePublishedArvnCompoundRoot, loadArvnPlanFixture } from './arvn-plan-witness-helpers.js';
+import { withCoupLookahead } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
-const SEED = 188_007_06;
+const SEED = 1;
 
 // Distilled from a seed-pinned convergence witness (202CIPQLANE): Train+Transport no longer
 // produces a Transport compound alternative at the turn-0 initial state (only arvn.trainGovern
@@ -15,11 +18,21 @@ const SEED = 188_007_06;
 // impossible. The durable invariant — the pre-Coup redeploy-discipline doctrine is bound to
 // arvn-baseline — is asserted structurally.
 describe('Spec 188 ARVN pre-Coup redeploy-discipline witness', () => {
-  it('binds the pre-Coup redeploy-discipline doctrine to arvn-baseline', () => {
+  it('keeps pre-Coup redeploy discipline bound while executing a near-Coup ARVN deployment branch', () => {
     const fixture = loadArvnPlanFixture(SEED);
     const modules = fixture.profile.use.strategyModules ?? [];
+    const executed = executePublishedArvnCompoundRoot(fixture, {
+      actionId: 'train',
+      specialActionId: 'transport',
+      seed: SEED,
+      prepareState: (def, state) => ({
+        ...withCoupLookahead(def, state),
+        globalMarkers: { ...state.globalMarkers, activeLeader: 'youngTurks' },
+      }),
+    });
+    const transportExecuted = Number(executed.postState.globalVars.transportCount) > Number(executed.preState.globalVars.transportCount);
 
-    const passed = modules.includes('arvn.preCoupRedeployDiscipline');
+    const passed = modules.includes('arvn.preCoupRedeployDiscipline') && transportExecuted;
 
     emitPolicyProfileQualityRecord({
       file: TEST_FILE,
@@ -27,7 +40,7 @@ describe('Spec 188 ARVN pre-Coup redeploy-discipline witness', () => {
       seed: SEED,
       passed,
       stopReason: 'architectural-invariant',
-      decisions: 1,
+      decisions: executed.decisions.length,
     });
 
     assert.equal(
@@ -35,5 +48,6 @@ describe('Spec 188 ARVN pre-Coup redeploy-discipline witness', () => {
       true,
       'arvn.preCoupRedeployDiscipline must be bound to arvn-baseline',
     );
+    assert.equal(transportExecuted, true, 'expected a near-Coup ARVN deployment branch to execute');
   });
 });

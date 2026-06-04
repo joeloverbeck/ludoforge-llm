@@ -64,11 +64,13 @@ const PREVIEW_OPTION_REF_KIND_CODE: Readonly<Record<string, number>> = {
   victoryCurrentMarginSelf: 0,
   victoryCurrentRankSelf: 1,
   deltaVictoryCurrentMarginSelf: 2,
-  globalVar: 3,
-  perPlayerVarSelf: 4,
-  derivedMetric: 5,
-  outcome: 6,
-  driveDepth: 7,
+  victoryCurrentMarginRole: 3,
+  deltaVictoryCurrentMarginRole: 4,
+  globalVar: 5,
+  perPlayerVarSelf: 6,
+  derivedMetric: 7,
+  outcome: 8,
+  driveDepth: 9,
 };
 
 const PHASE_INTRINSIC_CODE: Readonly<Record<string, number>> = {

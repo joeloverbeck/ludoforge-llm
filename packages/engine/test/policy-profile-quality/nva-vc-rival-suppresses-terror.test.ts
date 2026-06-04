@@ -1,35 +1,30 @@
 // @test-class: architectural-invariant
-import * as assert from 'node:assert/strict';
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { emitNvaPolicyQualityRecord, loadNvaPlanFixture } from './nva-plan-witness-helpers.js';
+import { assertFitlAllyRivalLiveCase } from './ally-rival-competence-helpers.js';
+import { withEveryZoneSupportMarker } from './shared-competence-helpers.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
-const SEED = 203_005_04;
+const SEED = 210_005_03;
 
 describe('Spec 203 NVA VC-rival Terror suppression witness', () => {
-  it('suppresses Terror support reduction when VC near-win risk is active', () => {
-    const fixture = loadNvaPlanFixture(SEED);
-    const module = fixture.def.agents?.library.strategyModules?.['nva.vcRivalRisk'];
-    const templates = fixture.profile.plan.planTemplates ?? [];
-
-    const hasModule = fixture.profile.use.strategyModules?.includes('nva.vcRivalRisk') === true;
-    const suppressesTerror = module?.suppressesPlanTemplates.some((id) => id === 'nva.terrorSupportReduction') === true;
-    const usesVcNearWin = module?.dependencies.strategicConditions?.includes('vcNearWin') === true;
-    const keepsAttackAmbush = templates.includes('nva.attackAmbush');
-    const passed = hasModule && suppressesTerror && usesVcNearWin && keepsAttackAmbush;
-
-    emitNvaPolicyQualityRecord({
-      file: TEST_FILE,
+  it('suppresses Terror support reduction when VC near-win risk is active in the live frontier', () => {
+    assertFitlAllyRivalLiveCase({
+      testFile: TEST_FILE,
+      profileId: 'nva-baseline',
+      seatId: 'nva',
+      playerIndex: 2,
       seed: SEED,
-      passed,
-      decisions: module?.suppressesPlanTemplates.length ?? 0,
+      prepareState: (def, state) => withEveryZoneSupportMarker(def, state, 'activeOpposition'),
+      expectedRootStableMoveKey: 'march|{}|noCompound|false|operation',
+      expectedTemplateId: 'nva.marchControl',
+      activeDoctrines: ['nva.vcRivalRisk'],
+      filteredTemplates: [
+        { templateId: 'nva.terrorSupportReduction', gatedBy: ['nva.vcRivalRisk'], reason: 'suppressed' },
+      ],
     });
-
-    assert.ok(hasModule, 'expected nva.vcRivalRisk bound');
-    assert.ok(suppressesTerror, 'expected nva.vcRivalRisk to suppress nva.terrorSupportReduction');
-    assert.ok(usesVcNearWin, 'expected nva.vcRivalRisk to depend on vcNearWin');
-    assert.ok(keepsAttackAmbush, 'expected nva.attackAmbush to remain bound for denial pressure');
   });
 });

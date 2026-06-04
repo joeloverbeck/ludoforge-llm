@@ -1,10 +1,18 @@
 // @test-class: architectural-invariant
+// @proof-tier: executed-outcome
+// @proof-tier: adversarial
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
-import { loadNvaPlanFixture } from './nva-plan-witness-helpers.js';
+import {
+  executePublishedNvaRoot,
+  emitNvaPolicyQualityRecord,
+  loadNvaPlanFixture,
+  publishedSecondEligibleNvaActionDecisions,
+} from './nva-plan-witness-helpers.js';
+import { withCoupLookahead } from './shared-competence-helpers.js';
+import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 
 const TEST_FILE = fileURLToPath(import.meta.url);
 const SEED = 188_009_02;
@@ -16,11 +24,21 @@ const SEED = 188_009_02;
 // Rally+Infiltrate and LoC-occupation template wiring, and the resource-floor posture must —
 // are asserted structurally.
 describe('Spec 188 NVA Trail and pre-Coup logistics witness', () => {
-  it('wires Rally/Infiltrate + LoC occupation to Trail/logistics protection doctrine', () => {
+  it('executes Trail protection before Coup while March violence is available', () => {
     const fixture = loadNvaPlanFixture(SEED);
     const lib = fixture.def.agents?.library;
     const modules = fixture.profile.use.strategyModules ?? [];
     const bound = fixture.profile.plan.planTemplates ?? [];
+    const nearCoup = withCoupLookahead(fixture.def, fixture.state);
+    const executed = executePublishedNvaRoot(fixture, {
+      actionId: 'rally',
+      specialActionId: 'infiltrate',
+      seed: SEED,
+      prepareState: (def, state) => withCoupLookahead(def, state),
+    });
+    const frontierKeys = publishedSecondEligibleNvaActionDecisions(fixture, nearCoup)
+      .map((decision) => decision.move === undefined ? '' : toMoveIdentityKey(fixture.def, decision.move));
+    const trailDelta = Number(executed.postState.globalVars.trail) - Number(executed.preState.globalVars.trail);
 
     const passed = lib?.guardrails?.['nva.preserveTrailAndBases']?.severity === 'demote'
       && modules.includes('nva.logisticsAndTrail')
@@ -28,15 +46,16 @@ describe('Spec 188 NVA Trail and pre-Coup logistics witness', () => {
       && bound.includes('nva.locOccupationBeforeCoup')
       && lib?.planTemplates?.['nva.rallyInfiltrate']?.roles.rallySpace?.selectorId === 'nva.rallyBaseOrTrailSpace'
       && lib?.planTemplates?.['nva.locOccupationBeforeCoup']?.roles.locSpace?.selectorId === 'nva.locOccupationSpace'
-      && lib?.postureEvaluators?.['nva.protectLogisticsAndBases']?.must?.[0]?.id === 'resource-floor';
+      && lib?.postureEvaluators?.['nva.protectLogisticsAndBases']?.must?.[0]?.id === 'resource-floor'
+      && trailDelta > 0
+      && frontierKeys.some((key) => key.startsWith('march|'));
 
-    emitPolicyProfileQualityRecord({
+    emitNvaPolicyQualityRecord({
       file: TEST_FILE,
-      variantId: 'nva-baseline',
       seed: SEED,
       passed,
-      stopReason: 'architectural-invariant',
-      decisions: 7,
+      stopReason: executed.rootStableMoveKey,
+      decisions: executed.decisions.length + frontierKeys.length,
     });
 
     assert.equal(lib?.guardrails?.['nva.preserveTrailAndBases']?.severity, 'demote');
@@ -46,5 +65,7 @@ describe('Spec 188 NVA Trail and pre-Coup logistics witness', () => {
     assert.equal(lib?.planTemplates?.['nva.rallyInfiltrate']?.roles.rallySpace?.selectorId, 'nva.rallyBaseOrTrailSpace');
     assert.equal(lib?.planTemplates?.['nva.locOccupationBeforeCoup']?.roles.locSpace?.selectorId, 'nva.locOccupationSpace');
     assert.equal(lib?.postureEvaluators?.['nva.protectLogisticsAndBases']?.must?.[0]?.id, 'resource-floor');
+    assert.ok(trailDelta > 0, `expected Trail repair, got ${trailDelta}`);
+    assert.ok(frontierKeys.some((key) => key.startsWith('march|')), 'expected March adversarial root');
   });
 });

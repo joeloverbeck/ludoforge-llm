@@ -187,6 +187,7 @@ export interface LegalChoicesRuntimeOptions {
 interface LegalChoicesInternalOptions extends LegalChoicesRuntimeOptions {
   /** Mutable accumulator for diagnostics collection. Internal only — created by public API when collectDiagnostics is true. */
   readonly _diagnosticsAccumulator?: ChooseNDiagnosticsAccumulator;
+  readonly _onCompleteState?: (state: GameState) => void;
 }
 
 const actionMapCache = new WeakMap<readonly ActionDef[], ReadonlyMap<ActionDef['id'], ActionDef>>();
@@ -1086,6 +1087,9 @@ const legalChoicesWithPreparedContextInternal = (
       return finalizeRequest(toPipelineLegalityFailedRequest());
     }
     const request = resolvedEventResult.request;
+    if (request.kind === 'complete') {
+      options?._onCompleteState?.(resolvedEventResult.state);
+    }
     if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
       recordPipeline();
       return finalizeRequest(request);
@@ -1114,6 +1118,9 @@ const legalChoicesWithPreparedContextInternal = (
     return finalizeRequest(toPipelineLegalityFailedRequest());
   }
   const request = resolvedRootResult.request;
+  if (request.kind === 'complete') {
+    options?._onCompleteState?.(resolvedRootResult.state);
+  }
   if (!shouldEvaluateOptionLegality || request.kind !== 'pending') {
     recordPipeline();
     return finalizeRequest(request);
@@ -1433,6 +1440,21 @@ const maybeChainCompoundSA = (
   if (result.kind !== 'complete' || partialMove.compound?.specialActivity === undefined) {
     return result;
   }
+  let compoundDiscoveryState = state;
+  if (partialMove.compound.timing === 'after') {
+    let completedState: GameState | undefined;
+    const mainContext = prepareLegalChoicesContext(def, state, partialMove, runtime);
+    const mainProbe = legalChoicesWithPreparedContextStrict(mainContext, partialMove, false, {
+      ...options,
+      _onCompleteState: (nextState) => {
+        completedState = nextState;
+      },
+    });
+    if (mainProbe.kind !== 'complete' || completedState === undefined) {
+      return mainProbe;
+    }
+    compoundDiscoveryState = completedState;
+  }
 
   // SA completeness check: probe the SA without option legality validation.
   // If the SA's params already satisfy all required decisions, the compound
@@ -1448,7 +1470,7 @@ const maybeChainCompoundSA = (
   const sa = partialMove.compound.specialActivity;
   const saAction = findAction(def, sa.actionId);
   if (saAction !== undefined) {
-    const saContext = prepareLegalChoicesContext(def, state, sa, runtime);
+    const saContext = prepareLegalChoicesContext(def, compoundDiscoveryState, sa, runtime);
     const saProbe = legalChoicesWithPreparedContextStrict(saContext, sa, false, options);
     if (saProbe.kind === 'complete') {
       return result; // SA already fully resolved via decision keys
@@ -1458,7 +1480,7 @@ const maybeChainCompoundSA = (
     }
   }
 
-  return discoverCompoundSAChoices(def, state, partialMove, shouldEvaluateOptionLegality, options, runtime);
+  return discoverCompoundSAChoices(def, compoundDiscoveryState, partialMove, shouldEvaluateOptionLegality, options, runtime);
 };
 
 export function legalChoicesDiscover(

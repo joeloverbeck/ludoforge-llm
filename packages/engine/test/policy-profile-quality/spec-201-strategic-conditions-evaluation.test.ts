@@ -47,7 +47,7 @@ const emptyDeps = {
 function createCandidate(actionId: string): PolicyEvaluationCandidate {
   return {
     move: { actionId: asActionId(actionId), params: {} },
-    stableMoveKey: `${actionId}|{}|false|unclassified`,
+    stableMoveKey: `${actionId}|{}|noCompound|false|unclassified`,
     actionId,
     previewRefIds: new Set(),
     unknownPreviewRefs: new Map(),

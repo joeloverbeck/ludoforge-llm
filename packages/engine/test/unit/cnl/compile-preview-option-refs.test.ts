@@ -82,8 +82,10 @@ describe('preview.option policy refs', () => {
         library: {
           considerations: {
             margin: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.victory.currentMargin.self'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
+            roleMargin: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.victory.currentMargin.role:currentLeader'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
             rank: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.victory.currentRank.self'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
             delta: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.delta.victory.currentMargin.self'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
+            roleDelta: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.delta.victory.currentMargin.role:currentLeader'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
             globalVar: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.var.global.score'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
             playerVar: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.var.player.self.tempo'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
             metric: { scopes: ['microturn'], weight: 1, value: { coalesce: [refExpr('preview.option.metric.pressure'), 0] }, previewFallback: { onUnavailable: 'noContribution' } },
@@ -103,7 +105,7 @@ describe('preview.option policy refs', () => {
             params: {},
             use: {
               guardrails: [],
-              considerations: ['margin', 'rank', 'delta', 'globalVar', 'playerVar', 'metric', 'outcome', 'driveDepth'],
+              considerations: ['margin', 'roleMargin', 'rank', 'delta', 'roleDelta', 'globalVar', 'playerVar', 'metric', 'outcome', 'driveDepth'],
               tieBreakers: ['stableMoveKey'],
             },
           },
@@ -125,8 +127,10 @@ describe('preview.option policy refs', () => {
 
     assert.deepEqual(refs, [
       { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginSelf' },
+      { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginRole', id: 'currentLeader' },
       { kind: 'previewOptionRef', refKind: 'victoryCurrentRankSelf' },
       { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' },
+      { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginRole', id: 'currentLeader' },
       { kind: 'previewOptionRef', refKind: 'globalVar', id: 'score' },
       { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id: 'tempo' },
       { kind: 'previewOptionRef', refKind: 'derivedMetric', id: 'pressure' },
